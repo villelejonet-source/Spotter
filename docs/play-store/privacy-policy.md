@@ -12,8 +12,8 @@ workouts and sets you log, your body weight entries and your settings.
 Google's cloud backup; it can move to a new phone with a direct device-to-device transfer.
 
 **Optional cloud backup.** If you choose to sign in (with your email address and a one-time
-code), Spotter backs up the data above to its cloud database (Supabase, hosted in the EU
-region chosen for the project) and syncs it between your phones. It's sent encrypted
+code), Spotter backs up the data above to its cloud database (hosted by Supabase) and
+syncs it between your phones. It's sent encrypted
 (HTTPS), and database rules ensure only your account can read or change your backup. Your
 email address is used only to sign you in. If you never sign in, nothing leaves your phone.
 

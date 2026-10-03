@@ -1,0 +1,4 @@
+<resources>
+    <!-- Debug builds sit next to the Play version on the same phone. -->
+    <string name="app_name">Spotter Debug</string>
+</resources>

@@ -62,6 +62,11 @@ android {
     }
 
     buildTypes {
+        // Test builds install next to the Play version instead of clashing with it.
+        debug {
+            applicationIdSuffix = ".debug"
+            versionNameSuffix = "-debug"
+        }
         release {
             // Without the upload key, release builds are debug-signed so R8 output can be
             // tested locally; such builds can't be uploaded to Play (bundleRelease checks).

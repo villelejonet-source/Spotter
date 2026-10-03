@@ -21,6 +21,22 @@ val keystoreProperties = Properties().apply {
 }
 val hasUploadKey = keystoreProperties.getProperty("storeFile") != null
 
+/**
+ * The upload key password: from keystore.properties if it's there, otherwise from the
+ * macOS Keychain item named by `keychainService` (default "spotter-upload-key"), so the
+ * password doesn't have to live in a file.
+ */
+val uploadKeyPassword: String? by lazy {
+    keystoreProperties.getProperty("storePassword")?.takeIf { it.isNotBlank() }
+        ?: providers.exec {
+            commandLine(
+                "security", "find-generic-password", "-w",
+                "-s", keystoreProperties.getProperty("keychainService", "spotter-upload-key"),
+            )
+            isIgnoreExitValue = true
+        }.standardOutput.asText.get().trim().takeIf { it.isNotEmpty() }
+}
+
 android {
     namespace = "com.viktorolsson.spotter"
 
@@ -37,9 +53,10 @@ android {
         if (hasUploadKey) {
             create("upload") {
                 storeFile = rootProject.file(keystoreProperties.getProperty("storeFile"))
-                storePassword = keystoreProperties.getProperty("storePassword")
+                storePassword = uploadKeyPassword
                 keyAlias = keystoreProperties.getProperty("keyAlias")
-                keyPassword = keystoreProperties.getProperty("keyPassword")
+                // keytool's default: the key password is the keystore password.
+                keyPassword = keystoreProperties.getProperty("keyPassword")?.takeIf { it.isNotBlank() } ?: uploadKeyPassword
             }
         }
     }
@@ -88,5 +105,8 @@ dependencies {
 tasks.matching { it.name == "bundleRelease" }.configureEach {
     doFirst {
         check(hasUploadKey) { "bundleRelease needs keystore.properties with the upload key (see docs/play-store/README.md)." }
+        checkNotNull(uploadKeyPassword) {
+            "No upload key password: add it to keystore.properties or the Keychain item \"spotter-upload-key\"."
+        }
     }
 }

@@ -12,14 +12,21 @@ Losing the upload key can be recovered through Play Console support, but it's sl
 keytool -genkeypair -v -keystore ~/keys/spotter-upload.jks -alias upload -keyalg RSA -keysize 4096 -validity 10000
 ```
 
-Then create `keystore.properties` in the repo root (it's gitignored, never commit it):
+Save the password in the macOS Keychain (it prompts; nothing is echoed):
+
+```bash
+security add-generic-password -a "$USER" -s spotter-upload-key -T /usr/bin/security -w
+```
+
+Then create `keystore.properties` in the repo root (gitignored). No password in it: the build
+reads it from the Keychain item above.
 
 ```properties
 storeFile=/Users/<you>/keys/spotter-upload.jks
-storePassword=...
 keyAlias=upload
-keyPassword=...
 ```
+
+(Putting `storePassword=` / `keyPassword=` in the file also works, e.g. on a machine without a Keychain.)
 
 Use **Play App Signing** (the default for new apps): Google holds the app signing key, and
 this upload key only proves uploads come from you.

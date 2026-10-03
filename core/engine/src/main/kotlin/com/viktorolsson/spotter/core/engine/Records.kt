@@ -12,6 +12,19 @@ data class ExerciseBests(
 ) {
     val isEmpty: Boolean get() = repsAtWeight.isEmpty()
 
+    /** These bests plus [sets] (e.g. sets already done today); session volume is unchanged. */
+    fun withSets(sets: List<LoggedSet>): ExerciseBests {
+        if (sets.isEmpty()) return this
+        val extra = PersonalRecords.bests(listOf(sets))
+        return ExerciseBests(
+            estimatedOneRepMax = listOfNotNull(estimatedOneRepMax, extra.estimatedOneRepMax).maxOrNull(),
+            repsAtWeight = (repsAtWeight.keys + extra.repsAtWeight.keys).associateWith {
+                maxOf(repsAtWeight[it] ?: 0, extra.repsAtWeight[it] ?: 0)
+            },
+            sessionVolumeKg = sessionVolumeKg,
+        )
+    }
+
     /** Most reps ever done at [weightKg] or heavier. */
     fun bestRepsAtOrAbove(weightKg: Double): Int? = repsAtWeight.filterKeys { it >= weightKg - EPS }.values.maxOrNull()
 

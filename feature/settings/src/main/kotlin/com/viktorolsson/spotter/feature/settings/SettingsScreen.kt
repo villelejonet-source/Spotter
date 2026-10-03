@@ -30,6 +30,8 @@ import com.viktorolsson.spotter.core.ui.formatClock
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
@@ -179,7 +181,7 @@ private fun SectionHeader(@StringRes title: Int) {
         stringResource(title),
         style = MaterialTheme.typography.titleSmall,
         color = MaterialTheme.colorScheme.primary,
-        modifier = Modifier.padding(top = 8.dp),
+        modifier = Modifier.padding(top = 8.dp).semantics { heading() },
     )
 }
 

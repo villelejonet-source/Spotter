@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Training data is health data: it never goes to Google's cloud backup. Moving it to a
+  new phone with a direct device-to-device transfer is allowed, so history isn't lost.
+  (Opt-in Supabase backup is planned separately.)
+-->
+<data-extraction-rules>
+    <cloud-backup>
+        <exclude domain="root" />
+        <exclude domain="file" />
+        <exclude domain="database" />
+        <exclude domain="sharedpref" />
+        <exclude domain="external" />
+    </cloud-backup>
+    <device-transfer>
+        <include domain="database" />
+        <include domain="file" />
+    </device-transfer>
+</data-extraction-rules>

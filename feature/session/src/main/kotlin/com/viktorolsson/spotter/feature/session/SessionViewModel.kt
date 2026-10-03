@@ -11,7 +11,12 @@ import com.viktorolsson.spotter.core.data.repository.RestTimerRepository
 import com.viktorolsson.spotter.core.data.repository.UserPreferencesRepository
 import com.viktorolsson.spotter.core.data.repository.UserProfileRepository
 import com.viktorolsson.spotter.core.data.repository.WorkoutRepository
+import com.viktorolsson.spotter.core.engine.DetectedRecord
+import com.viktorolsson.spotter.core.engine.ExerciseBests
 import com.viktorolsson.spotter.core.engine.ExerciseSimilarity
+import com.viktorolsson.spotter.core.engine.LoggedSet
+import com.viktorolsson.spotter.core.engine.PersonalRecords
+import com.viktorolsson.spotter.core.model.PersonalRecordType
 import com.viktorolsson.spotter.core.model.Equipment
 import com.viktorolsson.spotter.core.model.Exercise
 import com.viktorolsson.spotter.core.model.PreviousSet
@@ -24,7 +29,10 @@ import com.viktorolsson.spotter.core.model.parseToKg
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharedFlow
+import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.first
@@ -39,6 +47,17 @@ import kotlinx.coroutines.flow.onStart
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import javax.inject.Inject
+
+enum class SetField { WEIGHT, REPS, RIR }
+
+/** A set that beat the lifter's previous best, for the in-session celebration. */
+data class PrEvent(
+    val exerciseName: String,
+    val weightKg: Double?,
+    val reps: Int,
+    val records: List<DetectedRecord>,
+    val id: Long = System.nanoTime(),
+)
 
 enum class SwapFilter { ALL, SAME_EQUIPMENT, DUMBBELL, MACHINE, BODYWEIGHT }
 
@@ -136,19 +155,11 @@ class SessionViewModel @Inject constructor(
 
     private val prefs get() = uiState.value.preferences
 
-    fun updateSetValues(setId: Long, weightText: String, repsText: String, rirText: String) = launch {
-        workoutRepository.updateSetValues(
-            setId = setId,
-            weightKg = prefs.weightUnit.parseToKg(weightText),
-            reps = repsText.trim().toIntOrNull()?.takeIf { it in 0..999 },
-            rir = rirText.trim().toIntOrNull()?.takeIf { it in 0..10 },
-        )
-    }
-
     /** Ticks a set; on completion starts the rest timer unless mid-superset. */
     fun toggleSet(exercise: SessionExercise, setId: Long) = launch {
         val completed = workoutRepository.toggleSetCompleted(setId)
         if (!completed) return@launch
+        checkForPr(exercise, setId)
         val restSeconds = exercise.restSeconds ?: prefs.defaultRestSeconds
         if (!exercise.isMidSuperset()) restTimerRepository.start(restSeconds)
     }
@@ -157,6 +168,49 @@ class SessionViewModel @Inject constructor(
         val group = supersetGroup ?: return false
         val members = uiState.value.session?.exercises.orEmpty().filter { it.supersetGroup == group }
         return members.maxByOrNull { it.position }?.id != id
+    }
+
+    /** Writes one field from keypad text; the other values come from the stored set. */
+    fun updateSetField(setId: Long, field: SetField, text: String) = launch {
+        val set = findSet(setId) ?: return@launch
+        val unit = prefs.weightUnit
+        workoutRepository.updateSetValues(
+            setId = setId,
+            weightKg = if (field == SetField.WEIGHT) unit.parseToKg(text) else set.weightKg,
+            reps = if (field == SetField.REPS) text.toIntOrNull()?.takeIf { it in 0..999 } else set.reps,
+            rir = if (field == SetField.RIR) text.toIntOrNull()?.takeIf { it in 0..10 } else set.rir,
+        )
+    }
+
+    private fun findSet(setId: Long) = uiState.value.session?.exercises?.flatMap { it.sets }?.firstOrNull { it.id == setId }
+
+    private val _prEvents = MutableSharedFlow<PrEvent>(extraBufferCapacity = 4)
+    /** Fires when a ticked set beats the best from earlier sessions (and earlier sets today). */
+    val prEvents: SharedFlow<PrEvent> = _prEvents.asSharedFlow()
+    private val bestsCache = mutableMapOf<String, ExerciseBests>()
+
+    private suspend fun checkForPr(exercise: SessionExercise, setId: Long) {
+        val session = uiState.value.session ?: return
+        val set = exercise.sets.firstOrNull { it.id == setId } ?: return
+        val reps = set.reps ?: return
+        if (set.setType == SetType.WARMUP) return
+        val history = bestsCache.getOrPut(exercise.exercise.id) {
+            workoutRepository.bestsBefore(exercise.exercise.id, session.startedAt)
+        }
+        if (history.isEmpty) return // First time: this session sets the baseline.
+        val earlierToday = exercise.sets
+            .filter { it.id != setId && it.isCompleted && it.setType != SetType.WARMUP && it.reps != null }
+            .map { LoggedSet(it.weightKg, it.reps!!) }
+        val before = history.withSets(earlierToday)
+        val records = PersonalRecords.detect(listOf(LoggedSet(set.weightKg, reps)), before)
+            .filter { it.type != PersonalRecordType.VOLUME }
+        if (records.isNotEmpty()) _prEvents.tryEmit(PrEvent(exercise.exercise.name, set.weightKg, reps, records))
+    }
+
+    /** Adds a warm-up ramp; lifters 50+ get a longer one. */
+    fun addWarmUps(exerciseId: Long) = launch {
+        val age = profileRepository.get()?.birthDate?.let { java.time.Period.between(it, java.time.LocalDate.now()).years }
+        workoutRepository.addWarmUps(exerciseId, extended = (age ?: 0) >= 50)
     }
 
     fun copyPrevious(setId: Long, previous: PreviousSet) = launch {

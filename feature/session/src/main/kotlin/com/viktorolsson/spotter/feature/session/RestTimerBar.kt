@@ -27,6 +27,8 @@ internal fun RestTimerBar(
     now: Instant,
     onAdjust: (Int) -> Unit,
     onSkip: () -> Unit,
+    /** Slimmer, and without nav-bar padding, when the keypad sits below it. */
+    compact: Boolean = false,
 ) {
     val remaining = rest.remainingSeconds(now)
     val progress = if (rest.totalSeconds > 0) remaining.toFloat() / rest.totalSeconds else 0f
@@ -35,12 +37,12 @@ internal fun RestTimerBar(
         tonalElevation = 3.dp,
         modifier = Modifier.fillMaxWidth(),
     ) {
-        Column(Modifier.navigationBarsPadding()) {
+        Column(if (compact) Modifier else Modifier.navigationBarsPadding()) {
             LinearProgressIndicator(progress = { progress.coerceIn(0f, 1f) }, modifier = Modifier.fillMaxWidth())
             Row(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
-                modifier = Modifier.padding(horizontal = 16.dp, vertical = 10.dp),
+                modifier = Modifier.padding(horizontal = 16.dp, vertical = if (compact) 4.dp else 10.dp),
             ) {
                 Column(Modifier.weight(1f)) {
                     Text(
@@ -50,7 +52,8 @@ internal fun RestTimerBar(
                     )
                     Text(
                         formatClock(remaining),
-                        style = MaterialTheme.typography.headlineMedium.copy(fontFeatureSettings = "tnum"),
+                        style = (if (compact) MaterialTheme.typography.titleLarge else MaterialTheme.typography.headlineMedium)
+                            .copy(fontFeatureSettings = "tnum"),
                         color = MaterialTheme.colorScheme.onSecondaryContainer,
                     )
                 }

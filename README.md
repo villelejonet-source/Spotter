@@ -10,7 +10,12 @@ There's no system JDK on this machine, so point Gradle at Android Studio's bundl
 export JAVA_HOME="/Applications/Android Studio.app/Contents/jbr/Contents/Home"
 ./gradlew assembleDebug          # app/build/outputs/apk/debug/app-debug.apk
 ./gradlew testDebugUnitTest :core:engine:test :core:model:test   # all unit tests
+./gradlew verifyRoborazziDebug     # screenshot tests (recordRoborazziDebug updates the goldens)
+./gradlew :app:lintRelease
 ```
+
+Screenshot goldens (light, dark and large text) live in `*/src/test/screenshots`. Releasing
+to the Play Store internal test track: see [docs/play-store/README.md](docs/play-store/README.md).
 
 Or open the folder in Android Studio and run the `app` configuration.
 

@@ -1,6 +1,8 @@
 package com.viktorolsson.spotter.feature.session
 
 import androidx.compose.animation.animateColorAsState
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -12,9 +14,10 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.relocation.BringIntoViewRequester
+import androidx.compose.foundation.relocation.bringIntoViewRequester
+import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.text.BasicTextField
-import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Check
 import androidx.compose.material.icons.rounded.Delete
@@ -37,24 +40,27 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
-import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.input.ImeAction
-import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.viktorolsson.spotter.core.model.PreviousSet
 import com.viktorolsson.spotter.core.model.SetType
 import com.viktorolsson.spotter.core.model.WeightUnit
 import com.viktorolsson.spotter.core.model.WorkoutSet
 import com.viktorolsson.spotter.core.model.format
-import com.viktorolsson.spotter.core.model.parseToKg
-import kotlin.math.abs
+import com.viktorolsson.spotter.core.ui.formatSet
 
+/**
+ * One set: label (tap for type/note/delete), previous (tap to copy), weight, reps,
+ * optional RIR, and the tick. Values are edited with the in-app [Keypad]; the focused
+ * field shows what's being typed.
+ */
 @Composable
 internal fun SetRow(
     set: WorkoutSet,
@@ -62,26 +68,17 @@ internal fun SetRow(
     previous: PreviousSet?,
     unit: WeightUnit,
     logRir: Boolean,
-    onValuesChange: (weight: String, reps: String, rir: String) -> Unit,
+    focusedField: SetField?,
+    buffer: String,
+    onFieldClick: (SetField) -> Unit,
     onToggle: () -> Unit,
     onCopyPrevious: (PreviousSet) -> Unit,
     onDelete: () -> Unit,
     onTypeChange: (SetType) -> Unit,
     onNote: (String) -> Unit,
 ) {
-    // Local text is the source of truth while typing; it only resyncs when the
-    // stored value changes underneath it (copy-previous, carry-forward, unit switch).
-    var weight by rememberSaveable(set.id, unit) { mutableStateOf(set.weightKg?.let(unit::format).orEmpty()) }
-    var reps by rememberSaveable(set.id) { mutableStateOf(set.reps?.toString().orEmpty()) }
-    var rir by rememberSaveable(set.id) { mutableStateOf(set.rir?.toString().orEmpty()) }
-    LaunchedEffect(set.weightKg, unit) {
-        val local = unit.parseToKg(weight)
-        if (!sameWeight(local, set.weightKg)) weight = set.weightKg?.let(unit::format).orEmpty()
-    }
-    LaunchedEffect(set.reps) { if (reps.toIntOrNull() != set.reps) reps = set.reps?.toString().orEmpty() }
-    LaunchedEffect(set.rir) { if (rir.toIntOrNull() != set.rir) rir = set.rir?.toString().orEmpty() }
-
     var editingNote by rememberSaveable { mutableStateOf(false) }
+    val setNumber = if (set.setType == SetType.WARMUP) stringResource(R.string.set_warmup_short) else "$workingNumber"
 
     val dismissState = rememberSwipeToDismissBoxState()
     SwipeToDismissBox(
@@ -106,60 +103,44 @@ internal fun SetRow(
             modifier = Modifier
                 .fillMaxWidth()
                 .background(rowColor)
-                .padding(horizontal = 8.dp, vertical = 4.dp)
-                .height(44.dp),
+                .padding(horizontal = 8.dp, vertical = 2.dp)
+                .height(52.dp),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(4.dp),
         ) {
-            SetLabel(set, workingNumber, onTypeChange, onNote = { editingNote = true }, onDelete = onDelete)
-
-            Text(
-                previous?.let { formatPrevious(it, unit) } ?: "—",
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
-                textAlign = TextAlign.Center,
-                maxLines = 1,
-                modifier = Modifier
-                    .weight(1f)
-                    .clip(RoundedCornerShape(8.dp))
-                    .clickable(enabled = previous != null) { previous?.let(onCopyPrevious) }
-                    .padding(vertical = 10.dp),
-            )
-            NumberField(
-                value = weight,
+            SetLabel(set, setNumber, onTypeChange, onNote = { editingNote = true }, onDelete = onDelete)
+            PreviousCell(previous, unit, onCopyPrevious, Modifier.weight(1f))
+            FieldBox(
+                text = if (focusedField == SetField.WEIGHT) buffer else set.weightKg?.let(unit::format).orEmpty(),
                 placeholder = previous?.weightKg?.let(unit::format).orEmpty(),
-                keyboardType = KeyboardType.Decimal,
+                focused = focusedField == SetField.WEIGHT,
+                description = stringResource(R.string.a11y_weight_field, workingNumber),
                 modifier = Modifier.width(WeightColumnWidth),
-            ) {
-                weight = it
-                onValuesChange(it, reps, rir)
-            }
-            NumberField(
-                value = reps,
+                onClick = { onFieldClick(SetField.WEIGHT) },
+            )
+            FieldBox(
+                text = if (focusedField == SetField.REPS) buffer else set.reps?.toString().orEmpty(),
                 placeholder = previous?.reps?.toString().orEmpty(),
-                keyboardType = KeyboardType.Number,
-                imeAction = if (logRir) ImeAction.Next else ImeAction.Done,
+                focused = focusedField == SetField.REPS,
+                description = stringResource(R.string.a11y_reps_field, workingNumber),
                 modifier = Modifier.width(RepsColumnWidth),
-            ) {
-                reps = it.filter(Char::isDigit).take(3)
-                onValuesChange(weight, reps, rir)
-            }
+                onClick = { onFieldClick(SetField.REPS) },
+            )
             if (logRir) {
-                NumberField(
-                    value = rir,
+                FieldBox(
+                    text = if (focusedField == SetField.RIR) buffer else set.rir?.toString().orEmpty(),
                     placeholder = "",
-                    keyboardType = KeyboardType.Number,
-                    imeAction = ImeAction.Done,
+                    focused = focusedField == SetField.RIR,
+                    description = stringResource(R.string.a11y_rir_field, workingNumber),
                     modifier = Modifier.width(RirColumnWidth),
-                ) {
-                    rir = it.filter(Char::isDigit).take(2)
-                    onValuesChange(weight, reps, rir)
-                }
+                    onClick = { onFieldClick(SetField.RIR) },
+                )
             }
             CheckButton(
                 completed = set.isCompleted,
-                enabled = set.isCompleted || reps.toIntOrNull() != null,
-                onClick = onToggle,
+                enabled = set.isCompleted || set.reps != null,
+                setLabel = setNumber,
+                onToggle = onToggle,
             )
         }
     }
@@ -175,23 +156,90 @@ internal fun SetRow(
 }
 
 @Composable
+private fun PreviousCell(previous: PreviousSet?, unit: WeightUnit, onCopy: (PreviousSet) -> Unit, modifier: Modifier) {
+    val text = previous?.let { formatSet(it.weightKg, it.reps, unit).replace(" ${unit.name.lowercase()}", "") } ?: "—"
+    val description = previous?.let { stringResource(R.string.a11y_previous, formatSet(it.weightKg, it.reps, unit)) }
+        ?: stringResource(R.string.a11y_no_previous)
+    val copyLabel = stringResource(R.string.a11y_copy_previous)
+    Text(
+        text,
+        style = MaterialTheme.typography.bodyMedium,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+        textAlign = TextAlign.Center,
+        maxLines = 1,
+        overflow = TextOverflow.Ellipsis,
+        modifier = modifier
+            .clip(RoundedCornerShape(8.dp))
+            .clickable(enabled = previous != null, onClickLabel = copyLabel) { previous?.let(onCopy) }
+            .semantics { contentDescription = description }
+            .padding(vertical = 12.dp),
+    )
+}
+
+@OptIn(ExperimentalFoundationApi::class)
+@Composable
+private fun FieldBox(
+    text: String,
+    placeholder: String,
+    focused: Boolean,
+    description: String,
+    modifier: Modifier,
+    onClick: () -> Unit,
+) {
+    val requester = remember { BringIntoViewRequester() }
+    LaunchedEffect(focused) { if (focused) requester.bringIntoView() }
+    val empty = stringResource(R.string.a11y_empty)
+    val editLabel = stringResource(R.string.a11y_edit)
+    Surface(
+        shape = RoundedCornerShape(8.dp),
+        color = if (focused) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceContainerHighest,
+        border = if (focused) BorderStroke(2.dp, MaterialTheme.colorScheme.primary) else null,
+        modifier = modifier
+            .height(44.dp)
+            .bringIntoViewRequester(requester)
+            .clip(RoundedCornerShape(8.dp))
+            .clickable(onClickLabel = editLabel, role = Role.Button, onClick = onClick)
+            .semantics {
+                contentDescription = description
+                stateDescription = text.ifEmpty { empty }
+            },
+    ) {
+        Box(contentAlignment = Alignment.Center) {
+            Text(
+                text.ifEmpty { placeholder },
+                style = MaterialTheme.typography.titleMedium,
+                color = if (text.isEmpty()) MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f) else MaterialTheme.colorScheme.onSurface,
+                maxLines = 1,
+            )
+        }
+    }
+}
+
+@Composable
 private fun SetLabel(
     set: WorkoutSet,
-    workingNumber: Int,
+    number: String,
     onTypeChange: (SetType) -> Unit,
     onNote: () -> Unit,
     onDelete: () -> Unit,
 ) {
     var open by remember { mutableStateOf(false) }
-    val (text, color) = when (set.setType) {
-        SetType.WARMUP -> stringResource(R.string.set_warmup_short) to MaterialTheme.colorScheme.tertiary
-        SetType.DROP -> stringResource(R.string.set_drop_short) to MaterialTheme.colorScheme.secondary
-        SetType.FAILURE -> stringResource(R.string.set_failure_short) to MaterialTheme.colorScheme.error
-        SetType.WORKING -> "$workingNumber" to MaterialTheme.colorScheme.onSurface
+    val (typeLabel, color) = when (set.setType) {
+        SetType.WARMUP -> stringResource(R.string.set_type_warmup) to MaterialTheme.colorScheme.tertiary
+        SetType.DROP -> stringResource(R.string.set_type_drop) to MaterialTheme.colorScheme.secondary
+        SetType.FAILURE -> stringResource(R.string.set_type_failure) to MaterialTheme.colorScheme.error
+        SetType.WORKING -> stringResource(R.string.set_type_working) to MaterialTheme.colorScheme.onSurface
     }
+    val shortLabel = when (set.setType) {
+        SetType.DROP -> stringResource(R.string.set_drop_short)
+        SetType.FAILURE -> stringResource(R.string.set_failure_short)
+        else -> number
+    }
+    val description = stringResource(R.string.a11y_set_label, number, typeLabel)
+    val changeLabel = stringResource(R.string.a11y_change_type)
     Box(Modifier.width(SetColumnWidth)) {
         Text(
-            text + if (set.notes != null) "•" else "",
+            shortLabel + if (set.notes != null) "•" else "",
             style = MaterialTheme.typography.titleSmall,
             fontWeight = FontWeight.Bold,
             color = color,
@@ -199,8 +247,9 @@ private fun SetLabel(
             modifier = Modifier
                 .fillMaxWidth()
                 .clip(RoundedCornerShape(8.dp))
-                .clickable { open = true }
-                .padding(vertical = 10.dp),
+                .clickable(onClickLabel = changeLabel) { open = true }
+                .semantics { contentDescription = description }
+                .padding(vertical = 14.dp),
         )
         DropdownMenu(expanded = open, onDismissRequest = { open = false }) {
             listOf(
@@ -224,62 +273,23 @@ private fun SetLabel(
     }
 }
 
+/** The tick; a checkbox for screen readers. */
 @Composable
-private fun NumberField(
-    value: String,
-    placeholder: String,
-    keyboardType: KeyboardType,
-    modifier: Modifier = Modifier,
-    imeAction: ImeAction = ImeAction.Next,
-    onValueChange: (String) -> Unit,
-) {
-    val textStyle = MaterialTheme.typography.titleMedium.copy(
-        textAlign = TextAlign.Center,
-        color = MaterialTheme.colorScheme.onSurface,
-    )
-    BasicTextField(
-        value = value,
-        onValueChange = onValueChange,
-        singleLine = true,
-        textStyle = textStyle,
-        cursorBrush = SolidColor(MaterialTheme.colorScheme.primary),
-        keyboardOptions = KeyboardOptions(keyboardType = keyboardType, imeAction = imeAction),
-        modifier = modifier.height(40.dp),
-        decorationBox = { inner ->
-            Surface(
-                shape = RoundedCornerShape(8.dp),
-                color = MaterialTheme.colorScheme.surfaceContainerHighest,
-            ) {
-                Box(Modifier.fillMaxSize().padding(horizontal = 4.dp), contentAlignment = Alignment.Center) {
-                    if (value.isEmpty()) {
-                        Text(placeholder, style = textStyle.copy(color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)))
-                    }
-                    inner()
-                }
-            }
-        },
-    )
-}
-
-@Composable
-private fun CheckButton(completed: Boolean, enabled: Boolean, onClick: () -> Unit) {
-    val description = stringResource(if (completed) R.string.set_completed else R.string.set_complete)
+private fun CheckButton(completed: Boolean, enabled: Boolean, setLabel: String, onToggle: () -> Unit) {
+    val description = stringResource(R.string.set_complete) + " $setLabel"
     Box(
         Modifier
             .width(CheckColumnWidth)
-            .height(44.dp)
+            .height(48.dp)
             .clip(RoundedCornerShape(10.dp))
-            .clickable(enabled = enabled, onClick = onClick)
+            .toggleable(value = completed, enabled = enabled, role = Role.Checkbox, onValueChange = { onToggle() })
             .semantics { contentDescription = description },
         contentAlignment = Alignment.Center,
     ) {
         Surface(
             shape = RoundedCornerShape(8.dp),
-            color = when {
-                completed -> MaterialTheme.colorScheme.primary
-                else -> MaterialTheme.colorScheme.surfaceContainerHighest
-            },
-            modifier = Modifier.size(36.dp),
+            color = if (completed) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceContainerHighest,
+            modifier = Modifier.size(38.dp),
         ) {
             Box(contentAlignment = Alignment.Center) {
                 Icon(
@@ -288,20 +298,10 @@ private fun CheckButton(completed: Boolean, enabled: Boolean, onClick: () -> Uni
                     tint = when {
                         completed -> MaterialTheme.colorScheme.onPrimary
                         enabled -> MaterialTheme.colorScheme.onSurface
-                        else -> MaterialTheme.colorScheme.onSurface.copy(alpha = 0.3f)
+                        else -> MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)
                     },
                 )
             }
         }
     }
-}
-
-private fun formatPrevious(previous: PreviousSet, unit: WeightUnit): String {
-    val reps = previous.reps?.toString() ?: "–"
-    return previous.weightKg?.let { "${unit.format(it)} × $reps" } ?: "$reps reps"
-}
-
-private fun sameWeight(a: Double?, b: Double?) = when {
-    a == null || b == null -> a == b
-    else -> abs(a - b) < 0.0005
 }

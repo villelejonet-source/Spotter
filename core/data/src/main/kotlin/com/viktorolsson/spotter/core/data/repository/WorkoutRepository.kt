@@ -12,6 +12,8 @@ import com.viktorolsson.spotter.core.data.db.entity.WorkoutSessionEntity
 import com.viktorolsson.spotter.core.data.db.toModel
 import com.viktorolsson.spotter.core.data.db.toPrevious
 import com.viktorolsson.spotter.core.engine.Deload
+import com.viktorolsson.spotter.core.engine.ExerciseBests
+import com.viktorolsson.spotter.core.engine.WarmUps
 import com.viktorolsson.spotter.core.engine.LoggedSet
 import com.viktorolsson.spotter.core.engine.PersonalRecords
 import com.viktorolsson.spotter.core.engine.Progression
@@ -183,8 +185,9 @@ class WorkoutRepository @Inject constructor(
         if (replaceInPlan && planExerciseId != null) planDao.replaceExercise(planExerciseId, newExerciseId, newWeightKg)
     }
 
+    /** Last session's working sets of [exerciseId] (warm-ups left out), for the "previous" column. */
     suspend fun getPreviousSets(exerciseId: String): List<PreviousSet> =
-        dao.getPreviousSets(exerciseId).map { it.toPrevious() }
+        dao.getPreviousSets(exerciseId).filter { it.setType != SetType.WARMUP }.map { it.toPrevious() }
 
     /**
      * Appends exercises to the session. Sets are pre-filled from the last time each
@@ -287,6 +290,32 @@ class WorkoutRepository @Inject constructor(
             ),
         )
     }
+
+    /**
+     * Adds a warm-up ramp before the working sets, based on the first working set's
+     * weight. Does nothing if warm-ups are already there or the weight isn't set.
+     * Returns how many sets were added.
+     */
+    suspend fun addWarmUps(sessionExerciseId: Long, extended: Boolean): Int = db.withTransaction {
+        val entry = dao.getSessionExercise(sessionExerciseId) ?: return@withTransaction 0
+        val sets = dao.getSets(sessionExerciseId)
+        if (sets.any { it.setType == SetType.WARMUP }) return@withTransaction 0
+        val working = sets.firstOrNull { it.weightKg != null }?.weightKg ?: return@withTransaction 0
+        val exercise = exerciseDao.getById(entry.exerciseId)?.toModel() ?: return@withTransaction 0
+        val unit = preferences.preferences.first().weightUnit
+        val ramp = WarmUps.generate(working, exercise, unit, extended)
+        if (ramp.isEmpty()) return@withTransaction 0
+        dao.updateSets(sets.map { it.copy(position = it.position + ramp.size) })
+        dao.insertSets(ramp.mapIndexed { i, t -> newSet(sessionExerciseId, i, t.weightKg, t.reps, SetType.WARMUP) })
+        ramp.size
+    }
+
+    /** Best results for [exerciseId] from sessions before [before]; the baseline for live PRs. */
+    suspend fun bestsBefore(exerciseId: String, before: Instant): ExerciseBests =
+        PersonalRecords.bests(
+            dao.getWorkingSetsBefore(exerciseId, before).groupBy { it.sessionId }.values
+                .map { sets -> sets.map { LoggedSet(it.set.weightKg, it.set.reps ?: 0, it.set.rir) } },
+        )
 
     suspend fun deleteSet(setId: Long) = db.withTransaction {
         val set = dao.getSet(setId) ?: return@withTransaction

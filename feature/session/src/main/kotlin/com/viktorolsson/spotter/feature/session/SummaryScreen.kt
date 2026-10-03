@@ -1,6 +1,7 @@
 package com.viktorolsson.spotter.feature.session
 
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -28,6 +29,9 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.heading
+import androidx.compose.ui.semantics.semantics
+import com.viktorolsson.spotter.core.ui.component.Confetti
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.SavedStateHandle
@@ -82,7 +86,10 @@ class SummaryViewModel @Inject constructor(
 internal fun SummaryRoute(onDone: () -> Unit, viewModel: SummaryViewModel = hiltViewModel()) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val summary = uiState.summary ?: return
-    SummaryScreen(summary, uiState.unit, uiState.records, onDone)
+    Box {
+        SummaryScreen(summary, uiState.unit, uiState.records, onDone)
+        if (uiState.records.isNotEmpty()) Confetti(key = uiState.records.size)
+    }
 }
 
 @Composable
@@ -111,7 +118,11 @@ internal fun SummaryScreen(summary: WorkoutSummary, unit: WeightUnit, records: L
                         tint = MaterialTheme.colorScheme.primary,
                         modifier = Modifier.size(56.dp),
                     )
-                    Text(stringResource(R.string.summary_title), style = MaterialTheme.typography.headlineMedium)
+                    Text(
+                        stringResource(R.string.summary_title),
+                        style = MaterialTheme.typography.headlineMedium,
+                        modifier = Modifier.semantics { heading() },
+                    )
                 }
             }
             item {

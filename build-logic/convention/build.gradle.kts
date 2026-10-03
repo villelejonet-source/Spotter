@@ -9,6 +9,7 @@ dependencies {
     compileOnly(libs.kotlin.gradlePlugin)
     compileOnly(libs.ksp.gradlePlugin)
     compileOnly(libs.compose.gradlePlugin)
+    compileOnly(libs.roborazzi.gradlePlugin)
 }
 
 gradlePlugin {
@@ -32,6 +33,10 @@ gradlePlugin {
         register("hilt") {
             id = "spotter.hilt"
             implementationClass = "HiltConventionPlugin"
+        }
+        register("androidScreenshots") {
+            id = "spotter.android.screenshots"
+            implementationClass = "AndroidScreenshotsConventionPlugin"
         }
         register("jvmLibrary") {
             id = "spotter.jvm.library"

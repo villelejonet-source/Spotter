@@ -38,6 +38,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -72,7 +74,7 @@ internal fun ProgressRoute(onOpenExercise: (String) -> Unit, viewModel: Progress
             verticalArrangement = Arrangement.spacedBy(16.dp),
         ) {
             if (state.recommendations.isNotEmpty()) {
-                item { Text(stringResource(R.string.progress_recommendations), style = MaterialTheme.typography.titleMedium) }
+                item { Text(stringResource(R.string.progress_recommendations), style = MaterialTheme.typography.titleMedium, modifier = Modifier.semantics { heading() }) }
                 items(state.recommendations, key = { "rec-${it.id}" }) { rec ->
                     RecommendationCard(
                         recommendation = rec,
@@ -98,7 +100,7 @@ internal fun ProgressRoute(onOpenExercise: (String) -> Unit, viewModel: Progress
             }
             item { BodyWeightCard(state.bodyWeight, state.unit) { loggingWeight = true } }
             if (state.lifts.isNotEmpty()) {
-                item { Text(stringResource(R.string.progress_lifts), style = MaterialTheme.typography.titleMedium) }
+                item { Text(stringResource(R.string.progress_lifts), style = MaterialTheme.typography.titleMedium, modifier = Modifier.semantics { heading() }) }
                 items(state.lifts, key = { it.exercise.id }) { lift ->
                     Column(
                         Modifier.fillMaxWidth().clickable { onOpenExercise(lift.exercise.id) }.padding(vertical = 8.dp),
@@ -135,7 +137,7 @@ private fun SectionCard(content: @Composable () -> Unit) {
 private fun RecordsCard(state: ProgressUiState) = SectionCard {
     Row(verticalAlignment = Alignment.CenterVertically) {
         Icon(Icons.Rounded.EmojiEvents, contentDescription = null, tint = MaterialTheme.colorScheme.tertiary)
-        Text(stringResource(R.string.progress_records), style = MaterialTheme.typography.titleMedium, modifier = Modifier.padding(start = 8.dp))
+        Text(stringResource(R.string.progress_records), style = MaterialTheme.typography.titleMedium, modifier = Modifier.padding(start = 8.dp).semantics { heading() })
     }
     if (state.records.isEmpty()) {
         Text(stringResource(R.string.progress_records_empty), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
@@ -158,7 +160,7 @@ private fun RecordsCard(state: ProgressUiState) = SectionCard {
 /** Sets per muscle group against the goal's weekly range; under-trained groups stand out. */
 @Composable
 private fun BalanceCard(volume: List<MuscleVolume>) = SectionCard {
-    Text(stringResource(R.string.progress_balance), style = MaterialTheme.typography.titleMedium)
+    Text(stringResource(R.string.progress_balance), style = MaterialTheme.typography.titleMedium, modifier = Modifier.semantics { heading() })
     volume.firstOrNull()?.let {
         Text(
             stringResource(R.string.progress_balance_hint, it.targetLow, it.targetHigh),
@@ -196,7 +198,7 @@ private fun formatSets(sets: Double) = if (sets % 1.0 == 0.0) "${sets.toInt()}" 
 private fun BodyWeightCard(points: List<BodyWeightPoint>, unit: WeightUnit, onLog: () -> Unit) = SectionCard {
     Row(verticalAlignment = Alignment.CenterVertically) {
         Column(Modifier.weight(1f)) {
-            Text(stringResource(R.string.progress_body_weight), style = MaterialTheme.typography.titleMedium)
+            Text(stringResource(R.string.progress_body_weight), style = MaterialTheme.typography.titleMedium, modifier = Modifier.semantics { heading() })
             points.lastOrNull()?.let { latest ->
                 Text("${unit.format(latest.weightKg)} ${unit.label}", style = MaterialTheme.typography.headlineSmall)
                 Text(

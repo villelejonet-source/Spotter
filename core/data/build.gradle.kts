@@ -20,7 +20,7 @@ androidComponents {
 
 dependencies {
     api(project(":core:model"))
-    implementation(project(":core:engine"))
+    api(project(":core:engine"))
 
     implementation(libs.androidx.room.runtime)
     implementation(libs.androidx.room.ktx)

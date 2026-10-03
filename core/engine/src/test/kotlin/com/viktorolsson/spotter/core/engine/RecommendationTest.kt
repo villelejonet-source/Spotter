@@ -71,7 +71,7 @@ class RecommendationTest {
         assertNotNull(plateau)
         assertEquals(3, plateau!!.sessions)
         assertEquals(3, plateau.weeks)
-        assertEquals(80.0 to 8, plateau.latest!!.weightKg to plateau.latest!!.reps)
+        assertEquals(80.0 to 8, plateau.latest!!.weightKg to plateau.latest.reps)
 
         assertNull(RecommendationEngine.detectPlateau(bench, flat(80.0, 8, sessions = 3))) // only 2 after the best
         assertNull(RecommendationEngine.detectPlateau(bench, flat(80.0, 8, sessions = 5, daysApart = 3))) // 12 days

@@ -20,7 +20,9 @@ import androidx.compose.material.icons.automirrored.rounded.TrendingUp
 import androidx.compose.material.icons.rounded.MoreVert
 import androidx.compose.material.icons.rounded.SwapHoriz
 import androidx.compose.material.icons.rounded.Tune
+import androidx.compose.material.icons.rounded.Whatshot
 import androidx.compose.material.icons.rounded.Timer
+import androidx.compose.material3.AssistChip
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.DropdownMenu
@@ -40,9 +42,13 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.heading
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import com.viktorolsson.spotter.core.engine.WarmUps
+import com.viktorolsson.spotter.core.model.Mechanics
 import com.viktorolsson.spotter.core.model.PreviousSet
 import com.viktorolsson.spotter.core.model.ProgressionReason
 import com.viktorolsson.spotter.core.model.SessionExercise
@@ -53,7 +59,8 @@ import com.viktorolsson.spotter.core.ui.component.RestTimePickerDialog
 import com.viktorolsson.spotter.core.ui.formatClock
 
 internal class ExerciseCardActions(
-    val onValuesChange: (setId: Long, weight: String, reps: String, rir: String) -> Unit,
+    val onFieldClick: (setId: Long, SetField) -> Unit,
+    val onWarmUps: () -> Unit,
     val onToggleSet: (setId: Long) -> Unit,
     val onCopyPrevious: (setId: Long, PreviousSet) -> Unit,
     val onAddSet: () -> Unit,
@@ -83,9 +90,16 @@ internal fun ExerciseCard(
     isLast: Boolean,
     previous: List<PreviousSet>,
     preferences: UserPreferences,
+    focus: KeypadTarget?,
+    buffer: String,
     actions: ExerciseCardActions,
     modifier: Modifier = Modifier,
 ) {
+    // Only offered when a ramp would actually add sets (an empty-bar working weight has none).
+    val canWarmUp = exercise.exercise.mechanics == Mechanics.COMPOUND &&
+        exercise.sets.none { it.setType == SetType.WARMUP || it.isCompleted } &&
+        exercise.sets.firstOrNull { it.weightKg != null }?.weightKg
+            ?.let { WarmUps.generate(it, exercise.exercise, preferences.weightUnit).isNotEmpty() } == true
     var menuOpen by remember { mutableStateOf(false) }
     var editingNote by rememberSaveable { mutableStateOf(false) }
     var pickingRest by rememberSaveable { mutableStateOf(false) }
@@ -120,6 +134,7 @@ internal fun ExerciseCard(
                         color = MaterialTheme.colorScheme.primary,
                         maxLines = 2,
                         overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.semantics { heading() },
                     )
                 }
                 Row(
@@ -147,6 +162,7 @@ internal fun ExerciseCard(
                     }
                     DropdownMenu(expanded = menuOpen, onDismissRequest = { menuOpen = false }) {
                         MenuItem(R.string.exercise_swap) { menuOpen = false; actions.onSwap() }
+                        if (canWarmUp) MenuItem(R.string.warmup_add) { menuOpen = false; actions.onWarmUps() }
                         MenuItem(R.string.exercise_note) { menuOpen = false; editingNote = true }
                         MenuItem(R.string.exercise_rest) { menuOpen = false; pickingRest = true }
                         if (!isLast) MenuItem(R.string.exercise_superset_next) { menuOpen = false; actions.onSupersetNext() }
@@ -180,6 +196,14 @@ internal fun ExerciseCard(
                 )
             }
             exercise.progressionReason?.let { ProgressionNote(it) }
+            if (canWarmUp) {
+                AssistChip(
+                    onClick = actions.onWarmUps,
+                    label = { Text(stringResource(R.string.warmup_add)) },
+                    leadingIcon = { Icon(Icons.Rounded.Whatshot, contentDescription = null, modifier = Modifier.size(18.dp)) },
+                    modifier = Modifier.padding(horizontal = 16.dp),
+                )
+            }
             exercise.notes?.let { note ->
                 Text(
                     note,
@@ -196,11 +220,14 @@ internal fun ExerciseCard(
                 if (set.setType != SetType.WARMUP) workingNumber++
                 SetRow(
                     set = set,
-                    workingNumber = workingNumber,
-                    previous = previous.getOrNull(set.position),
+                    workingNumber = if (set.setType == SetType.WARMUP) 0 else workingNumber,
+                    // Working sets line up with last time's working sets; warm-ups have no "previous".
+                    previous = if (set.setType == SetType.WARMUP) null else previous.getOrNull(workingNumber - 1),
                     unit = preferences.weightUnit,
                     logRir = preferences.logRir,
-                    onValuesChange = { w, r, rir -> actions.onValuesChange(set.id, w, r, rir) },
+                    focusedField = focus?.takeIf { it.setId == set.id }?.field,
+                    buffer = buffer,
+                    onFieldClick = { actions.onFieldClick(set.id, it) },
                     onToggle = { actions.onToggleSet(set.id) },
                     onCopyPrevious = { actions.onCopyPrevious(set.id, it) },
                     onDelete = { actions.onDeleteSet(set.id) },

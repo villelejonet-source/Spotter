@@ -1,0 +1,81 @@
+# Releasing Spotter to the Play Store internal test track
+
+Everything in the repo is ready for an internal test release. The steps below need your
+Google Play Console account and your upload key, so they're for you to run.
+
+## 1. Create the upload key (once)
+
+Run this yourself and keep the file and passwords somewhere safe (a password manager).
+Losing the upload key can be recovered through Play Console support, but it's slow.
+
+```bash
+keytool -genkeypair -v -keystore ~/keys/spotter-upload.jks -alias upload -keyalg RSA -keysize 4096 -validity 10000
+```
+
+Then create `keystore.properties` in the repo root (it's gitignored, never commit it):
+
+```properties
+storeFile=/Users/<you>/keys/spotter-upload.jks
+storePassword=...
+keyAlias=upload
+keyPassword=...
+```
+
+Use **Play App Signing** (the default for new apps): Google holds the app signing key, and
+this upload key only proves uploads come from you.
+
+## 2. Build the bundle
+
+```bash
+export JAVA_HOME="/Applications/Android Studio.app/Contents/jbr/Contents/Home"
+./gradlew testDebugUnitTest :core:engine:test :core:model:test verifyRoborazziDebug :app:lintRelease
+./gradlew bundleRelease
+```
+
+The bundle is `app/build/outputs/bundle/release/app-release.aab`. `bundleRelease` refuses to
+run without `keystore.properties`, so a debug-signed bundle can't be uploaded by mistake.
+Bump `versionCode` in `app/build.gradle.kts` for every upload.
+
+## 3. Play Console
+
+1. **Create app**: name "Spotter", app, free.
+2. **Internal testing → Create release**: upload the `.aab`, add release notes, and add
+   testers (an email list).
+3. **App content**, everything Play asks before the first release:
+   - **Privacy policy**: host `privacy-policy.md` somewhere public (e.g. GitHub Pages) and paste the URL.
+   - **Data safety**: see below.
+   - **Foreground service permissions**: declare `FOREGROUND_SERVICE_SPECIAL_USE` with the text below.
+   - **Health apps declaration**: Spotter is a fitness app. It doesn't use Health Connect or sensors.
+   - **Content rating**: questionnaire, category "Health & fitness"; no user-generated content.
+   - **Target audience**: 18+ (strength training guidance).
+   - **Ads**: no ads.
+4. **Store listing**: copy from `listing.md`; screenshots below.
+
+### Foreground service declaration (special use)
+
+> Spotter shows a workout stopwatch and a rest-period countdown in an ongoing notification
+> while the user is logging a gym session. The countdown must keep running and alert the
+> user (sound/vibration) when rest ends, including when the screen is off or another app is
+> open. The service starts only when the user starts a workout and stops when the workout is
+> finished or discarded. Notification actions let the user add 30 seconds or skip the rest.
+> Exact alarms aren't suitable because the user adjusts the rest time continuously, and the
+> elapsed workout time is shown live.
+
+A short screen recording of starting a workout, ticking a set and the rest notification
+counting down with the screen off is usually requested; record it on the emulator.
+
+### Data safety answers
+
+- **Data collected:** none. **Data shared:** none.
+- Training data (workouts, body weight, profile) is stored only on the device, isn't sent
+  anywhere and isn't included in Google cloud backup (`data_extraction_rules.xml`).
+- No analytics, no ads, no accounts.
+- Revisit this when Supabase backup (milestone 8) ships: health and fitness data then
+  becomes "collected", optional, encrypted in transit, and deletable.
+
+## Screenshots
+
+Phone screenshots (at least 2, 16:9 or 9:16, 1080×1920 or more) are needed. The Roborazzi
+goldens under `feature/*/src/test/screenshots` show the screens, but take store screenshots
+on a device or emulator with real-looking data: Today, an active workout with the keypad,
+exercise history with a chart, the Progress tab with a suggestion, and the plan summary.

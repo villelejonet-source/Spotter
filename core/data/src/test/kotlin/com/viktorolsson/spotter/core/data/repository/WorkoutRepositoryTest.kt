@@ -159,6 +159,21 @@ class WorkoutRepositoryTest {
     }
 
     @Test
+    fun warmUpsGoBeforeWorkingSetsOnce() = runTest {
+        val id = repo.startEmptyWorkout()
+        repo.addExercises(id, listOf("barbell-bench-press"), defaultSetCount = 2)
+        val exercise = session(id).exercises.single()
+        exercise.sets.forEach { repo.updateSetValues(it.id, 100.0, 5, null) }
+
+        assertEquals(4, repo.addWarmUps(exercise.id, extended = false))
+        val sets = session(id).exercises.single().sets
+        assertEquals(listOf(SetType.WARMUP, SetType.WARMUP, SetType.WARMUP, SetType.WARMUP, SetType.WORKING, SetType.WORKING), sets.map { it.setType })
+        assertEquals(listOf(20.0, 50.0, 70.0, 85.0, 100.0, 100.0), sets.map { it.weightKg })
+        assertEquals((0..5).toList(), sets.map { it.position })
+        assertEquals(0, repo.addWarmUps(exercise.id, extended = false))
+    }
+
+    @Test
     fun discardDeletesEverything() = runTest {
         val id = repo.startEmptyWorkout()
         repo.addExercises(id, listOf("push-up"))

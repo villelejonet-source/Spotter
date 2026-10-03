@@ -1,6 +1,7 @@
 plugins {
     alias(libs.plugins.spotter.android.library)
     alias(libs.plugins.spotter.android.compose)
+    alias(libs.plugins.spotter.android.screenshots)
 }
 
 dependencies {

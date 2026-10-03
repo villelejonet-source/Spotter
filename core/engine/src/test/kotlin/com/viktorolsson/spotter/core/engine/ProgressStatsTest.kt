@@ -47,6 +47,15 @@ class ProgressStatsTest {
     }
 
     @Test
+    fun `a PR earlier today raises the bar for the next set`() {
+        val history = PersonalRecords.bests(listOf(sets(80.0, 8, 8)))
+        assertTrue(PersonalRecords.detect(sets(80.0, 9), history).isNotEmpty())
+        val afterFirstPr = history.withSets(sets(80.0, 9))
+        assertTrue(PersonalRecords.detect(sets(80.0, 9), afterFirstPr).isEmpty())
+        assertTrue(PersonalRecords.detect(sets(80.0, 10), afterFirstPr).isNotEmpty())
+    }
+
+    @Test
     fun `bodyweight sets only produce rep PRs`() {
         val previous = PersonalRecords.bests(listOf(sets(null, 10, 10)))
         val records = PersonalRecords.detect(sets(null, 12, 10), previous)

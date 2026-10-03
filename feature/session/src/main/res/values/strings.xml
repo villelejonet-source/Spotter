@@ -101,4 +101,33 @@
         <item quantity="one">%1$d new personal record</item>
         <item quantity="other">%1$d new personal records</item>
     </plurals>
+    <string name="keypad_next">Next</string>
+    <string name="keypad_done">Done</string>
+    <string name="keypad_backspace">Delete digit</string>
+    <string name="keypad_plates">Plates</string>
+    <string name="keypad_decrease">Decrease by %1$s</string>
+    <string name="keypad_increase">Increase by %1$s</string>
+    <string name="keypad_editing_weight">Weight · set %1$d</string>
+    <string name="keypad_editing_reps">Reps · set %1$d</string>
+    <string name="keypad_editing_rir">RIR · set %1$d</string>
+    <string name="a11y_weight_field">Weight, set %1$d</string>
+    <string name="a11y_reps_field">Reps, set %1$d</string>
+    <string name="a11y_rir_field">Reps in reserve, set %1$d</string>
+    <string name="a11y_empty">Empty</string>
+    <string name="a11y_edit">Edit</string>
+    <string name="a11y_set_label">Set %1$s, %2$s</string>
+    <string name="a11y_change_type">Change set type</string>
+    <string name="a11y_previous">Last time %1$s</string>
+    <string name="a11y_copy_previous">Copy last time\'s values</string>
+    <string name="a11y_no_previous">No previous set</string>
+    <string name="plates_title">Plates per side</string>
+    <string name="plates_bar">%1$s bar</string>
+    <string name="plates_none">Just the bar.</string>
+    <string name="plates_not_exact">%1$s can\'t be loaded exactly; the closest is %2$s.</string>
+    <string name="plates_not_bar">The plate calculator is for barbell exercises.</string>
+    <string name="warmup_add">Add warm-up sets</string>
+    <string name="pr_banner_title">New PR!</string>
+    <string name="pr_banner_body">%1$s · %2$s</string>
+    <string name="pr_1rm">est. 1RM %1$s</string>
+    <string name="pr_reps">rep record</string>
 </resources>

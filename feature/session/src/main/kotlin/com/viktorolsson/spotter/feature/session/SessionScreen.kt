@@ -54,6 +54,25 @@ import androidx.core.content.ContextCompat
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.viktorolsson.spotter.core.ui.formatClock
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.size
+import androidx.compose.material.icons.rounded.EmojiEvents
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.platform.LocalHapticFeedback
+import androidx.compose.ui.semantics.LiveRegionMode
+import androidx.compose.ui.semantics.liveRegion
+import androidx.compose.ui.semantics.semantics
+import com.viktorolsson.spotter.core.engine.Plates
+import com.viktorolsson.spotter.core.model.PersonalRecordType
+import com.viktorolsson.spotter.core.model.SessionExercise
+import com.viktorolsson.spotter.core.model.SetType
+import com.viktorolsson.spotter.core.model.WeightUnit
+import com.viktorolsson.spotter.core.model.format
+import com.viktorolsson.spotter.core.model.label
+import com.viktorolsson.spotter.core.ui.component.Confetti
+import com.viktorolsson.spotter.core.ui.formatSet
 import kotlinx.coroutines.delay
 import java.time.Duration
 import java.time.Instant
@@ -85,6 +104,48 @@ internal fun SessionRoute(
     var confirmDiscard by rememberSaveable { mutableStateOf(false) }
     val now by rememberTicker()
 
+    val unit = uiState.preferences.weightUnit
+    val keypad = rememberKeypadState()
+    var platesFor by remember { mutableStateOf<Pair<SessionExercise, Double>?>(null) }
+    // The focused set can disappear (deleted, swapped): close the keypad then.
+    LaunchedEffect(session.exercises) {
+        val target = keypad.target ?: return@LaunchedEffect
+        if (session.exercises.none { ex -> ex.sets.any { it.id == target.setId } }) keypad.target = null
+    }
+    fun fieldText(target: KeypadTarget): String {
+        val set = session.exercises.flatMap { it.sets }.firstOrNull { it.id == target.setId } ?: return ""
+        return when (target.field) {
+            SetField.WEIGHT -> set.weightKg?.let(unit::format).orEmpty()
+            SetField.REPS -> set.reps?.toString().orEmpty()
+            SetField.RIR -> set.rir?.toString().orEmpty()
+        }
+    }
+    fun focus(target: KeypadTarget?) {
+        keypad.target = target
+        keypad.buffer = target?.let(::fieldText).orEmpty()
+        keypad.fresh = true
+    }
+    fun write(text: String) {
+        val target = keypad.target ?: return
+        keypad.buffer = text
+        viewModel.updateSetField(target.setId, target.field, text)
+    }
+
+    var celebration by remember { mutableStateOf<PrEvent?>(null) }
+    val haptics = LocalHapticFeedback.current
+    LaunchedEffect(viewModel) {
+        viewModel.prEvents.collect {
+            celebration = it
+            haptics.performHapticFeedback(HapticFeedbackType.LongPress)
+        }
+    }
+    LaunchedEffect(celebration?.id) {
+        if (celebration != null) {
+            delay(3500)
+            celebration = null
+        }
+    }
+
     Scaffold(
         topBar = {
             SessionTopBar(
@@ -100,13 +161,69 @@ internal fun SessionRoute(
             )
         },
         bottomBar = {
-            uiState.restTimer?.let { rest ->
-                RestTimerBar(
-                    rest = rest,
-                    now = now,
-                    onAdjust = viewModel::adjustRest,
-                    onSkip = viewModel::skipRest,
-                )
+            Column {
+                uiState.restTimer?.let { rest ->
+                    RestTimerBar(
+                        rest = rest,
+                        now = now,
+                        onAdjust = viewModel::adjustRest,
+                        onSkip = viewModel::skipRest,
+                        compact = keypad.target != null,
+                    )
+                }
+                keypad.target?.let { target ->
+                    val exercise = session.exercises.firstOrNull { ex -> ex.sets.any { it.id == target.setId } }
+                    val set = exercise?.sets?.firstOrNull { it.id == target.setId }
+                    val number = exercise?.sets?.filter { it.setType != SetType.WARMUP }?.indexOfFirst { it.id == target.setId }?.plus(1) ?: 0
+                    val isWeight = target.field == SetField.WEIGHT
+                    val step = if (isWeight) (if (unit == WeightUnit.KG) 2.5 else 5.0) else 1.0
+                    Keypad(
+                        title = stringResource(
+                            when (target.field) {
+                                SetField.WEIGHT -> R.string.keypad_editing_weight
+                                SetField.REPS -> R.string.keypad_editing_reps
+                                SetField.RIR -> R.string.keypad_editing_rir
+                            },
+                            number,
+                        ),
+                        field = target.field,
+                        stepLabel = if (isWeight) "${java.math.BigDecimal(step).stripTrailingZeros().toPlainString()}" else "1",
+                        showPlates = isWeight && exercise != null && Plates.bar(exercise.exercise, unit) != null,
+                        onDigit = { c ->
+                            val base = if (keypad.fresh) "" else keypad.buffer
+                            if (c == '.' && base.contains('.')) return@Keypad
+                            keypad.fresh = false
+                            write((base + c).take(if (isWeight) 6 else 3))
+                        },
+                        onBackspace = {
+                            val base = if (keypad.fresh) "" else keypad.buffer
+                            keypad.fresh = false
+                            write(base.dropLast(1))
+                        },
+                        onStep = { sign ->
+                            val value = (keypad.buffer.replace(',', '.').toDoubleOrNull() ?: 0.0) + sign * step
+                            keypad.fresh = true
+                            write(java.math.BigDecimal(value.coerceAtLeast(0.0)).setScale(2, java.math.RoundingMode.HALF_UP).stripTrailingZeros().toPlainString())
+                        },
+                        onPlates = {
+                            val kg = set?.weightKg ?: return@Keypad
+                            platesFor = exercise to kg
+                        },
+                        onNext = {
+                            val order = session.exercises.flatMap { ex ->
+                                ex.sets.flatMap { st ->
+                                    listOfNotNull(
+                                        KeypadTarget(st.id, SetField.WEIGHT),
+                                        KeypadTarget(st.id, SetField.REPS),
+                                        KeypadTarget(st.id, SetField.RIR).takeIf { uiState.preferences.logRir },
+                                    )
+                                }
+                            }
+                            focus(order.getOrNull(order.indexOf(target) + 1))
+                        },
+                        onDone = { focus(null) },
+                    )
+                }
             }
         },
     ) { padding ->
@@ -148,8 +265,11 @@ internal fun SessionRoute(
                     isLast = exercise.position == session.exercises.lastIndex,
                     previous = uiState.previous[exercise.exercise.id].orEmpty(),
                     preferences = uiState.preferences,
+                    focus = keypad.target,
+                    buffer = keypad.buffer,
                     actions = ExerciseCardActions(
-                        onValuesChange = viewModel::updateSetValues,
+                        onFieldClick = { setId, field -> focus(KeypadTarget(setId, field)) },
+                        onWarmUps = { viewModel.addWarmUps(exercise.id) },
                         onToggleSet = { setId -> viewModel.toggleSet(exercise, setId) },
                         onCopyPrevious = viewModel::copyPrevious,
                         onAddSet = { viewModel.addSet(exercise.id) },
@@ -179,6 +299,15 @@ internal fun SessionRoute(
         }
     }
 
+    celebration?.let { event ->
+        Box(Modifier.fillMaxSize()) {
+            Confetti(key = event.id)
+            PrBanner(event, unit, Modifier.align(Alignment.TopCenter).padding(top = 96.dp, start = 16.dp, end = 16.dp))
+        }
+    }
+    platesFor?.let { (exercise, kg) ->
+        PlateSheet(exercise.exercise, kg, unit, onDismiss = { platesFor = null })
+    }
     swap?.let { state ->
         SwapSheet(
             state = state,
@@ -338,6 +467,43 @@ private fun RequestNotificationPermission() {
         if (!granted && !asked) {
             asked = true
             launcher.launch(Manifest.permission.POST_NOTIFICATIONS)
+        }
+    }
+}
+
+internal data class KeypadTarget(val setId: Long, val field: SetField)
+
+/** What the keypad is editing; the first key after focusing replaces the old value. */
+internal class KeypadState {
+    var target by mutableStateOf<KeypadTarget?>(null)
+    var buffer by mutableStateOf("")
+    var fresh by mutableStateOf(true)
+}
+
+@Composable
+private fun rememberKeypadState() = remember { KeypadState() }
+
+/** Announced politely to screen readers; the confetti itself is decorative. */
+@Composable
+private fun PrBanner(event: PrEvent, unit: WeightUnit, modifier: Modifier = Modifier) {
+    val oneRepMax = event.records.firstOrNull { it.type == PersonalRecordType.ESTIMATED_1RM }
+    val parts = listOfNotNull(
+        oneRepMax?.let { stringResource(R.string.pr_1rm, "${unit.format(it.value).substringBefore('.')} ${unit.label}") },
+        stringResource(R.string.pr_reps).takeIf { event.records.any { it.type == PersonalRecordType.REPS_AT_WEIGHT } },
+    )
+    val detail = parts.joinToString(" · ")
+    val body = stringResource(R.string.pr_banner_body, event.exerciseName, formatSet(event.weightKg, event.reps, unit)) + " · " + detail
+    Card(
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.tertiaryContainer),
+        elevation = CardDefaults.cardElevation(defaultElevation = 6.dp),
+        modifier = modifier.fillMaxWidth().semantics { liveRegion = LiveRegionMode.Polite },
+    ) {
+        Row(Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
+            Icon(Icons.Rounded.EmojiEvents, contentDescription = null, tint = MaterialTheme.colorScheme.onTertiaryContainer, modifier = Modifier.size(36.dp))
+            Column(Modifier.padding(start = 12.dp)) {
+                Text(stringResource(R.string.pr_banner_title), style = MaterialTheme.typography.titleLarge, color = MaterialTheme.colorScheme.onTertiaryContainer)
+                Text(body, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onTertiaryContainer)
+            }
         }
     }
 }

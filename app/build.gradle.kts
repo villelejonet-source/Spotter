@@ -101,12 +101,12 @@ dependencies {
     implementation(libs.kotlinx.serialization.json)
 }
 
-// Refuse to produce a Play bundle signed with the debug key.
+// Refuse to produce a Play bundle signed with the debug key. Captures a plain Boolean
+// (not the script) so the configuration cache can store it.
+val uploadKeyReady: Boolean = hasUploadKey
 tasks.matching { it.name == "bundleRelease" }.configureEach {
+    val ready = uploadKeyReady
     doFirst {
-        check(hasUploadKey) { "bundleRelease needs keystore.properties with the upload key (see docs/play-store/README.md)." }
-        checkNotNull(uploadKeyPassword) {
-            "No upload key password: add it to keystore.properties or the Keychain item \"spotter-upload-key\"."
-        }
+        check(ready) { "bundleRelease needs keystore.properties with the upload key (see docs/play-store/README.md)." }
     }
 }

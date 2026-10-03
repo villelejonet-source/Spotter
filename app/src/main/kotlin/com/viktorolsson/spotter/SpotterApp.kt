@@ -9,7 +9,9 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.KeyboardArrowUp
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Icon
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
@@ -42,6 +44,7 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import com.viktorolsson.spotter.core.data.repository.ActiveSession
+import com.viktorolsson.spotter.core.data.sync.FirstSyncChoice
 import com.viktorolsson.spotter.core.ui.formatClock
 import com.viktorolsson.spotter.feature.history.ExerciseHistoryRoute
 import com.viktorolsson.spotter.feature.history.WorkoutDetailRoute
@@ -60,6 +63,8 @@ import com.viktorolsson.spotter.feature.session.SummaryRoute
 import com.viktorolsson.spotter.feature.session.sessionScreen
 import com.viktorolsson.spotter.feature.session.summaryScreen
 import com.viktorolsson.spotter.feature.session.timer.WorkoutService
+import com.viktorolsson.spotter.feature.settings.AccountRoute
+import com.viktorolsson.spotter.feature.settings.accountScreen
 import com.viktorolsson.spotter.feature.settings.profileScreen
 import com.viktorolsson.spotter.feature.today.TodayRoute
 import com.viktorolsson.spotter.feature.today.todayScreen
@@ -73,6 +78,7 @@ fun SpotterApp(
     needsOnboarding: Boolean,
     navController: NavHostController = rememberNavController(),
     activeWorkoutViewModel: ActiveWorkoutViewModel = hiltViewModel(),
+    syncChoiceViewModel: SyncChoiceViewModel = hiltViewModel(),
 ) {
     val backStackEntry by navController.currentBackStackEntryAsState()
     val currentDestination = backStackEntry?.destination
@@ -80,6 +86,21 @@ fun SpotterApp(
     val activeSession by activeWorkoutViewModel.activeSession.collectAsStateWithLifecycle()
 
     KeepWorkoutServiceRunning(activeSession != null)
+
+    val needsSyncChoice by syncChoiceViewModel.needsChoice.collectAsStateWithLifecycle()
+    if (needsSyncChoice) {
+        AlertDialog(
+            onDismissRequest = {},
+            title = { Text(stringResource(R.string.sync_choice_title)) },
+            text = { Text(stringResource(R.string.sync_choice_body)) },
+            confirmButton = {
+                TextButton(onClick = { syncChoiceViewModel.choose(FirstSyncChoice.USE_BACKUP) }) { Text(stringResource(R.string.sync_choice_backup)) }
+            },
+            dismissButton = {
+                TextButton(onClick = { syncChoiceViewModel.choose(FirstSyncChoice.MERGE) }) { Text(stringResource(R.string.sync_choice_merge)) }
+            },
+        )
+    }
 
     // First launch: open the questionnaire once (it can be skipped; Today offers it again).
     var onboardingShown by rememberSaveable { mutableStateOf(false) }
@@ -140,8 +161,13 @@ fun SpotterApp(
             profileScreen(
                 onOpenPlan = { navController.navigate(PlanRoute) },
                 onRebuildPlan = { navController.navigate(OnboardingRoute(rebuild = true)) },
+                onOpenAccount = { navController.navigate(AccountRoute) },
             )
-            onboardingScreen(onDone = { navController.popBackStack() })
+            onboardingScreen(
+                onDone = { navController.popBackStack() },
+                onRestore = { navController.navigate(AccountRoute) },
+            )
+            accountScreen(onDone = { navController.popBackStack() })
             planScreen(
                 onBack = { navController.popBackStack() },
                 onRebuild = { navController.navigate(OnboardingRoute(rebuild = true)) },

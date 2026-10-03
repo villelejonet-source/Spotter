@@ -1,5 +1,6 @@
 package com.viktorolsson.spotter.core.data.db.entity
 
+import androidx.room.ColumnInfo
 import androidx.room.Entity
 import androidx.room.ForeignKey
 import androidx.room.Index
@@ -13,7 +14,7 @@ import com.viktorolsson.spotter.core.model.Muscle
 /** Seeded exercises use stable slug ids (e.g. `barbell-bench-press`); custom ones use `custom-<uuid>`. */
 @Entity(
     tableName = "exercise",
-    indices = [Index("movementPattern"), Index("name")],
+    indices = [Index("syncId", unique = true), Index("movementPattern"), Index("name")],
 )
 data class ExerciseEntity(
     @PrimaryKey val id: String,
@@ -27,6 +28,11 @@ data class ExerciseEntity(
     val unilateral: Boolean,
     val instructions: String?,
     val isCustom: Boolean,
+    /** Global id for cloud sync; assigned by a database trigger (see SyncSchema). */
+    val syncId: String? = null,
+    /** Time of the last local change (ms), maintained by a database trigger. */
+    @ColumnInfo(defaultValue = "0")
+    val updatedAt: Long = 0,
 )
 
 @Entity(

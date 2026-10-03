@@ -35,7 +35,7 @@ object DataModule {
     @Provides
     @Singleton
     fun provideDatabase(@ApplicationContext context: Context): SpotterDatabase =
-        Room.databaseBuilder(context, SpotterDatabase::class.java, SpotterDatabase.NAME).build()
+        SpotterDatabase.configure(Room.databaseBuilder(context, SpotterDatabase::class.java, SpotterDatabase.NAME)).build()
 
     @Provides
     fun provideExerciseDao(db: SpotterDatabase): ExerciseDao = db.exerciseDao()

@@ -1,6 +1,7 @@
 <resources>
     <string name="onb_back">Back</string>
     <string name="onb_skip">Skip</string>
+    <string name="onb_restore">Restore backup</string>
     <string name="onb_next">Next</string>
     <string name="onb_build">Build my plan</string>
     <string name="onb_start">Start training</string>

@@ -165,6 +165,7 @@ class WorkoutRepository @Inject constructor(
             dao.insertSessionExercise(
                 current.copy(
                     id = 0,
+                    syncId = null, // a new row: the insert trigger gives it its own global id
                     exerciseId = newExerciseId,
                     position = current.position + 1,
                     substitutedFromExerciseId = substitutedFrom,
@@ -174,7 +175,7 @@ class WorkoutRepository @Inject constructor(
             )
         }
 
-        val remaining = todo.ifEmpty { listOfNotNull(done.lastOrNull()?.copy(id = 0, completedAt = null, notes = null)) }
+        val remaining = todo.ifEmpty { listOfNotNull(done.lastOrNull()?.copy(id = 0, syncId = null, completedAt = null, notes = null)) }
         val moved = remaining.mapIndexed { i, set ->
             set.copy(sessionExerciseId = targetId, position = if (done.isEmpty()) set.position else i, weightKg = newWeightKg)
         }

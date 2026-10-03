@@ -4,6 +4,8 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.viktorolsson.spotter.core.data.repository.PlanRepository
 import com.viktorolsson.spotter.core.data.repository.UserPreferencesRepository
+import com.viktorolsson.spotter.core.data.sync.SyncRepository
+import com.viktorolsson.spotter.core.data.sync.SyncStatus
 import com.viktorolsson.spotter.core.model.ThemeMode
 import com.viktorolsson.spotter.core.model.UserPreferences
 import com.viktorolsson.spotter.core.model.WeightUnit
@@ -19,7 +21,17 @@ import javax.inject.Inject
 class SettingsViewModel @Inject constructor(
     private val preferencesRepository: UserPreferencesRepository,
     planRepository: PlanRepository,
+    private val syncRepository: SyncRepository,
 ) : ViewModel() {
+    val syncStatus: StateFlow<SyncStatus> = syncRepository.status
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), SyncStatus())
+
+    fun syncNow() = viewModelScope.launch { syncRepository.syncNow() }
+
+    fun signOut() = viewModelScope.launch { syncRepository.signOut() }
+
+    fun deleteAccount() = viewModelScope.launch { runCatching { syncRepository.deleteAccount() } }
+
     /** Name of the active plan, or null when there is none. */
     val planName: StateFlow<String?> = planRepository.observeActivePlan()
         .map { it?.name }

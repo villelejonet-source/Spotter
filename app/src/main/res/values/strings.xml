@@ -6,4 +6,8 @@
     <string name="nav_profile">Profile</string>
     <string name="workout_in_progress">Workout in progress</string>
     <string name="open_workout">Open workout</string>
+    <string name="sync_choice_title">This phone has its own data</string>
+    <string name="sync_choice_body">Both your backup and this phone have training data. Use the backup to replace what\'s on this phone, or merge both: the newest version of each workout and setting is kept.</string>
+    <string name="sync_choice_backup">Use backup</string>
+    <string name="sync_choice_merge">Merge both</string>
 </resources>

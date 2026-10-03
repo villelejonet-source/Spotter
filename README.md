@@ -35,8 +35,19 @@ The exercise library lives in `core/data/src/main/assets/exercises.json`. Bump i
 
 ## Supabase (optional backup + sync, milestone 8)
 
-The app works fully offline; Supabase is only used for opt-in cloud backup. Add the project's
-**publishable** key to `local.properties` (untracked). Never use the secret/service_role key in the app.
+The app works fully offline; signing in (email + 6-digit code) adds cloud backup and sync
+between phones. Each synced row lives in `public.sync_rows` (one row per record, payload as
+JSON, row-level security per user); SQLite triggers on the phone stamp changes and record
+deletions, and sync is last-write-wins per record.
+
+One-time setup in the Supabase dashboard:
+
+1. **SQL Editor:** run [supabase/001_sync.sql](supabase/001_sync.sql).
+2. **Authentication → Emails → Templates:** in both **Confirm signup** and **Magic link**,
+   add the code to the email body, e.g. `<p>Your Spotter code: <strong>{{ .Token }}</strong></p>`.
+
+Build config: add the project's **publishable** key to `local.properties` (untracked). Never
+use the secret/service_role key in the app.
 
 ```properties
 supabase.url=https://<project-ref>.supabase.co

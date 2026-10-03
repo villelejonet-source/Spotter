@@ -9,6 +9,14 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.TextButton
+import androidx.compose.ui.semantics.LiveRegionMode
+import androidx.compose.ui.semantics.liveRegion
+import com.viktorolsson.spotter.core.data.sync.SyncError
+import com.viktorolsson.spotter.core.data.sync.SyncStatus
+import java.time.ZoneId
+import java.time.format.DateTimeFormatter
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.MaterialTheme
@@ -46,13 +54,17 @@ import com.viktorolsson.spotter.core.ui.theme.supportsDynamicColor
 internal fun SettingsRoute(
     onOpenPlan: () -> Unit,
     onRebuildPlan: () -> Unit,
+    onOpenAccount: () -> Unit,
     viewModel: SettingsViewModel = hiltViewModel(),
 ) {
     val preferences by viewModel.preferences.collectAsStateWithLifecycle()
     val planName by viewModel.planName.collectAsStateWithLifecycle()
+    val syncStatus by viewModel.syncStatus.collectAsStateWithLifecycle()
     SettingsScreen(
         preferences = preferences,
         planName = planName,
+        syncStatus = syncStatus,
+        sync = SyncActions(onOpenAccount, viewModel::syncNow, viewModel::signOut, viewModel::deleteAccount),
         onOpenPlan = onOpenPlan,
         onRebuildPlan = onRebuildPlan,
         onThemeModeChange = { viewModel.setThemeMode(it) },
@@ -68,6 +80,8 @@ internal fun SettingsRoute(
 internal fun SettingsScreen(
     preferences: UserPreferences,
     planName: String?,
+    syncStatus: SyncStatus,
+    sync: SyncActions,
     onOpenPlan: () -> Unit,
     onRebuildPlan: () -> Unit,
     onThemeModeChange: (ThemeMode) -> Unit,
@@ -105,6 +119,8 @@ internal fun SettingsScreen(
                     Button(onClick = onRebuildPlan) { Text(stringResource(R.string.settings_build_plan)) }
                 }
             }
+
+            if (syncStatus.available) BackupSection(syncStatus, sync)
 
             SectionHeader(R.string.settings_section_appearance)
             Text(stringResource(R.string.settings_theme), style = MaterialTheme.typography.bodyLarge)
@@ -185,6 +201,75 @@ private fun SectionHeader(@StringRes title: Int) {
     )
 }
 
+internal class SyncActions(
+    val onSignIn: () -> Unit,
+    val onSyncNow: () -> Unit,
+    val onSignOut: () -> Unit,
+    val onDeleteAccount: () -> Unit,
+)
+
+@Composable
+private fun BackupSection(status: SyncStatus, actions: SyncActions) {
+    var confirmSignOut by rememberSaveable { mutableStateOf(false) }
+    var confirmDelete by rememberSaveable { mutableStateOf(false) }
+    SectionHeader(R.string.backup_section)
+    val account = status.account
+    if (account == null) {
+        Text(
+            stringResource(R.string.backup_intro),
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        Button(onClick = actions.onSignIn) { Text(stringResource(R.string.backup_sign_in)) }
+        return
+    }
+    Text(stringResource(R.string.backup_signed_in_as, account.email.orEmpty()), style = MaterialTheme.typography.bodyLarge)
+    Text(
+        when {
+            status.syncing -> stringResource(R.string.backup_syncing)
+            status.error == SyncError.OFFLINE -> stringResource(R.string.backup_error_offline)
+            status.error == SyncError.FAILED -> stringResource(R.string.backup_error_failed)
+            status.lastSyncedAt != null -> stringResource(
+                R.string.backup_last_synced,
+                DateTimeFormatter.ofPattern("EEE d MMM HH:mm").format(status.lastSyncedAt!!.atZone(ZoneId.systemDefault())),
+            )
+            else -> stringResource(R.string.backup_never_synced)
+        },
+        style = MaterialTheme.typography.bodyMedium,
+        color = if (status.error != null) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurfaceVariant,
+        modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite },
+    )
+    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        OutlinedButton(onClick = actions.onSyncNow, enabled = !status.syncing) { Text(stringResource(R.string.backup_sync_now)) }
+        OutlinedButton(onClick = { confirmSignOut = true }) { Text(stringResource(R.string.backup_sign_out)) }
+    }
+    TextButton(onClick = { confirmDelete = true }) {
+        Text(stringResource(R.string.backup_delete), color = MaterialTheme.colorScheme.error)
+    }
+    if (confirmSignOut) {
+        AlertDialog(
+            onDismissRequest = { confirmSignOut = false },
+            title = { Text(stringResource(R.string.backup_sign_out_title)) },
+            text = { Text(stringResource(R.string.backup_sign_out_body)) },
+            confirmButton = { TextButton(onClick = { confirmSignOut = false; actions.onSignOut() }) { Text(stringResource(R.string.backup_sign_out)) } },
+            dismissButton = { TextButton(onClick = { confirmSignOut = false }) { Text(stringResource(android.R.string.cancel)) } },
+        )
+    }
+    if (confirmDelete) {
+        AlertDialog(
+            onDismissRequest = { confirmDelete = false },
+            title = { Text(stringResource(R.string.backup_delete_title)) },
+            text = { Text(stringResource(R.string.backup_delete_body)) },
+            confirmButton = {
+                TextButton(onClick = { confirmDelete = false; actions.onDeleteAccount() }) {
+                    Text(stringResource(R.string.backup_delete_confirm), color = MaterialTheme.colorScheme.error)
+                }
+            },
+            dismissButton = { TextButton(onClick = { confirmDelete = false }) { Text(stringResource(android.R.string.cancel)) } },
+        )
+    }
+}
+
 @Composable
 private fun SettingRow(
     title: String,
@@ -224,6 +309,9 @@ private fun <T> SegmentedChoice(
 @Composable
 private fun SettingsScreenPreview() {
     SpotterTheme {
-        SettingsScreen(UserPreferences(), "Upper / Lower · 4 days", {}, {}, {}, {}, {}, {}, {})
+        SettingsScreen(
+            UserPreferences(), "Upper / Lower · 4 days", SyncStatus(), SyncActions({}, {}, {}, {}),
+            {}, {}, {}, {}, {}, {}, {},
+        )
     }
 }

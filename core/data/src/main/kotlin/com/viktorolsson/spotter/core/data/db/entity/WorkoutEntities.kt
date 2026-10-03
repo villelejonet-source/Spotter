@@ -16,7 +16,7 @@ import java.time.Instant
 @Entity(
     tableName = "workout_session",
     foreignKeys = [ForeignKey(PlanDayEntity::class, ["id"], ["planDayId"], onDelete = ForeignKey.SET_NULL)],
-    indices = [Index("planDayId"), Index("startedAt")],
+    indices = [Index("syncId", unique = true), Index("planDayId"), Index("startedAt")],
 )
 data class WorkoutSessionEntity(
     @PrimaryKey(autoGenerate = true) val id: Long = 0,
@@ -29,6 +29,11 @@ data class WorkoutSessionEntity(
     /** Lighter deload-week session; excluded from progression and plateau history. */
     @ColumnInfo(defaultValue = "0")
     val isDeload: Boolean = false,
+    /** Global id for cloud sync; assigned by a database trigger (see SyncSchema). */
+    val syncId: String? = null,
+    /** Time of the last local change (ms), maintained by a database trigger. */
+    @ColumnInfo(defaultValue = "0")
+    val updatedAt: Long = 0,
 )
 
 @Entity(
@@ -39,7 +44,7 @@ data class WorkoutSessionEntity(
         ForeignKey(ExerciseEntity::class, ["id"], ["substitutedFromExerciseId"], onDelete = ForeignKey.SET_NULL),
         ForeignKey(PlanExerciseEntity::class, ["id"], ["planExerciseId"], onDelete = ForeignKey.SET_NULL),
     ],
-    indices = [Index("sessionId"), Index("exerciseId"), Index("substitutedFromExerciseId"), Index("planExerciseId")],
+    indices = [Index("syncId", unique = true), Index("sessionId"), Index("exerciseId"), Index("substitutedFromExerciseId"), Index("planExerciseId")],
 )
 data class SessionExerciseEntity(
     @PrimaryKey(autoGenerate = true) val id: Long = 0,
@@ -58,13 +63,18 @@ data class SessionExerciseEntity(
     /** Why the pre-filled targets are what they are (planned workouts only). */
     @ColumnInfo(defaultValue = "NULL")
     val progressionReason: ProgressionReason? = null,
+    /** Global id for cloud sync; assigned by a database trigger (see SyncSchema). */
+    val syncId: String? = null,
+    /** Time of the last local change (ms), maintained by a database trigger. */
+    @ColumnInfo(defaultValue = "0")
+    val updatedAt: Long = 0,
 )
 
 /** Weights are always stored in kg; the UI converts to the user's unit. */
 @Entity(
     tableName = "set_entry",
     foreignKeys = [ForeignKey(SessionExerciseEntity::class, ["id"], ["sessionExerciseId"], onDelete = ForeignKey.CASCADE)],
-    indices = [Index("sessionExerciseId")],
+    indices = [Index("syncId", unique = true), Index("sessionExerciseId")],
 )
 data class SetEntryEntity(
     @PrimaryKey(autoGenerate = true) val id: Long = 0,
@@ -78,6 +88,11 @@ data class SetEntryEntity(
     /** Null until the set is ticked off. */
     val completedAt: Instant?,
     val notes: String?,
+    /** Global id for cloud sync; assigned by a database trigger (see SyncSchema). */
+    val syncId: String? = null,
+    /** Time of the last local change (ms), maintained by a database trigger. */
+    @ColumnInfo(defaultValue = "0")
+    val updatedAt: Long = 0,
 )
 
 @Entity(
@@ -86,7 +101,7 @@ data class SetEntryEntity(
         ForeignKey(ExerciseEntity::class, ["id"], ["exerciseId"], onDelete = ForeignKey.CASCADE),
         ForeignKey(WorkoutSessionEntity::class, ["id"], ["sessionId"], onDelete = ForeignKey.SET_NULL),
     ],
-    indices = [Index("exerciseId", "type"), Index("sessionId")],
+    indices = [Index("syncId", unique = true), Index("exerciseId", "type"), Index("sessionId")],
 )
 data class PersonalRecordEntity(
     @PrimaryKey(autoGenerate = true) val id: Long = 0,
@@ -97,12 +112,17 @@ data class PersonalRecordEntity(
     val reps: Int?,
     val achievedAt: Instant,
     val sessionId: Long?,
+    /** Global id for cloud sync; assigned by a database trigger (see SyncSchema). */
+    val syncId: String? = null,
+    /** Time of the last local change (ms), maintained by a database trigger. */
+    @ColumnInfo(defaultValue = "0")
+    val updatedAt: Long = 0,
 )
 
 @Entity(
     tableName = "recommendation",
     foreignKeys = [ForeignKey(ExerciseEntity::class, ["id"], ["exerciseId"], onDelete = ForeignKey.CASCADE)],
-    indices = [Index("exerciseId"), Index("status")],
+    indices = [Index("syncId", unique = true), Index("exerciseId"), Index("status")],
 )
 data class RecommendationEntity(
     @PrimaryKey(autoGenerate = true) val id: Long = 0,
@@ -118,4 +138,9 @@ data class RecommendationEntity(
     /** Identifies "the same suggestion" across refreshes (type + what it targets). */
     @ColumnInfo(defaultValue = "''")
     val dedupKey: String = "",
+    /** Global id for cloud sync; assigned by a database trigger (see SyncSchema). */
+    val syncId: String? = null,
+    /** Time of the last local change (ms), maintained by a database trigger. */
+    @ColumnInfo(defaultValue = "0")
+    val updatedAt: Long = 0,
 )

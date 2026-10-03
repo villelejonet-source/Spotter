@@ -35,6 +35,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
@@ -53,13 +54,15 @@ import com.viktorolsson.spotter.core.model.label
 import com.viktorolsson.spotter.core.ui.labelRes
 
 @Composable
-internal fun OnboardingRoute(onDone: () -> Unit, viewModel: OnboardingViewModel = hiltViewModel()) {
+internal fun OnboardingRoute(onDone: () -> Unit, onRestore: () -> Unit, viewModel: OnboardingViewModel = hiltViewModel()) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     BackHandler { if (!viewModel.back()) onDone() }
+    LaunchedEffect(viewModel) { viewModel.restoredFromBackup.collect { onDone() } }
     OnboardingScreen(
         state = state,
         onBack = { if (!viewModel.back()) onDone() },
         onSkip = { viewModel.skip(onDone) },
+        onRestore = onRestore,
         onNext = viewModel::next,
         onUpdate = viewModel::update,
         onChoose = viewModel::choose,
@@ -75,6 +78,7 @@ internal fun OnboardingScreen(
     state: OnboardingUiState,
     onBack: () -> Unit,
     onSkip: () -> Unit,
+    onRestore: () -> Unit,
     onNext: () -> Unit,
     onUpdate: ((Answers) -> Answers) -> Unit,
     onChoose: ((Answers) -> Answers) -> Unit,
@@ -95,6 +99,7 @@ internal fun OnboardingScreen(
                     },
                     actions = {
                         if (!state.rebuild && state.step == Step.BODY) {
+                            TextButton(onClick = onRestore) { Text(stringResource(R.string.onb_restore)) }
                             TextButton(onClick = onSkip) { Text(stringResource(R.string.onb_skip)) }
                         }
                     },

@@ -31,6 +31,7 @@ import org.robolectric.annotation.GraphicsMode
 import java.time.Duration
 import java.time.Instant
 
+@OptIn(com.github.takahirom.roborazzi.ExperimentalRoborazziApi::class)
 @RunWith(AndroidJUnit4::class)
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
 @Config(qualifiers = RobolectricDeviceQualifiers.Pixel7)

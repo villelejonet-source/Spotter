@@ -26,7 +26,12 @@ import com.viktorolsson.spotter.core.model.format
 import com.viktorolsson.spotter.core.model.parseToKg
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.drop
+import kotlinx.coroutines.flow.filter
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.first
@@ -134,6 +139,14 @@ class OnboardingViewModel @Inject constructor(
             _uiState.update { it.copy(answers = profile.toAnswers()) }
         }
     }
+
+    /** Fires when setup gets completed some other way: restoring a backup from the cloud. */
+    val restoredFromBackup: Flow<Unit> = preferencesRepository.preferences
+        .map { it.onboardingCompleted }
+        .distinctUntilChanged()
+        .drop(1)
+        .filter { it && !_uiState.value.saving }
+        .map { }
 
     fun update(change: (Answers) -> Answers) = _uiState.update { it.copy(answers = change(it.answers)) }
 

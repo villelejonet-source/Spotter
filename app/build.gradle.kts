@@ -104,6 +104,8 @@ dependencies {
     implementation(libs.androidx.hilt.lifecycle.viewmodel.compose)
     implementation(libs.androidx.compose.material.icons.extended)
     implementation(libs.kotlinx.serialization.json)
+    implementation(libs.androidx.work.runtime)
+    implementation(libs.androidx.hilt.work)
 }
 
 // Refuse to produce a Play bundle signed with the debug key. Captures a plain Boolean

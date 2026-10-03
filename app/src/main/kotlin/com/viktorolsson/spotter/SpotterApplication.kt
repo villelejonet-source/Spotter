@@ -1,16 +1,29 @@
 package com.viktorolsson.spotter
 
 import android.app.Application
+import androidx.hilt.work.HiltWorkerFactory
+import androidx.work.Configuration
 import com.viktorolsson.spotter.core.data.di.ApplicationScope
 import com.viktorolsson.spotter.core.data.repository.RecommendationRepository
 import com.viktorolsson.spotter.core.data.seed.ExerciseSeeder
+import com.viktorolsson.spotter.core.data.sync.SyncRepository
+import com.viktorolsson.spotter.core.data.sync.SyncScheduler
 import dagger.hilt.android.HiltAndroidApp
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
 @HiltAndroidApp
-class SpotterApplication : Application() {
+class SpotterApplication : Application(), Configuration.Provider {
+    @Inject lateinit var workerFactory: HiltWorkerFactory
+
+    @Inject lateinit var syncRepository: SyncRepository
+
+    @Inject lateinit var syncScheduler: SyncScheduler
+
+    override val workManagerConfiguration: Configuration
+        get() = Configuration.Builder().setWorkerFactory(workerFactory).build()
+
     @Inject lateinit var exerciseSeeder: ExerciseSeeder
 
     @Inject lateinit var recommendationRepository: RecommendationRepository
@@ -24,6 +37,11 @@ class SpotterApplication : Application() {
             exerciseSeeder.seedIfNeeded()
             // Time-based suggestions (scheduled deload, switching back from a variation) can fall due between workouts.
             recommendationRepository.refresh()
+        }
+        // Signed in to cloud backup: keep the periodic sync scheduled and catch up now.
+        if (syncRepository.isSignedIn()) {
+            syncScheduler.schedulePeriodic()
+            syncRepository.requestSync()
         }
     }
 }

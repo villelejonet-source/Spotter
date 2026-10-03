@@ -4,6 +4,7 @@ import androidx.room.AutoMigration
 import androidx.room.Database
 import androidx.room.RoomDatabase
 import androidx.room.TypeConverters
+import androidx.sqlite.db.SupportSQLiteDatabase
 import com.viktorolsson.spotter.core.data.db.dao.ExerciseDao
 import com.viktorolsson.spotter.core.data.db.dao.PlanDao
 import com.viktorolsson.spotter.core.data.db.dao.RecommendationDao
@@ -19,6 +20,8 @@ import com.viktorolsson.spotter.core.data.db.entity.PlanExerciseEntity
 import com.viktorolsson.spotter.core.data.db.entity.RecommendationEntity
 import com.viktorolsson.spotter.core.data.db.entity.SessionExerciseEntity
 import com.viktorolsson.spotter.core.data.db.entity.SetEntryEntity
+import com.viktorolsson.spotter.core.data.db.entity.SyncStateEntity
+import com.viktorolsson.spotter.core.data.db.entity.SyncTombstoneEntity
 import com.viktorolsson.spotter.core.data.db.entity.UserProfileEntity
 import com.viktorolsson.spotter.core.data.db.entity.WorkoutSessionEntity
 
@@ -27,7 +30,7 @@ import com.viktorolsson.spotter.core.data.db.entity.WorkoutSessionEntity
  * exported JSON in `core/data/schemas` is what migration tests run against.
  */
 @Database(
-    version = 5,
+    version = 6,
     exportSchema = true,
     autoMigrations = [
         AutoMigration(from = 1, to = 2), // session_exercise.restSeconds
@@ -48,6 +51,8 @@ import com.viktorolsson.spotter.core.data.db.entity.WorkoutSessionEntity
         SetEntryEntity::class,
         PersonalRecordEntity::class,
         RecommendationEntity::class,
+        SyncTombstoneEntity::class,
+        SyncStateEntity::class,
     ],
 )
 @TypeConverters(Converters::class)
@@ -60,5 +65,15 @@ abstract class SpotterDatabase : RoomDatabase() {
 
     companion object {
         const val NAME = "spotter.db"
+
+        /** Migrations and sync triggers; used for the app database and in tests. */
+        fun <T : SpotterDatabase> configure(builder: Builder<T>): Builder<T> = builder
+            .addMigrations(SyncSchema.MIGRATION_5_6)
+            .addCallback(
+                object : Callback() {
+                    // Idempotent: also restores triggers if they're ever missing.
+                    override fun onOpen(db: SupportSQLiteDatabase) = SyncSchema.createTriggers(db)
+                },
+            )
     }
 }

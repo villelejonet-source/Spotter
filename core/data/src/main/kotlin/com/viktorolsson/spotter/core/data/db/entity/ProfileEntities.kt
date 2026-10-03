@@ -1,5 +1,6 @@
 package com.viktorolsson.spotter.core.data.db.entity
 
+import androidx.room.ColumnInfo
 import androidx.room.Entity
 import androidx.room.Index
 import androidx.room.PrimaryKey
@@ -13,7 +14,7 @@ import com.viktorolsson.spotter.core.model.WeightUnit
 import java.time.LocalDate
 
 /** Single-user app: the profile is always the row with [id] = [SINGLETON_ID]. */
-@Entity(tableName = "user_profile")
+@Entity(tableName = "user_profile", indices = [Index("syncId", unique = true)])
 data class UserProfileEntity(
     @PrimaryKey val id: Int = SINGLETON_ID,
     val sex: Sex,
@@ -28,15 +29,25 @@ data class UserProfileEntity(
     val equipment: Set<Equipment>,
     val focusAreas: Set<BodyArea>,
     val limitations: Set<Limitation>,
+    /** Global id for cloud sync; assigned by a database trigger (see SyncSchema). */
+    val syncId: String? = null,
+    /** Time of the last local change (ms), maintained by a database trigger. */
+    @ColumnInfo(defaultValue = "0")
+    val updatedAt: Long = 0,
 ) {
     companion object {
         const val SINGLETON_ID = 1
     }
 }
 
-@Entity(tableName = "body_weight_entry", indices = [Index("date", unique = true)])
+@Entity(tableName = "body_weight_entry", indices = [Index("syncId", unique = true), Index("date", unique = true)])
 data class BodyWeightEntryEntity(
     @PrimaryKey(autoGenerate = true) val id: Long = 0,
     val date: LocalDate,
     val weightKg: Double,
+    /** Global id for cloud sync; assigned by a database trigger (see SyncSchema). */
+    val syncId: String? = null,
+    /** Time of the last local change (ms), maintained by a database trigger. */
+    @ColumnInfo(defaultValue = "0")
+    val updatedAt: Long = 0,
 )

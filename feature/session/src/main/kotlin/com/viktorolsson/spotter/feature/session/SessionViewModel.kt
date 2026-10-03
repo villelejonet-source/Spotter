@@ -7,6 +7,7 @@ import androidx.navigation.toRoute
 import com.viktorolsson.spotter.core.data.di.ApplicationScope
 import com.viktorolsson.spotter.core.data.repository.ExerciseRepository
 import com.viktorolsson.spotter.core.data.repository.RecommendationRepository
+import com.viktorolsson.spotter.core.data.sync.SyncRepository
 import com.viktorolsson.spotter.core.data.repository.RestTimerRepository
 import com.viktorolsson.spotter.core.data.repository.UserPreferencesRepository
 import com.viktorolsson.spotter.core.data.repository.UserProfileRepository
@@ -100,6 +101,7 @@ class SessionViewModel @Inject constructor(
     private val exerciseRepository: ExerciseRepository,
     private val profileRepository: UserProfileRepository,
     private val recommendationRepository: RecommendationRepository,
+    private val syncRepository: SyncRepository,
     @param:ApplicationScope private val applicationScope: CoroutineScope,
     preferencesRepository: UserPreferencesRepository,
 ) : ViewModel() {
@@ -240,6 +242,7 @@ class SessionViewModel @Inject constructor(
         workoutRepository.finishWorkout(sessionId)
         // Outlives this screen: re-evaluate plateaus and suggestions with the new session.
         applicationScope.launch { recommendationRepository.refresh() }
+        syncRepository.requestSync()
         onFinished(sessionId)
     }
 

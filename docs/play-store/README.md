@@ -51,6 +51,7 @@ Bump `versionCode` in `app/build.gradle.kts` for every upload.
 3. **App content**, everything Play asks before the first release:
    - **Privacy policy**: host `privacy-policy.md` somewhere public (e.g. GitHub Pages) and paste the URL.
    - **Data safety**: see below.
+   - **Data deletion**: point to the privacy policy (it describes in-app and email deletion).
    - **Foreground service permissions**: declare `FOREGROUND_SERVICE_SPECIAL_USE` with the text below.
    - **Health apps declaration**: Spotter is a fitness app. It doesn't use Health Connect or sensors.
    - **Content rating**: questionnaire, category "Health & fitness"; no user-generated content.
@@ -73,12 +74,20 @@ counting down with the screen off is usually requested; record it on the emulato
 
 ### Data safety answers
 
-- **Data collected:** none. **Data shared:** none.
-- Training data (workouts, body weight, profile) is stored only on the device, isn't sent
-  anywhere and isn't included in Google cloud backup (`data_extraction_rules.xml`).
-- No analytics, no ads, no accounts.
-- Revisit this when Supabase backup (milestone 8) ships: health and fitness data then
-  becomes "collected", optional, encrypted in transit, and deletable.
+- **Does the app collect or share user data?** Yes, collected (only with the optional cloud
+  backup). **Shared:** No.
+- **Data types collected:** Personal info → *Email address*; Health and fitness → *Fitness
+  info* (workouts, exercise data, body weight); for each: **optional** (backup is opt-in),
+  purpose **App functionality** and **Account management**, not processed ephemerally.
+- **Encrypted in transit:** Yes (HTTPS). **Users can request deletion:** Yes, in the app
+  (Profile → Backup & sync → Delete account and backup) and by email.
+- No analytics, no ads, no data sold or shared. Training data isn't in Google cloud backup
+  (`data_extraction_rules.xml`).
+
+### Account deletion (required because the app has accounts)
+
+- **In the app:** Profile → Backup & sync → "Delete account and backup".
+- **Web link** for the Play form: the privacy policy URL, section "Deleting your data".
 
 ## Screenshots
 

@@ -111,6 +111,35 @@ class MigrationTest {
         }
     }
 
+    @Test
+    fun migrate5To6GivesExistingRowsSyncIdsAndInstallsTriggers() {
+        helper.createDatabase(DB, 5).use { db ->
+            db.execSQL(
+                """INSERT INTO exercise (id, name, primaryMuscles, secondaryMuscles, movementPattern, equipment,
+                   mechanics, difficulty, unilateral, instructions, isCustom)
+                   VALUES ('push-up', 'Push-Up', 'CHEST', '', 'HORIZONTAL_PUSH', '', 'COMPOUND', 'BEGINNER', 0, NULL, 0),
+                          ('custom-1', 'Mine', 'CHEST', '', 'HORIZONTAL_PUSH', '', 'COMPOUND', 'BEGINNER', 0, NULL, 1)""",
+            )
+            db.execSQL("INSERT INTO workout_session (id, startedAt, endedAt, planDayId, notes, perceivedDifficulty, isDeload) VALUES (1, 0, 1, NULL, NULL, NULL, 0)")
+        }
+        helper.runMigrationsAndValidate(DB, 6, true, com.viktorolsson.spotter.core.data.db.SyncSchema.MIGRATION_5_6).use { db ->
+            db.query("SELECT syncId FROM exercise ORDER BY id").use {
+                it.moveToFirst(); assertEquals("custom-1", it.getString(0)) // custom: keyed by its own id
+                it.moveToNext(); assertEquals(true, it.isNull(0))           // seeded: not synced
+            }
+            db.query("SELECT syncId, updatedAt FROM workout_session WHERE id = 1").use {
+                it.moveToFirst()
+                assertEquals(32, it.getString(0).length)
+                assertEquals(true, it.getLong(1) > 0)
+            }
+            // Triggers are live after the migration.
+            db.execSQL("DELETE FROM workout_session WHERE id = 1")
+            db.query("SELECT COUNT(*) FROM sync_tombstone WHERE tableName = 'workout_session'").use {
+                it.moveToFirst(); assertEquals(1, it.getInt(0))
+            }
+        }
+    }
+
     private companion object {
         const val DB = "migration-test"
     }

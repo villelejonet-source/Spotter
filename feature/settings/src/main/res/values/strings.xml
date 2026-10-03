@@ -23,4 +23,35 @@
     <string name="settings_log_rir">Log RIR</string>
     <string name="settings_log_rir_summary">Add a reps-in-reserve column to each set</string>
     <string name="settings_privacy_note">Your training data stays on this device unless you turn on cloud backup.</string>
+    <string name="backup_section">Backup &amp; sync</string>
+    <string name="backup_intro">Back up your training and sync it between phones. Optional: without it, everything stays on this phone.</string>
+    <string name="backup_sign_in">Sign in to back up</string>
+    <string name="backup_signed_in_as">Signed in as %1$s</string>
+    <string name="backup_last_synced">Last synced %1$s</string>
+    <string name="backup_never_synced">Not synced yet</string>
+    <string name="backup_syncing">Syncing…</string>
+    <string name="backup_error_offline">Couldn\'t sync: no internet connection. It\'ll retry automatically.</string>
+    <string name="backup_error_failed">Couldn\'t sync. It\'ll retry automatically.</string>
+    <string name="backup_sync_now">Sync now</string>
+    <string name="backup_sign_out">Sign out</string>
+    <string name="backup_delete">Delete account and backup</string>
+    <string name="backup_delete_title">Delete your account?</string>
+    <string name="backup_delete_body">This deletes your account and everything backed up in the cloud. The data on this phone stays.</string>
+    <string name="backup_delete_confirm">Delete</string>
+    <string name="backup_sign_out_title">Sign out?</string>
+    <string name="backup_sign_out_body">This phone stops syncing. Your backup stays in the cloud and the data on this phone stays here.</string>
+
+    <string name="account_title">Cloud backup</string>
+    <string name="account_email_intro">Enter your email and we\'ll send you a 6-digit code. No password needed.</string>
+    <string name="account_email">Email</string>
+    <string name="account_send_code">Send code</string>
+    <string name="account_code_intro">Enter the 6-digit code we sent to %1$s.</string>
+    <string name="account_code">Code</string>
+    <string name="account_verify">Sign in</string>
+    <string name="account_resend">Send a new code</string>
+    <string name="account_change_email">Use another email</string>
+    <string name="account_send_failed">Couldn\'t send the code. Check the address and your connection.</string>
+    <string name="account_verify_failed">That code didn\'t work. Check it, or send a new one.</string>
+    <string name="account_privacy">Your training data is stored in your own private backup that only you can access. You can delete it any time.</string>
+    <string name="back">Back</string>
 </resources>

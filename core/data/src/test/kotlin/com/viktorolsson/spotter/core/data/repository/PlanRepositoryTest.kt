@@ -15,6 +15,7 @@ import com.viktorolsson.spotter.core.model.Equipment
 import com.viktorolsson.spotter.core.model.ExperienceLevel
 import com.viktorolsson.spotter.core.model.Goal
 import com.viktorolsson.spotter.core.model.Plan
+import com.viktorolsson.spotter.core.model.ProgressionReason
 import com.viktorolsson.spotter.core.model.Sex
 import com.viktorolsson.spotter.core.model.UserProfile
 import com.viktorolsson.spotter.core.model.WeightUnit
@@ -54,7 +55,7 @@ class PlanRepositoryTest {
         val seed = parseExerciseSeed(File("src/main/assets/exercises.json").readText())
         db.exerciseDao().upsertAll(seed.exercises.map(SeedExercise::toEntity))
         plans = PlanRepository(db, db.planDao())
-        workouts = WorkoutRepository(db, db.workoutDao(), db.planDao(), clock)
+        workouts = WorkoutRepository(db, db.workoutDao(), db.planDao(), db.exerciseDao(), testPreferences(), clock)
         profiles = UserProfileRepository(db.userProfileDao())
     }
 
@@ -119,12 +120,66 @@ class PlanRepositoryTest {
         assertEquals(bench.restSeconds, firstBench.restSeconds)
         assertEquals(bench.repMax, firstBench.target!!.repMax)
 
-        // Log heavier than calibration, finish, and the next Upper A starts from what was lifted.
+        assertEquals(ProgressionReason.CALIBRATION, firstBench.progressionReason)
+
+        // Log heavier than calibration, finish, and the next Upper A builds on what was lifted:
+        // same weight, one more rep per set (double progression, range 6–12).
         firstBench.sets.forEach { workouts.updateSetValues(it.id, 30.0, 10, null) }
         completeWorkout(first.id)
-        val upperAId = day.id
-        val second = workouts.getSession(workouts.startPlannedWorkout(upperAId))!!
-        assertTrue(second.exercises.first().sets.all { it.weightKg == 30.0 && it.reps == 10 })
+        val secondSession = workouts.getSession(workouts.startPlannedWorkout(day.id))!!
+        val second = secondSession.exercises.first()
+        assertEquals(ProgressionReason.ADD_REPS, second.progressionReason)
+        assertTrue(second.sets.all { it.weightKg == 30.0 && it.reps == 11 })
+
+        // Every set at the top of the range → +2.5 kg and back to the bottom.
+        second.sets.forEach { workouts.updateSetValues(it.id, 30.0, bench.repMax, null) }
+        completeWorkout(secondSession.id)
+        val third = workouts.getSession(workouts.startPlannedWorkout(day.id))!!.exercises.first()
+        assertEquals(ProgressionReason.INCREASE_WEIGHT, third.progressionReason)
+        assertTrue(third.sets.all { it.weightKg == 32.5 && it.reps == bench.repMin })
+    }
+
+    @Test
+    fun swapForThisSessionConvertsTheWeightAndKeepsTheLink() = runTest {
+        plans.saveAsActive(generatedPlan())
+        val day = plans.observeNextDay().first()!!
+        val session = workouts.getSession(workouts.startPlannedWorkout(day.id))!!
+        val bench = session.exercises.first()
+        assertEquals("barbell-bench-press", bench.exercise.id)
+        bench.sets.forEach { workouts.updateSetValues(it.id, 100.0, 8, null) }
+
+        workouts.swapExercise(bench.id, "dumbbell-bench-press", replaceInPlan = false)
+        val swapped = workouts.getSession(session.id)!!.exercises.first()
+        assertEquals("dumbbell-bench-press", swapped.exercise.id)
+        assertEquals("Barbell Bench Press", swapped.substitutedFromName)
+        assertEquals(bench.target, swapped.target)
+        assertTrue(swapped.sets.all { it.weightKg == 40.0 && it.reps == 8 })
+        // The plan is untouched.
+        assertEquals("barbell-bench-press", plans.observeActivePlan().first()!!.days[0].exercises[0].exercise.id)
+
+        // Swapping back clears the substitution.
+        workouts.swapExercise(swapped.id, "barbell-bench-press", replaceInPlan = false)
+        assertEquals(null, workouts.getSession(session.id)!!.exercises.first().substitutedFromName)
+    }
+
+    @Test
+    fun swapMidExerciseKeepsDoneSetsWithTheOriginal() = runTest {
+        plans.saveAsActive(generatedPlan())
+        val session = workouts.getSession(workouts.startPlannedWorkout(plans.observeNextDay().first()!!.id))!!
+        val bench = session.exercises.first()
+        workouts.updateSetValues(bench.sets[0].id, 100.0, 8, null)
+        workouts.toggleSetCompleted(bench.sets[0].id)
+
+        workouts.swapExercise(bench.id, "machine-chest-press", replaceInPlan = true)
+        val exercises = workouts.getSession(session.id)!!.exercises
+        assertEquals(listOf("barbell-bench-press", "machine-chest-press"), exercises.take(2).map { it.exercise.id })
+        assertEquals(1, exercises[0].sets.size)
+        assertTrue(exercises[0].sets.single().isCompleted)
+        assertEquals(bench.sets.size - 1, exercises[1].sets.size)
+        assertTrue(exercises[1].sets.none { it.isCompleted })
+        assertEquals((0 until exercises.size).toList(), exercises.map { it.position })
+        // Replace in plan: future Upper A sessions use the machine press.
+        assertEquals("machine-chest-press", plans.observeActivePlan().first()!!.days[0].exercises[0].exercise.id)
     }
 
     @Test

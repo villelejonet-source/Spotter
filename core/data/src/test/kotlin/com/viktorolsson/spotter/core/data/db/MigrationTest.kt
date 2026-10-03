@@ -69,6 +69,29 @@ class MigrationTest {
         }
     }
 
+    @Test
+    fun migrate3To4AddsProgressionReason() {
+        helper.createDatabase(DB, 3).use { db ->
+            db.execSQL(
+                """INSERT INTO exercise (id, name, primaryMuscles, secondaryMuscles, movementPattern, equipment,
+                   mechanics, difficulty, unilateral, instructions, isCustom)
+                   VALUES ('push-up', 'Push-Up', 'CHEST', '', 'HORIZONTAL_PUSH', '', 'COMPOUND', 'BEGINNER', 0, NULL, 0)""",
+            )
+            db.execSQL("INSERT INTO workout_session (id, startedAt, endedAt, planDayId, notes, perceivedDifficulty) VALUES (1, 0, NULL, NULL, NULL, NULL)")
+            db.execSQL(
+                """INSERT INTO session_exercise (id, sessionId, exerciseId, position, substitutedFromExerciseId, supersetGroup, notes, restSeconds, planExerciseId)
+                   VALUES (1, 1, 'push-up', 0, NULL, NULL, NULL, 90, NULL)""",
+            )
+        }
+        helper.runMigrationsAndValidate(DB, 4, true).use { db ->
+            db.query("SELECT restSeconds, progressionReason FROM session_exercise WHERE id = 1").use {
+                it.moveToFirst()
+                assertEquals(90, it.getInt(0))
+                assertEquals(true, it.isNull(1))
+            }
+        }
+    }
+
     private companion object {
         const val DB = "migration-test"
     }

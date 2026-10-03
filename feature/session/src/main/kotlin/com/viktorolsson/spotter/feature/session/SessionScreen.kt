@@ -66,6 +66,7 @@ internal fun SessionRoute(
     viewModel: SessionViewModel = hiltViewModel(),
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val swap by viewModel.swap.collectAsStateWithLifecycle()
 
     // Discarded (or finished elsewhere): nothing to show.
     LaunchedEffect(uiState.loading, uiState.session) {
@@ -155,6 +156,7 @@ internal fun SessionRoute(
                         onDeleteSet = viewModel::deleteSet,
                         onSetType = viewModel::setSetType,
                         onSetNote = viewModel::setSetNote,
+                        onSwap = { viewModel.openSwap(exercise) },
                         onExerciseNote = { viewModel.setExerciseNote(exercise.id, it) },
                         onRest = { viewModel.setExerciseRest(exercise.id, it) },
                         onSupersetNext = { viewModel.supersetWithNext(exercise.id) },
@@ -177,6 +179,14 @@ internal fun SessionRoute(
         }
     }
 
+    swap?.let { state ->
+        SwapSheet(
+            state = state,
+            onFilter = viewModel::setSwapFilter,
+            onPick = viewModel::swapTo,
+            onDismiss = viewModel::closeSwap,
+        )
+    }
     if (editingNote) {
         TextInputDialog(
             title = stringResource(R.string.session_workout_note),

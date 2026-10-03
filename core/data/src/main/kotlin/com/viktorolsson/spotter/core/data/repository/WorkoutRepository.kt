@@ -2,6 +2,7 @@ package com.viktorolsson.spotter.core.data.repository
 
 import androidx.room.withTransaction
 import com.viktorolsson.spotter.core.data.db.SpotterDatabase
+import com.viktorolsson.spotter.core.data.db.dao.ExerciseDao
 import com.viktorolsson.spotter.core.data.db.dao.PlanDao
 import com.viktorolsson.spotter.core.data.db.dao.WorkoutDao
 import com.viktorolsson.spotter.core.data.db.entity.SessionExerciseEntity
@@ -9,10 +10,15 @@ import com.viktorolsson.spotter.core.data.db.entity.SetEntryEntity
 import com.viktorolsson.spotter.core.data.db.entity.WorkoutSessionEntity
 import com.viktorolsson.spotter.core.data.db.toModel
 import com.viktorolsson.spotter.core.data.db.toPrevious
+import com.viktorolsson.spotter.core.engine.LoggedSet
+import com.viktorolsson.spotter.core.engine.Progression
+import com.viktorolsson.spotter.core.engine.ProgressionInput
+import com.viktorolsson.spotter.core.engine.WeightConversion
 import com.viktorolsson.spotter.core.model.PreviousSet
 import com.viktorolsson.spotter.core.model.SetType
 import com.viktorolsson.spotter.core.model.WorkoutSession
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import java.time.Clock
 import java.time.Instant
@@ -28,6 +34,8 @@ class WorkoutRepository @Inject constructor(
     private val db: SpotterDatabase,
     private val dao: WorkoutDao,
     private val planDao: PlanDao,
+    private val exerciseDao: ExerciseDao,
+    private val preferences: UserPreferencesRepository,
     private val clock: Clock,
 ) {
     fun observeActiveSession(): Flow<ActiveSession?> =
@@ -53,12 +61,14 @@ class WorkoutRepository @Inject constructor(
 
     /**
      * Starts the given plan day (or returns the workout already in progress). Each
-     * exercise keeps its plan link, rest and superset; sets are pre-filled from the
-     * last time it was done, or from the plan's calibration estimate the first time.
+     * exercise keeps its plan link, rest and superset, and its sets are pre-filled with
+     * the progression target computed from the last two sessions of that exercise
+     * (or the plan's calibration estimate the first time).
      */
     suspend fun startPlannedWorkout(planDayId: Long): Long = db.withTransaction {
         dao.getActiveSession()?.let { return@withTransaction it.id }
         val day = planDao.getDay(planDayId) ?: error("No plan day $planDayId")
+        val unit = preferences.preferences.first().weightUnit
         val sessionId = dao.insertSession(
             WorkoutSessionEntity(
                 startedAt = clock.instant(),
@@ -68,7 +78,20 @@ class WorkoutRepository @Inject constructor(
                 perceivedDifficulty = null,
             ),
         )
-        day.exercises.sortedBy { it.planExercise.position }.forEachIndexed { position, (pe, _) ->
+        day.exercises.sortedBy { it.planExercise.position }.forEachIndexed { position, (pe, exercise) ->
+            val target = Progression.next(
+                ProgressionInput(
+                    exercise = exercise.toModel(),
+                    rule = pe.progressionRule,
+                    sets = pe.sets,
+                    repMin = pe.repMin,
+                    repMax = pe.repMax,
+                    targetRir = pe.targetRir,
+                    history = recentHistory(pe.exerciseId),
+                    startingWeightKg = pe.startingWeightKg,
+                    unit = unit,
+                ),
+            )
             val sessionExerciseId = dao.insertSessionExercise(
                 SessionExerciseEntity(
                     sessionId = sessionId,
@@ -79,23 +102,77 @@ class WorkoutRepository @Inject constructor(
                     notes = null,
                     restSeconds = pe.restSeconds,
                     planExerciseId = pe.id,
+                    progressionReason = target.reason,
                 ),
             )
-            val previous = dao.getPreviousSets(pe.exerciseId).filter { it.setType != SetType.WARMUP }
             dao.insertSets(
-                List(pe.sets) { i ->
-                    val prev = previous.getOrNull(i) ?: previous.lastOrNull()
-                    newSet(
-                        sessionExerciseId,
-                        position = i,
-                        weightKg = prev?.weightKg ?: pe.startingWeightKg,
-                        reps = prev?.reps ?: pe.repMin,
-                        setType = SetType.WORKING,
-                    )
+                target.sets.mapIndexed { i, set ->
+                    newSet(sessionExerciseId, position = i, weightKg = set.weightKg, reps = set.reps, setType = SetType.WORKING)
                 },
             )
         }
         sessionId
+    }
+
+    /** Working sets of the last two sessions with [exerciseId], most recent first. */
+    private suspend fun recentHistory(exerciseId: String): List<List<LoggedSet>> =
+        dao.getRecentWorkingSets(exerciseId, sessions = 2)
+            .groupBy { it.sessionId }
+            .values
+            .map { sets -> sets.map { LoggedSet(it.set.weightKg, it.set.reps ?: 0, it.set.rir) } }
+
+    /**
+     * Swaps an exercise for another (busy or missing equipment). Remaining sets get a
+     * weight from the substitute's own history, or one converted from the original's
+     * (e.g. barbell → dumbbell). Sets already ticked stay with the original, and the
+     * substitute continues as a new exercise right after it. [replaceInPlan] also
+     * changes the plan, so future sessions use the substitute.
+     */
+    suspend fun swapExercise(sessionExerciseId: Long, newExerciseId: String, replaceInPlan: Boolean) = db.withTransaction {
+        val current = dao.getSessionExercise(sessionExerciseId) ?: return@withTransaction
+        if (current.exerciseId == newExerciseId) return@withTransaction
+        val original = exerciseDao.getById(current.exerciseId)?.toModel() ?: return@withTransaction
+        val replacement = exerciseDao.getById(newExerciseId)?.toModel() ?: return@withTransaction
+        val unit = preferences.preferences.first().weightUnit
+
+        val sets = dao.getSets(sessionExerciseId)
+        val (done, todo) = sets.partition { it.completedAt != null }
+        val referenceKg = todo.firstOrNull { it.weightKg != null }?.weightKg ?: done.lastOrNull { it.weightKg != null }?.weightKg
+        val ownLast = recentHistory(newExerciseId).firstOrNull()
+        val newWeightKg = ownLast?.mapNotNull { it.weightKg }?.maxOrNull()
+            ?: referenceKg?.let { WeightConversion.convert(original, it, replacement, unit) }
+        // Swapping back to the original clears the substitution.
+        val substitutedFrom = (current.substitutedFromExerciseId ?: current.exerciseId).takeIf { it != newExerciseId }
+
+        val targetId = if (done.isEmpty()) {
+            dao.updateSessionExercises(
+                listOf(current.copy(exerciseId = newExerciseId, substitutedFromExerciseId = substitutedFrom, progressionReason = null)),
+            )
+            current.id
+        } else {
+            val later = dao.getSessionExercises(current.sessionId).filter { it.position > current.position }
+            dao.updateSessionExercises(later.map { it.copy(position = it.position + 1) })
+            dao.insertSessionExercise(
+                current.copy(
+                    id = 0,
+                    exerciseId = newExerciseId,
+                    position = current.position + 1,
+                    substitutedFromExerciseId = substitutedFrom,
+                    notes = null,
+                    progressionReason = null,
+                ),
+            )
+        }
+
+        val remaining = todo.ifEmpty { listOfNotNull(done.lastOrNull()?.copy(id = 0, completedAt = null, notes = null)) }
+        val moved = remaining.mapIndexed { i, set ->
+            set.copy(sessionExerciseId = targetId, position = if (done.isEmpty()) set.position else i, weightKg = newWeightKg)
+        }
+        dao.updateSets(moved.filter { it.id != 0L })
+        dao.insertSets(moved.filter { it.id == 0L })
+
+        val planExerciseId = current.planExerciseId
+        if (replaceInPlan && planExerciseId != null) planDao.replaceExercise(planExerciseId, newExerciseId, newWeightKg)
     }
 
     suspend fun getPreviousSets(exerciseId: String): List<PreviousSet> =

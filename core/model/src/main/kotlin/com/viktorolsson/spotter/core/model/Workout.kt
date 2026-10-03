@@ -33,6 +33,9 @@ data class SessionExercise(
     val sets: List<WorkoutSet>,
     /** Set when the exercise came from a plan day. */
     val target: PlanTarget? = null,
+    /** Name of the exercise this one replaced in the session, if swapped. */
+    val substitutedFromName: String? = null,
+    val progressionReason: ProgressionReason? = null,
 )
 
 /** Weight is always kg; null weight means bodyweight. */

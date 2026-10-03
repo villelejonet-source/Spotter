@@ -26,6 +26,29 @@
     <string name="set_type_failure">To failure</string>
     <string name="set_note">Set note</string>
 
+    <string name="exercise_swap">Swap exercise</string>
+    <string name="exercise_swapped_from">Swapped from %1$s</string>
+    <string name="swap_title">Swap %1$s</string>
+    <string name="swap_this_session">Just this session</string>
+    <string name="swap_in_plan">Replace in plan</string>
+    <string name="swap_filter_all">All</string>
+    <string name="swap_filter_same">Same equipment</string>
+    <string name="swap_filter_dumbbell">Dumbbell</string>
+    <string name="swap_filter_machine">Machine / cable</string>
+    <string name="swap_filter_bodyweight">Bodyweight</string>
+    <string name="swap_none">No close alternatives with this filter.</string>
+    <string name="swap_bodyweight">Bodyweight</string>
+
+    <string name="progress_calibration">First time: estimated weight. Adjust to what feels right.</string>
+    <string name="progress_first_time">First time: pick a weight you can do for the target reps.</string>
+    <string name="progress_increase">Weight up: you hit the target on every set last time.</string>
+    <string name="progress_increase_easy">Weight up: last time felt easier than planned.</string>
+    <string name="progress_add_reps">Same weight: aim for one more rep per set.</string>
+    <string name="progress_hold_hard">Holding the weight: last time was harder than planned.</string>
+    <string name="progress_repeat">Same weight again: aim for the target reps.</string>
+    <string name="progress_reset">10%% lighter after two tough sessions. Build back up.</string>
+    <string name="progress_bodyweight_top">Top of the range: add weight or try a harder variation.</string>
+
     <string name="exercise_note">Exercise note</string>
     <string name="exercise_rest">Rest time</string>
     <string name="exercise_rest_label">Rest %1$s</string>

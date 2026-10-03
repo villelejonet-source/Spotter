@@ -1,16 +1,9 @@
 package com.viktorolsson.spotter.core.engine
 
-import com.viktorolsson.spotter.core.model.Equipment
 import com.viktorolsson.spotter.core.model.Exercise
 import com.viktorolsson.spotter.core.model.ExperienceLevel
-import com.viktorolsson.spotter.core.model.Mechanics
-import com.viktorolsson.spotter.core.model.MovementPattern
 import com.viktorolsson.spotter.core.model.Sex
 import com.viktorolsson.spotter.core.model.UserProfile
-import com.viktorolsson.spotter.core.model.WeightUnit
-import com.viktorolsson.spotter.core.model.fromKg
-import com.viktorolsson.spotter.core.model.toKg
-import kotlin.math.floor
 
 /** A set the user reports, e.g. "bench 80 kg × 5". */
 data class LiftResult(val weightKg: Double, val reps: Int) {
@@ -35,8 +28,6 @@ internal class StartingWeights(
     private val known: KnownLifts,
     private val ageYears: Int,
 ) {
-    private enum class Anchor { BENCH, SQUAT, DEADLIFT }
-
     private val anchors: Map<Anchor, Double> = Anchor.entries.associateWith { anchor ->
         val reported = when (anchor) {
             Anchor.BENCH -> known.bench
@@ -68,74 +59,11 @@ internal class StartingWeights(
     }
 
     fun estimateKg(exercise: Exercise, reps: Int, rir: Int): Double? {
-        val (anchor, movementFactor) = movement(exercise) ?: return null
-        val equipmentFactor = equipmentFactor(exercise) ?: return null
+        val (anchor, movementFactor) = LoadFactors.movement(exercise) ?: return null
+        val equipmentFactor = LoadFactors.equipment(exercise) ?: return null
         val oneRepMax = anchors.getValue(anchor) * movementFactor * equipmentFactor
         val working = oneRepMax / (1 + (reps + rir) / 30.0) * CALIBRATION
-        return roundDown(working, exercise)
-    }
-
-    private fun movement(ex: Exercise): Pair<Anchor, Double>? {
-        if (ex.id in Rules.unloaded) return null
-        overrides[ex.id]?.let { return it }
-        return when (ex.movementPattern) {
-            MovementPattern.HORIZONTAL_PUSH -> Anchor.BENCH to 1.0
-            MovementPattern.VERTICAL_PUSH -> Anchor.BENCH to 0.62
-            MovementPattern.HORIZONTAL_PULL -> Anchor.BENCH to 0.85
-            MovementPattern.VERTICAL_PULL -> if (ex.mechanics == Mechanics.COMPOUND) Anchor.BENCH to 0.85 else null
-            MovementPattern.SQUAT -> Anchor.SQUAT to 1.0
-            MovementPattern.LUNGE -> Anchor.SQUAT to 0.45
-            MovementPattern.HINGE -> Anchor.DEADLIFT to 0.7
-            MovementPattern.HIP_THRUST -> if (ex.mechanics == Mechanics.COMPOUND) Anchor.DEADLIFT to 0.9 else null
-            else -> null // Isolation work starts from the user's own pick.
-        }
-    }
-
-    private val overrides: Map<String, Pair<Anchor, Double>> = mapOf(
-        "deadlift" to (Anchor.DEADLIFT to 1.0),
-        "sumo-deadlift" to (Anchor.DEADLIFT to 1.0),
-        "trap-bar-deadlift" to (Anchor.DEADLIFT to 1.05),
-        "rack-pull" to (Anchor.DEADLIFT to 1.1),
-        "good-morning" to (Anchor.DEADLIFT to 0.4),
-        "kettlebell-swing" to (Anchor.DEADLIFT to 0.75),
-        "cable-pull-through" to (Anchor.DEADLIFT to 0.4),
-        "leg-press" to (Anchor.SQUAT to 1.8),
-        "single-leg-press" to (Anchor.SQUAT to 0.9),
-        "hack-squat" to (Anchor.SQUAT to 0.9),
-        "pendulum-squat" to (Anchor.SQUAT to 0.8),
-        "goblet-squat" to (Anchor.SQUAT to 0.9),
-        "kettlebell-goblet-squat" to (Anchor.SQUAT to 0.9),
-        "front-squat" to (Anchor.SQUAT to 0.8),
-        "close-grip-bench-press" to (Anchor.BENCH to 0.9),
-        "incline-barbell-bench-press" to (Anchor.BENCH to 0.85),
-        "incline-dumbbell-press" to (Anchor.BENCH to 0.9),
-        "barbell-hip-thrust" to (Anchor.DEADLIFT to 1.0),
-    )
-
-    /** Null for unloaded movements (bodyweight, bands): reps only. */
-    private fun equipmentFactor(ex: Exercise): Double? = when {
-        Equipment.BARBELL in ex.equipment && Equipment.LANDMINE in ex.equipment -> 0.5
-        Equipment.BARBELL in ex.equipment || Equipment.EZ_BAR in ex.equipment || Equipment.TRAP_BAR in ex.equipment -> 1.0
-        Equipment.SMITH_MACHINE in ex.equipment -> 0.9
-        Equipment.MACHINE in ex.equipment -> 1.0
-        Equipment.CABLE in ex.equipment -> 0.8
-        // Per hand: a dumbbell pair is ~80 % of the barbell, split across two hands.
-        Equipment.DUMBBELL in ex.equipment || Equipment.KETTLEBELL in ex.equipment ->
-            if (ex.id.contains("goblet")) 0.45 else 0.4
-        else -> null
-    }
-
-    private fun roundDown(kg: Double, ex: Exercise): Double? {
-        val barbell = Equipment.BARBELL in ex.equipment || Equipment.TRAP_BAR in ex.equipment
-        val unit = profile.units
-        val step = when (unit) {
-            WeightUnit.KG -> if (Equipment.DUMBBELL in ex.equipment || Equipment.KETTLEBELL in ex.equipment) 2.0 else 2.5
-            WeightUnit.LB -> 5.0
-        }
-        val minimum = if (barbell) (if (unit == WeightUnit.LB) 45.0 else 20.0) else step
-        val inUnit = floor(unit.fromKg(kg) / step) * step
-        if (inUnit < step) return null
-        return unit.toKg(inUnit.coerceAtLeast(minimum))
+        return LoadFactors.roundDown(working, exercise, profile.units)
     }
 
     private companion object {

@@ -5,6 +5,7 @@ import androidx.room.Insert
 import androidx.room.Query
 import androidx.room.Transaction
 import androidx.room.Update
+import com.viktorolsson.spotter.core.data.db.entity.HistorySet
 import com.viktorolsson.spotter.core.data.db.entity.SessionExerciseEntity
 import com.viktorolsson.spotter.core.data.db.entity.SessionWithExercises
 import com.viktorolsson.spotter.core.data.db.entity.SetEntryEntity
@@ -94,6 +95,27 @@ interface WorkoutDao {
         """,
     )
     suspend fun deleteExercisesWithoutSets(sessionId: Long)
+
+    /**
+     * Completed working sets for [exerciseId] from its last [sessions] finished
+     * sessions, most recent session first.
+     */
+    @Query(
+        """
+        SELECT se.*, sx.sessionId AS sessionId FROM set_entry se
+        JOIN session_exercise sx ON se.sessionExerciseId = sx.id
+        JOIN workout_session ws ON sx.sessionId = ws.id
+        WHERE sx.exerciseId = :exerciseId AND se.completedAt IS NOT NULL AND se.setType != 'WARMUP'
+          AND ws.id IN (
+            SELECT ws2.id FROM workout_session ws2
+            JOIN session_exercise sx2 ON sx2.sessionId = ws2.id
+            WHERE sx2.exerciseId = :exerciseId AND ws2.endedAt IS NOT NULL
+            GROUP BY ws2.id ORDER BY ws2.startedAt DESC LIMIT :sessions
+          )
+        ORDER BY ws.startedAt DESC, sx.position, se.position
+        """,
+    )
+    suspend fun getRecentWorkingSets(exerciseId: String, sessions: Int): List<HistorySet>
 
     /**
      * Completed sets for [exerciseId] from the most recent finished session that

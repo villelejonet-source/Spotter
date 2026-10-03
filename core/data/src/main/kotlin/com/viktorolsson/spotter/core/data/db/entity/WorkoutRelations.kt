@@ -19,6 +19,14 @@ data class SessionExerciseWithSets(
     val sets: List<SetEntryEntity>,
     @Relation(parentColumn = "planExerciseId", entityColumn = "id")
     val planExercise: PlanExerciseEntity?,
+    @Relation(parentColumn = "substitutedFromExerciseId", entityColumn = "id")
+    val substitutedFrom: ExerciseEntity?,
+)
+
+/** A logged set with the session it belongs to, for grouping history by session. */
+data class HistorySet(
+    @Embedded val set: SetEntryEntity,
+    val sessionId: Long,
 )
 
 data class PlanWithDays(

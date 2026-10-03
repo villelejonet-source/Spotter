@@ -65,6 +65,8 @@ fun SessionExerciseWithSets.toModel() = SessionExercise(
     notes = sessionExercise.notes,
     sets = sets.sortedBy { it.position }.map(SetEntryEntity::toModel),
     target = planExercise?.toTarget(),
+    substitutedFromName = substitutedFrom?.name,
+    progressionReason = sessionExercise.progressionReason,
 )
 
 fun SetEntryEntity.toModel() = WorkoutSet(

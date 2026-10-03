@@ -10,10 +10,16 @@ import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Add
+import androidx.compose.material.icons.automirrored.rounded.TrendingDown
+import androidx.compose.material.icons.automirrored.rounded.TrendingFlat
+import androidx.compose.material.icons.automirrored.rounded.TrendingUp
 import androidx.compose.material.icons.rounded.MoreVert
+import androidx.compose.material.icons.rounded.SwapHoriz
+import androidx.compose.material.icons.rounded.Tune
 import androidx.compose.material.icons.rounded.Timer
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -38,6 +44,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.viktorolsson.spotter.core.model.PreviousSet
+import com.viktorolsson.spotter.core.model.ProgressionReason
 import com.viktorolsson.spotter.core.model.SessionExercise
 import com.viktorolsson.spotter.core.model.SetType
 import com.viktorolsson.spotter.core.model.UserPreferences
@@ -53,6 +60,7 @@ internal class ExerciseCardActions(
     val onDeleteSet: (setId: Long) -> Unit,
     val onSetType: (setId: Long, SetType) -> Unit,
     val onSetNote: (setId: Long, String) -> Unit,
+    val onSwap: () -> Unit,
     val onExerciseNote: (String) -> Unit,
     val onRest: (Int) -> Unit,
     val onSupersetNext: () -> Unit,
@@ -116,7 +124,7 @@ internal fun ExerciseCard(
                 }
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
-                    modifier = Modifier.clickable { pickingRest = true }.padding(8.dp),
+                    modifier = Modifier.clickable { pickingRest = true }.padding(horizontal = 4.dp, vertical = 8.dp),
                 ) {
                     Icon(
                         Icons.Rounded.Timer,
@@ -130,11 +138,15 @@ internal fun ExerciseCard(
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                 }
+                IconButton(onClick = actions.onSwap) {
+                    Icon(Icons.Rounded.SwapHoriz, stringResource(R.string.exercise_swap))
+                }
                 Box {
                     IconButton(onClick = { menuOpen = true }) {
                         Icon(Icons.Rounded.MoreVert, stringResource(R.string.session_more))
                     }
                     DropdownMenu(expanded = menuOpen, onDismissRequest = { menuOpen = false }) {
+                        MenuItem(R.string.exercise_swap) { menuOpen = false; actions.onSwap() }
                         MenuItem(R.string.exercise_note) { menuOpen = false; editingNote = true }
                         MenuItem(R.string.exercise_rest) { menuOpen = false; pickingRest = true }
                         if (!isLast) MenuItem(R.string.exercise_superset_next) { menuOpen = false; actions.onSupersetNext() }
@@ -159,6 +171,15 @@ internal fun ExerciseCard(
                     modifier = Modifier.padding(horizontal = 16.dp),
                 )
             }
+            exercise.substitutedFromName?.let { from ->
+                Text(
+                    stringResource(R.string.exercise_swapped_from, from),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.tertiary,
+                    modifier = Modifier.padding(horizontal = 16.dp),
+                )
+            }
+            exercise.progressionReason?.let { ProgressionNote(it) }
             exercise.notes?.let { note ->
                 Text(
                     note,
@@ -213,6 +234,31 @@ internal fun ExerciseCard(
             onSelect = { actions.onRest(it); pickingRest = false },
             onDismiss = { pickingRest = false },
         )
+    }
+}
+
+/** Explains the pre-filled target, so progression never feels like a black box. */
+@Composable
+private fun ProgressionNote(reason: ProgressionReason) {
+    val (text, icon, emphasised) = when (reason) {
+        ProgressionReason.CALIBRATION -> Triple(R.string.progress_calibration, Icons.Rounded.Tune, false)
+        ProgressionReason.FIRST_TIME -> Triple(R.string.progress_first_time, Icons.Rounded.Tune, false)
+        ProgressionReason.INCREASE_WEIGHT -> Triple(R.string.progress_increase, Icons.AutoMirrored.Rounded.TrendingUp, true)
+        ProgressionReason.INCREASE_TOO_EASY -> Triple(R.string.progress_increase_easy, Icons.AutoMirrored.Rounded.TrendingUp, true)
+        ProgressionReason.ADD_REPS -> Triple(R.string.progress_add_reps, Icons.AutoMirrored.Rounded.TrendingUp, false)
+        ProgressionReason.HOLD_TOO_HARD -> Triple(R.string.progress_hold_hard, Icons.AutoMirrored.Rounded.TrendingFlat, false)
+        ProgressionReason.REPEAT -> Triple(R.string.progress_repeat, Icons.AutoMirrored.Rounded.TrendingFlat, false)
+        ProgressionReason.RESET_AFTER_MISSES -> Triple(R.string.progress_reset, Icons.AutoMirrored.Rounded.TrendingDown, false)
+        ProgressionReason.BODYWEIGHT_TOP_OF_RANGE -> Triple(R.string.progress_bodyweight_top, Icons.AutoMirrored.Rounded.TrendingUp, true)
+    }
+    val color = if (emphasised) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(6.dp),
+        modifier = Modifier.padding(horizontal = 16.dp, vertical = 2.dp),
+    ) {
+        Icon(icon, contentDescription = null, tint = color, modifier = Modifier.size(16.dp))
+        Text(stringResource(text), style = MaterialTheme.typography.bodySmall, color = color)
     }
 }
 

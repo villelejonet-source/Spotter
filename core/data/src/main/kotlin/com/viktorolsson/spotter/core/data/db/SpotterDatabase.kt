@@ -26,11 +26,12 @@ import com.viktorolsson.spotter.core.data.db.entity.WorkoutSessionEntity
  * exported JSON in `core/data/schemas` is what migration tests run against.
  */
 @Database(
-    version = 3,
+    version = 4,
     exportSchema = true,
     autoMigrations = [
         AutoMigration(from = 1, to = 2), // session_exercise.restSeconds
         AutoMigration(from = 2, to = 3), // plan_exercise.startingWeightKg, session_exercise.planExerciseId
+        AutoMigration(from = 3, to = 4), // session_exercise.progressionReason
     ],
     entities = [
         UserProfileEntity::class,

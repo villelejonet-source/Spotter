@@ -4,9 +4,14 @@ import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.navigation.toRoute
+import com.viktorolsson.spotter.core.data.repository.ExerciseRepository
 import com.viktorolsson.spotter.core.data.repository.RestTimerRepository
 import com.viktorolsson.spotter.core.data.repository.UserPreferencesRepository
+import com.viktorolsson.spotter.core.data.repository.UserProfileRepository
 import com.viktorolsson.spotter.core.data.repository.WorkoutRepository
+import com.viktorolsson.spotter.core.engine.ExerciseSimilarity
+import com.viktorolsson.spotter.core.model.Equipment
+import com.viktorolsson.spotter.core.model.Exercise
 import com.viktorolsson.spotter.core.model.PreviousSet
 import com.viktorolsson.spotter.core.model.RestTimer
 import com.viktorolsson.spotter.core.model.SessionExercise
@@ -16,7 +21,11 @@ import com.viktorolsson.spotter.core.model.WorkoutSession
 import com.viktorolsson.spotter.core.model.parseToKg
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
@@ -27,6 +36,28 @@ import kotlinx.coroutines.flow.onStart
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import javax.inject.Inject
+
+enum class SwapFilter { ALL, SAME_EQUIPMENT, DUMBBELL, MACHINE, BODYWEIGHT }
+
+data class SwapUiState(
+    val sessionExercise: SessionExercise,
+    val candidates: List<Exercise> = emptyList(),
+    val filter: SwapFilter = SwapFilter.ALL,
+) {
+    val canReplaceInPlan: Boolean get() = sessionExercise.target != null
+
+    val visible: List<Exercise>
+        get() = candidates.filter { candidate ->
+            val eq = candidate.equipment.toSet()
+            when (filter) {
+                SwapFilter.ALL -> true
+                SwapFilter.SAME_EQUIPMENT -> eq == sessionExercise.exercise.equipment.toSet()
+                SwapFilter.DUMBBELL -> Equipment.DUMBBELL in eq
+                SwapFilter.MACHINE -> eq.any { it in setOf(Equipment.MACHINE, Equipment.CABLE, Equipment.SMITH_MACHINE) }
+                SwapFilter.BODYWEIGHT -> eq.all { it in setOf(Equipment.PULL_UP_BAR, Equipment.DIP_STATION, Equipment.BENCH, Equipment.RESISTANCE_BAND) }
+            }
+        }
+}
 
 data class SessionUiState(
     val loading: Boolean = true,
@@ -44,8 +75,41 @@ class SessionViewModel @Inject constructor(
     savedStateHandle: SavedStateHandle,
     private val workoutRepository: WorkoutRepository,
     private val restTimerRepository: RestTimerRepository,
+    private val exerciseRepository: ExerciseRepository,
+    private val profileRepository: UserProfileRepository,
     preferencesRepository: UserPreferencesRepository,
 ) : ViewModel() {
+    private val _swap = MutableStateFlow<SwapUiState?>(null)
+    /** The open swap sheet, if any. */
+    val swap: StateFlow<SwapUiState?> = _swap.asStateFlow()
+
+    /** Ranks alternatives using the user's equipment and limitations (everything, if no profile yet). */
+    fun openSwap(exercise: SessionExercise) = launch {
+        _swap.value = SwapUiState(exercise)
+        val profile = profileRepository.get()
+        val inSession = uiState.value.session?.exercises.orEmpty().map { it.exercise.id }.toSet()
+        val ranked = ExerciseSimilarity.rank(
+            original = exercise.exercise,
+            library = exerciseRepository.observeAll().first(),
+            availableEquipment = profile?.equipment ?: Equipment.entries.toSet(),
+            limitations = profile?.limitations.orEmpty(),
+            exclude = inSession,
+        )
+        _swap.value = _swap.value?.copy(candidates = ranked.map { it.exercise })
+    }
+
+    fun setSwapFilter(filter: SwapFilter) = _swap.update { it?.copy(filter = filter) }
+
+    fun closeSwap() {
+        _swap.value = null
+    }
+
+    fun swapTo(exerciseId: String, replaceInPlan: Boolean) = launch {
+        val current = _swap.value?.sessionExercise ?: return@launch
+        _swap.value = null
+        workoutRepository.swapExercise(current.id, exerciseId, replaceInPlan)
+    }
+
     val sessionId = savedStateHandle.toRoute<SessionRoute>().sessionId
 
     private val session = workoutRepository.observeSession(sessionId)

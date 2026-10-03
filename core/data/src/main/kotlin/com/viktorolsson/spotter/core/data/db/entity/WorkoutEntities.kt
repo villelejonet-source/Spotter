@@ -6,6 +6,7 @@ import androidx.room.ForeignKey
 import androidx.room.Index
 import androidx.room.PrimaryKey
 import com.viktorolsson.spotter.core.model.PersonalRecordType
+import com.viktorolsson.spotter.core.model.ProgressionReason
 import com.viktorolsson.spotter.core.model.RecommendationStatus
 import com.viktorolsson.spotter.core.model.RecommendationType
 import com.viktorolsson.spotter.core.model.SetType
@@ -51,6 +52,9 @@ data class SessionExerciseEntity(
     /** The plan prescription this exercise was started from, if any. */
     @ColumnInfo(defaultValue = "NULL")
     val planExerciseId: Long? = null,
+    /** Why the pre-filled targets are what they are (planned workouts only). */
+    @ColumnInfo(defaultValue = "NULL")
+    val progressionReason: ProgressionReason? = null,
 )
 
 /** Weights are always stored in kg; the UI converts to the user's unit. */

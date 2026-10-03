@@ -19,6 +19,12 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
+import androidx.compose.foundation.clickable
+import com.viktorolsson.spotter.core.ui.component.RestTimePickerDialog
+import com.viktorolsson.spotter.core.ui.formatClock
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
@@ -40,6 +46,8 @@ internal fun SettingsRoute(viewModel: SettingsViewModel = hiltViewModel()) {
         onThemeModeChange = { viewModel.setThemeMode(it) },
         onDynamicColorChange = { viewModel.setDynamicColor(it) },
         onWeightUnitChange = { viewModel.setWeightUnit(it) },
+        onDefaultRestChange = { viewModel.setDefaultRest(it) },
+        onLogRirChange = { viewModel.setLogRir(it) },
     )
 }
 
@@ -50,7 +58,10 @@ internal fun SettingsScreen(
     onThemeModeChange: (ThemeMode) -> Unit,
     onDynamicColorChange: (Boolean) -> Unit,
     onWeightUnitChange: (WeightUnit) -> Unit,
+    onDefaultRestChange: (Int) -> Unit,
+    onLogRirChange: (Boolean) -> Unit,
 ) {
+    var pickingRest by rememberSaveable { mutableStateOf(false) }
     Scaffold(
         topBar = { TopAppBar(title = { Text(stringResource(R.string.profile_title)) }) },
     ) { padding ->
@@ -97,6 +108,21 @@ internal fun SettingsScreen(
                 onSelect = onWeightUnitChange,
             )
 
+            SectionHeader(R.string.settings_section_workout)
+            SettingRow(
+                title = stringResource(R.string.settings_default_rest),
+                summary = stringResource(R.string.settings_default_rest_summary),
+                modifier = Modifier.clickable { pickingRest = true },
+            ) {
+                Text(formatClock(preferences.defaultRestSeconds.toLong()), style = MaterialTheme.typography.titleMedium)
+            }
+            SettingRow(
+                title = stringResource(R.string.settings_log_rir),
+                summary = stringResource(R.string.settings_log_rir_summary),
+            ) {
+                Switch(checked = preferences.logRir, onCheckedChange = onLogRirChange)
+            }
+
             Text(
                 stringResource(R.string.settings_privacy_note),
                 style = MaterialTheme.typography.bodySmall,
@@ -104,6 +130,14 @@ internal fun SettingsScreen(
                 modifier = Modifier.padding(top = 16.dp),
             )
         }
+    }
+    if (pickingRest) {
+        RestTimePickerDialog(
+            title = stringResource(R.string.settings_default_rest),
+            selectedSeconds = preferences.defaultRestSeconds,
+            onSelect = { onDefaultRestChange(it); pickingRest = false },
+            onDismiss = { pickingRest = false },
+        )
     }
 }
 
@@ -115,6 +149,22 @@ private fun SectionHeader(@StringRes title: Int) {
         color = MaterialTheme.colorScheme.primary,
         modifier = Modifier.padding(top = 8.dp),
     )
+}
+
+@Composable
+private fun SettingRow(
+    title: String,
+    summary: String,
+    modifier: Modifier = Modifier,
+    trailing: @Composable () -> Unit,
+) {
+    Row(modifier.fillMaxWidth().padding(vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
+        Column(Modifier.weight(1f).padding(end = 16.dp)) {
+            Text(title, style = MaterialTheme.typography.bodyLarge)
+            Text(summary, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        }
+        trailing()
+    }
 }
 
 @Composable
@@ -140,6 +190,6 @@ private fun <T> SegmentedChoice(
 @Composable
 private fun SettingsScreenPreview() {
     SpotterTheme {
-        SettingsScreen(UserPreferences(), {}, {}, {})
+        SettingsScreen(UserPreferences(), {}, {}, {}, {}, {})
     }
 }

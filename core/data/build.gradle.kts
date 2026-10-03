@@ -9,6 +9,15 @@ room {
     schemaDirectory("$projectDir/schemas")
 }
 
+androidComponents {
+    // MigrationTestHelper reads the exported schemas as assets.
+    onVariants { variant ->
+        (variant as? com.android.build.api.variant.HasHostTests)
+            ?.hostTests?.get(com.android.build.api.variant.HostTestBuilder.UNIT_TEST_TYPE)
+            ?.sources?.assets?.addStaticSourceDirectory("$projectDir/schemas")
+    }
+}
+
 dependencies {
     api(project(":core:model"))
 

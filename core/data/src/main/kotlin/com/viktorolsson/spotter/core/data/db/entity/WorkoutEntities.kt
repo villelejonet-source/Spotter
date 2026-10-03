@@ -1,5 +1,6 @@
 package com.viktorolsson.spotter.core.data.db.entity
 
+import androidx.room.ColumnInfo
 import androidx.room.Entity
 import androidx.room.ForeignKey
 import androidx.room.Index
@@ -43,6 +44,9 @@ data class SessionExerciseEntity(
     val substitutedFromExerciseId: String?,
     val supersetGroup: Int?,
     val notes: String?,
+    /** Rest after each set; null falls back to the plan default, then the user default. */
+    @ColumnInfo(defaultValue = "NULL")
+    val restSeconds: Int? = null,
 )
 
 /** Weights are always stored in kg; the UI converts to the user's unit. */

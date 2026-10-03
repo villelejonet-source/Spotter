@@ -4,4 +4,6 @@
     <string name="nav_history">History</string>
     <string name="nav_progress">Progress</string>
     <string name="nav_profile">Profile</string>
+    <string name="workout_in_progress">Workout in progress</string>
+    <string name="open_workout">Open workout</string>
 </resources>

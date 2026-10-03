@@ -9,6 +9,7 @@ import androidx.room.Room
 import com.viktorolsson.spotter.core.data.db.SpotterDatabase
 import com.viktorolsson.spotter.core.data.db.dao.ExerciseDao
 import com.viktorolsson.spotter.core.data.db.dao.UserProfileDao
+import com.viktorolsson.spotter.core.data.db.dao.WorkoutDao
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -17,6 +18,7 @@ import dagger.hilt.components.SingletonComponent
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
+import java.time.Clock
 import javax.inject.Qualifier
 import javax.inject.Singleton
 
@@ -40,9 +42,15 @@ object DataModule {
     fun provideUserProfileDao(db: SpotterDatabase): UserProfileDao = db.userProfileDao()
 
     @Provides
+    fun provideWorkoutDao(db: SpotterDatabase): WorkoutDao = db.workoutDao()
+
+    @Provides
     @Singleton
     fun providePreferencesDataStore(@ApplicationContext context: Context): DataStore<Preferences> =
         PreferenceDataStoreFactory.create { context.preferencesDataStoreFile("user_preferences") }
+
+    @Provides
+    fun provideClock(): Clock = Clock.systemUTC()
 
     @Provides
     @Singleton

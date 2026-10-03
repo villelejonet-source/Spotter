@@ -1,6 +1,7 @@
 package com.viktorolsson.spotter.core.data.db.dao
 
 import androidx.room.Dao
+import androidx.room.Insert
 import androidx.room.Query
 import androidx.room.Upsert
 import com.viktorolsson.spotter.core.data.db.entity.ExerciseEntity
@@ -23,6 +24,9 @@ interface ExerciseDao {
 
     @Query("SELECT * FROM exercise WHERE name LIKE '%' || :query || '%' ORDER BY name COLLATE NOCASE")
     fun search(query: String): Flow<List<ExerciseEntity>>
+
+    @Insert
+    suspend fun insert(exercise: ExerciseEntity)
 
     @Upsert
     suspend fun upsertAll(exercises: List<ExerciseEntity>)

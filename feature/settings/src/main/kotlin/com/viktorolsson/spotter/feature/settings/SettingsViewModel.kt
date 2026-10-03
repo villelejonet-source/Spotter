@@ -25,4 +25,8 @@ class SettingsViewModel @Inject constructor(
     fun setDynamicColor(enabled: Boolean) = viewModelScope.launch { preferencesRepository.setDynamicColor(enabled) }
 
     fun setWeightUnit(unit: WeightUnit) = viewModelScope.launch { preferencesRepository.setWeightUnit(unit) }
+
+    fun setDefaultRest(seconds: Int) = viewModelScope.launch { preferencesRepository.setDefaultRestSeconds(seconds) }
+
+    fun setLogRir(enabled: Boolean) = viewModelScope.launch { preferencesRepository.setLogRir(enabled) }
 }

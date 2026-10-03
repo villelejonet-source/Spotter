@@ -47,6 +47,8 @@ dependencies {
     implementation(project(":feature:history"))
     implementation(project(":feature:progress"))
     implementation(project(":feature:settings"))
+    implementation(project(":feature:library"))
+    implementation(project(":feature:session"))
 
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.core.splashscreen)
@@ -54,6 +56,7 @@ dependencies {
     implementation(libs.androidx.lifecycle.runtime.compose)
     implementation(libs.androidx.lifecycle.viewmodel.compose)
     implementation(libs.androidx.navigation.compose)
+    implementation(libs.androidx.hilt.lifecycle.viewmodel.compose)
     implementation(libs.androidx.compose.material.icons.extended)
     implementation(libs.kotlinx.serialization.json)
 }

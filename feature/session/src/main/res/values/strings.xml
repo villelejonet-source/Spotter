@@ -1,0 +1,74 @@
+<resources>
+    <string name="session_minimize">Minimize workout</string>
+    <string name="session_finish">Finish</string>
+    <string name="session_more">More</string>
+    <string name="session_add_exercises">Add exercises</string>
+    <string name="session_empty_title">Empty workout</string>
+    <string name="session_empty_body">Add exercises to start logging sets.</string>
+    <string name="session_workout_note">Workout note</string>
+    <string name="session_stopwatch">Stopwatch / timer</string>
+    <string name="session_discard">Discard workout</string>
+
+    <string name="col_set">Set</string>
+    <string name="col_previous">Previous</string>
+    <string name="col_reps">Reps</string>
+    <string name="col_rir">RIR</string>
+    <string name="set_complete">Complete set</string>
+    <string name="set_completed">Set completed</string>
+    <string name="add_set">Add set</string>
+    <string name="delete">Delete</string>
+    <string name="set_warmup_short">W</string>
+    <string name="set_drop_short">D</string>
+    <string name="set_failure_short">F</string>
+    <string name="set_type_warmup">Warm-up</string>
+    <string name="set_type_working">Working set</string>
+    <string name="set_type_drop">Drop set</string>
+    <string name="set_type_failure">To failure</string>
+    <string name="set_note">Set note</string>
+
+    <string name="exercise_note">Exercise note</string>
+    <string name="exercise_rest">Rest time</string>
+    <string name="exercise_rest_label">Rest %1$s</string>
+    <string name="exercise_superset_next">Superset with next</string>
+    <string name="exercise_superset_remove">Remove from superset</string>
+    <string name="exercise_superset_badge">Superset</string>
+    <string name="exercise_move_up">Move up</string>
+    <string name="exercise_move_down">Move down</string>
+    <string name="exercise_remove">Remove exercise</string>
+
+    <string name="rest_title">Rest</string>
+    <string name="rest_minus">−15 s</string>
+    <string name="rest_plus">+15 s</string>
+    <string name="rest_skip">Skip</string>
+
+    <string name="stopwatch_start">Start</string>
+    <string name="stopwatch_pause">Pause</string>
+    <string name="stopwatch_reset">Reset</string>
+    <string name="stopwatch_countdown">Countdown</string>
+
+    <string name="note_save">Save</string>
+    <string name="cancel">Cancel</string>
+
+    <string name="finish_title">Finish workout?</string>
+    <string name="finish_body_incomplete">%1$d unticked sets will be removed.</string>
+    <string name="finish_body_ok">Nice work. Ready to wrap up?</string>
+    <string name="finish_body_nothing">You haven\'t completed any sets yet. Discard the workout instead?</string>
+    <string name="discard_title">Discard workout?</string>
+    <string name="discard_body">Everything logged in this workout will be deleted.</string>
+
+    <string name="summary_title">Workout complete</string>
+    <string name="summary_duration">Duration</string>
+    <string name="summary_volume">Volume</string>
+    <string name="summary_sets">Sets</string>
+    <string name="summary_exercise_line">%1$d sets · best %2$s</string>
+    <string name="summary_exercise_sets">%1$d sets</string>
+    <string name="summary_done">Done</string>
+
+    <string name="notif_channel_workout">Workout in progress</string>
+    <string name="notif_channel_rest_done">Rest finished</string>
+    <string name="notif_workout_title">Workout in progress</string>
+    <string name="notif_rest_title">Resting</string>
+    <string name="notif_rest_done_title">Rest over</string>
+    <string name="notif_rest_done_text">Time for your next set.</string>
+    <string name="notif_add_30">+30 s</string>
+</resources>

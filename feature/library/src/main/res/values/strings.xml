@@ -1,0 +1,18 @@
+<resources>
+    <string name="picker_title">Add exercises</string>
+    <string name="picker_search">Search exercises</string>
+    <string name="picker_add">Add (%1$d)</string>
+    <string name="picker_back">Back</string>
+    <string name="picker_create">Create exercise</string>
+    <string name="picker_no_results">No exercises match. Try another search or create your own.</string>
+    <string name="picker_all_equipment">Any equipment</string>
+    <string name="picker_bodyweight">Bodyweight</string>
+    <string name="picker_custom">Custom</string>
+    <string name="create_title">New exercise</string>
+    <string name="create_name">Name</string>
+    <string name="create_muscle">Main muscle</string>
+    <string name="create_pattern">Movement</string>
+    <string name="create_equipment">Equipment</string>
+    <string name="create_save">Create</string>
+    <string name="cancel">Cancel</string>
+</resources>

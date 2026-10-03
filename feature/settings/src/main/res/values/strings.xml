@@ -11,5 +11,10 @@
     <string name="settings_weight_unit">Weight</string>
     <string name="settings_unit_kg">kg</string>
     <string name="settings_unit_lb">lb</string>
-    <string name="settings_privacy_note">Your training data stays on this device. Nothing is sent anywhere.</string>
+    <string name="settings_section_workout">Workouts</string>
+    <string name="settings_default_rest">Default rest</string>
+    <string name="settings_default_rest_summary">Used when an exercise has no rest time of its own</string>
+    <string name="settings_log_rir">Log RIR</string>
+    <string name="settings_log_rir_summary">Add a reps-in-reserve column to each set</string>
+    <string name="settings_privacy_note">Your training data stays on this device unless you turn on cloud backup.</string>
 </resources>

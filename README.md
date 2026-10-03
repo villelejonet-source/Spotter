@@ -22,7 +22,7 @@ Or open the folder in Android Studio and run the `app` configuration.
 | `core/model` | Pure Kotlin domain types and enums |
 | `core/data` | Room schema (exported to `core/data/schemas`), DataStore preferences, exercise seeder |
 | `core/ui` | Theme (branded light/dark palette + dynamic color), shared components |
-| `feature/*` | One module per tab: `today`, `history`, `progress`, `settings` (Profile tab) |
+| `feature/*` | One module per tab (`today`, `history`, `progress`, `settings` = Profile), plus `session` (workout logger, rest timer service, summary) and `library` (exercise picker) |
 | `build-logic` | Convention plugins (`spotter.android.feature`, `spotter.jvm.library`, …) |
 
 The exercise library lives in `core/data/src/main/assets/exercises.json`. Bump its `version` after editing so installed apps re-seed.

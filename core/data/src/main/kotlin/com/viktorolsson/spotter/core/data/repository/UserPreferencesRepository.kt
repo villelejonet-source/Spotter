@@ -26,6 +26,7 @@ class UserPreferencesRepository @Inject constructor(
             dynamicColor = prefs[Keys.DYNAMIC_COLOR] ?: defaults.dynamicColor,
             weightUnit = prefs[Keys.WEIGHT_UNIT].toEnumOr(defaults.weightUnit),
             defaultRestSeconds = prefs[Keys.DEFAULT_REST_SECONDS] ?: defaults.defaultRestSeconds,
+            logRir = prefs[Keys.LOG_RIR] ?: defaults.logRir,
             onboardingCompleted = prefs[Keys.ONBOARDING_COMPLETED] ?: defaults.onboardingCompleted,
         )
     }
@@ -46,6 +47,10 @@ class UserPreferencesRepository @Inject constructor(
         dataStore.edit { it[Keys.DEFAULT_REST_SECONDS] = seconds }
     }
 
+    suspend fun setLogRir(enabled: Boolean) {
+        dataStore.edit { it[Keys.LOG_RIR] = enabled }
+    }
+
     suspend fun setOnboardingCompleted(done: Boolean) {
         dataStore.edit { it[Keys.ONBOARDING_COMPLETED] = done }
     }
@@ -55,6 +60,7 @@ class UserPreferencesRepository @Inject constructor(
         val DYNAMIC_COLOR = booleanPreferencesKey("dynamic_color")
         val WEIGHT_UNIT = stringPreferencesKey("weight_unit")
         val DEFAULT_REST_SECONDS = intPreferencesKey("default_rest_seconds")
+        val LOG_RIR = booleanPreferencesKey("log_rir")
         val ONBOARDING_COMPLETED = booleanPreferencesKey("onboarding_completed")
     }
 }

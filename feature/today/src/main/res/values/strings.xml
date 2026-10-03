@@ -4,5 +4,6 @@
     <string name="today_no_plan_body">A short questionnaire will build a plan around your goal, schedule and equipment.</string>
     <string name="today_start_workout">Start workout</string>
     <string name="today_empty_workout">Empty workout</string>
+    <string name="today_resume_workout">Resume workout</string>
     <string name="today_library_count">Exercise library: %1$d exercises</string>
 </resources>

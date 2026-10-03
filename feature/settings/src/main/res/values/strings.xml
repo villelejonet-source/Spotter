@@ -24,8 +24,9 @@
     <string name="settings_log_rir_summary">Add a reps-in-reserve column to each set</string>
     <string name="settings_privacy_note">Your training data stays on this device unless you turn on cloud backup.</string>
     <string name="backup_section">Backup &amp; sync</string>
-    <string name="backup_intro">Back up your training and sync it between phones. Optional: without it, everything stays on this phone.</string>
-    <string name="backup_sign_in">Sign in to back up</string>
+    <string name="backup_intro">Not backed up. Your training is only stored on this phone: if you lose the phone or uninstall Spotter, it\'s gone. A free account keeps it safe and syncs it between phones.</string>
+    <string name="backup_sign_in">Create account</string>
+    <string name="backup_sign_in_existing">I already have an account</string>
     <string name="backup_signed_in_as">Signed in as %1$s</string>
     <string name="backup_last_synced">Last synced %1$s</string>
     <string name="backup_never_synced">Not synced yet</string>
@@ -41,16 +42,18 @@
     <string name="backup_sign_out_title">Sign out?</string>
     <string name="backup_sign_out_body">This phone stops syncing. Your backup stays in the cloud and the data on this phone stays here.</string>
 
-    <string name="account_title">Cloud backup</string>
-    <string name="account_email_intro">Enter your email and we\'ll send you a sign-in link. No password needed.</string>
+    <string name="account_title">Sign in</string>
+    <string name="account_title_new">Create account</string>
+    <string name="account_email_intro">Enter the email you signed up with and we\'ll send you a sign-in link. No password needed.</string>
+    <string name="account_email_intro_new">Enter your email and we\'ll send you a link to create your free account. No password needed.</string>
     <string name="account_email">Email</string>
-    <string name="account_send_code">Send code</string>
+    <string name="account_send_code">Send sign-in link</string>
     <string name="account_code_intro">We sent an email to %1$s. Open it on this phone and tap the sign-in link, or type the 6-digit code if the email has one.</string>
     <string name="account_code">Code</string>
     <string name="account_verify">Sign in</string>
-    <string name="account_resend">Send a new code</string>
+    <string name="account_resend">Send the email again</string>
     <string name="account_change_email">Use another email</string>
-    <string name="account_send_failed">Couldn\'t send the code. Check the address and your connection.</string>
+    <string name="account_send_failed">Couldn\'t send the email. Check the address and your connection.</string>
     <string name="account_verify_failed">That code didn\'t work. Check it, or send a new one.</string>
     <string name="account_privacy">Your training data is stored in your own private backup that only you can access. You can delete it any time.</string>
     <string name="back">Back</string>

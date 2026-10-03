@@ -1,7 +1,16 @@
 <resources>
     <string name="onb_back">Back</string>
     <string name="onb_skip">Skip</string>
-    <string name="onb_restore">Restore backup</string>
+    <string name="welcome_title">Spotter</string>
+    <string name="welcome_tagline">Your training plan, progression and history in one place.</string>
+    <string name="welcome_create">Create account</string>
+    <string name="welcome_sign_in">I already have an account</string>
+    <string name="welcome_without">Continue without an account</string>
+    <string name="welcome_account_note">A free account backs up your training and syncs it between phones. Just your email, no password.</string>
+    <string name="welcome_without_title">Continue without an account?</string>
+    <string name="welcome_without_body">Your training will only be stored on this phone. If you lose the phone or uninstall Spotter, it\'s gone for good. You can create an account later in Profile.</string>
+    <string name="welcome_without_confirm">Continue without</string>
+    <string name="welcome_checking_backup">Looking for your backup…</string>
     <string name="onb_next">Next</string>
     <string name="onb_build">Build my plan</string>
     <string name="onb_start">Start training</string>

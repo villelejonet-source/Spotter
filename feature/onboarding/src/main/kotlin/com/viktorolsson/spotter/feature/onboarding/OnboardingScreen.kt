@@ -54,15 +54,33 @@ import com.viktorolsson.spotter.core.model.label
 import com.viktorolsson.spotter.core.ui.labelRes
 
 @Composable
-internal fun OnboardingRoute(onDone: () -> Unit, onRestore: () -> Unit, viewModel: OnboardingViewModel = hiltViewModel()) {
+internal fun OnboardingRoute(
+    onDone: () -> Unit,
+    onSignIn: (newAccount: Boolean) -> Unit,
+    viewModel: OnboardingViewModel = hiltViewModel(),
+) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
-    BackHandler { if (!viewModel.back()) onDone() }
     LaunchedEffect(viewModel) { viewModel.restoredFromBackup.collect { onDone() } }
+    when {
+        // Back on the welcome screen leaves the app as usual.
+        state.welcome -> {
+            WelcomeScreen(
+                onCreateAccount = { onSignIn(true) },
+                onSignIn = { onSignIn(false) },
+                onContinueWithout = viewModel::continueWithoutAccount,
+            )
+            return
+        }
+        state.checkingBackup -> {
+            CheckingBackup()
+            return
+        }
+    }
+    BackHandler { if (!viewModel.back()) onDone() }
     OnboardingScreen(
         state = state,
         onBack = { if (!viewModel.back()) onDone() },
         onSkip = { viewModel.skip(onDone) },
-        onRestore = onRestore,
         onNext = viewModel::next,
         onUpdate = viewModel::update,
         onChoose = viewModel::choose,
@@ -78,7 +96,6 @@ internal fun OnboardingScreen(
     state: OnboardingUiState,
     onBack: () -> Unit,
     onSkip: () -> Unit,
-    onRestore: () -> Unit,
     onNext: () -> Unit,
     onUpdate: ((Answers) -> Answers) -> Unit,
     onChoose: ((Answers) -> Answers) -> Unit,
@@ -99,7 +116,6 @@ internal fun OnboardingScreen(
                     },
                     actions = {
                         if (!state.rebuild && state.step == Step.BODY) {
-                            TextButton(onClick = onRestore) { Text(stringResource(R.string.onb_restore)) }
                             TextButton(onClick = onSkip) { Text(stringResource(R.string.onb_skip)) }
                         }
                     },

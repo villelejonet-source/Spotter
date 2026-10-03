@@ -40,6 +40,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewModelScope
 import androidx.navigation.NavGraphBuilder
 import androidx.navigation.compose.composable
+import androidx.navigation.toRoute
 import com.viktorolsson.spotter.core.data.sync.SyncRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -52,10 +53,13 @@ import kotlinx.serialization.Serializable
 import javax.inject.Inject
 
 @Serializable
-data object AccountRoute
+data class AccountRoute(
+    /** Worded for creating an account (from the welcome screen) instead of signing in. */
+    val newAccount: Boolean = false,
+)
 
 fun NavGraphBuilder.accountScreen(onDone: () -> Unit) {
-    composable<AccountRoute> { AccountRoute(onDone = onDone) }
+    composable<AccountRoute> { entry -> AccountRoute(newAccount = entry.toRoute<AccountRoute>().newAccount, onDone = onDone) }
 }
 
 data class AccountUiState(
@@ -107,13 +111,13 @@ class AccountViewModel @Inject constructor(private val sync: SyncRepository) : V
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-internal fun AccountRoute(onDone: () -> Unit, viewModel: AccountViewModel = hiltViewModel()) {
+internal fun AccountRoute(newAccount: Boolean, onDone: () -> Unit, viewModel: AccountViewModel = hiltViewModel()) {
     val state by viewModel.state.collectAsStateWithLifecycle()
     LaunchedEffect(state.signedIn) { if (state.signedIn) onDone() }
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text(stringResource(R.string.account_title)) },
+                title = { Text(stringResource(if (newAccount) R.string.account_title_new else R.string.account_title)) },
                 navigationIcon = {
                     IconButton(onClick = onDone) { Icon(Icons.AutoMirrored.Rounded.ArrowBack, stringResource(R.string.back)) }
                 },
@@ -125,7 +129,7 @@ internal fun AccountRoute(onDone: () -> Unit, viewModel: AccountViewModel = hilt
             verticalArrangement = Arrangement.spacedBy(16.dp),
         ) {
             if (!state.codeSent) {
-                Text(stringResource(R.string.account_email_intro), style = MaterialTheme.typography.bodyLarge)
+                Text(stringResource(if (newAccount) R.string.account_email_intro_new else R.string.account_email_intro), style = MaterialTheme.typography.bodyLarge)
                 OutlinedTextField(
                     value = state.email,
                     onValueChange = viewModel::setEmail,

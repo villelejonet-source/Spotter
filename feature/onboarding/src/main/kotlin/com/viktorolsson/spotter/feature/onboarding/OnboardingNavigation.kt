@@ -8,6 +8,6 @@ import kotlinx.serialization.Serializable
 @Serializable
 data class OnboardingRoute(val rebuild: Boolean = false)
 
-fun NavGraphBuilder.onboardingScreen(onDone: () -> Unit, onRestore: () -> Unit) {
-    composable<OnboardingRoute> { OnboardingRoute(onDone = onDone, onRestore = onRestore) }
+fun NavGraphBuilder.onboardingScreen(onDone: () -> Unit, onSignIn: (newAccount: Boolean) -> Unit) {
+    composable<OnboardingRoute> { OnboardingRoute(onDone = onDone, onSignIn = onSignIn) }
 }

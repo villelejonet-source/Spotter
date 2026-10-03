@@ -54,7 +54,7 @@ import com.viktorolsson.spotter.core.ui.theme.supportsDynamicColor
 internal fun SettingsRoute(
     onOpenPlan: () -> Unit,
     onRebuildPlan: () -> Unit,
-    onOpenAccount: () -> Unit,
+    onOpenAccount: (newAccount: Boolean) -> Unit,
     viewModel: SettingsViewModel = hiltViewModel(),
 ) {
     val preferences by viewModel.preferences.collectAsStateWithLifecycle()
@@ -202,7 +202,8 @@ private fun SectionHeader(@StringRes title: Int) {
 }
 
 internal class SyncActions(
-    val onSignIn: () -> Unit,
+    /** Opens sign-in; true for creating a new account. */
+    val onSignIn: (newAccount: Boolean) -> Unit,
     val onSyncNow: () -> Unit,
     val onSignOut: () -> Unit,
     val onDeleteAccount: () -> Unit,
@@ -220,7 +221,8 @@ private fun BackupSection(status: SyncStatus, actions: SyncActions) {
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
-        Button(onClick = actions.onSignIn) { Text(stringResource(R.string.backup_sign_in)) }
+        Button(onClick = { actions.onSignIn(true) }) { Text(stringResource(R.string.backup_sign_in)) }
+        TextButton(onClick = { actions.onSignIn(false) }) { Text(stringResource(R.string.backup_sign_in_existing)) }
         return
     }
     Text(stringResource(R.string.backup_signed_in_as, account.email.orEmpty()), style = MaterialTheme.typography.bodyLarge)

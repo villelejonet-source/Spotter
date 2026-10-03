@@ -8,6 +8,7 @@ import com.viktorolsson.spotter.core.data.repository.ExerciseRepository
 import com.viktorolsson.spotter.core.data.repository.PlanRepository
 import com.viktorolsson.spotter.core.data.repository.UserPreferencesRepository
 import com.viktorolsson.spotter.core.data.repository.UserProfileRepository
+import com.viktorolsson.spotter.core.data.sync.SyncRepository
 import com.viktorolsson.spotter.core.engine.GeneratedPlan
 import com.viktorolsson.spotter.core.engine.KnownLifts
 import com.viktorolsson.spotter.core.engine.LiftResult
@@ -118,6 +119,11 @@ data class OnboardingUiState(
     val splitOverride: SplitType? = null,
     val generated: GeneratedPlan? = null,
     val saving: Boolean = false,
+    /** First launch: choose between an account and staying on this phone only. */
+    val welcome: Boolean = false,
+    /** Just signed in: waiting for the first sync to see if there's a backup to restore. */
+    val checkingBackup: Boolean = false,
+    val signedIn: Boolean = false,
 )
 
 @HiltViewModel
@@ -127,13 +133,27 @@ class OnboardingViewModel @Inject constructor(
     private val planRepository: PlanRepository,
     private val profileRepository: UserProfileRepository,
     private val preferencesRepository: UserPreferencesRepository,
+    syncRepository: SyncRepository,
     private val clock: Clock,
 ) : ViewModel() {
     private val rebuild = savedStateHandle.toRoute<OnboardingRoute>().rebuild
-    private val _uiState = MutableStateFlow(OnboardingUiState(rebuild = rebuild))
+    private val _uiState = MutableStateFlow(OnboardingUiState(rebuild = rebuild, welcome = !rebuild))
     val uiState: StateFlow<OnboardingUiState> = _uiState.asStateFlow()
 
     init {
+        if (!rebuild) viewModelScope.launch {
+            syncRepository.status.collect { sync ->
+                val signedIn = sync.account != null
+                _uiState.update {
+                    it.copy(
+                        // No welcome when this build has no cloud backup, or once signed in.
+                        welcome = it.welcome && sync.available && !signedIn,
+                        signedIn = signedIn,
+                        checkingBackup = signedIn && sync.lastSyncedAt == null && sync.error == null,
+                    )
+                }
+            }
+        }
         viewModelScope.launch {
             val profile = profileRepository.get() ?: return@launch
             _uiState.update { it.copy(answers = profile.toAnswers()) }
@@ -180,9 +200,17 @@ class OnboardingViewModel @Inject constructor(
         if (nextStep == Step.SUMMARY) generate()
     }
 
+    fun continueWithoutAccount() = _uiState.update { it.copy(welcome = false) }
+
     /** Returns false when already on the first step (the caller then leaves). */
     fun back(): Boolean {
-        val previous = Step.entries.getOrNull(_uiState.value.step.ordinal - 1) ?: return false
+        val state = _uiState.value
+        // Signed out on the first question: back returns to the welcome screen.
+        if (state.step == Step.BODY && !state.rebuild && !state.signedIn) {
+            _uiState.update { it.copy(welcome = true) }
+            return true
+        }
+        val previous = Step.entries.getOrNull(state.step.ordinal - 1) ?: return false
         _uiState.update { it.copy(step = previous) }
         return true
     }

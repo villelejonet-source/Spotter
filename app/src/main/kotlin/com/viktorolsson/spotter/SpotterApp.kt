@@ -161,11 +161,11 @@ fun SpotterApp(
             profileScreen(
                 onOpenPlan = { navController.navigate(PlanRoute) },
                 onRebuildPlan = { navController.navigate(OnboardingRoute(rebuild = true)) },
-                onOpenAccount = { navController.navigate(AccountRoute) },
+                onOpenAccount = { navController.navigate(AccountRoute(newAccount = it)) },
             )
             onboardingScreen(
                 onDone = { navController.popBackStack() },
-                onRestore = { navController.navigate(AccountRoute) },
+                onSignIn = { navController.navigate(AccountRoute(newAccount = it)) },
             )
             accountScreen(onDone = { navController.popBackStack() })
             planScreen(

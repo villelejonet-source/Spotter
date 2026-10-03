@@ -26,4 +26,4 @@ wake lock (for the rest alert).
 **Changes.** If an optional cloud backup is added, it will be opt-in and this policy will be
 updated before it ships.
 
-**Contact.** <your contact email>
+**Contact.** v.olsson950@gmail.com

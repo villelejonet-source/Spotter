@@ -74,4 +74,6 @@ enum class ProgressionReason {
     RESET_AFTER_MISSES,
     /** Bodyweight exercise at the top of the range: add load or a harder variation. */
     BODYWEIGHT_TOP_OF_RANGE,
+    /** Deload week: fewer sets, lighter weight; doesn't count towards progression. */
+    DELOAD,
 }

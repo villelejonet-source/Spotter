@@ -38,6 +38,19 @@ interface PlanDao {
     @Query("UPDATE plan_exercise SET exerciseId = :exerciseId, startingWeightKg = :startingWeightKg WHERE id = :planExerciseId")
     suspend fun replaceExercise(planExerciseId: Long, exerciseId: String, startingWeightKg: Double?)
 
+    @Transaction
+    @Query("SELECT * FROM plan WHERE isActive = 1 ORDER BY createdAt DESC LIMIT 1")
+    suspend fun getActivePlan(): PlanWithDays?
+
+    @Query("SELECT COALESCE(MAX(position) + 1, 0) FROM plan_exercise WHERE planDayId = :planDayId")
+    suspend fun nextExercisePosition(planDayId: Long): Int
+
+    @Query("UPDATE plan_exercise SET sets = sets + 1 WHERE id IN (:planExerciseIds)")
+    suspend fun addOneSet(planExerciseIds: List<Long>)
+
+    @Query("UPDATE plan_exercise SET sets = :sets, repMin = :repMin, repMax = :repMax WHERE id = :planExerciseId")
+    suspend fun setRepRange(planExerciseId: Long, sets: Int, repMin: Int, repMax: Int)
+
     /** The plan day of the most recently finished workout in [planId], if any. */
     @Query(
         """

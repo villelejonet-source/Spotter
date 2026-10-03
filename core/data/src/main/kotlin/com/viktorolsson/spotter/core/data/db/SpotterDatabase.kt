@@ -6,6 +6,7 @@ import androidx.room.RoomDatabase
 import androidx.room.TypeConverters
 import com.viktorolsson.spotter.core.data.db.dao.ExerciseDao
 import com.viktorolsson.spotter.core.data.db.dao.PlanDao
+import com.viktorolsson.spotter.core.data.db.dao.RecommendationDao
 import com.viktorolsson.spotter.core.data.db.dao.UserProfileDao
 import com.viktorolsson.spotter.core.data.db.dao.WorkoutDao
 import com.viktorolsson.spotter.core.data.db.entity.BodyWeightEntryEntity
@@ -26,12 +27,13 @@ import com.viktorolsson.spotter.core.data.db.entity.WorkoutSessionEntity
  * exported JSON in `core/data/schemas` is what migration tests run against.
  */
 @Database(
-    version = 4,
+    version = 5,
     exportSchema = true,
     autoMigrations = [
         AutoMigration(from = 1, to = 2), // session_exercise.restSeconds
         AutoMigration(from = 2, to = 3), // plan_exercise.startingWeightKg, session_exercise.planExerciseId
         AutoMigration(from = 3, to = 4), // session_exercise.progressionReason
+        AutoMigration(from = 4, to = 5), // workout_session.isDeload, recommendation.resolvedAt/dedupKey
     ],
     entities = [
         UserProfileEntity::class,
@@ -54,6 +56,7 @@ abstract class SpotterDatabase : RoomDatabase() {
     abstract fun userProfileDao(): UserProfileDao
     abstract fun workoutDao(): WorkoutDao
     abstract fun planDao(): PlanDao
+    abstract fun recommendationDao(): RecommendationDao
 
     companion object {
         const val NAME = "spotter.db"

@@ -139,3 +139,19 @@ object Progression {
     private fun increase(input: ProgressionInput, weightKg: Double): Double =
         LoadFactors.snap(weightKg + increment(input.exercise, input.rule, input.unit), input.exercise, input.unit)
 }
+
+/** Deload week: about 60 % of the sets at 90 % of the weight, reps at the bottom of the range. */
+object Deload {
+    private const val SET_FACTOR = 0.6
+    private const val WEIGHT_FACTOR = 0.9
+
+    fun lighten(target: ProgressionTarget, exercise: Exercise, repMin: Int, unit: WeightUnit): ProgressionTarget {
+        val sets = Math.round(target.sets.size * SET_FACTOR).toInt().coerceAtLeast(2).coerceAtMost(target.sets.size)
+        return ProgressionTarget(
+            target.sets.take(sets).map { set ->
+                SetTarget(set.weightKg?.let { LoadFactors.roundDown(it * WEIGHT_FACTOR, exercise, unit) ?: it }, repMin)
+            },
+            ProgressionReason.DELOAD,
+        )
+    }
+}

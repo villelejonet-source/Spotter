@@ -52,6 +52,7 @@ import com.viktorolsson.spotter.core.model.fromKg
 import com.viktorolsson.spotter.core.model.label
 import com.viktorolsson.spotter.core.ui.component.ChartPoint
 import com.viktorolsson.spotter.core.ui.component.EmptyState
+import com.viktorolsson.spotter.core.ui.component.RecommendationCard
 import com.viktorolsson.spotter.core.ui.component.TrendChart
 import com.viktorolsson.spotter.core.ui.formatRecordValue
 import com.viktorolsson.spotter.core.ui.formatShortDate
@@ -70,6 +71,18 @@ internal fun ProgressRoute(onOpenExercise: (String) -> Unit, viewModel: Progress
             contentPadding = PaddingValues(16.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp),
         ) {
+            if (state.recommendations.isNotEmpty()) {
+                item { Text(stringResource(R.string.progress_recommendations), style = MaterialTheme.typography.titleMedium) }
+                items(state.recommendations, key = { "rec-${it.id}" }) { rec ->
+                    RecommendationCard(
+                        recommendation = rec,
+                        unit = state.unit,
+                        onApply = { viewModel.apply(rec.id) },
+                        onDismiss = { viewModel.dismiss(rec.id) },
+                        modifier = Modifier.animateItem(),
+                    )
+                }
+            }
             if (state.isEmpty) {
                 item {
                     EmptyState(

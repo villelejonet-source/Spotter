@@ -11,6 +11,7 @@ import com.viktorolsson.spotter.core.data.db.entity.SetEntryEntity
 import com.viktorolsson.spotter.core.data.db.entity.WorkoutSessionEntity
 import com.viktorolsson.spotter.core.data.db.toModel
 import com.viktorolsson.spotter.core.data.db.toPrevious
+import com.viktorolsson.spotter.core.engine.Deload
 import com.viktorolsson.spotter.core.engine.LoggedSet
 import com.viktorolsson.spotter.core.engine.PersonalRecords
 import com.viktorolsson.spotter.core.engine.Progression
@@ -24,6 +25,7 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import java.time.Clock
 import java.time.Instant
+import java.time.LocalDate
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -70,7 +72,9 @@ class WorkoutRepository @Inject constructor(
     suspend fun startPlannedWorkout(planDayId: Long): Long = db.withTransaction {
         dao.getActiveSession()?.let { return@withTransaction it.id }
         val day = planDao.getDay(planDayId) ?: error("No plan day $planDayId")
-        val unit = preferences.preferences.first().weightUnit
+        val prefs = preferences.preferences.first()
+        val unit = prefs.weightUnit
+        val deload = prefs.isDeload(LocalDate.now(clock))
         val sessionId = dao.insertSession(
             WorkoutSessionEntity(
                 startedAt = clock.instant(),
@@ -78,10 +82,11 @@ class WorkoutRepository @Inject constructor(
                 planDayId = planDayId,
                 notes = null,
                 perceivedDifficulty = null,
+                isDeload = deload,
             ),
         )
         day.exercises.sortedBy { it.planExercise.position }.forEachIndexed { position, (pe, exercise) ->
-            val target = Progression.next(
+            val progression = Progression.next(
                 ProgressionInput(
                     exercise = exercise.toModel(),
                     rule = pe.progressionRule,
@@ -94,6 +99,7 @@ class WorkoutRepository @Inject constructor(
                     unit = unit,
                 ),
             )
+            val target = if (deload) Deload.lighten(progression, exercise.toModel(), pe.repMin, unit) else progression
             val sessionExerciseId = dao.insertSessionExercise(
                 SessionExerciseEntity(
                     sessionId = sessionId,

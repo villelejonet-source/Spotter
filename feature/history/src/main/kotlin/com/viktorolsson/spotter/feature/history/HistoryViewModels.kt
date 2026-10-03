@@ -6,11 +6,13 @@ import androidx.lifecycle.viewModelScope
 import androidx.navigation.toRoute
 import com.viktorolsson.spotter.core.data.repository.ExerciseRepository
 import com.viktorolsson.spotter.core.data.repository.HistoryRepository
+import com.viktorolsson.spotter.core.data.repository.RecommendationRepository
 import com.viktorolsson.spotter.core.data.repository.UserPreferencesRepository
 import com.viktorolsson.spotter.core.data.repository.WorkoutRepository
 import com.viktorolsson.spotter.core.model.Exercise
 import com.viktorolsson.spotter.core.model.ExerciseSessionLog
 import com.viktorolsson.spotter.core.model.PersonalRecord
+import com.viktorolsson.spotter.core.model.Recommendation
 import com.viktorolsson.spotter.core.model.WeightUnit
 import com.viktorolsson.spotter.core.model.WorkoutSession
 import com.viktorolsson.spotter.core.ui.localDate
@@ -88,6 +90,7 @@ data class ExerciseHistoryUiState(
     val records: List<PersonalRecord> = emptyList(),
     val unit: WeightUnit = WeightUnit.KG,
     val metric: ExerciseMetric = ExerciseMetric.ONE_REP_MAX,
+    val recommendations: List<Recommendation> = emptyList(),
 ) {
     /** Most reps achieved at each weight, heaviest first. */
     val repRecords: List<Pair<Double, Int>>
@@ -104,11 +107,12 @@ class ExerciseHistoryViewModel @Inject constructor(
     exerciseRepository: ExerciseRepository,
     historyRepository: HistoryRepository,
     preferencesRepository: UserPreferencesRepository,
+    private val recommendationRepository: RecommendationRepository,
 ) : ViewModel() {
     private val exerciseId = savedStateHandle.toRoute<ExerciseHistoryRoute>().exerciseId
     private val metric = MutableStateFlow(ExerciseMetric.ONE_REP_MAX)
 
-    val uiState: StateFlow<ExerciseHistoryUiState> = combine(
+    private val base = combine(
         flow { emit(exerciseRepository.getById(exerciseId)) },
         historyRepository.observeExerciseLogs(exerciseId),
         historyRepository.observeExerciseRecords(exerciseId),
@@ -116,7 +120,15 @@ class ExerciseHistoryViewModel @Inject constructor(
         metric,
     ) { exercise, logs, records, prefs, metric ->
         ExerciseHistoryUiState(exercise, logs, records, prefs.weightUnit, metric)
+    }
+
+    val uiState: StateFlow<ExerciseHistoryUiState> = combine(base, recommendationRepository.observeActive()) { state, recs ->
+        state.copy(recommendations = recs.filter { it.exerciseId == exerciseId })
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), ExerciseHistoryUiState())
+
+    fun apply(id: Long) = viewModelScope.launch { recommendationRepository.apply(id) }
+
+    fun dismiss(id: Long) = viewModelScope.launch { recommendationRepository.dismiss(id) }
 
     fun setMetric(value: ExerciseMetric) {
         metric.value = value

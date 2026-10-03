@@ -110,7 +110,7 @@ interface WorkoutDao {
 
     /**
      * Completed working sets for [exerciseId] from its last [sessions] finished
-     * sessions, most recent session first.
+     * non-deload sessions, most recent session first.
      */
     @Query(
         """
@@ -121,7 +121,7 @@ interface WorkoutDao {
           AND ws.id IN (
             SELECT ws2.id FROM workout_session ws2
             JOIN session_exercise sx2 ON sx2.sessionId = ws2.id
-            WHERE sx2.exerciseId = :exerciseId AND ws2.endedAt IS NOT NULL
+            WHERE sx2.exerciseId = :exerciseId AND ws2.endedAt IS NOT NULL AND ws2.isDeload = 0
             GROUP BY ws2.id ORDER BY ws2.startedAt DESC LIMIT :sessions
           )
         ORDER BY ws.startedAt DESC, sx.position, se.position
@@ -165,6 +165,36 @@ interface WorkoutDao {
         """,
     )
     fun observeLoggedExercises(): Flow<List<LoggedExercise>>
+
+    /** Working sets of [exerciseId] from finished non-deload sessions, oldest first (plateau detection). */
+    @Query(
+        """
+        SELECT se.*, sx.sessionId AS sessionId, ws.startedAt AS startedAt FROM set_entry se
+        JOIN session_exercise sx ON se.sessionExerciseId = sx.id
+        JOIN workout_session ws ON sx.sessionId = ws.id
+        WHERE sx.exerciseId = :exerciseId AND ws.endedAt IS NOT NULL AND ws.isDeload = 0
+          AND se.completedAt IS NOT NULL AND se.setType != 'WARMUP'
+        ORDER BY ws.startedAt, sx.position, se.position
+        """,
+    )
+    suspend fun getExposureSets(exerciseId: String): List<DatedSet>
+
+    @Query("SELECT startedAt FROM workout_session WHERE endedAt IS NOT NULL AND isDeload = 0 ORDER BY startedAt")
+    suspend fun getTrainingStarts(): List<Instant>
+
+    @Query("SELECT MAX(startedAt) FROM workout_session WHERE endedAt IS NOT NULL AND isDeload = 1")
+    suspend fun getLastDeloadSession(): Instant?
+
+    @Query(
+        """
+        SELECT se.rir FROM set_entry se
+        JOIN session_exercise sx ON se.sessionExerciseId = sx.id
+        JOIN workout_session ws ON sx.sessionId = ws.id
+        WHERE ws.endedAt IS NOT NULL AND ws.isDeload = 0 AND ws.startedAt >= :since
+          AND se.completedAt IS NOT NULL AND se.rir IS NOT NULL AND se.setType != 'WARMUP'
+        """,
+    )
+    suspend fun getRirSince(since: Instant): List<Int>
 
     // --- Personal records ---
 

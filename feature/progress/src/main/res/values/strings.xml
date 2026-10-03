@@ -2,6 +2,7 @@
     <string name="progress_title">Progress</string>
     <string name="progress_empty_title">Nothing to chart yet</string>
     <string name="progress_empty_body">Log a few workouts to see your PRs, strength trends, body weight and recommendations.</string>
+    <string name="progress_recommendations">Suggestions</string>
     <string name="progress_records">Recent PRs</string>
     <string name="progress_records_empty">PRs show up from the second time you log an exercise.</string>
     <string name="progress_balance">Muscle balance · last 7 days</string>

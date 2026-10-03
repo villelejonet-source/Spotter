@@ -1,3 +1,26 @@
 <resources>
     <string name="action_cancel">Cancel</string>
+    <string name="rec_dismiss">Dismiss</string>
+    <string name="rec_apply">Apply to plan</string>
+    <string name="rec_apply_deload">Start lighter week</string>
+    <string name="rec_evidence_stalled">%1$s hasn\'t progressed in %2$d sessions over %3$d weeks (latest best %4$s).</string>
+    <string name="rec_evidence_missed">%1$s missed its target twice in a row (latest best %2$s).</string>
+
+    <string name="rec_accessory_title">Add %1$s</string>
+    <string name="rec_accessory_body">%1$s trains the weak points of the same movement. Adds %2$d × %3$d–%4$d to %5$s.</string>
+    <string name="rec_volume_title">More %1$s volume</string>
+    <string name="rec_volume_body">%1$s got %2$s working sets in the last 7 days; the target is %3$d–%4$d. Adds a set to %5$s.</string>
+    <string name="rec_range_title">New rep range for %1$s</string>
+    <string name="rec_range_body">It\'s been at %1$d × %2$d–%3$d for %4$d weeks. Switch to %5$d × %6$d–%7$d for a block.</string>
+    <string name="rec_variation_title">Swap %1$s for %2$s</string>
+    <string name="rec_variation_body">Use %1$s for about %2$d weeks, then switch back.</string>
+    <string name="rec_return_title">Switch back to %1$s</string>
+    <string name="rec_return_body">You\'ve used %1$s for %2$d weeks. Switch back to %3$s and build on the new base.</string>
+    <string name="rec_frequency_title">Train %1$s twice a week</string>
+    <string name="rec_frequency_body">%1$s is only trained on one day a week. Adds %2$s (%3$d × %4$d–%5$d) to %6$s.</string>
+    <string name="rec_deload_title">Take a lighter week</string>
+    <string name="rec_deload_plateaus">%1$d lifts have stalled at once: %2$s.</string>
+    <string name="rec_deload_recovery">Performance dropped on %1$s while sets are ending close to failure.</string>
+    <string name="rec_deload_scheduled">%1$d weeks of steady training since your last lighter week.</string>
+    <string name="rec_deload_body" formatted="false">For 7 days, planned workouts use fewer sets and 10% lighter weights, and they don\'t count against your progress.</string>
 </resources>

@@ -2,6 +2,7 @@ package com.viktorolsson.spotter
 
 import android.app.Application
 import com.viktorolsson.spotter.core.data.di.ApplicationScope
+import com.viktorolsson.spotter.core.data.repository.RecommendationRepository
 import com.viktorolsson.spotter.core.data.seed.ExerciseSeeder
 import dagger.hilt.android.HiltAndroidApp
 import kotlinx.coroutines.CoroutineScope
@@ -12,11 +13,17 @@ import javax.inject.Inject
 class SpotterApplication : Application() {
     @Inject lateinit var exerciseSeeder: ExerciseSeeder
 
+    @Inject lateinit var recommendationRepository: RecommendationRepository
+
     @Inject @ApplicationScope
     lateinit var applicationScope: CoroutineScope
 
     override fun onCreate() {
         super.onCreate()
-        applicationScope.launch { exerciseSeeder.seedIfNeeded() }
+        applicationScope.launch {
+            exerciseSeeder.seedIfNeeded()
+            // Time-based suggestions (scheduled deload, switching back from a variation) can fall due between workouts.
+            recommendationRepository.refresh()
+        }
     }
 }

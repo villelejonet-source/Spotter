@@ -4,7 +4,9 @@ import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.navigation.toRoute
+import com.viktorolsson.spotter.core.data.di.ApplicationScope
 import com.viktorolsson.spotter.core.data.repository.ExerciseRepository
+import com.viktorolsson.spotter.core.data.repository.RecommendationRepository
 import com.viktorolsson.spotter.core.data.repository.RestTimerRepository
 import com.viktorolsson.spotter.core.data.repository.UserPreferencesRepository
 import com.viktorolsson.spotter.core.data.repository.UserProfileRepository
@@ -20,6 +22,7 @@ import com.viktorolsson.spotter.core.model.UserPreferences
 import com.viktorolsson.spotter.core.model.WorkoutSession
 import com.viktorolsson.spotter.core.model.parseToKg
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -77,6 +80,8 @@ class SessionViewModel @Inject constructor(
     private val restTimerRepository: RestTimerRepository,
     private val exerciseRepository: ExerciseRepository,
     private val profileRepository: UserProfileRepository,
+    private val recommendationRepository: RecommendationRepository,
+    @param:ApplicationScope private val applicationScope: CoroutineScope,
     preferencesRepository: UserPreferencesRepository,
 ) : ViewModel() {
     private val _swap = MutableStateFlow<SwapUiState?>(null)
@@ -179,6 +184,8 @@ class SessionViewModel @Inject constructor(
     fun finish(onFinished: (Long) -> Unit) = launch {
         restTimerRepository.stop()
         workoutRepository.finishWorkout(sessionId)
+        // Outlives this screen: re-evaluate plateaus and suggestions with the new session.
+        applicationScope.launch { recommendationRepository.refresh() }
         onFinished(sessionId)
     }
 

@@ -9,6 +9,7 @@ import androidx.room.Room
 import com.viktorolsson.spotter.core.data.db.SpotterDatabase
 import com.viktorolsson.spotter.core.data.db.dao.ExerciseDao
 import com.viktorolsson.spotter.core.data.db.dao.PlanDao
+import com.viktorolsson.spotter.core.data.db.dao.RecommendationDao
 import com.viktorolsson.spotter.core.data.db.dao.UserProfileDao
 import com.viktorolsson.spotter.core.data.db.dao.WorkoutDao
 import dagger.Module
@@ -47,6 +48,9 @@ object DataModule {
 
     @Provides
     fun providePlanDao(db: SpotterDatabase): PlanDao = db.planDao()
+
+    @Provides
+    fun provideRecommendationDao(db: SpotterDatabase): RecommendationDao = db.recommendationDao()
 
     @Provides
     @Singleton

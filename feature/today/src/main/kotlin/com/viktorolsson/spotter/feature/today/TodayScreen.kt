@@ -73,6 +73,25 @@ internal fun TodayScreen(
             verticalArrangement = Arrangement.spacedBy(16.dp),
         ) {
             val next = uiState.nextDay
+            uiState.deloadUntil?.let { until ->
+                Card(
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.tertiaryContainer),
+                    modifier = Modifier.fillMaxWidth(),
+                ) {
+                    Column(Modifier.padding(16.dp)) {
+                        Text(
+                            stringResource(R.string.today_deload_title),
+                            style = MaterialTheme.typography.titleMedium,
+                            color = MaterialTheme.colorScheme.onTertiaryContainer,
+                        )
+                        Text(
+                            stringResource(R.string.today_deload_body, until.format(java.time.format.DateTimeFormatter.ofPattern("EEE d MMM"))),
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onTertiaryContainer,
+                        )
+                    }
+                }
+            }
             when {
                 next != null -> NextWorkoutCard(next, onOpenPlan)
                 !uiState.hasPlan -> NoPlanCard(onBuildPlan)

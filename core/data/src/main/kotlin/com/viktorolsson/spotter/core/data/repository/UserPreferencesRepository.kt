@@ -5,12 +5,14 @@ import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.intPreferencesKey
+import androidx.datastore.preferences.core.longPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import com.viktorolsson.spotter.core.model.ThemeMode
 import com.viktorolsson.spotter.core.model.UserPreferences
 import com.viktorolsson.spotter.core.model.WeightUnit
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
+import java.time.LocalDate
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -28,6 +30,7 @@ class UserPreferencesRepository @Inject constructor(
             defaultRestSeconds = prefs[Keys.DEFAULT_REST_SECONDS] ?: defaults.defaultRestSeconds,
             logRir = prefs[Keys.LOG_RIR] ?: defaults.logRir,
             onboardingCompleted = prefs[Keys.ONBOARDING_COMPLETED] ?: defaults.onboardingCompleted,
+            deloadUntil = prefs[Keys.DELOAD_UNTIL]?.let(LocalDate::ofEpochDay),
         )
     }
 
@@ -51,6 +54,10 @@ class UserPreferencesRepository @Inject constructor(
         dataStore.edit { it[Keys.LOG_RIR] = enabled }
     }
 
+    suspend fun setDeloadUntil(date: LocalDate?) {
+        dataStore.edit { if (date == null) it.remove(Keys.DELOAD_UNTIL) else it[Keys.DELOAD_UNTIL] = date.toEpochDay() }
+    }
+
     suspend fun setOnboardingCompleted(done: Boolean) {
         dataStore.edit { it[Keys.ONBOARDING_COMPLETED] = done }
     }
@@ -61,6 +68,7 @@ class UserPreferencesRepository @Inject constructor(
         val WEIGHT_UNIT = stringPreferencesKey("weight_unit")
         val DEFAULT_REST_SECONDS = intPreferencesKey("default_rest_seconds")
         val LOG_RIR = booleanPreferencesKey("log_rir")
+        val DELOAD_UNTIL = longPreferencesKey("deload_until_epoch_day")
         val ONBOARDING_COMPLETED = booleanPreferencesKey("onboarding_completed")
     }
 }

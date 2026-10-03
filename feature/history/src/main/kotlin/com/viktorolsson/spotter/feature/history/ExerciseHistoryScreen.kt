@@ -33,6 +33,7 @@ import com.viktorolsson.spotter.core.model.format
 import com.viktorolsson.spotter.core.model.fromKg
 import com.viktorolsson.spotter.core.model.label
 import com.viktorolsson.spotter.core.ui.component.ChartPoint
+import com.viktorolsson.spotter.core.ui.component.RecommendationCard
 import com.viktorolsson.spotter.core.ui.component.TrendChart
 import com.viktorolsson.spotter.core.ui.formatSet
 import com.viktorolsson.spotter.core.ui.formatShortDate
@@ -63,6 +64,14 @@ internal fun ExerciseHistoryRoute(onBack: () -> Unit, viewModel: ExerciseHistory
             if (logs.isEmpty()) {
                 item { Text(stringResource(R.string.exercise_none), color = MaterialTheme.colorScheme.onSurfaceVariant) }
                 return@LazyColumn
+            }
+            items(state.recommendations, key = { "rec-${it.id}" }) { rec ->
+                RecommendationCard(
+                    recommendation = rec,
+                    unit = unit,
+                    onApply = { viewModel.apply(rec.id) },
+                    onDismiss = { viewModel.dismiss(rec.id) },
+                )
             }
             item {
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {

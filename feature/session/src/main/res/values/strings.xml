@@ -46,7 +46,8 @@
     <string name="progress_add_reps">Same weight: aim for one more rep per set.</string>
     <string name="progress_hold_hard">Holding the weight: last time was harder than planned.</string>
     <string name="progress_repeat">Same weight again: aim for the target reps.</string>
-    <string name="progress_reset">10%% lighter after two tough sessions. Build back up.</string>
+    <string name="progress_reset" formatted="false">10% lighter after two tough sessions. Build back up.</string>
+    <string name="progress_deload" formatted="false">Lighter week: fewer sets, about 10% less weight. Recover and come back stronger.</string>
     <string name="progress_bodyweight_top">Top of the range: add weight or try a harder variation.</string>
 
     <string name="exercise_note">Exercise note</string>

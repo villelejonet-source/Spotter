@@ -250,6 +250,7 @@ private fun ProgressionNote(reason: ProgressionReason) {
         ProgressionReason.REPEAT -> Triple(R.string.progress_repeat, Icons.AutoMirrored.Rounded.TrendingFlat, false)
         ProgressionReason.RESET_AFTER_MISSES -> Triple(R.string.progress_reset, Icons.AutoMirrored.Rounded.TrendingDown, false)
         ProgressionReason.BODYWEIGHT_TOP_OF_RANGE -> Triple(R.string.progress_bodyweight_top, Icons.AutoMirrored.Rounded.TrendingUp, true)
+        ProgressionReason.DELOAD -> Triple(R.string.progress_deload, Icons.AutoMirrored.Rounded.TrendingDown, false)
     }
     val color = if (emphasised) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
     Row(

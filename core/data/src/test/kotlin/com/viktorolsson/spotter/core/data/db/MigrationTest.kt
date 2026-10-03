@@ -92,6 +92,25 @@ class MigrationTest {
         }
     }
 
+    @Test
+    fun migrate4To5AddsDeloadFlagAndRecommendationFields() {
+        helper.createDatabase(DB, 4).use { db ->
+            db.execSQL("INSERT INTO workout_session (id, startedAt, endedAt, planDayId, notes, perceivedDifficulty) VALUES (1, 0, 1, NULL, NULL, NULL)")
+            db.execSQL("INSERT INTO recommendation (id, type, exerciseId, payload, createdAt, status) VALUES (1, 'DELOAD', NULL, '{}', 0, 'ACTIVE')")
+        }
+        helper.runMigrationsAndValidate(DB, 5, true).use { db ->
+            db.query("SELECT isDeload FROM workout_session WHERE id = 1").use {
+                it.moveToFirst()
+                assertEquals(0, it.getInt(0))
+            }
+            db.query("SELECT resolvedAt, dedupKey FROM recommendation WHERE id = 1").use {
+                it.moveToFirst()
+                assertEquals(true, it.isNull(0))
+                assertEquals("", it.getString(1))
+            }
+        }
+    }
+
     private companion object {
         const val DB = "migration-test"
     }

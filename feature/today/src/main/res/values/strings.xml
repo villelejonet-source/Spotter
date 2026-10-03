@@ -10,4 +10,6 @@
     <string name="today_start_workout">Start workout</string>
     <string name="today_empty_workout">Empty workout</string>
     <string name="today_resume_workout">Resume workout</string>
+    <string name="today_deload_title">Lighter week</string>
+    <string name="today_deload_body">Until %1$s, planned workouts use fewer sets and lighter weights.</string>
 </resources>

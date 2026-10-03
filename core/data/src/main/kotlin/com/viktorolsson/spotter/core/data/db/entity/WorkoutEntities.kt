@@ -26,6 +26,9 @@ data class WorkoutSessionEntity(
     val notes: String?,
     /** 1–10 session RPE, optional. */
     val perceivedDifficulty: Int?,
+    /** Lighter deload-week session; excluded from progression and plateau history. */
+    @ColumnInfo(defaultValue = "0")
+    val isDeload: Boolean = false,
 )
 
 @Entity(
@@ -109,4 +112,10 @@ data class RecommendationEntity(
     val payload: String,
     val createdAt: Instant,
     val status: RecommendationStatus,
+    /** When it was applied or dismissed. */
+    @ColumnInfo(defaultValue = "NULL")
+    val resolvedAt: Instant? = null,
+    /** Identifies "the same suggestion" across refreshes (type + what it targets). */
+    @ColumnInfo(defaultValue = "''")
+    val dedupKey: String = "",
 )

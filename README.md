@@ -26,3 +26,15 @@ Or open the folder in Android Studio and run the `app` configuration.
 | `build-logic` | Convention plugins (`spotter.android.feature`, `spotter.jvm.library`, …) |
 
 The exercise library lives in `core/data/src/main/assets/exercises.json`. Bump its `version` after editing so installed apps re-seed.
+
+## Supabase (optional backup + sync, milestone 8)
+
+The app works fully offline; Supabase is only used for opt-in cloud backup. Add the project's
+**publishable** key to `local.properties` (untracked). Never use the secret/service_role key in the app.
+
+```properties
+supabase.url=https://<project-ref>.supabase.co
+supabase.publishableKey=sb_publishable_...
+```
+
+Dashboard: https://supabase.com/dashboard/project/gaherwthntdonrsuowbh

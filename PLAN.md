@@ -1,4 +1,4 @@
-# Gym App (Android): implementation plan
+# Spotter (Android): implementation plan
 
 _Approved 2026-10-03._
 
@@ -11,11 +11,11 @@ You want an Android-only, mobile-only gym app where logging a workout is quick a
 - Spot plateaus and suggest specific fixes.
 - Include a stopwatch and rest timer, plus dark and light mode.
 
-This is a new project and has nothing to do with the HubSpot Helper repo. It lives in its own folder, `~/private/dev/gym`.
+This is a new project and has nothing to do with the HubSpot Helper repo. It lives in its own folder, `~/private/dev/gym`, and on GitHub at `villelejonet-source/Spotter`.
 
 ## Assumptions (defaults, easy to change)
 - **Stack:** native Kotlin with Jetpack Compose and Material 3. Android-only rules out the main reason to go cross-platform. Compose gives the best performance, a foreground-service timer, Material You dynamic color and dark mode for free.
-- **Offline-first, single user, no backend in v1.** All data stays on the device in Room/SQLite. Export/import and cloud sync are out of scope for v1.
+- **Offline-first, single user.** Room/SQLite on the device is always the source of truth, and the app works fully without an account or a connection. **Supabase** (decided 2026-10-03) adds optional sign-in and cloud backup/sync in milestone 8, after the core app works. Health data only leaves the device if the user signs in to back up.
 - **No accounts and no AI service.** Recommendations come from a deterministic rules engine that runs on the device, so the app is explainable, works offline and costs nothing.
 - Min SDK 26, target the latest SDK.
 
@@ -192,13 +192,12 @@ Material 3 theme with light, dark and "follow system" settings, plus dynamic col
 - Health Connect sync
 - Home-screen widget
 - Training-day reminders
-- Cloud backup and sync
 - Wear OS rest timer
 - Cardio logging
 - Program templates (5/3/1, PHUL)
 - Sharing workouts
 
-**Privacy and safety:** health data stays on the device with no analytics. Show a "consult a professional" note for limitations, and make no medical claims.
+**Privacy and safety:** no analytics. Health data stays on the device unless the user signs in to cloud backup (milestone 8), and then only in their own row-level-secured Supabase rows. Show a "consult a professional" note for limitations, and make no medical claims.
 
 ## Milestones
 1. **Foundation (week 1):** project setup, modules, theme and dark mode, navigation shell, Room schema, seeded exercise library.
@@ -208,6 +207,7 @@ Material 3 theme with light, dark and "follow system" settings, plus dynamic col
 5. **History + progress (week 6):** per-workout and per-exercise history, charts, PRs, muscle balance.
 6. **Recommendations (week 7):** plateau detection, accessory mapping, deload, recommendation cards.
 7. **Polish (week 8):** accessibility, plate calculator, warm-ups, PR celebrations, screenshot tests, Play Store internal test track.
+8. **Cloud backup + sync (weeks 9–10):** optional Supabase sign-in, Postgres schema mirroring Room with row-level security per user, background push/pull sync (last-write-wins per row, soft deletes), restore on a new phone.
 
 ## Verification
 - **Engine unit tests:** golden tests for plan generation (e.g. "female, 28, intermediate, hypertrophy, 4 days, full gym" → expected split, slots and parameters), progression math, plateau detection on synthetic histories, swap ranking (bench busy → DB bench / machine press first).

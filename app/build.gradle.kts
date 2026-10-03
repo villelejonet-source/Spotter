@@ -1,9 +1,18 @@
+import java.util.Properties
+
 plugins {
     alias(libs.plugins.spotter.android.application)
     alias(libs.plugins.spotter.android.compose)
     alias(libs.plugins.spotter.hilt)
     alias(libs.plugins.kotlin.serialization)
 }
+
+// Supabase config comes from the untracked local.properties (see README); empty values mean "sync not configured".
+val localProperties = Properties().apply {
+    providers.fileContents(rootProject.layout.projectDirectory.file("local.properties")).asText.orNull
+        ?.let { load(it.reader()) }
+}
+fun localProperty(key: String): String = localProperties.getProperty(key, "")
 
 android {
     namespace = "com.viktorolsson.spotter"
@@ -12,6 +21,9 @@ android {
         applicationId = "com.viktorolsson.spotter"
         versionCode = 1
         versionName = "0.1.0"
+
+        buildConfigField("String", "SUPABASE_URL", "\"${localProperty("supabase.url")}\"")
+        buildConfigField("String", "SUPABASE_PUBLISHABLE_KEY", "\"${localProperty("supabase.publishableKey")}\"")
     }
 
     buildTypes {
@@ -23,7 +35,7 @@ android {
     }
 
     buildFeatures {
-        buildConfig = false
+        buildConfig = true
     }
 }
 

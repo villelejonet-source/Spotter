@@ -13,7 +13,7 @@ data class UserProfile(
     val daysPerWeek: Int,
     val sessionLengthMinutes: Int,
     val equipment: Set<Equipment>,
-    val focusAreas: Set<Muscle>,
+    val focusAreas: Set<BodyArea>,
     val limitations: Set<Limitation>,
 )
 

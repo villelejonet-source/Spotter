@@ -5,6 +5,8 @@ import androidx.room.Relation
 
 data class SessionWithExercises(
     @Embedded val session: WorkoutSessionEntity,
+    @Relation(parentColumn = "planDayId", entityColumn = "id")
+    val planDay: PlanDayEntity?,
     @Relation(entity = SessionExerciseEntity::class, parentColumn = "id", entityColumn = "sessionId")
     val exercises: List<SessionExerciseWithSets>,
 )
@@ -15,4 +17,24 @@ data class SessionExerciseWithSets(
     val exercise: ExerciseEntity,
     @Relation(parentColumn = "id", entityColumn = "sessionExerciseId")
     val sets: List<SetEntryEntity>,
+    @Relation(parentColumn = "planExerciseId", entityColumn = "id")
+    val planExercise: PlanExerciseEntity?,
+)
+
+data class PlanWithDays(
+    @Embedded val plan: PlanEntity,
+    @Relation(entity = PlanDayEntity::class, parentColumn = "id", entityColumn = "planId")
+    val days: List<PlanDayWithExercises>,
+)
+
+data class PlanDayWithExercises(
+    @Embedded val day: PlanDayEntity,
+    @Relation(entity = PlanExerciseEntity::class, parentColumn = "id", entityColumn = "planDayId")
+    val exercises: List<PlanExerciseWithExercise>,
+)
+
+data class PlanExerciseWithExercise(
+    @Embedded val planExercise: PlanExerciseEntity,
+    @Relation(parentColumn = "exerciseId", entityColumn = "id")
+    val exercise: ExerciseEntity,
 )

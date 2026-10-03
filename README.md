@@ -9,7 +9,7 @@ There's no system JDK on this machine, so point Gradle at Android Studio's bundl
 ```bash
 export JAVA_HOME="/Applications/Android Studio.app/Contents/jbr/Contents/Home"
 ./gradlew assembleDebug          # app/build/outputs/apk/debug/app-debug.apk
-./gradlew testDebugUnitTest      # seed validation + Room (Robolectric) tests
+./gradlew testDebugUnitTest :core:engine:test :core:model:test   # all unit tests
 ```
 
 Or open the folder in Android Studio and run the `app` configuration.
@@ -21,8 +21,9 @@ Or open the folder in Android Studio and run the `app` configuration.
 | `app` | Application, MainActivity, bottom-bar navigation shell |
 | `core/model` | Pure Kotlin domain types and enums |
 | `core/data` | Room schema (exported to `core/data/schemas`), DataStore preferences, exercise seeder |
+| `core/engine` | Pure Kotlin plan generator: split choice, movement-pattern slots, goal parameters, starting weights (no Android deps, unit-tested) |
 | `core/ui` | Theme (branded light/dark palette + dynamic color), shared components |
-| `feature/*` | One module per tab (`today`, `history`, `progress`, `settings` = Profile), plus `session` (workout logger, rest timer service, summary) and `library` (exercise picker) |
+| `feature/*` | One module per tab (`today`, `history`, `progress`, `settings` = Profile), plus `session` (workout logger, rest timer service, summary), `library` (exercise picker), `onboarding` (questionnaire + plan summary) and `plan` (plan overview) |
 | `build-logic` | Convention plugins (`spotter.android.feature`, `spotter.jvm.library`, …) |
 
 The exercise library lives in `core/data/src/main/assets/exercises.json`. Bump its `version` after editing so installed apps re-seed.

@@ -87,6 +87,7 @@ internal fun SessionRoute(
     Scaffold(
         topBar = {
             SessionTopBar(
+                dayName = session.planDayName,
                 elapsed = Duration.between(session.startedAt, now),
                 menuOpen = menuOpen,
                 onMenuOpenChange = { menuOpen = it },
@@ -242,6 +243,7 @@ internal fun SessionRoute(
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun SessionTopBar(
+    dayName: String?,
     elapsed: Duration,
     menuOpen: Boolean,
     onMenuOpenChange: (Boolean) -> Unit,
@@ -258,10 +260,15 @@ private fun SessionTopBar(
             }
         },
         title = {
-            Text(
-                formatClock(elapsed),
-                style = MaterialTheme.typography.titleLarge.copy(fontFeatureSettings = "tnum"),
-            )
+            Column {
+                if (dayName != null) {
+                    Text(dayName, style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary)
+                }
+                Text(
+                    formatClock(elapsed),
+                    style = MaterialTheme.typography.titleLarge.copy(fontFeatureSettings = "tnum"),
+                )
+            }
         },
         actions = {
             Box {

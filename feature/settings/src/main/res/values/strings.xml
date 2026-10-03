@@ -1,5 +1,11 @@
 <resources>
     <string name="profile_title">Profile</string>
+    <string name="settings_section_plan">Training plan</string>
+    <string name="settings_no_plan">No plan yet</string>
+    <string name="settings_view_plan">View plan</string>
+    <string name="settings_rebuild_plan">Rebuild plan</string>
+    <string name="settings_build_plan">Build my plan</string>
+    <string name="settings_rebuild_summary">Retake the questionnaire. Your history is kept.</string>
     <string name="settings_section_appearance">Appearance</string>
     <string name="settings_theme">Theme</string>
     <string name="settings_theme_system">System</string>

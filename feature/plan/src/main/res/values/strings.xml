@@ -1,0 +1,14 @@
+<resources>
+    <string name="plan_title">Your plan</string>
+    <string name="plan_back">Back</string>
+    <string name="plan_rebuild">Rebuild plan</string>
+    <string name="plan_start_day">Start</string>
+    <string name="plan_next">Next up</string>
+    <string name="plan_day_meta">~%1$d min · %2$d exercises</string>
+    <string name="plan_target">%1$d × %2$d–%3$d</string>
+    <string name="plan_target_rir">%1$d × %2$d–%3$d · RIR %4$d</string>
+    <string name="plan_superset">Superset</string>
+    <string name="plan_none_title">No plan yet</string>
+    <string name="plan_none_body">Answer a few questions and Spotter builds a plan around your goal, schedule and equipment.</string>
+    <string name="plan_none_action">Build my plan</string>
+</resources>

@@ -40,7 +40,7 @@ class MainActivity : ComponentActivity() {
             }
 
             SpotterTheme(darkTheme = darkTheme, dynamicColor = preferences.dynamicColor) {
-                SpotterApp()
+                SpotterApp(needsOnboarding = !preferences.onboardingCompleted)
             }
         }
     }

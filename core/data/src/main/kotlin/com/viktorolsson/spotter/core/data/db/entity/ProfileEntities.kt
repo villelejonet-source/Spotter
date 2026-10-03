@@ -3,11 +3,11 @@ package com.viktorolsson.spotter.core.data.db.entity
 import androidx.room.Entity
 import androidx.room.Index
 import androidx.room.PrimaryKey
+import com.viktorolsson.spotter.core.model.BodyArea
 import com.viktorolsson.spotter.core.model.Equipment
 import com.viktorolsson.spotter.core.model.ExperienceLevel
 import com.viktorolsson.spotter.core.model.Goal
 import com.viktorolsson.spotter.core.model.Limitation
-import com.viktorolsson.spotter.core.model.Muscle
 import com.viktorolsson.spotter.core.model.Sex
 import com.viktorolsson.spotter.core.model.WeightUnit
 import java.time.LocalDate
@@ -26,7 +26,7 @@ data class UserProfileEntity(
     val daysPerWeek: Int,
     val sessionLengthMinutes: Int,
     val equipment: Set<Equipment>,
-    val focusAreas: Set<Muscle>,
+    val focusAreas: Set<BodyArea>,
     val limitations: Set<Limitation>,
 ) {
     companion object {

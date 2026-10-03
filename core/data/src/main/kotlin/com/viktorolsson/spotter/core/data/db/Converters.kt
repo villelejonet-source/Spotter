@@ -1,6 +1,7 @@
 package com.viktorolsson.spotter.core.data.db
 
 import androidx.room.TypeConverter
+import com.viktorolsson.spotter.core.model.BodyArea
 import com.viktorolsson.spotter.core.model.Equipment
 import com.viktorolsson.spotter.core.model.Limitation
 import com.viktorolsson.spotter.core.model.Muscle
@@ -29,6 +30,9 @@ class Converters {
 
     @TypeConverter fun equipmentSetToString(value: Set<Equipment>): String = value.joinNames()
     @TypeConverter fun stringToEquipmentSet(value: String): Set<Equipment> = value.splitNames(Equipment::valueOf).toSet()
+
+    @TypeConverter fun bodyAreaSetToString(value: Set<BodyArea>): String = value.joinNames()
+    @TypeConverter fun stringToBodyAreaSet(value: String): Set<BodyArea> = value.splitNames(BodyArea::valueOf).toSet()
 
     @TypeConverter fun limitationSetToString(value: Set<Limitation>): String = value.joinNames()
     @TypeConverter fun stringToLimitationSet(value: String): Set<Limitation> = value.splitNames(Limitation::valueOf).toSet()

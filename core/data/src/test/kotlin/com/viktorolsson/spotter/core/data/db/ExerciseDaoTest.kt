@@ -7,6 +7,7 @@ import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.viktorolsson.spotter.core.data.db.entity.UserProfileEntity
 import com.viktorolsson.spotter.core.data.seed.SeedExercise
 import com.viktorolsson.spotter.core.data.seed.parseExerciseSeed
+import com.viktorolsson.spotter.core.model.BodyArea
 import com.viktorolsson.spotter.core.model.Equipment
 import com.viktorolsson.spotter.core.model.ExperienceLevel
 import com.viktorolsson.spotter.core.model.Goal
@@ -91,7 +92,7 @@ class ExerciseDaoTest {
             daysPerWeek = 4,
             sessionLengthMinutes = 60,
             equipment = setOf(Equipment.BARBELL, Equipment.DUMBBELL),
-            focusAreas = setOf(Muscle.GLUTES),
+            focusAreas = setOf(BodyArea.GLUTES),
             limitations = emptySet(),
         )
         db.userProfileDao().upsert(profile)

@@ -2,6 +2,7 @@ package com.viktorolsson.spotter.core.data.repository
 
 import androidx.room.withTransaction
 import com.viktorolsson.spotter.core.data.db.SpotterDatabase
+import com.viktorolsson.spotter.core.data.db.dao.PlanDao
 import com.viktorolsson.spotter.core.data.db.dao.WorkoutDao
 import com.viktorolsson.spotter.core.data.db.entity.SessionExerciseEntity
 import com.viktorolsson.spotter.core.data.db.entity.SetEntryEntity
@@ -26,6 +27,7 @@ import javax.inject.Singleton
 class WorkoutRepository @Inject constructor(
     private val db: SpotterDatabase,
     private val dao: WorkoutDao,
+    private val planDao: PlanDao,
     private val clock: Clock,
 ) {
     fun observeActiveSession(): Flow<ActiveSession?> =
@@ -47,6 +49,53 @@ class WorkoutRepository @Inject constructor(
                 perceivedDifficulty = null,
             ),
         )
+    }
+
+    /**
+     * Starts the given plan day (or returns the workout already in progress). Each
+     * exercise keeps its plan link, rest and superset; sets are pre-filled from the
+     * last time it was done, or from the plan's calibration estimate the first time.
+     */
+    suspend fun startPlannedWorkout(planDayId: Long): Long = db.withTransaction {
+        dao.getActiveSession()?.let { return@withTransaction it.id }
+        val day = planDao.getDay(planDayId) ?: error("No plan day $planDayId")
+        val sessionId = dao.insertSession(
+            WorkoutSessionEntity(
+                startedAt = clock.instant(),
+                endedAt = null,
+                planDayId = planDayId,
+                notes = null,
+                perceivedDifficulty = null,
+            ),
+        )
+        day.exercises.sortedBy { it.planExercise.position }.forEachIndexed { position, (pe, _) ->
+            val sessionExerciseId = dao.insertSessionExercise(
+                SessionExerciseEntity(
+                    sessionId = sessionId,
+                    exerciseId = pe.exerciseId,
+                    position = position,
+                    substitutedFromExerciseId = null,
+                    supersetGroup = pe.supersetGroup,
+                    notes = null,
+                    restSeconds = pe.restSeconds,
+                    planExerciseId = pe.id,
+                ),
+            )
+            val previous = dao.getPreviousSets(pe.exerciseId).filter { it.setType != SetType.WARMUP }
+            dao.insertSets(
+                List(pe.sets) { i ->
+                    val prev = previous.getOrNull(i) ?: previous.lastOrNull()
+                    newSet(
+                        sessionExerciseId,
+                        position = i,
+                        weightKg = prev?.weightKg ?: pe.startingWeightKg,
+                        reps = prev?.reps ?: pe.repMin,
+                        setType = SetType.WORKING,
+                    )
+                },
+            )
+        }
+        sessionId
     }
 
     suspend fun getPreviousSets(exerciseId: String): List<PreviousSet> =

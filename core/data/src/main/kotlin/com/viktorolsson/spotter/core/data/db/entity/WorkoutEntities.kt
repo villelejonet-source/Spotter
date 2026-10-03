@@ -33,8 +33,9 @@ data class WorkoutSessionEntity(
         ForeignKey(WorkoutSessionEntity::class, ["id"], ["sessionId"], onDelete = ForeignKey.CASCADE),
         ForeignKey(ExerciseEntity::class, ["id"], ["exerciseId"], onDelete = ForeignKey.RESTRICT),
         ForeignKey(ExerciseEntity::class, ["id"], ["substitutedFromExerciseId"], onDelete = ForeignKey.SET_NULL),
+        ForeignKey(PlanExerciseEntity::class, ["id"], ["planExerciseId"], onDelete = ForeignKey.SET_NULL),
     ],
-    indices = [Index("sessionId"), Index("exerciseId"), Index("substitutedFromExerciseId")],
+    indices = [Index("sessionId"), Index("exerciseId"), Index("substitutedFromExerciseId"), Index("planExerciseId")],
 )
 data class SessionExerciseEntity(
     @PrimaryKey(autoGenerate = true) val id: Long = 0,
@@ -47,6 +48,9 @@ data class SessionExerciseEntity(
     /** Rest after each set; null falls back to the plan default, then the user default. */
     @ColumnInfo(defaultValue = "NULL")
     val restSeconds: Int? = null,
+    /** The plan prescription this exercise was started from, if any. */
+    @ColumnInfo(defaultValue = "NULL")
+    val planExerciseId: Long? = null,
 )
 
 /** Weights are always stored in kg; the UI converts to the user's unit. */

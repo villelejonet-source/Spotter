@@ -2,6 +2,7 @@ package com.viktorolsson.spotter.feature.settings
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.viktorolsson.spotter.core.data.repository.PlanRepository
 import com.viktorolsson.spotter.core.data.repository.UserPreferencesRepository
 import com.viktorolsson.spotter.core.model.ThemeMode
 import com.viktorolsson.spotter.core.model.UserPreferences
@@ -9,6 +10,7 @@ import com.viktorolsson.spotter.core.model.WeightUnit
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import javax.inject.Inject
@@ -16,7 +18,13 @@ import javax.inject.Inject
 @HiltViewModel
 class SettingsViewModel @Inject constructor(
     private val preferencesRepository: UserPreferencesRepository,
+    planRepository: PlanRepository,
 ) : ViewModel() {
+    /** Name of the active plan, or null when there is none. */
+    val planName: StateFlow<String?> = planRepository.observeActivePlan()
+        .map { it?.name }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
+
     val preferences: StateFlow<UserPreferences> = preferencesRepository.preferences
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), UserPreferences())
 

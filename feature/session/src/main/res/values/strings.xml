@@ -32,6 +32,8 @@
     <string name="exercise_superset_next">Superset with next</string>
     <string name="exercise_superset_remove">Remove from superset</string>
     <string name="exercise_superset_badge">Superset</string>
+    <string name="exercise_target">Target %1$d × %2$d–%3$d</string>
+    <string name="exercise_target_rir">Target %1$d × %2$d–%3$d · RIR %4$d</string>
     <string name="exercise_move_up">Move up</string>
     <string name="exercise_move_down">Move down</string>
     <string name="exercise_remove">Remove exercise</string>

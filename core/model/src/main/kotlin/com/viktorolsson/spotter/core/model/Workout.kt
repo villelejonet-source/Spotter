@@ -17,6 +17,8 @@ data class WorkoutSession(
     val endedAt: Instant?,
     val notes: String?,
     val exercises: List<SessionExercise>,
+    /** Set when the session was started from a plan day. */
+    val planDayName: String? = null,
 ) {
     val isActive: Boolean get() = endedAt == null
 }
@@ -29,6 +31,8 @@ data class SessionExercise(
     val restSeconds: Int?,
     val notes: String?,
     val sets: List<WorkoutSet>,
+    /** Set when the exercise came from a plan day. */
+    val target: PlanTarget? = null,
 )
 
 /** Weight is always kg; null weight means bodyweight. */

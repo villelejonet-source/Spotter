@@ -150,6 +150,15 @@ internal fun ExerciseCard(
                     }
                 }
             }
+            exercise.target?.let { target ->
+                Text(
+                    target.targetRir?.let { stringResource(R.string.exercise_target_rir, target.sets, target.repMin, target.repMax, it) }
+                        ?: stringResource(R.string.exercise_target, target.sets, target.repMin, target.repMax),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(horizontal = 16.dp),
+                )
+            }
             exercise.notes?.let { note ->
                 Text(
                     note,

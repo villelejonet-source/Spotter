@@ -8,7 +8,9 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.SegmentedButton
 import androidx.compose.material3.SegmentedButtonDefaults
@@ -39,10 +41,18 @@ import com.viktorolsson.spotter.core.ui.theme.SpotterTheme
 import com.viktorolsson.spotter.core.ui.theme.supportsDynamicColor
 
 @Composable
-internal fun SettingsRoute(viewModel: SettingsViewModel = hiltViewModel()) {
+internal fun SettingsRoute(
+    onOpenPlan: () -> Unit,
+    onRebuildPlan: () -> Unit,
+    viewModel: SettingsViewModel = hiltViewModel(),
+) {
     val preferences by viewModel.preferences.collectAsStateWithLifecycle()
+    val planName by viewModel.planName.collectAsStateWithLifecycle()
     SettingsScreen(
         preferences = preferences,
+        planName = planName,
+        onOpenPlan = onOpenPlan,
+        onRebuildPlan = onRebuildPlan,
         onThemeModeChange = { viewModel.setThemeMode(it) },
         onDynamicColorChange = { viewModel.setDynamicColor(it) },
         onWeightUnitChange = { viewModel.setWeightUnit(it) },
@@ -55,6 +65,9 @@ internal fun SettingsRoute(viewModel: SettingsViewModel = hiltViewModel()) {
 @Composable
 internal fun SettingsScreen(
     preferences: UserPreferences,
+    planName: String?,
+    onOpenPlan: () -> Unit,
+    onRebuildPlan: () -> Unit,
     onThemeModeChange: (ThemeMode) -> Unit,
     onDynamicColorChange: (Boolean) -> Unit,
     onWeightUnitChange: (WeightUnit) -> Unit,
@@ -72,6 +85,25 @@ internal fun SettingsScreen(
                 .padding(horizontal = 16.dp, vertical = 8.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp),
         ) {
+            SectionHeader(R.string.settings_section_plan)
+            Text(
+                planName ?: stringResource(R.string.settings_no_plan),
+                style = MaterialTheme.typography.titleMedium,
+            )
+            Text(
+                stringResource(R.string.settings_rebuild_summary),
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                if (planName != null) {
+                    OutlinedButton(onClick = onOpenPlan) { Text(stringResource(R.string.settings_view_plan)) }
+                    OutlinedButton(onClick = onRebuildPlan) { Text(stringResource(R.string.settings_rebuild_plan)) }
+                } else {
+                    Button(onClick = onRebuildPlan) { Text(stringResource(R.string.settings_build_plan)) }
+                }
+            }
+
             SectionHeader(R.string.settings_section_appearance)
             Text(stringResource(R.string.settings_theme), style = MaterialTheme.typography.bodyLarge)
             SegmentedChoice(
@@ -190,6 +222,6 @@ private fun <T> SegmentedChoice(
 @Composable
 private fun SettingsScreenPreview() {
     SpotterTheme {
-        SettingsScreen(UserPreferences(), {}, {}, {}, {}, {})
+        SettingsScreen(UserPreferences(), "Upper / Lower · 4 days", {}, {}, {}, {}, {}, {}, {})
     }
 }

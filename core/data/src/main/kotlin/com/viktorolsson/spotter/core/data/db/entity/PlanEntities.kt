@@ -1,5 +1,6 @@
 package com.viktorolsson.spotter.core.data.db.entity
 
+import androidx.room.ColumnInfo
 import androidx.room.Entity
 import androidx.room.ForeignKey
 import androidx.room.Index
@@ -9,7 +10,7 @@ import com.viktorolsson.spotter.core.model.ProgressionRule
 import com.viktorolsson.spotter.core.model.SplitType
 import java.time.Instant
 
-@Entity(tableName = "plan")
+@Entity(tableName = "plan", indices = [Index("isActive")])
 data class PlanEntity(
     @PrimaryKey(autoGenerate = true) val id: Long = 0,
     val name: String,
@@ -52,4 +53,7 @@ data class PlanExerciseEntity(
     val progressionRule: ProgressionRule,
     /** Exercises sharing a group number in the same day form a superset. */
     val supersetGroup: Int?,
+    /** First-session estimate from the plan generator. */
+    @ColumnInfo(defaultValue = "NULL")
+    val startingWeightKg: Double? = null,
 )

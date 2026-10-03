@@ -19,6 +19,9 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.runtime.produceState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -43,6 +46,10 @@ import com.viktorolsson.spotter.core.ui.formatClock
 import com.viktorolsson.spotter.feature.history.historyScreen
 import com.viktorolsson.spotter.feature.library.ExercisePickerRoute
 import com.viktorolsson.spotter.feature.library.exercisePickerScreen
+import com.viktorolsson.spotter.feature.onboarding.OnboardingRoute
+import com.viktorolsson.spotter.feature.onboarding.onboardingScreen
+import com.viktorolsson.spotter.feature.plan.PlanRoute
+import com.viktorolsson.spotter.feature.plan.planScreen
 import com.viktorolsson.spotter.feature.progress.progressScreen
 import com.viktorolsson.spotter.feature.session.SessionRoute
 import com.viktorolsson.spotter.feature.session.SummaryRoute
@@ -59,6 +66,7 @@ import java.time.Instant
 
 @Composable
 fun SpotterApp(
+    needsOnboarding: Boolean,
     navController: NavHostController = rememberNavController(),
     activeWorkoutViewModel: ActiveWorkoutViewModel = hiltViewModel(),
 ) {
@@ -68,6 +76,15 @@ fun SpotterApp(
     val activeSession by activeWorkoutViewModel.activeSession.collectAsStateWithLifecycle()
 
     KeepWorkoutServiceRunning(activeSession != null)
+
+    // First launch: open the questionnaire once (it can be skipped; Today offers it again).
+    var onboardingShown by rememberSaveable { mutableStateOf(false) }
+    LaunchedEffect(needsOnboarding) {
+        if (needsOnboarding && !onboardingShown) {
+            onboardingShown = true
+            navController.navigate(OnboardingRoute())
+        }
+    }
 
     Scaffold(
         bottomBar = {
@@ -103,10 +120,23 @@ fun SpotterApp(
             startDestination = TodayRoute,
             modifier = Modifier.padding(padding).consumeWindowInsets(padding),
         ) {
-            todayScreen(onOpenSession = { navController.navigate(SessionRoute(it)) })
+            todayScreen(
+                onOpenSession = { navController.navigate(SessionRoute(it)) },
+                onOpenPlan = { navController.navigate(PlanRoute) },
+                onBuildPlan = { navController.navigate(OnboardingRoute()) },
+            )
             historyScreen()
             progressScreen()
-            profileScreen()
+            profileScreen(
+                onOpenPlan = { navController.navigate(PlanRoute) },
+                onRebuildPlan = { navController.navigate(OnboardingRoute(rebuild = true)) },
+            )
+            onboardingScreen(onDone = { navController.popBackStack() })
+            planScreen(
+                onBack = { navController.popBackStack() },
+                onRebuild = { navController.navigate(OnboardingRoute(rebuild = true)) },
+                onOpenSession = { navController.navigate(SessionRoute(it)) },
+            )
             sessionScreen(
                 onAddExercises = { navController.navigate(ExercisePickerRoute(it)) },
                 onFinished = { id ->

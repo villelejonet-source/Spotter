@@ -1,0 +1,86 @@
+<resources>
+    <string name="onb_back">Back</string>
+    <string name="onb_skip">Skip</string>
+    <string name="onb_next">Next</string>
+    <string name="onb_build">Build my plan</string>
+    <string name="onb_start">Start training</string>
+    <string name="onb_optional">Optional</string>
+
+    <string name="onb_body_title">About you</string>
+    <string name="onb_body_subtitle">Used to pick sensible starting weights and defaults. It stays on your phone.</string>
+    <string name="onb_sex">Sex</string>
+    <string name="onb_sex_female">Female</string>
+    <string name="onb_sex_male">Male</string>
+    <string name="onb_units_metric">kg / cm</string>
+    <string name="onb_units_imperial">lb / ft</string>
+    <string name="onb_age">Age</string>
+    <string name="onb_height_cm">Height (cm)</string>
+    <string name="onb_height_ft">ft</string>
+    <string name="onb_height_in">in</string>
+    <string name="onb_weight">Weight (%1$s)</string>
+
+    <string name="onb_goal_title">What\'s your main goal?</string>
+    <string name="onb_goal_strength">Get stronger</string>
+    <string name="onb_goal_strength_sub">Heavier weights, fewer reps, longer rests</string>
+    <string name="onb_goal_hypertrophy">Build muscle</string>
+    <string name="onb_goal_hypertrophy_sub">Moderate weights, more sets and reps</string>
+    <string name="onb_goal_general">General fitness</string>
+    <string name="onb_goal_general_sub">A balanced mix to feel and move better</string>
+    <string name="onb_goal_fat_loss">Lose fat, keep muscle</string>
+    <string name="onb_goal_fat_loss_sub">Efficient sessions with short rests and supersets</string>
+
+    <string name="onb_exp_title">How long have you been lifting?</string>
+    <string name="onb_exp_new">New</string>
+    <string name="onb_exp_new_sub">Less than 6 months</string>
+    <string name="onb_exp_intermediate">Intermediate</string>
+    <string name="onb_exp_intermediate_sub">6 months to 2 years</string>
+    <string name="onb_exp_advanced">Advanced</string>
+    <string name="onb_exp_advanced_sub">More than 2 years</string>
+
+    <string name="onb_days_title">How many days a week can you train?</string>
+    <string name="onb_days_hint">%1$d days a week</string>
+    <string name="onb_length_title">How long is a typical session?</string>
+    <string name="onb_length_option">%1$d min</string>
+    <string name="onb_length_long">75+ min</string>
+
+    <string name="onb_equipment_title">What equipment do you have?</string>
+    <string name="onb_equipment_full">Full gym</string>
+    <string name="onb_equipment_full_sub">Commercial gym with machines and cables</string>
+    <string name="onb_equipment_home">Home gym</string>
+    <string name="onb_equipment_home_sub">Barbell, rack, bench and dumbbells</string>
+    <string name="onb_equipment_dumbbells">Dumbbells only</string>
+    <string name="onb_equipment_dumbbells_sub">Dumbbells and a bench</string>
+    <string name="onb_equipment_bodyweight">Bodyweight only</string>
+    <string name="onb_equipment_bodyweight_sub">No equipment</string>
+    <string name="onb_equipment_items">Fine-tune</string>
+
+    <string name="onb_focus_title">Anything you want to focus on?</string>
+    <string name="onb_focus_subtitle">Adds extra work for these areas. Change it any time.</string>
+
+    <string name="onb_limits_title">Any pain or injuries to work around?</string>
+    <string name="onb_limits_subtitle">We\'ll leave out exercises that load these areas and favour gentler options.</string>
+    <string name="onb_limit_shoulder">Shoulder</string>
+    <string name="onb_limit_knee">Knee</string>
+    <string name="onb_limit_lower_back">Lower back</string>
+    <string name="onb_limit_wrist">Wrist</string>
+    <string name="onb_limits_note">Spotter isn\'t medical advice. If something hurts, check with a doctor or physiotherapist before training it.</string>
+
+    <string name="onb_lifts_title">Know any of your lifts?</string>
+    <string name="onb_lifts_subtitle">A recent set you did, like 60 kg × 5. Leave blank if you\'re not sure; we\'ll estimate.</string>
+    <string name="onb_lift_bench">Bench press</string>
+    <string name="onb_lift_squat">Squat</string>
+    <string name="onb_lift_deadlift">Deadlift</string>
+    <string name="onb_lift_weight">Weight (%1$s)</string>
+    <string name="onb_lift_reps">Reps</string>
+
+    <string name="onb_summary_title">Your plan</string>
+    <string name="onb_summary_split">Split</string>
+    <string name="onb_split_auto">Recommended</string>
+    <string name="onb_split_full">Full body</string>
+    <string name="onb_split_upper_lower">Upper / Lower</string>
+    <string name="onb_split_ppl">Push / Pull / Legs</string>
+    <string name="onb_summary_day_meta">~%1$d min · %2$d exercises</string>
+    <string name="onb_summary_calibration">Starting weights are estimates. Your first session calibrates them, so log what you actually lift.</string>
+    <string name="onb_summary_missing">Some movements couldn\'t be programmed with your equipment (%1$s). Adding a pull-up bar or resistance bands fixes most of this.</string>
+    <string name="onb_summary_sets_reps">%1$d × %2$d–%3$d</string>
+</resources>

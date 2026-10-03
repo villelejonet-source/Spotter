@@ -1,9 +1,13 @@
 <resources>
     <string name="today_title">Today</string>
-    <string name="today_no_plan_title">No plan yet</string>
-    <string name="today_no_plan_body">A short questionnaire will build a plan around your goal, schedule and equipment.</string>
+    <string name="today_no_plan_title">Build your plan</string>
+    <string name="today_no_plan_body">A two-minute questionnaire builds a plan around your goal, schedule and equipment.</string>
+    <string name="today_no_plan_action">Get started</string>
+    <string name="today_next_label">Next workout</string>
+    <string name="today_day_meta">~%1$d min · %2$d exercises</string>
+    <string name="today_more_exercises">+%1$d more</string>
+    <string name="today_view_plan">View plan</string>
     <string name="today_start_workout">Start workout</string>
     <string name="today_empty_workout">Empty workout</string>
     <string name="today_resume_workout">Resume workout</string>
-    <string name="today_library_count">Exercise library: %1$d exercises</string>
 </resources>

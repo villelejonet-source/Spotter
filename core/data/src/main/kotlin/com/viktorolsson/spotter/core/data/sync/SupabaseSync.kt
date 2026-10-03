@@ -1,9 +1,11 @@
 package com.viktorolsson.spotter.core.data.sync
 
+import android.content.Intent
 import io.github.jan.supabase.SupabaseClient
 import io.github.jan.supabase.auth.Auth
 import io.github.jan.supabase.auth.OtpType
 import io.github.jan.supabase.auth.auth
+import io.github.jan.supabase.auth.handleDeeplinks
 import io.github.jan.supabase.auth.providers.builtin.OTP
 import io.github.jan.supabase.auth.status.SessionStatus
 import io.github.jan.supabase.createSupabaseClient
@@ -35,15 +37,27 @@ class SupabaseProvider @Inject constructor(private val config: SupabaseConfig) {
     val client: SupabaseClient? by lazy {
         if (!config.isConfigured) return@lazy null
         createSupabaseClient(config.url, config.publishableKey) {
-            install(Auth)
+            install(Auth) {
+                // Sign-in links in emails open the app at spotter://login (must be listed under
+                // Authentication → URL Configuration → Redirect URLs in Supabase).
+                scheme = DEEP_LINK_SCHEME
+                host = DEEP_LINK_HOST
+            }
             install(Postgrest)
         }
     }
 }
 
+const val DEEP_LINK_SCHEME = "spotter"
+const val DEEP_LINK_HOST = "login"
+
 data class Account(val userId: String, val email: String?)
 
-/** Sign-in with a 6-digit code sent by email: no passwords, no deep links. */
+/**
+ * Passwordless sign-in by email: the email has a sign-in link that opens the app (see
+ * [handleDeeplink]), and, when the project's email template includes it, a 6-digit code
+ * that can be typed in instead.
+ */
 @Singleton
 class AccountService @Inject constructor(private val provider: SupabaseProvider) {
     val isAvailable: Boolean get() = provider.client != null
@@ -56,7 +70,7 @@ class AccountService @Inject constructor(private val provider: SupabaseProvider)
     fun currentAccount(): Account? = provider.client?.auth?.currentUserOrNull()?.let { Account(it.id, it.email) }
 
     suspend fun sendCode(email: String) {
-        requireClient().auth.signInWith(OTP) {
+        requireClient().auth.signInWith(OTP, redirectUrl = "$DEEP_LINK_SCHEME://$DEEP_LINK_HOST") {
             this.email = email.trim()
             createUser = true
         }
@@ -64,6 +78,13 @@ class AccountService @Inject constructor(private val provider: SupabaseProvider)
 
     suspend fun verifyCode(email: String, code: String) {
         requireClient().auth.verifyEmailOtp(type = OtpType.Email.EMAIL, email = email.trim(), token = code.trim())
+    }
+
+    /** Completes sign-in from a tapped email link (spotter://login#...); ignores other intents. */
+    fun handleDeeplink(intent: Intent) {
+        val data = intent.data ?: return
+        if (data.scheme != DEEP_LINK_SCHEME || data.host != DEEP_LINK_HOST) return
+        provider.client?.handleDeeplinks(intent)
     }
 
     suspend fun signOut() {

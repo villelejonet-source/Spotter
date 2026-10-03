@@ -31,6 +31,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -52,7 +53,6 @@ import java.time.YearMonth
 import java.time.format.DateTimeFormatter
 import java.time.format.TextStyle
 import java.time.temporal.WeekFields
-import java.util.Locale
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -113,7 +113,8 @@ private fun MonthCalendar(
         .groupBy { it.startedAt.localDate() }
         .mapValues { (_, list) -> list.sumOf { WorkoutSummary.of(it).volumeKg }.coerceAtLeast(1.0) }
     val maxVolume = volumeByDay.values.maxOrNull() ?: 1.0
-    val firstDay = WeekFields.of(Locale.getDefault()).firstDayOfWeek
+    val locale = LocalConfiguration.current.locales[0]
+    val firstDay = WeekFields.of(locale).firstDayOfWeek
     val leading = (month.atDay(1).dayOfWeek.value - firstDay.value + 7) % 7
     val today = LocalDate.now()
 
@@ -136,7 +137,7 @@ private fun MonthCalendar(
             Row {
                 (0 until 7).map { DayOfWeek.of((firstDay.value - 1 + it) % 7 + 1) }.forEach { day ->
                     Text(
-                        day.getDisplayName(TextStyle.NARROW, Locale.getDefault()),
+                        day.getDisplayName(TextStyle.NARROW, locale),
                         style = MaterialTheme.typography.labelSmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         textAlign = TextAlign.Center,

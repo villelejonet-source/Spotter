@@ -42,10 +42,10 @@
     <string name="backup_sign_out_body">This phone stops syncing. Your backup stays in the cloud and the data on this phone stays here.</string>
 
     <string name="account_title">Cloud backup</string>
-    <string name="account_email_intro">Enter your email and we\'ll send you a 6-digit code. No password needed.</string>
+    <string name="account_email_intro">Enter your email and we\'ll send you a sign-in link. No password needed.</string>
     <string name="account_email">Email</string>
     <string name="account_send_code">Send code</string>
-    <string name="account_code_intro">Enter the 6-digit code we sent to %1$s.</string>
+    <string name="account_code_intro">We sent an email to %1$s. Open it on this phone and tap the sign-in link, or type the 6-digit code if the email has one.</string>
     <string name="account_code">Code</string>
     <string name="account_verify">Sign in</string>
     <string name="account_resend">Send a new code</string>

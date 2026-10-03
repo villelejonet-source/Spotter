@@ -45,6 +45,7 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.serialization.Serializable
@@ -73,6 +74,14 @@ data class AccountUiState(
 class AccountViewModel @Inject constructor(private val sync: SyncRepository) : ViewModel() {
     private val _state = MutableStateFlow(AccountUiState())
     val state: StateFlow<AccountUiState> = _state.asStateFlow()
+
+    init {
+        // Tapping the link in the email signs in from outside this screen.
+        viewModelScope.launch {
+            sync.status.first { it.account != null }
+            _state.update { it.copy(busy = false, signedIn = true) }
+        }
+    }
 
     fun setEmail(value: String) = _state.update { it.copy(email = value.trim(), error = null) }
 

@@ -1,6 +1,7 @@
 package com.viktorolsson.spotter.core.data.sync
 
 import android.content.Context
+import android.content.Intent
 import androidx.hilt.work.HiltWorker
 import androidx.work.Constraints
 import androidx.work.CoroutineWorker
@@ -11,15 +12,19 @@ import androidx.work.OneTimeWorkRequestBuilder
 import androidx.work.PeriodicWorkRequestBuilder
 import androidx.work.WorkManager
 import androidx.work.WorkerParameters
+import com.viktorolsson.spotter.core.data.di.ApplicationScope
 import com.viktorolsson.spotter.core.data.repository.UserPreferencesRepository
 import com.viktorolsson.spotter.core.data.repository.UserProfileRepository
 import dagger.assisted.Assisted
 import dagger.assisted.AssistedInject
 import dagger.hilt.android.qualifiers.ApplicationContext
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.distinctUntilChangedBy
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
@@ -54,6 +59,7 @@ class SyncRepository @Inject constructor(
     private val preferences: UserPreferencesRepository,
     private val profiles: UserProfileRepository,
     private val scheduler: SyncScheduler,
+    @param:ApplicationScope private val scope: CoroutineScope,
     clock: Clock,
 ) {
     private val engine = SyncEngine(store, remote, cursors, clock)
@@ -73,16 +79,27 @@ class SyncRepository @Inject constructor(
         )
     }
 
+    init {
+        // Any sign-in (email link, code, or a session restored at start-up) kicks off a
+        // sync, which restores the backup on a fresh phone, and keeps background sync on.
+        scope.launch {
+            accounts.account.distinctUntilChangedBy { it?.userId }.collect { account ->
+                if (account != null) {
+                    scheduler.schedulePeriodic()
+                    syncNow()
+                }
+            }
+        }
+    }
+
     fun isSignedIn(): Boolean = accounts.currentAccount() != null
+
+    fun handleDeeplink(intent: Intent) = accounts.handleDeeplink(intent)
 
     suspend fun sendCode(email: String) = accounts.sendCode(email)
 
-    /** Signs in, then syncs right away (which restores a backup on a fresh phone). */
-    suspend fun verifyCode(email: String, code: String) {
-        accounts.verifyCode(email, code)
-        scheduler.schedulePeriodic()
-        syncNow()
-    }
+    /** Signs in with a typed code; the sign-in itself triggers the first sync. */
+    suspend fun verifyCode(email: String, code: String) = accounts.verifyCode(email, code)
 
     /** Runs a sync now if signed in. Returns false when it failed (worth retrying). */
     suspend fun syncNow(choice: FirstSyncChoice? = null): Boolean {

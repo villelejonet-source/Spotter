@@ -96,4 +96,8 @@
     <string name="notif_rest_done_title">Rest over</string>
     <string name="notif_rest_done_text">Time for your next set.</string>
     <string name="notif_add_30">+30 s</string>
+    <plurals name="summary_new_prs">
+        <item quantity="one">%1$d new personal record</item>
+        <item quantity="other">%1$d new personal records</item>
+    </plurals>
 </resources>

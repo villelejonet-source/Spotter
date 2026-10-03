@@ -5,12 +5,14 @@ import com.viktorolsson.spotter.core.data.db.SpotterDatabase
 import com.viktorolsson.spotter.core.data.db.dao.ExerciseDao
 import com.viktorolsson.spotter.core.data.db.dao.PlanDao
 import com.viktorolsson.spotter.core.data.db.dao.WorkoutDao
+import com.viktorolsson.spotter.core.data.db.entity.PersonalRecordEntity
 import com.viktorolsson.spotter.core.data.db.entity.SessionExerciseEntity
 import com.viktorolsson.spotter.core.data.db.entity.SetEntryEntity
 import com.viktorolsson.spotter.core.data.db.entity.WorkoutSessionEntity
 import com.viktorolsson.spotter.core.data.db.toModel
 import com.viktorolsson.spotter.core.data.db.toPrevious
 import com.viktorolsson.spotter.core.engine.LoggedSet
+import com.viktorolsson.spotter.core.engine.PersonalRecords
 import com.viktorolsson.spotter.core.engine.Progression
 import com.viktorolsson.spotter.core.engine.ProgressionInput
 import com.viktorolsson.spotter.core.engine.WeightConversion
@@ -318,11 +320,52 @@ class WorkoutRepository @Inject constructor(
     suspend fun setSessionNotes(sessionId: Long, notes: String?) =
         dao.updateSessionNotes(sessionId, notes?.takeIf(String::isNotBlank))
 
-    /** Ends the session, dropping sets that were never ticked and exercises left with no sets. */
+    /**
+     * Ends the session, dropping sets that were never ticked and exercises left with no
+     * sets, then records any personal records it set.
+     */
     suspend fun finishWorkout(sessionId: Long) = db.withTransaction {
         dao.deleteIncompleteSets(sessionId)
         dao.deleteExercisesWithoutSets(sessionId)
-        dao.endSession(sessionId, clock.instant())
+        val now = clock.instant()
+        dao.endSession(sessionId, now)
+        recordPersonalRecords(sessionId, now)
+    }
+
+    private suspend fun recordPersonalRecords(sessionId: Long, achievedAt: Instant) {
+        val session = dao.getSessionWithExercises(sessionId) ?: return
+        val records = session.exercises.groupBy { it.exercise.id }.flatMap { (exerciseId, entries) ->
+            val logged = entries.flatMap { it.sets }
+                .filter { it.completedAt != null && it.setType != SetType.WARMUP && it.reps != null }
+                .map { LoggedSet(it.weightKg, it.reps!!, it.rir) }
+            val previous = dao.getWorkingSetsBefore(exerciseId, session.session.startedAt)
+                .groupBy { it.sessionId }.values
+                .map { sets -> sets.map { LoggedSet(it.set.weightKg, it.set.reps ?: 0, it.set.rir) } }
+            PersonalRecords.detect(logged, PersonalRecords.bests(previous)).map {
+                PersonalRecordEntity(
+                    exerciseId = exerciseId,
+                    type = it.type,
+                    value = it.value,
+                    weightKg = it.weightKg,
+                    reps = it.reps,
+                    achievedAt = achievedAt,
+                    sessionId = sessionId,
+                )
+            }
+        }
+        if (records.isNotEmpty()) dao.insertRecords(records)
+    }
+
+    /**
+     * "Repeat this workout": starts an empty workout with the same exercises (or
+     * returns the one in progress). Sets pre-fill from the latest time each was done.
+     */
+    suspend fun repeatWorkout(sessionId: Long): Long = db.withTransaction {
+        dao.getActiveSession()?.let { return@withTransaction it.id }
+        val source = dao.getSessionWithExercises(sessionId) ?: error("No session $sessionId")
+        val newId = startEmptyWorkout()
+        addExercises(newId, source.exercises.sortedBy { it.sessionExercise.position }.map { it.exercise.id }.distinct())
+        newId
     }
 
     suspend fun discardWorkout(sessionId: Long) = dao.deleteSession(sessionId)

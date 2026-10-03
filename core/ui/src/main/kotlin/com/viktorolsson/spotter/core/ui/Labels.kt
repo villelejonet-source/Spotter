@@ -5,6 +5,8 @@ import androidx.annotation.StringRes
 import com.viktorolsson.spotter.core.model.BodyArea
 import com.viktorolsson.spotter.core.model.Equipment
 import com.viktorolsson.spotter.core.model.MovementPattern
+import com.viktorolsson.spotter.core.model.MuscleGroup
+import com.viktorolsson.spotter.core.model.PersonalRecordType
 import com.viktorolsson.spotter.core.model.Muscle
 
 val Muscle.labelRes: Int
@@ -84,4 +86,25 @@ val BodyArea.labelRes: Int
         BodyArea.LEGS -> R.string.body_area_legs
         BodyArea.GLUTES -> R.string.body_area_glutes
         BodyArea.CORE -> R.string.body_area_core
+    }
+
+val MuscleGroup.labelRes: Int
+    @StringRes get() = when (this) {
+        MuscleGroup.CHEST -> R.string.muscle_group_chest
+        MuscleGroup.BACK -> R.string.muscle_group_back
+        MuscleGroup.SHOULDERS -> R.string.muscle_group_shoulders
+        MuscleGroup.BICEPS -> R.string.muscle_group_biceps
+        MuscleGroup.TRICEPS -> R.string.muscle_group_triceps
+        MuscleGroup.QUADS -> R.string.muscle_group_quads
+        MuscleGroup.HAMSTRINGS -> R.string.muscle_group_hamstrings
+        MuscleGroup.GLUTES -> R.string.muscle_group_glutes
+        MuscleGroup.CALVES -> R.string.muscle_group_calves
+        MuscleGroup.CORE -> R.string.muscle_group_core
+    }
+
+val PersonalRecordType.labelRes: Int
+    @StringRes get() = when (this) {
+        PersonalRecordType.ESTIMATED_1RM -> R.string.record_estimated_1rm
+        PersonalRecordType.REPS_AT_WEIGHT -> R.string.record_reps_at_weight
+        PersonalRecordType.VOLUME -> R.string.record_volume
     }

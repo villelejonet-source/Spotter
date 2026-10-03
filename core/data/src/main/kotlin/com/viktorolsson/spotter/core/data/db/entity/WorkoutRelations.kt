@@ -46,3 +46,23 @@ data class PlanExerciseWithExercise(
     @Relation(parentColumn = "exerciseId", entityColumn = "id")
     val exercise: ExerciseEntity,
 )
+
+/** A logged set with its session's start time, for per-exercise history. */
+data class DatedSet(
+    @Embedded val set: SetEntryEntity,
+    val sessionId: Long,
+    val startedAt: java.time.Instant,
+)
+
+data class RecordWithExercise(
+    @Embedded val record: PersonalRecordEntity,
+    @Relation(parentColumn = "exerciseId", entityColumn = "id")
+    val exercise: ExerciseEntity,
+)
+
+/** An exercise the user has logged, with when it was last done. */
+data class LoggedExercise(
+    @Embedded val exercise: ExerciseEntity,
+    val lastDone: java.time.Instant,
+    val sessionCount: Int,
+)

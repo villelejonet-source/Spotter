@@ -2,4 +2,31 @@
     <string name="history_title">History</string>
     <string name="history_empty_title">No workouts yet</string>
     <string name="history_empty_body">Finished workouts show up here, with every set, by date and by exercise.</string>
+    <string name="history_prev_month">Previous month</string>
+    <string name="history_next_month">Next month</string>
+    <string name="history_month_empty">No workouts this month.</string>
+    <string name="history_workout">Workout</string>
+    <string name="history_session_meta">%1$s · %2$d sets · %3$s</string>
+    <string name="history_back">Back</string>
+
+    <string name="detail_duration">Duration</string>
+    <string name="detail_volume">Volume</string>
+    <string name="detail_sets">Sets</string>
+    <string name="detail_repeat">Repeat this workout</string>
+    <string name="detail_prs">Personal records</string>
+    <string name="detail_warmup">W</string>
+    <string name="detail_rir">RIR %1$d</string>
+    <string name="detail_open_exercise">History</string>
+
+    <string name="exercise_metric_1rm">Est. 1RM</string>
+    <string name="exercise_metric_best">Best set</string>
+    <string name="exercise_metric_volume">Volume</string>
+    <string name="exercise_chart_empty">Log this exercise in two sessions to see a trend.</string>
+    <string name="exercise_best_1rm">Best est. 1RM</string>
+    <string name="exercise_heaviest">Heaviest</string>
+    <string name="exercise_best_volume">Best volume</string>
+    <string name="exercise_rep_records">Rep records</string>
+    <string name="exercise_rep_record_row">%1$d reps</string>
+    <string name="exercise_log">Log</string>
+    <string name="exercise_none">No sets logged for this exercise yet.</string>
 </resources>

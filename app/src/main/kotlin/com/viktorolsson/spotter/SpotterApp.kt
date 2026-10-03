@@ -43,7 +43,11 @@ import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import com.viktorolsson.spotter.core.data.repository.ActiveSession
 import com.viktorolsson.spotter.core.ui.formatClock
+import com.viktorolsson.spotter.feature.history.ExerciseHistoryRoute
+import com.viktorolsson.spotter.feature.history.WorkoutDetailRoute
+import com.viktorolsson.spotter.feature.history.exerciseHistoryScreen
 import com.viktorolsson.spotter.feature.history.historyScreen
+import com.viktorolsson.spotter.feature.history.workoutDetailScreen
 import com.viktorolsson.spotter.feature.library.ExercisePickerRoute
 import com.viktorolsson.spotter.feature.library.exercisePickerScreen
 import com.viktorolsson.spotter.feature.onboarding.OnboardingRoute
@@ -125,8 +129,14 @@ fun SpotterApp(
                 onOpenPlan = { navController.navigate(PlanRoute) },
                 onBuildPlan = { navController.navigate(OnboardingRoute()) },
             )
-            historyScreen()
-            progressScreen()
+            historyScreen(onOpenWorkout = { navController.navigate(WorkoutDetailRoute(it)) })
+            progressScreen(onOpenExercise = { navController.navigate(ExerciseHistoryRoute(it)) })
+            workoutDetailScreen(
+                onBack = { navController.popBackStack() },
+                onOpenExercise = { navController.navigate(ExerciseHistoryRoute(it)) },
+                onOpenSession = { navController.navigate(SessionRoute(it)) },
+            )
+            exerciseHistoryScreen(onBack = { navController.popBackStack() })
             profileScreen(
                 onOpenPlan = { navController.navigate(PlanRoute) },
                 onRebuildPlan = { navController.navigate(OnboardingRoute(rebuild = true)) },

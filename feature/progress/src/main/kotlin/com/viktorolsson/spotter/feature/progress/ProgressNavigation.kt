@@ -7,6 +7,6 @@ import kotlinx.serialization.Serializable
 @Serializable
 data object ProgressRoute
 
-fun NavGraphBuilder.progressScreen() {
-    composable<ProgressRoute> { ProgressScreen() }
+fun NavGraphBuilder.progressScreen(onOpenExercise: (String) -> Unit) {
+    composable<ProgressRoute> { ProgressRoute(onOpenExercise = onOpenExercise) }
 }

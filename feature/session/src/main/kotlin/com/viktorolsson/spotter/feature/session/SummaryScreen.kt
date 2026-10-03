@@ -26,6 +26,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
@@ -34,13 +35,18 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewModelScope
 import androidx.navigation.toRoute
+import com.viktorolsson.spotter.core.data.repository.HistoryRepository
 import com.viktorolsson.spotter.core.data.repository.UserPreferencesRepository
 import com.viktorolsson.spotter.core.data.repository.WorkoutRepository
+import com.viktorolsson.spotter.core.model.PersonalRecord
 import com.viktorolsson.spotter.core.model.WeightUnit
 import com.viktorolsson.spotter.core.model.WorkoutSummary
 import com.viktorolsson.spotter.core.model.format
 import com.viktorolsson.spotter.core.model.label
 import com.viktorolsson.spotter.core.ui.formatClock
+import com.viktorolsson.spotter.core.ui.formatRecordValue
+import com.viktorolsson.spotter.core.ui.formatTotal
+import com.viktorolsson.spotter.core.ui.labelRes
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -48,21 +54,27 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
 import javax.inject.Inject
 
-data class SummaryUiState(val summary: WorkoutSummary? = null, val unit: WeightUnit = WeightUnit.KG)
+data class SummaryUiState(
+    val summary: WorkoutSummary? = null,
+    val unit: WeightUnit = WeightUnit.KG,
+    val records: List<PersonalRecord> = emptyList(),
+)
 
 @HiltViewModel
 class SummaryViewModel @Inject constructor(
     savedStateHandle: SavedStateHandle,
     workoutRepository: WorkoutRepository,
+    historyRepository: HistoryRepository,
     preferencesRepository: UserPreferencesRepository,
 ) : ViewModel() {
     private val sessionId = savedStateHandle.toRoute<SummaryRoute>().sessionId
 
     val uiState: StateFlow<SummaryUiState> = combine(
         workoutRepository.observeSession(sessionId),
+        historyRepository.observeSessionRecords(sessionId),
         preferencesRepository.preferences,
-    ) { session, prefs ->
-        SummaryUiState(session?.let { WorkoutSummary.of(it) }, prefs.weightUnit)
+    ) { session, records, prefs ->
+        SummaryUiState(session?.let { WorkoutSummary.of(it) }, prefs.weightUnit, records)
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), SummaryUiState())
 }
 
@@ -70,11 +82,11 @@ class SummaryViewModel @Inject constructor(
 internal fun SummaryRoute(onDone: () -> Unit, viewModel: SummaryViewModel = hiltViewModel()) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val summary = uiState.summary ?: return
-    SummaryScreen(summary, uiState.unit, onDone)
+    SummaryScreen(summary, uiState.unit, uiState.records, onDone)
 }
 
 @Composable
-internal fun SummaryScreen(summary: WorkoutSummary, unit: WeightUnit, onDone: () -> Unit) {
+internal fun SummaryScreen(summary: WorkoutSummary, unit: WeightUnit, records: List<PersonalRecord>, onDone: () -> Unit) {
     Scaffold(
         bottomBar = {
             Button(
@@ -107,10 +119,38 @@ internal fun SummaryScreen(summary: WorkoutSummary, unit: WeightUnit, onDone: ()
                     StatTile(stringResource(R.string.summary_duration), formatClock(summary.duration), Modifier.weight(1f))
                     StatTile(
                         stringResource(R.string.summary_volume),
-                        "${unit.format(summary.volumeKg).substringBefore('.')} ${unit.label}",
+                        formatTotal(summary.volumeKg, unit),
                         Modifier.weight(1f),
                     )
                     StatTile(stringResource(R.string.summary_sets), "${summary.completedSets}", Modifier.weight(1f))
+                }
+            }
+            if (records.isNotEmpty()) {
+                item {
+                    Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.tertiaryContainer)) {
+                        Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                            Text(
+                                pluralStringResource(R.plurals.summary_new_prs, records.size, records.size),
+                                style = MaterialTheme.typography.titleMedium,
+                                color = MaterialTheme.colorScheme.onTertiaryContainer,
+                            )
+                            records.forEach { record ->
+                                Row {
+                                    Text(
+                                        "${record.exerciseName} · ${stringResource(record.type.labelRes)}",
+                                        style = MaterialTheme.typography.bodyMedium,
+                                        color = MaterialTheme.colorScheme.onTertiaryContainer,
+                                        modifier = Modifier.weight(1f),
+                                    )
+                                    Text(
+                                        formatRecordValue(record, unit),
+                                        style = MaterialTheme.typography.bodyMedium,
+                                        color = MaterialTheme.colorScheme.onTertiaryContainer,
+                                    )
+                                }
+                            }
+                        }
+                    }
                 }
             }
             items(summary.exercises) { ex ->

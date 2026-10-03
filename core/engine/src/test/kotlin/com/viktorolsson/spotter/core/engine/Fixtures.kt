@@ -37,9 +37,11 @@ object Fixtures {
         val unilateral: Boolean = false,
     )
 
+    private val json = Json { ignoreUnknownKeys = true }
+
     val library: List<Exercise> by lazy {
         val text = File("../data/src/main/assets/exercises.json").readText()
-        Json { ignoreUnknownKeys = true }.decodeFromString<SeedFile>(text).exercises.map {
+        json.decodeFromString<SeedFile>(text).exercises.map {
             Exercise(
                 it.id, it.name, it.primary, it.secondary, it.pattern, it.equipment, it.mechanics,
                 it.difficulty, it.unilateral, instructions = null, isCustom = false,

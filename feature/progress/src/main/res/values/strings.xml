@@ -2,4 +2,20 @@
     <string name="progress_title">Progress</string>
     <string name="progress_empty_title">Nothing to chart yet</string>
     <string name="progress_empty_body">Log a few workouts to see your PRs, strength trends, body weight and recommendations.</string>
+    <string name="progress_records">Recent PRs</string>
+    <string name="progress_records_empty">PRs show up from the second time you log an exercise.</string>
+    <string name="progress_balance">Muscle balance · last 7 days</string>
+    <string name="progress_balance_hint">Working sets per muscle group. Target %1$d–%2$d for your goal.</string>
+    <string name="progress_balance_row">%1$s / %2$d–%3$d</string>
+    <string name="progress_under">Under</string>
+    <string name="progress_over">Over</string>
+    <string name="progress_body_weight">Body weight</string>
+    <string name="progress_log_weight">Log weight</string>
+    <string name="progress_weight_label">Weight (%1$s)</string>
+    <string name="progress_weight_average">7-day average %1$s</string>
+    <string name="progress_weight_empty">Log your weight a few times to see the trend.</string>
+    <string name="progress_lifts">Your lifts</string>
+    <string name="progress_lift_meta">%1$d sessions · last %2$s</string>
+    <string name="save">Save</string>
+    <string name="cancel">Cancel</string>
 </resources>

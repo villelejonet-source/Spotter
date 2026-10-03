@@ -1,6 +1,8 @@
 package com.viktorolsson.spotter.core.data.db
 
+import com.viktorolsson.spotter.core.data.db.entity.BodyWeightEntryEntity
 import com.viktorolsson.spotter.core.data.db.entity.ExerciseEntity
+import com.viktorolsson.spotter.core.data.db.entity.RecordWithExercise
 import com.viktorolsson.spotter.core.data.db.entity.PlanDayWithExercises
 import com.viktorolsson.spotter.core.data.db.entity.PlanExerciseEntity
 import com.viktorolsson.spotter.core.data.db.entity.PlanWithDays
@@ -8,7 +10,9 @@ import com.viktorolsson.spotter.core.data.db.entity.UserProfileEntity
 import com.viktorolsson.spotter.core.data.db.entity.SessionExerciseWithSets
 import com.viktorolsson.spotter.core.data.db.entity.SessionWithExercises
 import com.viktorolsson.spotter.core.data.db.entity.SetEntryEntity
+import com.viktorolsson.spotter.core.model.BodyWeightEntry
 import com.viktorolsson.spotter.core.model.Exercise
+import com.viktorolsson.spotter.core.model.PersonalRecord
 import com.viktorolsson.spotter.core.model.Plan
 import com.viktorolsson.spotter.core.model.PlanDay
 import com.viktorolsson.spotter.core.model.PlanExercise
@@ -143,3 +147,17 @@ fun UserProfile.toEntity() = UserProfileEntity(
     focusAreas = focusAreas,
     limitations = limitations,
 )
+
+fun RecordWithExercise.toModel() = PersonalRecord(
+    id = record.id,
+    exerciseId = record.exerciseId,
+    exerciseName = exercise.name,
+    type = record.type,
+    value = record.value,
+    weightKg = record.weightKg,
+    reps = record.reps,
+    achievedAt = record.achievedAt,
+    sessionId = record.sessionId,
+)
+
+fun BodyWeightEntryEntity.toModel() = BodyWeightEntry(id = id, date = date, weightKg = weightKg)

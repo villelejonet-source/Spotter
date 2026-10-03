@@ -63,4 +63,17 @@
     <string name="body_area_legs">Legs</string>
     <string name="body_area_glutes">Glutes</string>
     <string name="body_area_core">Core</string>
+    <string name="muscle_group_chest">Chest</string>
+    <string name="muscle_group_back">Back</string>
+    <string name="muscle_group_shoulders">Shoulders</string>
+    <string name="muscle_group_biceps">Biceps</string>
+    <string name="muscle_group_triceps">Triceps</string>
+    <string name="muscle_group_quads">Quads</string>
+    <string name="muscle_group_hamstrings">Hamstrings</string>
+    <string name="muscle_group_glutes">Glutes</string>
+    <string name="muscle_group_calves">Calves</string>
+    <string name="muscle_group_core">Core</string>
+    <string name="record_estimated_1rm">Est. 1RM</string>
+    <string name="record_reps_at_weight">Rep record</string>
+    <string name="record_volume">Volume</string>
 </resources>

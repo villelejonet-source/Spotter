@@ -5,4 +5,5 @@ plugins {
 
 dependencies {
     api(project(":core:model"))
+    implementation(libs.vico.compose.m3)
 }

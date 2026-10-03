@@ -1,5 +1,8 @@
 package com.viktorolsson.spotter.feature.settings
 
+import android.content.ActivityNotFoundException
+import android.content.Context
+import android.content.Intent
 import android.util.Patterns
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -7,11 +10,13 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
+import androidx.compose.material.icons.rounded.MarkEmailRead
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -27,8 +32,10 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.LiveRegionMode
+import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.input.ImeAction
@@ -70,6 +77,8 @@ data class AccountUiState(
     val busy: Boolean = false,
     val error: Int? = null,
     val signedIn: Boolean = false,
+    /** The code field is hidden until asked for: the email's link is the main way in. */
+    val showCode: Boolean = false,
 ) {
     val emailValid: Boolean get() = Patterns.EMAIL_ADDRESS.matcher(email.trim()).matches()
 }
@@ -106,20 +115,49 @@ class AccountViewModel @Inject constructor(private val sync: SyncRepository) : V
             .onFailure { _state.update { it.copy(busy = false, error = R.string.account_verify_failed) } }
     }
 
-    fun changeEmail() = _state.update { it.copy(codeSent = false, code = "", error = null) }
+    fun showCode() = _state.update { it.copy(showCode = true) }
+
+    fun changeEmail() = _state.update { it.copy(codeSent = false, showCode = false, code = "", error = null) }
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
+
 @Composable
 internal fun AccountRoute(newAccount: Boolean, onDone: () -> Unit, viewModel: AccountViewModel = hiltViewModel()) {
     val state by viewModel.state.collectAsStateWithLifecycle()
     LaunchedEffect(state.signedIn) { if (state.signedIn) onDone() }
+    AccountScreen(
+        state = state,
+        newAccount = newAccount,
+        onBack = onDone,
+        actions = AccountActions(
+            setEmail = viewModel::setEmail,
+            sendCode = viewModel::sendCode,
+            setCode = viewModel::setCode,
+            verify = viewModel::verify,
+            showCode = viewModel::showCode,
+            changeEmail = viewModel::changeEmail,
+        ),
+    )
+}
+
+internal class AccountActions(
+    val setEmail: (String) -> Unit,
+    val sendCode: () -> Unit,
+    val setCode: (String) -> Unit,
+    val verify: () -> Unit,
+    val showCode: () -> Unit,
+    val changeEmail: () -> Unit,
+)
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+internal fun AccountScreen(state: AccountUiState, newAccount: Boolean, onBack: () -> Unit, actions: AccountActions) {
     Scaffold(
         topBar = {
             TopAppBar(
                 title = { Text(stringResource(if (newAccount) R.string.account_title_new else R.string.account_title)) },
                 navigationIcon = {
-                    IconButton(onClick = onDone) { Icon(Icons.AutoMirrored.Rounded.ArrowBack, stringResource(R.string.back)) }
+                    IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Rounded.ArrowBack, stringResource(R.string.back)) }
                 },
             )
         },
@@ -132,26 +170,47 @@ internal fun AccountRoute(newAccount: Boolean, onDone: () -> Unit, viewModel: Ac
                 Text(stringResource(if (newAccount) R.string.account_email_intro_new else R.string.account_email_intro), style = MaterialTheme.typography.bodyLarge)
                 OutlinedTextField(
                     value = state.email,
-                    onValueChange = viewModel::setEmail,
+                    onValueChange = actions.setEmail,
                     label = { Text(stringResource(R.string.account_email)) },
                     singleLine = true,
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email, imeAction = ImeAction.Send),
                     modifier = Modifier.fillMaxWidth(),
                 )
-                ActionButton(R.string.account_send_code, enabled = state.emailValid, busy = state.busy, onClick = viewModel::sendCode)
+                ActionButton(R.string.account_send_code, enabled = state.emailValid, busy = state.busy, onClick = actions.sendCode)
             } else {
-                Text(stringResource(R.string.account_code_intro, state.email), style = MaterialTheme.typography.bodyLarge)
-                OutlinedTextField(
-                    value = state.code,
-                    onValueChange = viewModel::setCode,
-                    label = { Text(stringResource(R.string.account_code)) },
-                    singleLine = true,
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.NumberPassword, imeAction = ImeAction.Done),
-                    modifier = Modifier.fillMaxWidth(),
+                // Supabase's email always has the sign-in link; the code only when the project's
+                // template includes it, so the code field stays secondary.
+                Icon(
+                    Icons.Rounded.MarkEmailRead,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.size(56.dp),
                 )
-                ActionButton(R.string.account_verify, enabled = state.code.length == 6, busy = state.busy, onClick = viewModel::verify)
-                TextButton(onClick = viewModel::sendCode, enabled = !state.busy) { Text(stringResource(R.string.account_resend)) }
-                TextButton(onClick = viewModel::changeEmail, enabled = !state.busy) { Text(stringResource(R.string.account_change_email)) }
+                Text(
+                    stringResource(R.string.account_check_email),
+                    style = MaterialTheme.typography.headlineSmall,
+                    modifier = Modifier.semantics { heading() },
+                )
+                Text(stringResource(R.string.account_code_intro, state.email), style = MaterialTheme.typography.bodyLarge)
+                val context = LocalContext.current
+                Button(onClick = { openEmailApp(context) }, modifier = Modifier.fillMaxWidth().height(52.dp)) {
+                    Text(stringResource(R.string.account_open_email))
+                }
+                if (state.showCode) {
+                    OutlinedTextField(
+                        value = state.code,
+                        onValueChange = actions.setCode,
+                        label = { Text(stringResource(R.string.account_code)) },
+                        singleLine = true,
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.NumberPassword, imeAction = ImeAction.Done),
+                        modifier = Modifier.fillMaxWidth(),
+                    )
+                    ActionButton(R.string.account_verify, enabled = state.code.length == 6, busy = state.busy, onClick = actions.verify)
+                } else {
+                    TextButton(onClick = actions.showCode) { Text(stringResource(R.string.account_enter_code)) }
+                }
+                TextButton(onClick = actions.sendCode, enabled = !state.busy) { Text(stringResource(R.string.account_resend)) }
+                TextButton(onClick = actions.changeEmail, enabled = !state.busy) { Text(stringResource(R.string.account_change_email)) }
             }
             state.error?.let {
                 Text(
@@ -166,6 +225,16 @@ internal fun AccountRoute(newAccount: Boolean, onDone: () -> Unit, viewModel: Ac
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }
+    }
+}
+
+/** Opens the phone's email app on its inbox; does nothing if there isn't one. */
+private fun openEmailApp(context: Context) {
+    val intent = Intent.makeMainSelectorActivity(Intent.ACTION_MAIN, Intent.CATEGORY_APP_EMAIL)
+        .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+    try {
+        context.startActivity(intent)
+    } catch (_: ActivityNotFoundException) {
     }
 }
 

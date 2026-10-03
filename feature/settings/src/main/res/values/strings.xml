@@ -48,7 +48,10 @@
     <string name="account_email_intro_new">Enter your email and we\'ll send you a link to create your free account. No password needed.</string>
     <string name="account_email">Email</string>
     <string name="account_send_code">Send sign-in link</string>
-    <string name="account_code_intro">We sent an email to %1$s. Open it on this phone and tap the sign-in link, or type the 6-digit code if the email has one.</string>
+    <string name="account_check_email">Check your email</string>
+    <string name="account_code_intro">We sent a sign-in link to %1$s. Open the email on this phone and tap the link. You\'ll come straight back here, signed in.</string>
+    <string name="account_open_email">Open email app</string>
+    <string name="account_enter_code">Got a 6-digit code instead? Enter it</string>
     <string name="account_code">Code</string>
     <string name="account_verify">Sign in</string>
     <string name="account_resend">Send the email again</string>

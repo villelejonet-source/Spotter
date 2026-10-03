@@ -11,11 +11,12 @@ workouts and sets you log, your body weight entries and your settings.
 **Where it's stored.** On your device, in the app's private storage. It's excluded from
 Google's cloud backup; it can move to a new phone with a direct device-to-device transfer.
 
-**Optional cloud backup.** If you choose to sign in (with your email address and a one-time
-code), Spotter backs up the data above to its cloud database (hosted by Supabase) and
+**Optional cloud backup.** If you choose to sign in (with your email address and a sign-in
+link or one-time code), Spotter backs up the data above to its cloud database (hosted by Supabase) and
 syncs it between your phones. It's sent encrypted
 (HTTPS), and database rules ensure only your account can read or change your backup. Your
-email address is used only to sign you in. If you never sign in, nothing leaves your phone.
+email address is used only to sign you in; sign-in emails are sent through Gmail. If you
+never sign in, nothing leaves your phone.
 
 **What Spotter doesn't do.** No analytics, no advertising, no tracking, no selling or
 sharing of data with anyone. Spotter doesn't access your location, contacts, photos or sensors.

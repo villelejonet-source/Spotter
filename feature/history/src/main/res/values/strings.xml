@@ -1,0 +1,5 @@
+<resources>
+    <string name="history_title">History</string>
+    <string name="history_empty_title">No workouts yet</string>
+    <string name="history_empty_body">Finished workouts show up here, with every set, by date and by exercise.</string>
+</resources>

@@ -1,0 +1,12 @@
+<resources>
+    <!-- Compose draws everything; this only sets the window before the first frame. -->
+    <style name="Theme.Spotter" parent="android:Theme.Material.Light.NoActionBar">
+        <item name="android:windowBackground">@color/splash_background</item>
+    </style>
+
+    <style name="Theme.Spotter.Starting" parent="Theme.SplashScreen">
+        <item name="windowSplashScreenBackground">@color/splash_background</item>
+        <item name="windowSplashScreenAnimatedIcon">@drawable/ic_launcher_foreground</item>
+        <item name="postSplashScreenTheme">@style/Theme.Spotter</item>
+    </style>
+</resources>

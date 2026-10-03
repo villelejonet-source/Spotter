@@ -1,0 +1,28 @@
+package com.viktorolsson.spotter.feature.settings
+
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
+import com.viktorolsson.spotter.core.data.repository.UserPreferencesRepository
+import com.viktorolsson.spotter.core.model.ThemeMode
+import com.viktorolsson.spotter.core.model.UserPreferences
+import com.viktorolsson.spotter.core.model.WeightUnit
+import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.launch
+import javax.inject.Inject
+
+@HiltViewModel
+class SettingsViewModel @Inject constructor(
+    private val preferencesRepository: UserPreferencesRepository,
+) : ViewModel() {
+    val preferences: StateFlow<UserPreferences> = preferencesRepository.preferences
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), UserPreferences())
+
+    fun setThemeMode(mode: ThemeMode) = viewModelScope.launch { preferencesRepository.setThemeMode(mode) }
+
+    fun setDynamicColor(enabled: Boolean) = viewModelScope.launch { preferencesRepository.setDynamicColor(enabled) }
+
+    fun setWeightUnit(unit: WeightUnit) = viewModelScope.launch { preferencesRepository.setWeightUnit(unit) }
+}

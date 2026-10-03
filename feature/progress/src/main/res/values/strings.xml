@@ -1,0 +1,5 @@
+<resources>
+    <string name="progress_title">Progress</string>
+    <string name="progress_empty_title">Nothing to chart yet</string>
+    <string name="progress_empty_body">Log a few workouts to see your PRs, strength trends, body weight and recommendations.</string>
+</resources>

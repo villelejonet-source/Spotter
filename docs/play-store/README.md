@@ -49,9 +49,10 @@ Bump `versionCode` in `app/build.gradle.kts` for every upload.
 2. **Internal testing → Create release**: upload the `.aab`, add release notes, and add
    testers (an email list).
 3. **App content**, everything Play asks before the first release:
-   - **Privacy policy**: host `privacy-policy.md` somewhere public (e.g. GitHub Pages) and paste the URL.
+   - **Privacy policy**: https://sites.google.com/view/spotter-app-gym/startsida (a Google Site on the personal Gmail account; paste
+     `privacy-policy.md` there again when it changes).
    - **Data safety**: see below.
-   - **Data deletion**: point to the privacy policy (it describes in-app and email deletion).
+   - **Data deletion**: the same URL (section "Deleting your data" describes in-app and email deletion).
    - **Foreground service permissions**: declare `FOREGROUND_SERVICE_SPECIAL_USE` with the text below.
    - **Health apps declaration**: Spotter is a fitness app. It doesn't use Health Connect or sensors.
    - **Content rating**: questionnaire, category "Health & fitness"; no user-generated content.
@@ -76,9 +77,13 @@ counting down with the screen off is usually requested; record it on the emulato
 
 - **Does the app collect or share user data?** Yes, collected (only with the optional cloud
   backup). **Shared:** No.
-- **Data types collected:** Personal info → *Email address*; Health and fitness → *Fitness
-  info* (workouts, exercise data, body weight); for each: **optional** (backup is opt-in),
-  purpose **App functionality** and **Account management**, not processed ephemerally.
+- **Data types collected** (everything the backup uploads, see `SyncSchema.tables`):
+  - Personal info → *Email address*, *User IDs* (the account id), *Other info* (sex and
+    date of birth from the profile)
+  - Health and fitness → *Health info* (injuries/limitations to work around, body weight)
+    and *Fitness info* (plans, workouts, sets, records)
+  - For each: **optional** (backup is opt-in), purpose **App functionality** (plus
+    **Account management** for email and user ID), not processed ephemerally.
 - **Encrypted in transit:** Yes (HTTPS). **Users can request deletion:** Yes, in the app
   (Profile → Backup & sync → Delete account and backup) and by email.
 - No analytics, no ads, no data sold or shared. Training data isn't in Google cloud backup
@@ -87,7 +92,7 @@ counting down with the screen off is usually requested; record it on the emulato
 ### Account deletion (required because the app has accounts)
 
 - **In the app:** Profile → Backup & sync → "Delete account and backup".
-- **Web link** for the Play form: the privacy policy URL, section "Deleting your data".
+- **Web link** for the Play form: https://sites.google.com/view/spotter-app-gym/startsida (section "Deleting your data").
 
 ## Screenshots
 

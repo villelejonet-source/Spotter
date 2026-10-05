@@ -92,5 +92,4 @@
     <string name="onb_summary_day_meta">~%1$d min · %2$d exercises</string>
     <string name="onb_summary_calibration">Starting weights are estimates. Your first session calibrates them, so log what you actually lift.</string>
     <string name="onb_summary_missing">Some movements couldn\'t be programmed with your equipment (%1$s). Adding a pull-up bar or resistance bands fixes most of this.</string>
-    <string name="onb_summary_sets_reps">%1$d × %2$d–%3$d</string>
 </resources>

@@ -8,7 +8,10 @@ import com.viktorolsson.spotter.core.data.db.entity.PlanEntity
 import com.viktorolsson.spotter.core.data.db.entity.PlanExerciseEntity
 import com.viktorolsson.spotter.core.data.db.toModel
 import com.viktorolsson.spotter.core.model.Plan
+import com.viktorolsson.spotter.core.engine.timedHoldSeconds
+import com.viktorolsson.spotter.core.model.ExperienceLevel
 import com.viktorolsson.spotter.core.model.PlanDay
+import com.viktorolsson.spotter.core.model.TIMED_EXERCISE_IDS
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flatMapLatest
@@ -32,6 +35,15 @@ class PlanRepository @Inject constructor(
             val lastIndex = plan.days.indexOfFirst { it.id == lastDayId }
             plan.days[(lastIndex + 1) % plan.days.size]
         }
+    }
+
+    /**
+     * Plans made before holds were timed (version 0.9.0) prescribed the plank in reps,
+     * e.g. 3 × 10–15. Moves those to seconds; does nothing once they're converted.
+     */
+    suspend fun convertHoldsToSeconds() {
+        val seconds = timedHoldSeconds(ExperienceLevel.INTERMEDIATE)
+        dao.convertHoldsToSeconds(TIMED_EXERCISE_IDS.toList(), seconds.first, seconds.last)
     }
 
     /** Saves a generated plan and makes it the only active one. Returns the new plan id. */

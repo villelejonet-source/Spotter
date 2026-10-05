@@ -35,6 +35,8 @@ import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.viktorolsson.spotter.core.engine.PlanGenerator
 import com.viktorolsson.spotter.core.model.PlanDay
+import com.viktorolsson.spotter.core.model.isTimed
+import com.viktorolsson.spotter.core.ui.formatTarget
 
 @Composable
 internal fun TodayRoute(
@@ -150,7 +152,7 @@ private fun NextWorkoutCard(day: PlanDay, onOpenPlan: () -> Unit) {
                         overflow = TextOverflow.Ellipsis,
                         modifier = Modifier.weight(1f),
                     )
-                    Text("${ex.sets} × ${ex.repMin}–${ex.repMax}", style = MaterialTheme.typography.bodyMedium)
+                    Text(formatTarget(ex.sets, ex.repMin, ex.repMax, ex.exercise.isTimed), style = MaterialTheme.typography.bodyMedium)
                 }
             }
             Row(verticalAlignment = Alignment.CenterVertically) {

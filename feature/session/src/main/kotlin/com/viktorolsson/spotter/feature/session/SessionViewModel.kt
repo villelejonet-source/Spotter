@@ -7,47 +7,48 @@ import androidx.navigation.toRoute
 import com.viktorolsson.spotter.core.data.di.ApplicationScope
 import com.viktorolsson.spotter.core.data.repository.ExerciseRepository
 import com.viktorolsson.spotter.core.data.repository.RecommendationRepository
-import com.viktorolsson.spotter.core.data.sync.SyncRepository
 import com.viktorolsson.spotter.core.data.repository.RestTimerRepository
 import com.viktorolsson.spotter.core.data.repository.UserPreferencesRepository
 import com.viktorolsson.spotter.core.data.repository.UserProfileRepository
 import com.viktorolsson.spotter.core.data.repository.WorkoutRepository
+import com.viktorolsson.spotter.core.data.sync.SyncRepository
 import com.viktorolsson.spotter.core.engine.DetectedRecord
 import com.viktorolsson.spotter.core.engine.ExerciseBests
 import com.viktorolsson.spotter.core.engine.ExerciseSimilarity
 import com.viktorolsson.spotter.core.engine.LoggedSet
 import com.viktorolsson.spotter.core.engine.PersonalRecords
-import com.viktorolsson.spotter.core.model.PersonalRecordType
 import com.viktorolsson.spotter.core.model.Equipment
 import com.viktorolsson.spotter.core.model.Exercise
+import com.viktorolsson.spotter.core.model.PersonalRecordType
 import com.viktorolsson.spotter.core.model.PreviousSet
 import com.viktorolsson.spotter.core.model.RestTimer
 import com.viktorolsson.spotter.core.model.SessionExercise
 import com.viktorolsson.spotter.core.model.SetType
 import com.viktorolsson.spotter.core.model.UserPreferences
 import com.viktorolsson.spotter.core.model.WorkoutSession
+import com.viktorolsson.spotter.core.model.isTimed
 import com.viktorolsson.spotter.core.model.parseToKg
 import dagger.hilt.android.lifecycle.HiltViewModel
+import javax.inject.Inject
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharedFlow
-import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.SharingStarted
-import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.first
-import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asSharedFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.filterNotNull
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.mapLatest
 import kotlinx.coroutines.flow.onStart
 import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import javax.inject.Inject
 
 enum class SetField { WEIGHT, REPS, RIR }
 
@@ -57,6 +58,8 @@ data class PrEvent(
     val weightKg: Double?,
     val reps: Int,
     val records: List<DetectedRecord>,
+    /** A hold: [reps] are seconds. */
+    val timed: Boolean = false,
     val id: Long = System.nanoTime(),
 )
 
@@ -206,7 +209,7 @@ class SessionViewModel @Inject constructor(
         val before = history.withSets(earlierToday)
         val records = PersonalRecords.detect(listOf(LoggedSet(set.weightKg, reps)), before)
             .filter { it.type != PersonalRecordType.VOLUME }
-        if (records.isNotEmpty()) _prEvents.tryEmit(PrEvent(exercise.exercise.name, set.weightKg, reps, records))
+        if (records.isNotEmpty()) _prEvents.tryEmit(PrEvent(exercise.exercise.name, set.weightKg, reps, records, exercise.exercise.isTimed))
     }
 
     /** Adds a warm-up ramp; lifters 50+ get a longer one. */

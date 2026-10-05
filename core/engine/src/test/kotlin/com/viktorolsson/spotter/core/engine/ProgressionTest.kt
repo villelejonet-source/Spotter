@@ -130,5 +130,14 @@ class ProgressionTest {
         assertEquals(ProgressionReason.BODYWEIGHT_TOP_OF_RANGE, top.reason)
     }
 
+    @Test
+    fun `holds progress in seconds, five at a time`() {
+        val plank = input(id = "plank", repMin = 30, repMax = 60, targetRir = null, start = null, history = listOf(sets(null, 30, 30, 25)))
+        assertEquals(listOf(35, 35, 30), Progression.next(plank).reps())
+
+        val top = Progression.next(plank.copy(history = listOf(sets(null, 60, 60, 60))))
+        assertEquals(ProgressionReason.BODYWEIGHT_TOP_OF_RANGE, top.reason)
+    }
+
     private fun WeightUnit.toKgOf(value: Double) = toKg(value)
 }

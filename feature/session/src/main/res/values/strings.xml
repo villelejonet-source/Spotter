@@ -12,6 +12,7 @@
     <string name="col_set">Set</string>
     <string name="col_previous">Previous</string>
     <string name="col_reps">Reps</string>
+    <string name="col_seconds">Sec</string>
     <string name="col_rir">RIR</string>
     <string name="set_complete">Complete set</string>
     <string name="set_completed">Set completed</string>
@@ -41,9 +42,11 @@
 
     <string name="progress_calibration">First time: estimated weight. Adjust to what feels right.</string>
     <string name="progress_first_time">First time: pick a weight you can do for the target reps.</string>
+    <string name="progress_first_time_timed">First time: hold for the bottom of the target time.</string>
     <string name="progress_increase">Weight up: you hit the target on every set last time.</string>
     <string name="progress_increase_easy">Weight up: last time felt easier than planned.</string>
     <string name="progress_add_reps">Same weight: aim for one more rep per set.</string>
+    <string name="progress_add_time">Hold each set 5 seconds longer than last time.</string>
     <string name="progress_hold_hard">Holding the weight: last time was harder than planned.</string>
     <string name="progress_repeat">Same weight again: aim for the target reps.</string>
     <string name="progress_reset" formatted="false">10% lighter after two tough sessions. Build back up.</string>
@@ -56,8 +59,8 @@
     <string name="exercise_superset_next">Superset with next</string>
     <string name="exercise_superset_remove">Remove from superset</string>
     <string name="exercise_superset_badge">Superset</string>
-    <string name="exercise_target">Target %1$d × %2$d–%3$d</string>
-    <string name="exercise_target_rir">Target %1$d × %2$d–%3$d · RIR %4$d</string>
+    <string name="exercise_target">Target %1$s</string>
+    <string name="exercise_target_rir">Target %1$s · RIR %2$d</string>
     <string name="exercise_move_up">Move up</string>
     <string name="exercise_move_down">Move down</string>
     <string name="exercise_remove">Remove exercise</string>
@@ -109,9 +112,11 @@
     <string name="keypad_increase">Increase by %1$s</string>
     <string name="keypad_editing_weight">Weight · set %1$d</string>
     <string name="keypad_editing_reps">Reps · set %1$d</string>
+    <string name="keypad_editing_seconds">Seconds · set %1$d</string>
     <string name="keypad_editing_rir">RIR · set %1$d</string>
     <string name="a11y_weight_field">Weight, set %1$d</string>
     <string name="a11y_reps_field">Reps, set %1$d</string>
+    <string name="a11y_seconds_field">Seconds, set %1$d</string>
     <string name="a11y_rir_field">Reps in reserve, set %1$d</string>
     <string name="a11y_empty">Empty</string>
     <string name="a11y_edit">Edit</string>

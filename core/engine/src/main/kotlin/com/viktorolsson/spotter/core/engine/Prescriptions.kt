@@ -19,6 +19,12 @@ data class Prescription(
     }
 }
 
+/** Holds (plank and friends) are prescribed in seconds, whatever the goal. */
+fun timedHoldSeconds(experience: ExperienceLevel): IntRange = when (experience) {
+    ExperienceLevel.NEW -> 20..40
+    else -> 30..60
+}
+
 /**
  * Goal parameters from the plan. Secondary compounds use the main lift's rep range
  * with accessory-level sets and a little less rest.

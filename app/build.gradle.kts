@@ -42,8 +42,8 @@ android {
 
     defaultConfig {
         applicationId = "com.viktorolsson.spotter"
-        versionCode = 1
-        versionName = "0.9.0"
+        versionCode = 2
+        versionName = "0.9.1"
 
         buildConfigField("String", "SUPABASE_URL", "\"${localProperty("supabase.url")}\"")
         buildConfigField("String", "SUPABASE_PUBLISHABLE_KEY", "\"${localProperty("supabase.publishableKey")}\"")

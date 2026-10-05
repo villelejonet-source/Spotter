@@ -16,6 +16,7 @@ import com.viktorolsson.spotter.core.model.Sex
 import com.viktorolsson.spotter.core.model.SplitType
 import com.viktorolsson.spotter.core.model.WeightUnit
 import com.viktorolsson.spotter.core.model.fromKg
+import com.viktorolsson.spotter.core.model.isTimed
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
@@ -52,6 +53,18 @@ class PlanGeneratorTest {
             assertTrue(day.name, day.exercises.any { it.exercise.movementPattern == MovementPattern.HIP_THRUST })
         }
         generated.estimatedMinutes.forEach { assertTrue("$it min", it <= 60) }
+    }
+
+    @Test
+    fun `holds are prescribed in seconds, not reps`() {
+        val holds = (2..6).flatMap { days ->
+            ExperienceLevel.entries.flatMap { generate(profile(days = days, experience = it, focus = setOf(BodyArea.CORE))).allExercises }
+        }.filter { it.exercise.isTimed }
+        assertTrue(holds.isNotEmpty())
+        holds.forEach {
+            assertTrue("${it.exercise.name}: ${it.repMin}–${it.repMax}", it.repMin >= 20 && it.repMax >= 40)
+            assertNull(it.startingWeightKg)
+        }
     }
 
     @Test

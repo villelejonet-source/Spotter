@@ -68,22 +68,25 @@ data class ExerciseSummary(
     val completedSets: Int,
     /** Heaviest completed working set, then most reps at that weight. */
     val bestSet: PreviousSet?,
+    /** A hold: the best set's reps are seconds. */
+    val timed: Boolean = false,
 )
 
 data class WorkoutSummary(
     val duration: Duration,
     val completedSets: Int,
-    /** Sum of weight × reps over completed non-warm-up sets, in kg. */
+    /** Sum of weight × reps over completed non-warm-up sets, in kg (holds don't count). */
     val volumeKg: Double,
     val exercises: List<ExerciseSummary>,
 ) {
     companion object {
         fun of(session: WorkoutSession, now: Instant = Instant.now()): WorkoutSummary {
             val counted = session.exercises.flatMap { ex -> ex.sets.filter { it.isCompleted } }
+            val lifted = session.exercises.filterNot { it.exercise.isTimed }.flatMap { ex -> ex.sets.filter { it.isCompleted } }
             return WorkoutSummary(
                 duration = Duration.between(session.startedAt, session.endedAt ?: now),
                 completedSets = counted.size,
-                volumeKg = counted
+                volumeKg = lifted
                     .filter { it.setType != SetType.WARMUP }
                     .sumOf { (it.weightKg ?: 0.0) * (it.reps ?: 0) },
                 exercises = session.exercises.map { ex ->
@@ -94,6 +97,7 @@ data class WorkoutSummary(
                         bestSet = done.filter { it.setType != SetType.WARMUP }
                             .maxWithOrNull(compareBy<WorkoutSet>({ it.weightKg ?: 0.0 }, { it.reps ?: 0 }))
                             ?.let { PreviousSet(it.weightKg, it.reps) },
+                        timed = ex.exercise.isTimed,
                     )
                 },
             )

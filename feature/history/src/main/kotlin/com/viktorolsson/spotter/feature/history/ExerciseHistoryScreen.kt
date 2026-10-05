@@ -31,6 +31,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.viktorolsson.spotter.core.model.SetType
 import com.viktorolsson.spotter.core.model.format
 import com.viktorolsson.spotter.core.model.fromKg
+import com.viktorolsson.spotter.core.model.isTimed
 import com.viktorolsson.spotter.core.model.label
 import com.viktorolsson.spotter.core.ui.component.ChartPoint
 import com.viktorolsson.spotter.core.ui.component.RecommendationCard
@@ -125,7 +126,7 @@ internal fun ExerciseHistoryRoute(onBack: () -> Unit, viewModel: ExerciseHistory
                             state.repRecords.take(8).forEach { (weight, reps) ->
                                 Row {
                                     Text("${unit.format(weight)} ${unit.label}", modifier = Modifier.weight(1f))
-                                    Text(stringResource(R.string.exercise_rep_record_row, reps))
+                                    Text(stringResource(if (state.exercise?.isTimed == true) R.string.exercise_hold_record_row else R.string.exercise_rep_record_row, reps))
                                 }
                             }
                         }
@@ -137,7 +138,7 @@ internal fun ExerciseHistoryRoute(onBack: () -> Unit, viewModel: ExerciseHistory
                 Column {
                     Text(formatShortDate(log.date.localDate()), style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary)
                     Text(
-                        log.sets.filter { it.setType != SetType.WARMUP }.joinToString("  ·  ") { formatSet(it.weightKg, it.reps, unit) },
+                        log.sets.filter { it.setType != SetType.WARMUP }.joinToString("  ·  ") { formatSet(it.weightKg, it.reps, unit, state.exercise?.isTimed == true) },
                         style = MaterialTheme.typography.bodyMedium,
                     )
                 }

@@ -4,6 +4,7 @@ import android.app.Application
 import androidx.hilt.work.HiltWorkerFactory
 import androidx.work.Configuration
 import com.viktorolsson.spotter.core.data.di.ApplicationScope
+import com.viktorolsson.spotter.core.data.repository.PlanRepository
 import com.viktorolsson.spotter.core.data.repository.RecommendationRepository
 import com.viktorolsson.spotter.core.data.seed.ExerciseSeeder
 import com.viktorolsson.spotter.core.data.sync.SyncRepository
@@ -26,6 +27,8 @@ class SpotterApplication : Application(), Configuration.Provider {
 
     @Inject lateinit var recommendationRepository: RecommendationRepository
 
+    @Inject lateinit var planRepository: PlanRepository
+
     @Inject @ApplicationScope
     lateinit var applicationScope: CoroutineScope
 
@@ -33,6 +36,7 @@ class SpotterApplication : Application(), Configuration.Provider {
         super.onCreate()
         applicationScope.launch {
             exerciseSeeder.seedIfNeeded()
+            planRepository.convertHoldsToSeconds()
             // Time-based suggestions (scheduled deload, switching back from a variation) can fall due between workouts.
             recommendationRepository.refresh()
         }    }

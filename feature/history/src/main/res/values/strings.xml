@@ -27,6 +27,7 @@
     <string name="exercise_best_volume">Best volume</string>
     <string name="exercise_rep_records">Rep records</string>
     <string name="exercise_rep_record_row">%1$d reps</string>
+    <string name="exercise_hold_record_row">%1$d s</string>
     <string name="exercise_log">Log</string>
     <string name="exercise_none">No sets logged for this exercise yet.</string>
 </resources>

@@ -37,7 +37,9 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.viktorolsson.spotter.core.engine.PlanGenerator
 import com.viktorolsson.spotter.core.model.PlanDay
 import com.viktorolsson.spotter.core.model.PlanExercise
+import com.viktorolsson.spotter.core.model.isTimed
 import com.viktorolsson.spotter.core.ui.component.EmptyState
+import com.viktorolsson.spotter.core.ui.formatTarget
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -146,8 +148,10 @@ internal fun PlanExerciseRow(exercise: PlanExercise) {
             }
         }
         Text(
-            exercise.targetRir?.let { stringResource(R.string.plan_target_rir, exercise.sets, exercise.repMin, exercise.repMax, it) }
-                ?: stringResource(R.string.plan_target, exercise.sets, exercise.repMin, exercise.repMax),
+            formatTarget(exercise.sets, exercise.repMin, exercise.repMax, exercise.exercise.isTimed).let { target ->
+                // Reps in reserve don't apply to a hold.
+                exercise.targetRir?.takeUnless { exercise.exercise.isTimed }?.let { stringResource(R.string.plan_target_rir, target, it) } ?: target
+            },
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )

@@ -1,6 +1,8 @@
 package com.viktorolsson.spotter.core.engine
 
 import com.viktorolsson.spotter.core.model.DeloadReason
+import com.viktorolsson.spotter.core.model.ExperienceLevel
+import com.viktorolsson.spotter.core.model.isTimed
 import com.viktorolsson.spotter.core.model.Equipment
 import com.viktorolsson.spotter.core.model.Exercise
 import com.viktorolsson.spotter.core.model.Limitation
@@ -196,7 +198,7 @@ object RecommendationEngine {
                 ),
             )
         }
-        if (p.historyDays >= LONG_IN_RANGE_DAYS) {
+        if (p.historyDays >= LONG_IN_RANGE_DAYS && !slot.exercise.isTimed) {
             val (sets, min, max) = when {
                 slot.repMax <= 6 -> Triple((slot.sets - 1).coerceAtLeast(3), 8, 10)
                 slot.repMin >= 10 -> Triple(slot.sets, 6, 10)
@@ -213,6 +215,7 @@ object RecommendationEngine {
         }
         accessoryFor(slot, ctx)?.let { accessory ->
             val compound = accessory.mechanics == Mechanics.COMPOUND
+            val holdSeconds = timedHoldSeconds(ExperienceLevel.INTERMEDIATE).takeIf { accessory.isTimed }
             return RecommendationDraft(
                 RecommendationType.ADD_ACCESSORY,
                 slot.exercise.id,
@@ -223,8 +226,8 @@ object RecommendationEngine {
                         exerciseId = accessory.id,
                         exerciseName = accessory.name,
                         sets = 3,
-                        repMin = if (compound) 6 else 10,
-                        repMax = if (compound) 10 else 15,
+                        repMin = holdSeconds?.first ?: if (compound) 6 else 10,
+                        repMax = holdSeconds?.last ?: if (compound) 10 else 15,
                         targetRir = 2,
                         restSeconds = if (compound) 120 else 90,
                     ),

@@ -9,19 +9,24 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Add
+import androidx.compose.material.icons.rounded.EmojiEvents
 import androidx.compose.material.icons.rounded.KeyboardArrowDown
 import androidx.compose.material.icons.rounded.MoreVert
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -45,37 +50,33 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.LiveRegionMode
+import androidx.compose.ui.semantics.liveRegion
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.viktorolsson.spotter.core.ui.formatClock
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.size
-import androidx.compose.material.icons.rounded.EmojiEvents
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
-import androidx.compose.ui.hapticfeedback.HapticFeedbackType
-import androidx.compose.ui.platform.LocalHapticFeedback
-import androidx.compose.ui.semantics.LiveRegionMode
-import androidx.compose.ui.semantics.liveRegion
-import androidx.compose.ui.semantics.semantics
 import com.viktorolsson.spotter.core.engine.Plates
 import com.viktorolsson.spotter.core.model.PersonalRecordType
 import com.viktorolsson.spotter.core.model.SessionExercise
 import com.viktorolsson.spotter.core.model.SetType
 import com.viktorolsson.spotter.core.model.WeightUnit
 import com.viktorolsson.spotter.core.model.format
+import com.viktorolsson.spotter.core.model.isTimed
 import com.viktorolsson.spotter.core.model.label
 import com.viktorolsson.spotter.core.ui.component.Confetti
+import com.viktorolsson.spotter.core.ui.formatClock
 import com.viktorolsson.spotter.core.ui.formatSet
-import kotlinx.coroutines.delay
 import java.time.Duration
 import java.time.Instant
+import kotlinx.coroutines.delay
 
 @Composable
 internal fun SessionRoute(
@@ -181,7 +182,7 @@ internal fun SessionRoute(
                         title = stringResource(
                             when (target.field) {
                                 SetField.WEIGHT -> R.string.keypad_editing_weight
-                                SetField.REPS -> R.string.keypad_editing_reps
+                                SetField.REPS -> if (exercise?.exercise?.isTimed == true) R.string.keypad_editing_seconds else R.string.keypad_editing_reps
                                 SetField.RIR -> R.string.keypad_editing_rir
                             },
                             number,
@@ -492,7 +493,7 @@ private fun PrBanner(event: PrEvent, unit: WeightUnit, modifier: Modifier = Modi
         stringResource(R.string.pr_reps).takeIf { event.records.any { it.type == PersonalRecordType.REPS_AT_WEIGHT } },
     )
     val detail = parts.joinToString(" · ")
-    val body = stringResource(R.string.pr_banner_body, event.exerciseName, formatSet(event.weightKg, event.reps, unit)) + " · " + detail
+    val body = stringResource(R.string.pr_banner_body, event.exerciseName, formatSet(event.weightKg, event.reps, unit, event.timed)) + " · " + detail
     Card(
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.tertiaryContainer),
         elevation = CardDefaults.cardElevation(defaultElevation = 6.dp),

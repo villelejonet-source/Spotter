@@ -36,7 +36,8 @@ SEE YOUR PROGRESS
 • Body weight trend with a 7-day average
 
 PRIVATE BY DESIGN
-No account, no ads, no tracking. Your training data stays on your phone.
+No account needed, no ads, no tracking. Your training data stays on your phone unless you
+turn on the optional cloud backup.
 
 Spotter isn't medical advice. If something hurts, check with a doctor or physiotherapist.
 

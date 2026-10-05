@@ -67,6 +67,8 @@ internal fun SetRow(
     workingNumber: Int,
     previous: PreviousSet?,
     unit: WeightUnit,
+    /** A hold: the reps field holds seconds. */
+    timed: Boolean,
     logRir: Boolean,
     focusedField: SetField?,
     buffer: String,
@@ -109,7 +111,7 @@ internal fun SetRow(
             horizontalArrangement = Arrangement.spacedBy(4.dp),
         ) {
             SetLabel(set, setNumber, onTypeChange, onNote = { editingNote = true }, onDelete = onDelete)
-            PreviousCell(previous, unit, onCopyPrevious, Modifier.weight(1f))
+            PreviousCell(previous, unit, timed, onCopyPrevious, Modifier.weight(1f))
             FieldBox(
                 text = if (focusedField == SetField.WEIGHT) buffer else set.weightKg?.let(unit::format).orEmpty(),
                 placeholder = previous?.weightKg?.let(unit::format).orEmpty(),
@@ -122,7 +124,7 @@ internal fun SetRow(
                 text = if (focusedField == SetField.REPS) buffer else set.reps?.toString().orEmpty(),
                 placeholder = previous?.reps?.toString().orEmpty(),
                 focused = focusedField == SetField.REPS,
-                description = stringResource(R.string.a11y_reps_field, workingNumber),
+                description = stringResource(if (timed) R.string.a11y_seconds_field else R.string.a11y_reps_field, workingNumber),
                 modifier = Modifier.width(RepsColumnWidth),
                 onClick = { onFieldClick(SetField.REPS) },
             )
@@ -156,9 +158,9 @@ internal fun SetRow(
 }
 
 @Composable
-private fun PreviousCell(previous: PreviousSet?, unit: WeightUnit, onCopy: (PreviousSet) -> Unit, modifier: Modifier) {
-    val text = previous?.let { formatSet(it.weightKg, it.reps, unit).replace(" ${unit.name.lowercase()}", "") } ?: "—"
-    val description = previous?.let { stringResource(R.string.a11y_previous, formatSet(it.weightKg, it.reps, unit)) }
+private fun PreviousCell(previous: PreviousSet?, unit: WeightUnit, timed: Boolean, onCopy: (PreviousSet) -> Unit, modifier: Modifier) {
+    val text = previous?.let { formatSet(it.weightKg, it.reps, unit, timed).replace(" ${unit.name.lowercase()}", "") } ?: "—"
+    val description = previous?.let { stringResource(R.string.a11y_previous, formatSet(it.weightKg, it.reps, unit, timed)) }
         ?: stringResource(R.string.a11y_no_previous)
     val copyLabel = stringResource(R.string.a11y_copy_previous)
     Text(

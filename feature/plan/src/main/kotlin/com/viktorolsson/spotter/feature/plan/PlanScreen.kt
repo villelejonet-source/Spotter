@@ -1,5 +1,7 @@
 package com.viktorolsson.spotter.feature.plan
 
+import com.viktorolsson.spotter.core.ui.formatEffort
+import com.viktorolsson.spotter.core.model.EffortScale
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -82,7 +84,7 @@ internal fun PlanRoute(
             ) {
                 item { Text(plan.name, style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.primary) }
                 items(plan.days, key = { it.id }) { day ->
-                    DayCard(day, isNext = day.id == state.nextDayId) { viewModel.startDay(day.id, onOpenSession) }
+                    DayCard(day, isNext = day.id == state.nextDayId, effortScale = state.effortScale) { viewModel.startDay(day.id, onOpenSession) }
                 }
             }
         }
@@ -90,7 +92,7 @@ internal fun PlanRoute(
 }
 
 @Composable
-private fun DayCard(day: PlanDay, isNext: Boolean, onStart: () -> Unit) {
+private fun DayCard(day: PlanDay, isNext: Boolean, effortScale: EffortScale, onStart: () -> Unit) {
     Card(
         colors = CardDefaults.cardColors(
             containerColor = if (isNext) MaterialTheme.colorScheme.secondaryContainer else MaterialTheme.colorScheme.surfaceContainerLow,
@@ -120,13 +122,13 @@ private fun DayCard(day: PlanDay, isNext: Boolean, onStart: () -> Unit) {
                     FilledTonalButton(onClick = onStart) { Text(stringResource(R.string.plan_start_day)) }
                 }
             }
-            day.exercises.forEach { PlanExerciseRow(it) }
+            day.exercises.forEach { PlanExerciseRow(it, effortScale) }
         }
     }
 }
 
 @Composable
-internal fun PlanExerciseRow(exercise: PlanExercise) {
+internal fun PlanExerciseRow(exercise: PlanExercise, effortScale: EffortScale) {
     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
         Text(
             exercise.exercise.name,
@@ -146,7 +148,7 @@ internal fun PlanExerciseRow(exercise: PlanExercise) {
             }
         }
         Text(
-            exercise.targetRir?.let { stringResource(R.string.plan_target_rir, exercise.sets, exercise.repMin, exercise.repMax, it) }
+            exercise.targetRir?.let { stringResource(R.string.plan_target_rir, exercise.sets, exercise.repMin, exercise.repMax, formatEffort(it, effortScale)) }
                 ?: stringResource(R.string.plan_target, exercise.sets, exercise.repMin, exercise.repMax),
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,

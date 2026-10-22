@@ -1,5 +1,7 @@
 package com.viktorolsson.spotter.feature.session
 
+import com.viktorolsson.spotter.core.ui.formatEffort
+import com.viktorolsson.spotter.core.model.EffortScale
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -80,7 +82,7 @@ internal class ExerciseCardActions(
 internal val SetColumnWidth = 40.dp
 internal val WeightColumnWidth = 72.dp
 internal val RepsColumnWidth = 56.dp
-internal val RirColumnWidth = 48.dp
+internal val EffortColumnWidth = 48.dp
 internal val CheckColumnWidth = 48.dp
 
 @Composable
@@ -103,6 +105,7 @@ internal fun ExerciseCard(
     var menuOpen by remember { mutableStateOf(false) }
     var editingNote by rememberSaveable { mutableStateOf(false) }
     var pickingRest by rememberSaveable { mutableStateOf(false) }
+    var showingInfo by rememberSaveable { mutableStateOf(false) }
     val restSeconds = exercise.restSeconds ?: preferences.defaultRestSeconds
 
     Card(
@@ -134,7 +137,9 @@ internal fun ExerciseCard(
                         color = MaterialTheme.colorScheme.primary,
                         maxLines = 2,
                         overflow = TextOverflow.Ellipsis,
-                        modifier = Modifier.semantics { heading() },
+                        modifier = Modifier
+                            .clickable(onClickLabel = stringResource(R.string.a11y_exercise_info)) { showingInfo = true }
+                            .semantics { heading() },
                     )
                 }
                 Row(
@@ -180,7 +185,7 @@ internal fun ExerciseCard(
             }
             exercise.target?.let { target ->
                 Text(
-                    target.targetRir?.let { stringResource(R.string.exercise_target_rir, target.sets, target.repMin, target.repMax, it) }
+                    target.targetRir?.let { stringResource(R.string.exercise_target_rir, target.sets, target.repMin, target.repMax, formatEffort(it, preferences.effortScale)) }
                         ?: stringResource(R.string.exercise_target, target.sets, target.repMin, target.repMax),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -224,7 +229,7 @@ internal fun ExerciseCard(
                     // Working sets line up with last time's working sets; warm-ups have no "previous".
                     previous = if (set.setType == SetType.WARMUP) null else previous.getOrNull(workingNumber - 1),
                     unit = preferences.weightUnit,
-                    logRir = preferences.logRir,
+                    effortScale = preferences.effortScale,
                     focusedField = focus?.takeIf { it.setId == set.id }?.field,
                     buffer = buffer,
                     onFieldClick = { actions.onFieldClick(set.id, it) },
@@ -246,6 +251,7 @@ internal fun ExerciseCard(
         }
     }
 
+    if (showingInfo) ExerciseInfoSheet(exercise.exercise, onDismiss = { showingInfo = false })
     if (editingNote) {
         TextInputDialog(
             title = stringResource(R.string.exercise_note),
@@ -310,7 +316,7 @@ private fun SetHeader(preferences: UserPreferences) {
         HeaderCell(stringResource(R.string.col_previous), Modifier.weight(1f))
         HeaderCell(preferences.weightUnit.label, Modifier.width(WeightColumnWidth))
         HeaderCell(stringResource(R.string.col_reps), Modifier.width(RepsColumnWidth))
-        if (preferences.logRir) HeaderCell(stringResource(R.string.col_rir), Modifier.width(RirColumnWidth))
+        if (preferences.effortScale != EffortScale.OFF) HeaderCell(preferences.effortScale.name, Modifier.width(EffortColumnWidth))
         Box(Modifier.width(CheckColumnWidth))
     }
 }

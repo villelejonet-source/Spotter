@@ -1,5 +1,7 @@
 package com.viktorolsson.spotter.feature.history
 
+import com.viktorolsson.spotter.core.ui.formatEffort
+import com.viktorolsson.spotter.core.model.EffortScale
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -113,6 +115,7 @@ internal fun WorkoutDetailRoute(
                 ExerciseSetsCard(
                     exercise = exercise,
                     unit = state.unit,
+                    effortScale = state.effortScale,
                     recordReps = state.records.filter { it.exerciseId == exercise.exercise.id },
                     onOpen = { onOpenExercise(exercise.exercise.id) },
                 )
@@ -170,6 +173,7 @@ private fun RecordsCard(records: List<PersonalRecord>, unit: WeightUnit) {
 private fun ExerciseSetsCard(
     exercise: SessionExercise,
     unit: WeightUnit,
+    effortScale: EffortScale,
     recordReps: List<PersonalRecord>,
     onOpen: () -> Unit,
 ) {
@@ -208,7 +212,7 @@ private fun ExerciseSetsCard(
                     Text(formatSet(set.weightKg, set.reps, unit), style = MaterialTheme.typography.bodyLarge, modifier = Modifier.weight(1f))
                     set.rir?.let {
                         Text(
-                            stringResource(R.string.detail_rir, it),
+                            formatEffort(it, effortScale),
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                             modifier = Modifier.padding(end = 8.dp),

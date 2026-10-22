@@ -1,5 +1,6 @@
 package com.viktorolsson.spotter.feature.session
 
+import com.viktorolsson.spotter.core.model.EffortScale
 import android.Manifest
 import android.content.pm.PackageManager
 import android.os.Build
@@ -117,7 +118,7 @@ internal fun SessionRoute(
         return when (target.field) {
             SetField.WEIGHT -> set.weightKg?.let(unit::format).orEmpty()
             SetField.REPS -> set.reps?.toString().orEmpty()
-            SetField.RIR -> set.rir?.toString().orEmpty()
+            SetField.EFFORT -> set.rir?.let(uiState.preferences.effortScale::display)?.toString().orEmpty()
         }
     }
     fun focus(target: KeypadTarget?) {
@@ -178,14 +179,11 @@ internal fun SessionRoute(
                     val isWeight = target.field == SetField.WEIGHT
                     val step = if (isWeight) (if (unit == WeightUnit.KG) 2.5 else 5.0) else 1.0
                     Keypad(
-                        title = stringResource(
-                            when (target.field) {
-                                SetField.WEIGHT -> R.string.keypad_editing_weight
-                                SetField.REPS -> R.string.keypad_editing_reps
-                                SetField.RIR -> R.string.keypad_editing_rir
-                            },
-                            number,
-                        ),
+                        title = when (target.field) {
+                            SetField.WEIGHT -> stringResource(R.string.keypad_editing_weight, number)
+                            SetField.REPS -> stringResource(R.string.keypad_editing_reps, number)
+                            SetField.EFFORT -> stringResource(R.string.keypad_editing_effort, uiState.preferences.effortScale.name, number)
+                        },
                         field = target.field,
                         stepLabel = if (isWeight) "${java.math.BigDecimal(step).stripTrailingZeros().toPlainString()}" else "1",
                         showPlates = isWeight && exercise != null && Plates.bar(exercise.exercise, unit) != null,
@@ -215,7 +213,7 @@ internal fun SessionRoute(
                                     listOfNotNull(
                                         KeypadTarget(st.id, SetField.WEIGHT),
                                         KeypadTarget(st.id, SetField.REPS),
-                                        KeypadTarget(st.id, SetField.RIR).takeIf { uiState.preferences.logRir },
+                                        KeypadTarget(st.id, SetField.EFFORT).takeIf { uiState.preferences.effortScale != EffortScale.OFF },
                                     )
                                 }
                             }
@@ -270,7 +268,11 @@ internal fun SessionRoute(
                     actions = ExerciseCardActions(
                         onFieldClick = { setId, field -> focus(KeypadTarget(setId, field)) },
                         onWarmUps = { viewModel.addWarmUps(exercise.id) },
-                        onToggleSet = { setId -> viewModel.toggleSet(exercise, setId) },
+                        onToggleSet = { setId ->
+                            // Ticking a set off means it's logged: close the keypad too.
+                            if (exercise.sets.none { it.id == setId && it.isCompleted }) focus(null)
+                            viewModel.toggleSet(exercise, setId)
+                        },
                         onCopyPrevious = viewModel::copyPrevious,
                         onAddSet = { viewModel.addSet(exercise.id) },
                         onDeleteSet = viewModel::deleteSet,

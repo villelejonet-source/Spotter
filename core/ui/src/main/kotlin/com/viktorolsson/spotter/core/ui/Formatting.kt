@@ -1,5 +1,6 @@
 package com.viktorolsson.spotter.core.ui
 
+import com.viktorolsson.spotter.core.model.EffortScale
 import com.viktorolsson.spotter.core.model.PersonalRecord
 import com.viktorolsson.spotter.core.model.PersonalRecordType
 import com.viktorolsson.spotter.core.model.WeightUnit
@@ -17,6 +18,10 @@ import kotlin.math.roundToLong
 /** "4,520 kg": whole units with grouping, for totals like volume. */
 fun formatTotal(kg: Double, unit: WeightUnit): String =
     "${NumberFormat.getIntegerInstance().format(unit.fromKg(kg).roundToLong())} ${unit.label}"
+
+/** "RIR 2", or "RPE 8" on the RPE scale. */
+fun formatEffort(rir: Int, scale: EffortScale): String =
+    if (scale == EffortScale.RPE) "RPE ${scale.display(rir)}" else "RIR $rir"
 
 /** "82.5 kg × 6", or "12 reps" for bodyweight. */
 fun formatSet(weightKg: Double?, reps: Int?, unit: WeightUnit): String {

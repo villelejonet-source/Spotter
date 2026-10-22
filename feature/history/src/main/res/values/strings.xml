@@ -15,7 +15,6 @@
     <string name="detail_repeat">Repeat this workout</string>
     <string name="detail_prs">Personal records</string>
     <string name="detail_warmup">W</string>
-    <string name="detail_rir">RIR %1$d</string>
     <string name="detail_open_exercise">History</string>
 
     <string name="exercise_metric_1rm">Est. 1RM</string>

@@ -7,6 +7,7 @@ import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.longPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
+import com.viktorolsson.spotter.core.model.EffortScale
 import com.viktorolsson.spotter.core.model.ThemeMode
 import com.viktorolsson.spotter.core.model.UserPreferences
 import com.viktorolsson.spotter.core.model.WeightUnit
@@ -28,7 +29,10 @@ class UserPreferencesRepository @Inject constructor(
             dynamicColor = prefs[Keys.DYNAMIC_COLOR] ?: defaults.dynamicColor,
             weightUnit = prefs[Keys.WEIGHT_UNIT].toEnumOr(defaults.weightUnit),
             defaultRestSeconds = prefs[Keys.DEFAULT_REST_SECONDS] ?: defaults.defaultRestSeconds,
-            logRir = prefs[Keys.LOG_RIR] ?: defaults.logRir,
+            // Before the effort scale existed, a "Log RIR" switch meant the RIR scale.
+            effortScale = prefs[Keys.EFFORT_SCALE].toEnumOr(
+                if (prefs[Keys.LOG_RIR] == true) EffortScale.RIR else defaults.effortScale,
+            ),
             onboardingCompleted = prefs[Keys.ONBOARDING_COMPLETED] ?: defaults.onboardingCompleted,
             deloadUntil = prefs[Keys.DELOAD_UNTIL]?.let(LocalDate::ofEpochDay),
         )
@@ -50,8 +54,8 @@ class UserPreferencesRepository @Inject constructor(
         dataStore.edit { it[Keys.DEFAULT_REST_SECONDS] = seconds }
     }
 
-    suspend fun setLogRir(enabled: Boolean) {
-        dataStore.edit { it[Keys.LOG_RIR] = enabled }
+    suspend fun setEffortScale(scale: EffortScale) {
+        dataStore.edit { it[Keys.EFFORT_SCALE] = scale.name }
     }
 
     suspend fun setDeloadUntil(date: LocalDate?) {
@@ -68,6 +72,7 @@ class UserPreferencesRepository @Inject constructor(
         val WEIGHT_UNIT = stringPreferencesKey("weight_unit")
         val DEFAULT_REST_SECONDS = intPreferencesKey("default_rest_seconds")
         val LOG_RIR = booleanPreferencesKey("log_rir")
+        val EFFORT_SCALE = stringPreferencesKey("effort_scale")
         val DELOAD_UNTIL = longPreferencesKey("deload_until_epoch_day")
         val ONBOARDING_COMPLETED = booleanPreferencesKey("onboarding_completed")
     }

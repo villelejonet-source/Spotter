@@ -1,5 +1,6 @@
 package com.viktorolsson.spotter.feature.session
 
+import com.viktorolsson.spotter.core.model.EffortScale
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Surface
@@ -69,13 +70,13 @@ class SessionScreenshotTest {
         }
 
     @Composable
-    private fun card(logRir: Boolean = false) = Column(Modifier.padding(12.dp)) {
+    private fun card(effortScale: EffortScale = EffortScale.OFF) = Column(Modifier.padding(12.dp)) {
         ExerciseCard(
             exercise = bench,
             isFirst = true,
             isLast = false,
             previous = previous,
-            preferences = UserPreferences(logRir = logRir),
+            preferences = UserPreferences(effortScale = effortScale),
             focus = KeypadTarget(4, SetField.REPS),
             buffer = "1",
             actions = actions,
@@ -86,7 +87,7 @@ class SessionScreenshotTest {
     fun exerciseCard_light() = capture("exercise_card_light", dark = false) { card() }
 
     @Test
-    fun exerciseCard_dark() = capture("exercise_card_dark", dark = true) { card(logRir = true) }
+    fun exerciseCard_dark() = capture("exercise_card_dark", dark = true) { card(effortScale = EffortScale.RPE) }
 
     /** Large text: the set row must stay usable (no clipped numbers or overlapping columns). */
     @Test

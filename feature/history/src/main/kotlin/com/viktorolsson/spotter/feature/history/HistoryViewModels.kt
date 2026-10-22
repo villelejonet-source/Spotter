@@ -1,5 +1,6 @@
 package com.viktorolsson.spotter.feature.history
 
+import com.viktorolsson.spotter.core.model.EffortScale
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -59,6 +60,7 @@ data class WorkoutDetailUiState(
     val session: WorkoutSession? = null,
     val records: List<PersonalRecord> = emptyList(),
     val unit: WeightUnit = WeightUnit.KG,
+    val effortScale: EffortScale = EffortScale.OFF,
 )
 
 @HiltViewModel
@@ -74,7 +76,7 @@ class WorkoutDetailViewModel @Inject constructor(
         workoutRepository.observeSession(sessionId),
         historyRepository.observeSessionRecords(sessionId),
         preferencesRepository.preferences,
-    ) { session, records, prefs -> WorkoutDetailUiState(session, records, prefs.weightUnit) }
+    ) { session, records, prefs -> WorkoutDetailUiState(session, records, prefs.weightUnit, prefs.effortScale) }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), WorkoutDetailUiState())
 
     fun repeat(onStarted: (Long) -> Unit) = viewModelScope.launch {

@@ -44,6 +44,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.viktorolsson.spotter.core.model.EffortScale
 import com.viktorolsson.spotter.core.model.ThemeMode
 import com.viktorolsson.spotter.core.model.UserPreferences
 import com.viktorolsson.spotter.core.model.WeightUnit
@@ -71,7 +72,7 @@ internal fun SettingsRoute(
         onDynamicColorChange = { viewModel.setDynamicColor(it) },
         onWeightUnitChange = { viewModel.setWeightUnit(it) },
         onDefaultRestChange = { viewModel.setDefaultRest(it) },
-        onLogRirChange = { viewModel.setLogRir(it) },
+        onEffortScaleChange = { viewModel.setEffortScale(it) },
     )
 }
 
@@ -88,7 +89,7 @@ internal fun SettingsScreen(
     onDynamicColorChange: (Boolean) -> Unit,
     onWeightUnitChange: (WeightUnit) -> Unit,
     onDefaultRestChange: (Int) -> Unit,
-    onLogRirChange: (Boolean) -> Unit,
+    onEffortScaleChange: (EffortScale) -> Unit,
 ) {
     var pickingRest by rememberSaveable { mutableStateOf(false) }
     Scaffold(
@@ -166,12 +167,27 @@ internal fun SettingsScreen(
             ) {
                 Text(formatClock(preferences.defaultRestSeconds.toLong()), style = MaterialTheme.typography.titleMedium)
             }
-            SettingRow(
-                title = stringResource(R.string.settings_log_rir),
-                summary = stringResource(R.string.settings_log_rir_summary),
-            ) {
-                Switch(checked = preferences.logRir, onCheckedChange = onLogRirChange)
-            }
+            Text(stringResource(R.string.settings_effort_scale), style = MaterialTheme.typography.bodyLarge)
+            Text(
+                stringResource(
+                    when (preferences.effortScale) {
+                        EffortScale.OFF -> R.string.settings_effort_off_summary
+                        EffortScale.RIR -> R.string.settings_effort_rir_summary
+                        EffortScale.RPE -> R.string.settings_effort_rpe_summary
+                    },
+                ),
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            SegmentedChoice(
+                options = listOf(
+                    EffortScale.OFF to R.string.settings_effort_off,
+                    EffortScale.RIR to R.string.settings_effort_rir,
+                    EffortScale.RPE to R.string.settings_effort_rpe,
+                ),
+                selected = preferences.effortScale,
+                onSelect = onEffortScaleChange,
+            )
 
             Text(
                 stringResource(R.string.settings_privacy_note),

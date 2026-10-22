@@ -6,6 +6,7 @@ import com.viktorolsson.spotter.core.data.repository.PlanRepository
 import com.viktorolsson.spotter.core.data.repository.UserPreferencesRepository
 import com.viktorolsson.spotter.core.data.sync.SyncRepository
 import com.viktorolsson.spotter.core.data.sync.SyncStatus
+import com.viktorolsson.spotter.core.model.EffortScale
 import com.viktorolsson.spotter.core.model.ThemeMode
 import com.viktorolsson.spotter.core.model.UserPreferences
 import com.viktorolsson.spotter.core.model.WeightUnit
@@ -48,5 +49,5 @@ class SettingsViewModel @Inject constructor(
 
     fun setDefaultRest(seconds: Int) = viewModelScope.launch { preferencesRepository.setDefaultRestSeconds(seconds) }
 
-    fun setLogRir(enabled: Boolean) = viewModelScope.launch { preferencesRepository.setLogRir(enabled) }
+    fun setEffortScale(scale: EffortScale) = viewModelScope.launch { preferencesRepository.setEffortScale(scale) }
 }

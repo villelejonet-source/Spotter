@@ -4,6 +4,7 @@ import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.github.takahirom.roborazzi.RobolectricDeviceQualifiers
 import com.github.takahirom.roborazzi.captureRoboImage
 import com.viktorolsson.spotter.core.data.sync.SyncStatus
+import com.viktorolsson.spotter.core.model.EffortScale
 import com.viktorolsson.spotter.core.model.ThemeMode
 import com.viktorolsson.spotter.core.model.UserPreferences
 import com.viktorolsson.spotter.core.ui.theme.SpotterTheme
@@ -19,12 +20,12 @@ class SettingsScreenshotTest {
     private fun capture(name: String, dark: Boolean) = captureRoboImage("src/test/screenshots/$name.png") {
         SpotterTheme(darkTheme = dark, dynamicColor = false) {
             SettingsScreen(
-                preferences = UserPreferences(themeMode = if (dark) ThemeMode.DARK else ThemeMode.LIGHT, dynamicColor = false, logRir = true),
+                preferences = UserPreferences(themeMode = if (dark) ThemeMode.DARK else ThemeMode.LIGHT, dynamicColor = false, effortScale = EffortScale.RPE),
                 planName = "Upper / Lower · 4 days",
                 syncStatus = SyncStatus(),
                 sync = SyncActions({}, {}, {}, {}),
                 onOpenPlan = {}, onRebuildPlan = {}, onThemeModeChange = {}, onDynamicColorChange = {},
-                onWeightUnitChange = {}, onDefaultRestChange = {}, onLogRirChange = {},
+                onWeightUnitChange = {}, onDefaultRestChange = {}, onEffortScaleChange = {},
             )
         }
     }

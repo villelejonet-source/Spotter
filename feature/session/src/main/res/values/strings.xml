@@ -12,7 +12,6 @@
     <string name="col_set">Set</string>
     <string name="col_previous">Previous</string>
     <string name="col_reps">Reps</string>
-    <string name="col_rir">RIR</string>
     <string name="set_complete">Complete set</string>
     <string name="set_completed">Set completed</string>
     <string name="add_set">Add set</string>
@@ -57,7 +56,7 @@
     <string name="exercise_superset_remove">Remove from superset</string>
     <string name="exercise_superset_badge">Superset</string>
     <string name="exercise_target">Target %1$d × %2$d–%3$d</string>
-    <string name="exercise_target_rir">Target %1$d × %2$d–%3$d · RIR %4$d</string>
+    <string name="exercise_target_rir">Target %1$d × %2$d–%3$d · %4$s</string>
     <string name="exercise_move_up">Move up</string>
     <string name="exercise_move_down">Move down</string>
     <string name="exercise_remove">Remove exercise</string>
@@ -109,10 +108,11 @@
     <string name="keypad_increase">Increase by %1$s</string>
     <string name="keypad_editing_weight">Weight · set %1$d</string>
     <string name="keypad_editing_reps">Reps · set %1$d</string>
-    <string name="keypad_editing_rir">RIR · set %1$d</string>
+    <string name="keypad_editing_effort">%1$s · set %2$d</string>
     <string name="a11y_weight_field">Weight, set %1$d</string>
     <string name="a11y_reps_field">Reps, set %1$d</string>
     <string name="a11y_rir_field">Reps in reserve, set %1$d</string>
+    <string name="a11y_rpe_field">Effort from 1 to 10, set %1$d</string>
     <string name="a11y_empty">Empty</string>
     <string name="a11y_edit">Edit</string>
     <string name="a11y_set_label">Set %1$s, %2$s</string>
@@ -130,4 +130,10 @@
     <string name="pr_banner_body">%1$s · %2$s</string>
     <string name="pr_1rm">est. 1RM %1$s</string>
     <string name="pr_reps">rep record</string>
+    <string name="a11y_exercise_info">Show how to do this exercise</string>
+    <string name="info_primary">Main muscles</string>
+    <string name="info_secondary">Also works</string>
+    <string name="info_equipment">Equipment</string>
+    <string name="info_bodyweight">None (bodyweight)</string>
+    <string name="info_how_to">How to</string>
 </resources>

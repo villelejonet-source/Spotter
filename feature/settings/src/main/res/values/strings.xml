@@ -20,8 +20,13 @@
     <string name="settings_section_workout">Workouts</string>
     <string name="settings_default_rest">Default rest</string>
     <string name="settings_default_rest_summary">Used when an exercise has no rest time of its own</string>
-    <string name="settings_log_rir">Log RIR</string>
-    <string name="settings_log_rir_summary">Add a reps-in-reserve column to each set</string>
+    <string name="settings_effort_scale">Rate set effort</string>
+    <string name="settings_effort_off">Off</string>
+    <string name="settings_effort_rir">RIR</string>
+    <string name="settings_effort_rpe">RPE 1–10</string>
+    <string name="settings_effort_off_summary">Log weight and reps only</string>
+    <string name="settings_effort_rir_summary">Reps in reserve: how many more reps you could have done (0 = failure)</string>
+    <string name="settings_effort_rpe_summary">How hard the set felt, 1–10 (10 = nothing left, 8 = two reps left)</string>
     <string name="settings_privacy_note">Your training data stays on this device unless you turn on cloud backup.</string>
     <string name="backup_section">Backup &amp; sync</string>
     <string name="backup_intro">Not backed up. Your training is only stored on this phone: if you lose the phone or uninstall Spotter, it\'s gone. A free account keeps it safe and syncs it between phones.</string>

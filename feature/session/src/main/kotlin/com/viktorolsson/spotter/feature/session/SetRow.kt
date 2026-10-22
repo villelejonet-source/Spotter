@@ -1,5 +1,6 @@
 package com.viktorolsson.spotter.feature.session
 
+import com.viktorolsson.spotter.core.model.EffortScale
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.ExperimentalFoundationApi
@@ -58,7 +59,7 @@ import com.viktorolsson.spotter.core.ui.formatSet
 
 /**
  * One set: label (tap for type/note/delete), previous (tap to copy), weight, reps,
- * optional RIR, and the tick. Values are edited with the in-app [Keypad]; the focused
+ * optional effort (RIR or RPE), and the tick. Values are edited with the in-app [Keypad]; the focused
  * field shows what's being typed.
  */
 @Composable
@@ -67,7 +68,7 @@ internal fun SetRow(
     workingNumber: Int,
     previous: PreviousSet?,
     unit: WeightUnit,
-    logRir: Boolean,
+    effortScale: EffortScale,
     focusedField: SetField?,
     buffer: String,
     onFieldClick: (SetField) -> Unit,
@@ -126,14 +127,17 @@ internal fun SetRow(
                 modifier = Modifier.width(RepsColumnWidth),
                 onClick = { onFieldClick(SetField.REPS) },
             )
-            if (logRir) {
+            if (effortScale != EffortScale.OFF) {
                 FieldBox(
-                    text = if (focusedField == SetField.RIR) buffer else set.rir?.toString().orEmpty(),
+                    text = if (focusedField == SetField.EFFORT) buffer else set.rir?.let(effortScale::display)?.toString().orEmpty(),
                     placeholder = "",
-                    focused = focusedField == SetField.RIR,
-                    description = stringResource(R.string.a11y_rir_field, workingNumber),
-                    modifier = Modifier.width(RirColumnWidth),
-                    onClick = { onFieldClick(SetField.RIR) },
+                    focused = focusedField == SetField.EFFORT,
+                    description = stringResource(
+                        if (effortScale == EffortScale.RPE) R.string.a11y_rpe_field else R.string.a11y_rir_field,
+                        workingNumber,
+                    ),
+                    modifier = Modifier.width(EffortColumnWidth),
+                    onClick = { onFieldClick(SetField.EFFORT) },
                 )
             }
             CheckButton(

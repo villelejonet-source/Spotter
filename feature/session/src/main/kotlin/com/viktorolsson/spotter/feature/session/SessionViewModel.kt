@@ -49,7 +49,7 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
-enum class SetField { WEIGHT, REPS, RIR }
+enum class SetField { WEIGHT, REPS, EFFORT }
 
 /** A set that beat the lifter's previous best, for the in-session celebration. */
 data class PrEvent(
@@ -180,7 +180,7 @@ class SessionViewModel @Inject constructor(
             setId = setId,
             weightKg = if (field == SetField.WEIGHT) unit.parseToKg(text) else set.weightKg,
             reps = if (field == SetField.REPS) text.toIntOrNull()?.takeIf { it in 0..999 } else set.reps,
-            rir = if (field == SetField.RIR) text.toIntOrNull()?.takeIf { it in 0..10 } else set.rir,
+            rir = if (field == SetField.EFFORT) text.toIntOrNull()?.let(prefs.effortScale::toRir) else set.rir,
         )
     }
 

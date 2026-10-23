@@ -24,12 +24,13 @@ async function selectAll<T>(
   client: Client,
   view: string,
   build?: (q: ReturnType<ReturnType<Client["from"]>["select"]>) => typeof q,
+  key = "sync_id",
 ): Promise<T[]> {
   const rows: T[] = [];
   for (let from = 0; ; from += PAGE) {
     let q = client.from(view).select("*");
     if (build) q = build(q);
-    const { data, error } = await q.order("sync_id").range(from, from + PAGE - 1);
+    const { data, error } = await q.order(key).range(from, from + PAGE - 1);
     if (error) throw new Error(`${view}: ${error.message}`);
     rows.push(...(data as T[]));
     if (data.length < PAGE) return rows;
@@ -49,7 +50,7 @@ export async function getUnit(): Promise<WeightUnit> {
 
 export const getCatalog = cache(async () => {
   const client = await createClient();
-  return buildCatalog(await selectAll<CustomExerciseRow>(client, "v_custom_exercise"));
+  return buildCatalog(await selectAll<CustomExerciseRow>(client, "v_custom_exercise", undefined, "id"));
 });
 
 /** All sessions, newest first. */

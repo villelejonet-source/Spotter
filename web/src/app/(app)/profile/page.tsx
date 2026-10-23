@@ -26,7 +26,9 @@ function Chips({ value }: { value: string }) {
 }
 
 export default async function ProfilePage() {
-  const [{ user }, profile] = await Promise.all([requireUser(), getProfile()]);
+  const { supabase } = await requireUser();
+  const [{ data: { user } }, profile] = await Promise.all([supabase.auth.getUser(), getProfile()]);
+  if (!user) return null;
 
   return (
     <>

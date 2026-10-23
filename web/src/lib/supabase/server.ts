@@ -24,12 +24,10 @@ export async function createClient() {
   );
 }
 
-/** The signed-in user, or a redirect to /login. */
+/** The signed-in user's id and email (checked locally, see middleware), or a redirect to /login. */
 export async function requireUser() {
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) redirect("/login");
-  return { supabase, user };
+  const { data } = await supabase.auth.getClaims();
+  if (!data) redirect("/login");
+  return { supabase, user: { id: data.claims.sub, email: data.claims.email as string | undefined } };
 }

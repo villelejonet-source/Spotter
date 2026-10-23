@@ -22,9 +22,10 @@ export async function middleware(request: NextRequest) {
     },
   );
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  // getClaims verifies the session JWT locally against the project's published signing
+  // keys (refreshing it when expired), so most requests skip a round trip to Supabase.
+  const { data } = await supabase.auth.getClaims();
+  const user = data?.claims.sub ?? null;
 
   const path = request.nextUrl.pathname;
   const isPublic = PUBLIC_PATHS.some((p) => path === p || path.startsWith(`${p}/`));

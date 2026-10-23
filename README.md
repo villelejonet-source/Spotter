@@ -15,7 +15,7 @@ export JAVA_HOME="/Applications/Android Studio.app/Contents/jbr/Contents/Home"
 ```
 
 Screenshot goldens (light, dark and large text) live in `*/src/test/screenshots`. Releasing
-to the Play Store internal test track: see [docs/play-store/README.md](docs/play-store/README.md).
+to Google Play: see [docs/play-store/README.md](docs/play-store/README.md).
 
 Or open the folder in Android Studio and run the `app` configuration.
 

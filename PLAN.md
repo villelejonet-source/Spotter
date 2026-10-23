@@ -127,10 +127,11 @@ Experience scales volume: new lifters start at the low end, advanced lifters at 
 - **Starting weight** for the substitute comes from its own history, or else is estimated from the original exercise's estimated 1RM with a conversion factor per equipment type (e.g. DB bench ≈ 0.8 × BB bench ÷ 2 per hand).
 
 ## Workout logging UX (the most important screen)
-- One scrollable list of exercise cards. Each set is a row: `prev | weight | reps | (RIR) | ✓`.
+- One scrollable list of exercise cards. Each set is a row: `prev | weight | reps | (RIR or RPE) | ✓`. Holds log seconds instead of reps. Effort is stored as RIR; RPE is converted for display and entry (RPE = 10 − RIR).
 - Weight and reps are **pre-filled** from the progression target, with the previous session shown in grey next to them. Most sets take one tap on ✓.
 - Large touch targets, a numeric keypad with ±2.5 / ±1 steppers, and swipe to delete a set.
-- Ticking a set **starts the rest timer automatically** with that exercise's default rest.
+- Ticking a set **starts the rest timer automatically** with that exercise's default rest and closes the keypad.
+- Tapping an exercise name opens a sheet with its muscles, equipment and coaching cues.
 - Add a set, an exercise, a note, or a superset (group exercises; rest only after the last one in the group).
 - A warm-up set generator for main lifts (e.g. bar × 10, 50 % × 5, 70 % × 3, 85 % × 1).
 - A plate calculator: tap the weight to see the plates per side.
@@ -187,7 +188,7 @@ Material 3 theme with light, dark and "follow system" settings, plus dynamic col
 **Out of v1:** data export/import.
 
 **Later ideas:**
-- Exercise instructions with images or GIFs
+- Exercise images or GIFs (text cues ship in 0.10.0)
 - Body measurements and progress photos
 - Health Connect sync
 - Home-screen widget

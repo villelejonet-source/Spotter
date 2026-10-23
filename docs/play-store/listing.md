@@ -14,6 +14,8 @@ each session and why.
 FAST LOGGING
 • Every set is pre-filled with today's target, so most sets take one tap
 • Built-in keypad with ±2.5 kg steppers and a plate calculator
+• Rate how hard each set was as RIR or RPE 1–10, or leave it off
+• Time planks and other holds in seconds
 • Rest timer starts automatically and alerts you with the screen off
 • Warm-up sets, supersets, drop sets and notes
 • Never lose a workout: everything saves as you go
@@ -23,6 +25,7 @@ A PLAN THAT FITS YOU
 • Strength, muscle, general fitness or fat loss
 • Works with a full gym, a home gym, dumbbells only or just bodyweight
 • Leaves out exercises that load a sore shoulder, knee, lower back or wrist
+• Tap any exercise mid-workout for the muscles it works and how to do it
 
 GETS YOU STRONGER
 • Progressive overload built in: add reps, then weight, with the reason shown

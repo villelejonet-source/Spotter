@@ -1,7 +1,21 @@
-# Releasing Spotter to the Play Store internal test track
+# Releasing Spotter on Google Play
 
-Everything in the repo is ready for an internal test release. The steps below need your
-Google Play Console account and your upload key, so they're for you to run.
+The Play Console steps below need your Google Play Console account and your upload key, so
+they're for you to run.
+
+The developer account is an **organization** account (Northstar solutions AB), so releases
+can go straight to production. The 12-testers-for-14-days closed test rule only applies to
+personal accounts.
+
+## Versions
+
+| versionCode | versionName | Status |
+|---|---|---|
+| 2 | 0.9.1 | Internal and closed test (alpha) |
+| 3 | 0.10.0 | Closed test (alpha); first production release, in review since 2026-10-23 (Sweden only). Lacks timed holds from 0.9.1. |
+| 4 | 0.10.1 | Built from tag `v0.10.1`, not uploaded yet: ship it as the first update once 0.10.0 is approved. |
+
+Tag each uploaded build (`git tag v0.10.1 <commit>`) so it can be rebuilt exactly.
 
 ## 1. Create the upload key (once)
 
@@ -41,13 +55,20 @@ export JAVA_HOME="/Applications/Android Studio.app/Contents/jbr/Contents/Home"
 
 The bundle is `app/build/outputs/bundle/release/app-release.aab`. `bundleRelease` refuses to
 run without `keystore.properties`, so a debug-signed bundle can't be uploaded by mistake.
-Bump `versionCode` in `app/build.gradle.kts` for every upload.
+Bump `versionCode` in `app/build.gradle.kts` for every upload: Play rejects a code it has
+seen before, on any track. Then add the build to the table above.
 
 ## 3. Play Console
 
 1. **Create app**: name "Spotter", app, free.
-2. **Internal testing → Create release**: upload the `.aab`, add release notes, and add
-   testers (an email list).
+2. **Release** (Testa och lansera): pick a track, then **Skapa ny version** (create new
+   release), upload the `.aab` (or **Lägg till från bibliotek** for a build already
+   uploaded to another track), add release notes, then **Nästa → Spara och publicera**.
+   - **Produktion**: set the countries on **Länder/regioner** first (currently Sweden).
+   - **Stängt test → alpha** and **Internt test**: testers come from an email list and must
+     open the opt-in link before Play offers them the app.
+   - Managed publishing is off, so an approved release goes live by itself. Withdrawing a
+     release in review (**Ta bort ändringar**) puts the next one at the back of the queue.
 3. **App content**, everything Play asks before the first release:
    - **Privacy policy**: https://sites.google.com/view/spotter-app-gym/startsida (a Google Site on the personal Gmail account; paste
      `privacy-policy.md` there again when it changes).

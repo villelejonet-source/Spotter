@@ -1,7 +1,10 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 
-const PUBLIC_PATHS = ["/login", "/auth"];
+/** Reachable signed out. /reset-password is not: the reset email's link or code signs in first. */
+const PUBLIC_PATHS = ["/login", "/signup", "/forgot-password", "/auth"];
+/** Pointless when signed in, so they forward to the dashboard. */
+const SIGNED_OUT_ONLY = ["/login", "/signup"];
 
 /** Refreshes the Supabase session cookie on every request and guards the app pages. */
 export async function middleware(request: NextRequest) {
@@ -35,7 +38,7 @@ export async function middleware(request: NextRequest) {
     url.search = "";
     return NextResponse.redirect(url);
   }
-  if (user && path === "/login") {
+  if (user && SIGNED_OUT_ONLY.includes(path)) {
     const url = request.nextUrl.clone();
     url.pathname = "/";
     return NextResponse.redirect(url);

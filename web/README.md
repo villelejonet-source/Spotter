@@ -25,7 +25,9 @@ The seeded exercise catalog isn't synced; `scripts/copy-catalog.mjs` copies
    or paste each into the SQL editor. They're all safe to re-run.
 2. In Supabase → Authentication → URL Configuration, add `http://localhost:3000/auth/callback`
    and the deployed URL's `/auth/callback` to the redirect URLs.
-3. `cp .env.example .env.local` and fill in the publishable key (same as `supabase.publishableKey`
+3. Set up the sign-in emails and auth settings in `docs/platform/auth-emails.md` (email
+   templates with both a link and a code, password rules, redirect URLs).
+4. `cp .env.example .env.local` and fill in the publishable key (same as `supabase.publishableKey`
    in the app's `local.properties`).
 
 ```bash

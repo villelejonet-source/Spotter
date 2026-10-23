@@ -3,6 +3,7 @@ import { buttonClass, Card, CardTitle, PageHeader } from "@/components/ui";
 import { getBodyWeight, getProfile } from "@/lib/data";
 import { requireUser } from "@/lib/supabase/server";
 import { profileDraftFrom } from "@/lib/sync-writer";
+import { ChangePassword } from "./change-password";
 import { ProfileForm } from "./profile-form";
 import { WeightLog } from "./weight-log";
 
@@ -53,7 +54,10 @@ export default async function ProfilePage() {
               <Row label="Email">{user.email}</Row>
               <Row label="Member since">{new Date(user.created_at).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" })}</Row>
             </dl>
-            <div className="mt-4">
+            <div className="mt-4 border-t border-outline pt-4">
+              <ChangePassword />
+            </div>
+            <div className="mt-4 border-t border-outline pt-4">
               <DeleteAccount />
             </div>
           </Card>

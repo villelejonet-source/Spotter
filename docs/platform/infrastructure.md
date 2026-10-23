@@ -26,7 +26,7 @@ Website (Next.js on Vercel) ── server components, RLS ───────�
 | App | debug build → local or staging | debug / internal test track | Play production |
 | Data | seed script | test accounts only | real users |
 
-To do (needs you, in the dashboards):
+Deferred on 2026-10-24 (revisit before public launch or paid features). In the dashboards:
 1. **Create a staging Supabase project** in the same region as production. Apply
    `supabase/migrations` to it, and point Vercel's *Preview* environment variables at it, so
    pull-request previews never touch real data.
@@ -42,7 +42,7 @@ To do (needs you, in the dashboards):
 | Users (monthly active) | Supabase | Vercel | Notes |
 |---|---|---|---|
 | < 100 (now) | Free | Hobby | Free projects pause after a week idle and have **no backups**. Hobby is non-commercial only. |
-| Launch / paid features | **Pro, $25/mo** | **Pro, $20/mo** | Daily backups, no pausing, 8 GB database included. Required once money is involved. |
+| Launch / paid features (deferred for now) | **Pro, $25/mo** | **Pro, $20/mo** | Daily backups, no pausing, 8 GB database included. Required once money is involved. |
 | ~10 000 | Pro + Point-in-time recovery add-on, small compute upgrade | Pro | ~5 000 synced rows per active user per year ≈ 50 M rows / ~15 GB a year. |
 | ~100 000 | Larger compute, read replica for the web | Pro / Enterprise | Move heavy reads off `sync_rows` (see "Scaling the data model"). |
 

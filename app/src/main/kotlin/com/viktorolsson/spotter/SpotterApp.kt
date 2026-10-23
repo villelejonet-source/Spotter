@@ -79,6 +79,7 @@ fun SpotterApp(
     navController: NavHostController = rememberNavController(),
     activeWorkoutViewModel: ActiveWorkoutViewModel = hiltViewModel(),
     syncChoiceViewModel: SyncChoiceViewModel = hiltViewModel(),
+    passwordRecoveryViewModel: PasswordRecoveryViewModel = hiltViewModel(),
 ) {
     val backStackEntry by navController.currentBackStackEntryAsState()
     val currentDestination = backStackEntry?.destination
@@ -100,6 +101,13 @@ fun SpotterApp(
                 TextButton(onClick = { syncChoiceViewModel.choose(FirstSyncChoice.MERGE) }) { Text(stringResource(R.string.sync_choice_merge)) }
             },
         )
+    }
+
+    val recoveringPassword by passwordRecoveryViewModel.recovering.collectAsStateWithLifecycle()
+    LaunchedEffect(recoveringPassword) {
+        if (recoveringPassword && currentDestination?.hasRoute<AccountRoute>() != true) {
+            navController.navigate(AccountRoute(newPassword = true))
+        }
     }
 
     // First launch: open the questionnaire once (it can be skipped; Today offers it again).
@@ -161,7 +169,7 @@ fun SpotterApp(
             profileScreen(
                 onOpenPlan = { navController.navigate(PlanRoute) },
                 onRebuildPlan = { navController.navigate(OnboardingRoute(rebuild = true)) },
-                onOpenAccount = { navController.navigate(AccountRoute(newAccount = it)) },
+                onOpenAccount = { navController.navigate(it) },
             )
             onboardingScreen(
                 onDone = { navController.popBackStack() },

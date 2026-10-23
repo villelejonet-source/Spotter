@@ -23,7 +23,7 @@ class SettingsScreenshotTest {
                 preferences = UserPreferences(themeMode = if (dark) ThemeMode.DARK else ThemeMode.LIGHT, dynamicColor = false, effortScale = EffortScale.RPE),
                 planName = "Upper / Lower · 4 days",
                 syncStatus = SyncStatus(),
-                sync = SyncActions({}, {}, {}, {}),
+                sync = SyncActions({}, {}, {}, {}, {}),
                 onOpenPlan = {}, onRebuildPlan = {}, onThemeModeChange = {}, onDynamicColorChange = {},
                 onWeightUnitChange = {}, onDefaultRestChange = {}, onEffortScaleChange = {},
             )

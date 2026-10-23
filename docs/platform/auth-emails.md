@@ -1,9 +1,10 @@
 # Sign-in emails and auth settings (Supabase dashboard)
 
-The website signs people up with email + password, confirms the email, and resets
-passwords by email. The app signs in with an emailed link or code (no password). Both use
-the same accounts and the same email templates, so every email carries **both** a link
-and a code:
+The app and the website share accounts and flows: sign up with email + password and
+confirm the email, sign in with the password, reset it by email, change it from Profile.
+Accounts made before passwords existed sign in with an emailed code and can set a password
+with "Forgot password". Both use the same email templates, so every email carries **both**
+a link and a code:
 
 - The **link** (`{{ .ConfirmationURL }}`) works on the device that asked for it: it opens
   the app (`spotter://login`) or the website (`/auth/callback`), whichever sent the request.
@@ -92,9 +93,12 @@ Subject: `Confirm your Spotter password change`
 **Authentication → Rate Limits**: defaults are fine. With the custom (Gmail) SMTP sender,
 emails are limited per hour; raise it only if real users hit it.
 
-## How each flow works on the website
+## How each flow works
 
-| Flow | Pages | Email | Ends |
+The app (Profile → Backup & sync, or the welcome screen) and the website have the same
+steps. In the app a reset link opens "New password" directly.
+
+| Flow | Website pages | Email | Ends |
 |---|---|---|---|
 | Sign up | `/signup` → "Confirm your email" | Confirm signup | Code or link confirms and signs in → dashboard |
 | Sign in | `/login` with email + password | — | Dashboard. Unconfirmed accounts get a new confirmation email and the code step |

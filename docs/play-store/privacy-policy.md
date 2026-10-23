@@ -1,6 +1,6 @@
 # Spotter privacy policy
 
-_Last updated: 23 October 2026_
+_Last updated: 24 October 2026_
 
 Spotter is a workout logging app. This policy explains what happens to your data.
 
@@ -11,11 +11,12 @@ workouts and sets you log, your body weight entries and your settings.
 **Where it's stored.** On your device, in the app's private storage. It's excluded from
 Google's cloud backup; it can move to a new phone with a direct device-to-device transfer.
 
-**Optional cloud backup.** If you choose to sign in (with your email address and a sign-in
-link or one-time code), Spotter backs up the data above to its cloud database (hosted by Supabase) and
+**Optional cloud backup.** If you choose to create an account (your email address and a
+password, confirmed with an emailed link or one-time code), Spotter backs up the data above to its cloud database (hosted by Supabase) and
 syncs it between your phones. It's sent encrypted
 (HTTPS), and database rules ensure only your account can read or change your backup. Your
-email address is used only to sign you in; sign-in emails are sent through Gmail. If you
+email address is used only for your account and its emails (confirmation, sign-in codes,
+password resets), sent through Gmail. Passwords are stored only as secure hashes. If you
 never sign in, nothing leaves your phone.
 
 **Spotter on the web.** With the same account you can sign in on the Spotter website to see

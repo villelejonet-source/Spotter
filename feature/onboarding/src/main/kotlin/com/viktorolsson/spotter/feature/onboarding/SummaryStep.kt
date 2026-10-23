@@ -21,6 +21,8 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.viktorolsson.spotter.core.model.SplitType
+import com.viktorolsson.spotter.core.model.isTimed
+import com.viktorolsson.spotter.core.ui.formatTarget
 import com.viktorolsson.spotter.core.ui.labelRes
 
 @Composable
@@ -83,7 +85,7 @@ internal fun SummaryStep(state: OnboardingUiState, onSplit: (SplitType?) -> Unit
                             modifier = Modifier.weight(1f),
                         )
                         Text(
-                            stringResource(R.string.onb_summary_sets_reps, ex.sets, ex.repMin, ex.repMax),
+                            formatTarget(ex.sets, ex.repMin, ex.repMax, ex.exercise.isTimed),
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )

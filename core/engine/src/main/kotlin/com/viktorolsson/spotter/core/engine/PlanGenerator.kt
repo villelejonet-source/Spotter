@@ -11,6 +11,7 @@ import com.viktorolsson.spotter.core.model.ProgressionRule
 import com.viktorolsson.spotter.core.model.Sex
 import com.viktorolsson.spotter.core.model.SplitType
 import com.viktorolsson.spotter.core.model.UserProfile
+import com.viktorolsson.spotter.core.model.isTimed
 import java.time.Instant
 import java.time.LocalDate
 import java.time.Period
@@ -171,6 +172,21 @@ class PlanGenerator {
             // Modest evidence of faster between-set recovery and higher rep tolerance.
             rest = (rest - 15).coerceAtLeast(45)
             if (role != SlotRole.MAIN) repMax = (repMax + 2).coerceAtMost(15).coerceAtLeast(base.repMax)
+        }
+
+        if (exercise.isTimed) {
+            val seconds = timedHoldSeconds(profile.experience)
+            return Planned(
+                exercise = exercise,
+                role = role,
+                sets = base.sets(profile.experience),
+                repMin = seconds.first,
+                repMax = seconds.last,
+                rir = rir,
+                rest = rest,
+                progression = ProgressionRule.DOUBLE_PROGRESSION,
+                startingWeightKg = null,
+            )
         }
 
         val progression = when {

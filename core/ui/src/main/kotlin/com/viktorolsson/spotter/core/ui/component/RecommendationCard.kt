@@ -30,8 +30,10 @@ import com.viktorolsson.spotter.core.model.Recommendation
 import com.viktorolsson.spotter.core.model.RecommendationAction
 import com.viktorolsson.spotter.core.model.RecommendationEvidence
 import com.viktorolsson.spotter.core.model.WeightUnit
+import com.viktorolsson.spotter.core.model.TIMED_EXERCISE_IDS
 import com.viktorolsson.spotter.core.ui.R
 import com.viktorolsson.spotter.core.ui.formatSet
+import com.viktorolsson.spotter.core.ui.formatTarget
 import com.viktorolsson.spotter.core.ui.labelRes
 
 /** A recommendation with the evidence behind it, and Apply / Dismiss. */
@@ -45,7 +47,7 @@ fun RecommendationCard(
 ) {
     val evidence = recommendation.payload.evidence
     val action = recommendation.payload.action
-    val (icon, title, body) = describe(action, evidence, unit)
+    val (icon, title, body) = describe(action, evidence, unit, timed = recommendation.exerciseId in TIMED_EXERCISE_IDS)
     Card(
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.secondaryContainer),
         modifier = modifier.fillMaxWidth(),
@@ -67,8 +69,13 @@ fun RecommendationCard(
 }
 
 @Composable
-private fun describe(action: RecommendationAction, evidence: RecommendationEvidence, unit: WeightUnit): Triple<ImageVector, String, String> {
-    val why = plateauEvidence(evidence, unit)
+private fun describe(
+    action: RecommendationAction,
+    evidence: RecommendationEvidence,
+    unit: WeightUnit,
+    timed: Boolean,
+): Triple<ImageVector, String, String> {
+    val why = plateauEvidence(evidence, unit, timed)
     fun join(vararg parts: String?) = parts.filterNotNull().joinToString(" ")
     return when (action) {
         is RecommendationAction.AddExercise -> if (evidence.group != null && evidence.exerciseName == null) {
@@ -76,13 +83,13 @@ private fun describe(action: RecommendationAction, evidence: RecommendationEvide
             Triple(
                 Icons.Rounded.CalendarMonth,
                 stringResource(R.string.rec_frequency_title, group.lowercase()),
-                stringResource(R.string.rec_frequency_body, group, action.exerciseName, action.sets, action.repMin, action.repMax, action.dayName),
+                stringResource(R.string.rec_frequency_body, group, action.exerciseName, formatTarget(action.sets, action.repMin, action.repMax, action.exerciseId in TIMED_EXERCISE_IDS), action.dayName),
             )
         } else {
             Triple(
                 Icons.Rounded.Add,
                 stringResource(R.string.rec_accessory_title, action.exerciseName),
-                join(why, stringResource(R.string.rec_accessory_body, action.exerciseName, action.sets, action.repMin, action.repMax, action.dayName)),
+                join(why, stringResource(R.string.rec_accessory_body, action.exerciseName, formatTarget(action.sets, action.repMin, action.repMax, action.exerciseId in TIMED_EXERCISE_IDS), action.dayName)),
             )
         }
         is RecommendationAction.AddSets -> {
@@ -140,9 +147,9 @@ private fun describe(action: RecommendationAction, evidence: RecommendationEvide
 
 /** "Bench hasn't progressed in 4 sessions over 3 weeks (latest best 80 kg × 5)." */
 @Composable
-private fun plateauEvidence(evidence: RecommendationEvidence, unit: WeightUnit): String? {
+private fun plateauEvidence(evidence: RecommendationEvidence, unit: WeightUnit, timed: Boolean): String? {
     val name = evidence.exerciseName ?: return null
-    val best = formatSet(evidence.weightKg, evidence.reps, unit)
+    val best = formatSet(evidence.weightKg, evidence.reps, unit, timed)
     return if (evidence.missedTwice) {
         stringResource(R.string.rec_evidence_missed, name, best)
     } else {

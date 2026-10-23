@@ -42,3 +42,8 @@ enum class Equipment {
 enum class Mechanics { COMPOUND, ISOLATION }
 
 enum class Difficulty { BEGINNER, INTERMEDIATE, ADVANCED }
+
+/** Holds logged in seconds rather than reps; the seconds go in the set's reps field. */
+val TIMED_EXERCISE_IDS = setOf("plank", "side-plank", "copenhagen-plank", "hollow-body-hold")
+
+val Exercise.isTimed: Boolean get() = id in TIMED_EXERCISE_IDS

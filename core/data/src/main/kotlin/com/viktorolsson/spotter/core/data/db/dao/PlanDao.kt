@@ -51,6 +51,10 @@ interface PlanDao {
     @Query("UPDATE plan_exercise SET sets = :sets, repMin = :repMin, repMax = :repMax WHERE id = :planExerciseId")
     suspend fun setRepRange(planExerciseId: Long, sets: Int, repMin: Int, repMax: Int)
 
+    /** Holds still prescribed in reps (shorter than [repMin] seconds) get the range in seconds. */
+    @Query("UPDATE plan_exercise SET repMin = :repMin, repMax = :repMax WHERE exerciseId IN (:exerciseIds) AND repMax < :repMin")
+    suspend fun convertHoldsToSeconds(exerciseIds: List<String>, repMin: Int, repMax: Int)
+
     /** The plan day of the most recently finished workout in [planId], if any. */
     @Query(
         """

@@ -15,15 +15,15 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.rounded.Add
 import androidx.compose.material.icons.automirrored.rounded.TrendingDown
 import androidx.compose.material.icons.automirrored.rounded.TrendingFlat
 import androidx.compose.material.icons.automirrored.rounded.TrendingUp
+import androidx.compose.material.icons.rounded.Add
 import androidx.compose.material.icons.rounded.MoreVert
 import androidx.compose.material.icons.rounded.SwapHoriz
+import androidx.compose.material.icons.rounded.Timer
 import androidx.compose.material.icons.rounded.Tune
 import androidx.compose.material.icons.rounded.Whatshot
-import androidx.compose.material.icons.rounded.Timer
 import androidx.compose.material3.AssistChip
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -56,9 +56,11 @@ import com.viktorolsson.spotter.core.model.ProgressionReason
 import com.viktorolsson.spotter.core.model.SessionExercise
 import com.viktorolsson.spotter.core.model.SetType
 import com.viktorolsson.spotter.core.model.UserPreferences
+import com.viktorolsson.spotter.core.model.isTimed
 import com.viktorolsson.spotter.core.model.label
 import com.viktorolsson.spotter.core.ui.component.RestTimePickerDialog
 import com.viktorolsson.spotter.core.ui.formatClock
+import com.viktorolsson.spotter.core.ui.formatTarget
 
 internal class ExerciseCardActions(
     val onFieldClick: (setId: Long, SetField) -> Unit,
@@ -97,6 +99,7 @@ internal fun ExerciseCard(
     actions: ExerciseCardActions,
     modifier: Modifier = Modifier,
 ) {
+    val timed = exercise.exercise.isTimed
     // Only offered when a ramp would actually add sets (an empty-bar working weight has none).
     val canWarmUp = exercise.exercise.mechanics == Mechanics.COMPOUND &&
         exercise.sets.none { it.setType == SetType.WARMUP || it.isCompleted } &&
@@ -185,8 +188,11 @@ internal fun ExerciseCard(
             }
             exercise.target?.let { target ->
                 Text(
-                    target.targetRir?.let { stringResource(R.string.exercise_target_rir, target.sets, target.repMin, target.repMax, formatEffort(it, preferences.effortScale)) }
-                        ?: stringResource(R.string.exercise_target, target.sets, target.repMin, target.repMax),
+                    formatTarget(target.sets, target.repMin, target.repMax, timed).let { range ->
+                        // Reps in reserve don't apply to a hold.
+                        target.targetRir?.takeUnless { timed }?.let { stringResource(R.string.exercise_target_rir, range, formatEffort(it, preferences.effortScale)) }
+                            ?: stringResource(R.string.exercise_target, range)
+                    },
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.padding(horizontal = 16.dp),
@@ -200,7 +206,7 @@ internal fun ExerciseCard(
                     modifier = Modifier.padding(horizontal = 16.dp),
                 )
             }
-            exercise.progressionReason?.let { ProgressionNote(it) }
+            exercise.progressionReason?.let { ProgressionNote(it, timed) }
             if (canWarmUp) {
                 AssistChip(
                     onClick = actions.onWarmUps,
@@ -218,7 +224,7 @@ internal fun ExerciseCard(
                 )
             }
 
-            SetHeader(preferences)
+            SetHeader(preferences, timed)
 
             var workingNumber = 0
             exercise.sets.forEach { set ->
@@ -229,6 +235,7 @@ internal fun ExerciseCard(
                     // Working sets line up with last time's working sets; warm-ups have no "previous".
                     previous = if (set.setType == SetType.WARMUP) null else previous.getOrNull(workingNumber - 1),
                     unit = preferences.weightUnit,
+                    timed = timed,
                     effortScale = preferences.effortScale,
                     focusedField = focus?.takeIf { it.setId == set.id }?.field,
                     buffer = buffer,
@@ -272,13 +279,15 @@ internal fun ExerciseCard(
 
 /** Explains the pre-filled target, so progression never feels like a black box. */
 @Composable
-private fun ProgressionNote(reason: ProgressionReason) {
+private fun ProgressionNote(reason: ProgressionReason, timed: Boolean) {
     val (text, icon, emphasised) = when (reason) {
         ProgressionReason.CALIBRATION -> Triple(R.string.progress_calibration, Icons.Rounded.Tune, false)
-        ProgressionReason.FIRST_TIME -> Triple(R.string.progress_first_time, Icons.Rounded.Tune, false)
+        ProgressionReason.FIRST_TIME ->
+            Triple(if (timed) R.string.progress_first_time_timed else R.string.progress_first_time, Icons.Rounded.Tune, false)
         ProgressionReason.INCREASE_WEIGHT -> Triple(R.string.progress_increase, Icons.AutoMirrored.Rounded.TrendingUp, true)
         ProgressionReason.INCREASE_TOO_EASY -> Triple(R.string.progress_increase_easy, Icons.AutoMirrored.Rounded.TrendingUp, true)
-        ProgressionReason.ADD_REPS -> Triple(R.string.progress_add_reps, Icons.AutoMirrored.Rounded.TrendingUp, false)
+        ProgressionReason.ADD_REPS ->
+            Triple(if (timed) R.string.progress_add_time else R.string.progress_add_reps, Icons.AutoMirrored.Rounded.TrendingUp, false)
         ProgressionReason.HOLD_TOO_HARD -> Triple(R.string.progress_hold_hard, Icons.AutoMirrored.Rounded.TrendingFlat, false)
         ProgressionReason.REPEAT -> Triple(R.string.progress_repeat, Icons.AutoMirrored.Rounded.TrendingFlat, false)
         ProgressionReason.RESET_AFTER_MISSES -> Triple(R.string.progress_reset, Icons.AutoMirrored.Rounded.TrendingDown, false)
@@ -302,7 +311,7 @@ private fun MenuItem(label: Int, onClick: () -> Unit) {
 }
 
 @Composable
-private fun SetHeader(preferences: UserPreferences) {
+private fun SetHeader(preferences: UserPreferences, timed: Boolean) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -315,7 +324,7 @@ private fun SetHeader(preferences: UserPreferences) {
         HeaderCell(stringResource(R.string.col_set), Modifier.width(SetColumnWidth))
         HeaderCell(stringResource(R.string.col_previous), Modifier.weight(1f))
         HeaderCell(preferences.weightUnit.label, Modifier.width(WeightColumnWidth))
-        HeaderCell(stringResource(R.string.col_reps), Modifier.width(RepsColumnWidth))
+        HeaderCell(stringResource(if (timed) R.string.col_seconds else R.string.col_reps), Modifier.width(RepsColumnWidth))
         if (preferences.effortScale != EffortScale.OFF) HeaderCell(preferences.effortScale.name, Modifier.width(EffortColumnWidth))
         Box(Modifier.width(CheckColumnWidth))
     }

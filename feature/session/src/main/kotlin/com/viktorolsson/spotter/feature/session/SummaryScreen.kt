@@ -8,9 +8,9 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
@@ -31,7 +31,6 @@ import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
-import com.viktorolsson.spotter.core.ui.component.Confetti
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.SavedStateHandle
@@ -45,18 +44,18 @@ import com.viktorolsson.spotter.core.data.repository.WorkoutRepository
 import com.viktorolsson.spotter.core.model.PersonalRecord
 import com.viktorolsson.spotter.core.model.WeightUnit
 import com.viktorolsson.spotter.core.model.WorkoutSummary
-import com.viktorolsson.spotter.core.model.format
-import com.viktorolsson.spotter.core.model.label
+import com.viktorolsson.spotter.core.ui.component.Confetti
 import com.viktorolsson.spotter.core.ui.formatClock
 import com.viktorolsson.spotter.core.ui.formatRecordValue
+import com.viktorolsson.spotter.core.ui.formatSet
 import com.viktorolsson.spotter.core.ui.formatTotal
 import com.viktorolsson.spotter.core.ui.labelRes
 import dagger.hilt.android.lifecycle.HiltViewModel
+import javax.inject.Inject
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
-import javax.inject.Inject
 
 data class SummaryUiState(
     val summary: WorkoutSummary? = null,
@@ -166,8 +165,7 @@ internal fun SummaryScreen(summary: WorkoutSummary, unit: WeightUnit, records: L
             }
             items(summary.exercises) { ex ->
                 val best = ex.bestSet?.let { set ->
-                    val reps = set.reps ?: 0
-                    set.weightKg?.let { "${unit.format(it)} ${unit.label} × $reps" } ?: "$reps reps"
+                    formatSet(set.weightKg, set.reps, unit, ex.timed)
                 }
                 ListItem(
                     headlineContent = { Text(ex.exerciseName) },

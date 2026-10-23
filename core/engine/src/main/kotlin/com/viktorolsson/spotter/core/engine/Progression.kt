@@ -6,6 +6,7 @@ import com.viktorolsson.spotter.core.model.MovementPattern
 import com.viktorolsson.spotter.core.model.ProgressionReason
 import com.viktorolsson.spotter.core.model.ProgressionRule
 import com.viktorolsson.spotter.core.model.WeightUnit
+import com.viktorolsson.spotter.core.model.isTimed
 import com.viktorolsson.spotter.core.model.toKg
 
 /** A completed working set from history. Weight null = bodyweight. */
@@ -43,6 +44,8 @@ object Progression {
     private const val RESET_FACTOR = 0.9
     /** RIR this far off target counts as "much harder/easier than planned". */
     private const val RIR_TOLERANCE = 2
+    /** Holds climb their range in seconds, a few at a time. */
+    const val TIMED_STEP_SECONDS = 5
 
     fun next(input: ProgressionInput): ProgressionTarget {
         val last = input.history.firstOrNull()
@@ -89,12 +92,15 @@ object Progression {
         return sets.count { it.reps < floor } * 2 > sets.size
     }
 
-    /** Same weight, one more rep per set than last time, within the range. */
+    /** One more rep per session, or a few more seconds for a hold. */
+    private fun repStep(input: ProgressionInput): Int = if (input.exercise.isTimed) TIMED_STEP_SECONDS else 1
+
+    /** Same weight, one more rep (or a longer hold) per set than last time, within the range. */
     private fun holdAt(input: ProgressionInput, last: List<LoggedSet>, weight: Double, reason: ProgressionReason) =
         ProgressionTarget(
             List(input.sets) { i ->
                 val previous = (last.getOrNull(i) ?: last.last()).reps
-                val reps = if (reason == ProgressionReason.ADD_REPS) previous + 1 else previous
+                val reps = if (reason == ProgressionReason.ADD_REPS) previous + repStep(input) else previous
                 SetTarget(weight, reps.coerceIn(input.repMin, input.repMax))
             },
             reason,
@@ -105,7 +111,7 @@ object Progression {
         return ProgressionTarget(
             List(input.sets) { i ->
                 val previous = (last.getOrNull(i) ?: last.last()).reps
-                SetTarget(null, if (atTop) input.repMax else (previous + 1).coerceIn(input.repMin, input.repMax))
+                SetTarget(null, if (atTop) input.repMax else (previous + repStep(input)).coerceIn(input.repMin, input.repMax))
             },
             if (atTop) ProgressionReason.BODYWEIGHT_TOP_OF_RANGE else ProgressionReason.ADD_REPS,
         )

@@ -43,6 +43,7 @@ import com.viktorolsson.spotter.core.model.SessionExercise
 import com.viktorolsson.spotter.core.model.SetType
 import com.viktorolsson.spotter.core.model.WeightUnit
 import com.viktorolsson.spotter.core.model.WorkoutSummary
+import com.viktorolsson.spotter.core.model.isTimed
 import com.viktorolsson.spotter.core.ui.formatClock
 import com.viktorolsson.spotter.core.ui.formatMediumDate
 import com.viktorolsson.spotter.core.ui.formatRecordValue
@@ -209,7 +210,7 @@ private fun ExerciseSetsCard(
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier.width(32.dp),
                     )
-                    Text(formatSet(set.weightKg, set.reps, unit), style = MaterialTheme.typography.bodyLarge, modifier = Modifier.weight(1f))
+                    Text(formatSet(set.weightKg, set.reps, unit, exercise.exercise.isTimed), style = MaterialTheme.typography.bodyLarge, modifier = Modifier.weight(1f))
                     set.rir?.let {
                         Text(
                             formatEffort(it, effortScale),

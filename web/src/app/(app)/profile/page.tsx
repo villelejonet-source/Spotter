@@ -28,8 +28,7 @@ export default async function ProfilePage() {
         <Card>
           <CardTitle>Training profile</CardTitle>
           {profile ? (
-            // Keyed so a profile synced from the phone replaces the form's state.
-            <ProfileForm key={profile.updated_at} initial={profileDraftFrom(profile)} />
+            <ProfileForm initial={profileDraftFrom(profile)} version={profile.updated_at} />
           ) : (
             <p className="text-sm text-muted">No profile synced yet. Finish onboarding in the app with cloud backup on.</p>
           )}

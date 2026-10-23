@@ -1,7 +1,6 @@
 "use client";
 
 import clsx from "clsx";
-import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import { updateProfile } from "@/app/actions/profile";
 import { Button, inputClass } from "@/components/ui";
@@ -53,8 +52,8 @@ function Field({ label, hint, children }: { label: string; hint?: string; childr
   );
 }
 
-export function ProfileForm({ initial }: { initial: ProfileDraft }) {
-  const router = useRouter();
+/** [version] is the profile's updated_at as loaded; the server refuses to save over a newer one. */
+export function ProfileForm({ initial, version }: { initial: ProfileDraft; version: number }) {
   const [p, setP] = useState(initial);
   const [error, setError] = useState<string | null>(null);
   const [saved, setSaved] = useState(false);
@@ -69,12 +68,10 @@ export function ProfileForm({ initial }: { initial: ProfileDraft }) {
     e.preventDefault();
     setError(null);
     start(async () => {
-      const result = await updateProfile(p);
+      // The save revalidates the page, which brings the new version in as props.
+      const result = await updateProfile(p, version);
       if (!result.ok) setError(result.error);
-      else {
-        setSaved(true);
-        router.refresh();
-      }
+      else setSaved(true);
     });
   }
 
@@ -138,7 +135,7 @@ export function ProfileForm({ initial }: { initial: ProfileDraft }) {
             onChange={(e) => set({ body_weight_kg: fromUnit(Number(e.target.value), p.units) })}
           />
         </Field>
-        <Field label="Units on the website" hint="The app keeps its own unit setting.">
+        <Field label="Units" hint="How weights show here; the app also uses it to round suggested starting weights.">
           <select className={inputClass} value={p.units} onChange={(e) => set({ units: e.target.value as ProfileDraft["units"] })}>
             <option value="KG">kg</option>
             <option value="LB">lb</option>

@@ -9,7 +9,7 @@ export async function signOut() {
   redirect("/login");
 }
 
-/** Deletes the account and every backed-up row (001_sync.sql delete_my_account). */
+/** Deletes the account and every backed-up row (supabase/migrations/20261004000000_sync.sql, delete_my_account). */
 export async function deleteAccount() {
   const supabase = await createClient();
   const { error } = await supabase.rpc("delete_my_account");

@@ -10,7 +10,7 @@ export async function GET(request: NextRequest) {
   if (!auth) return new NextResponse("Not signed in", { status: 401 });
 
   const format = request.nextUrl.searchParams.get("format") === "csv" ? "csv" : "json";
-  const [sessions, sets, catalog] = await Promise.all([getSessions(), getSetHistory(), getCatalog()]);
+  const [sessions, sets, catalog] = await Promise.all([getSessions(), getSetHistory(undefined, undefined, true), getCatalog()]);
   const stamp = new Date().toISOString().slice(0, 10);
   const iso = (ms: number | null) => (ms == null ? null : new Date(ms).toISOString());
 
@@ -64,6 +64,8 @@ export async function GET(request: NextRequest) {
 
 function csvCell(value: unknown): string {
   if (value == null) return "";
-  const s = String(value);
+  let s = String(value);
+  // Spreadsheets run cells starting with these as formulas; a leading ' keeps them text.
+  if (typeof value === "string" && /^[=+\-@\t\r]/.test(s)) s = `'${s}`;
   return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
 }

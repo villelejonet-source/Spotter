@@ -3,6 +3,9 @@ import { resolve } from "node:path";
 import { describe, expect, it } from "vitest";
 import {
   activatePlanRows,
+  CHANGED_ELSEWHERE,
+  planConflict,
+  planVersions,
   bodyWeightPayload,
   customExercisePayload,
   newCustomExerciseId,
@@ -221,5 +224,49 @@ describe("planDraftSchema", () => {
     expect(planDraftSchema.safeParse(d).success).toBe(false);
     expect(planDraftSchema.safeParse({ ...draft(), sync_id: "nope" }).success).toBe(false);
     expect(planDraftSchema.safeParse(draft()).success).toBe(true);
+  });
+});
+
+describe("planConflict", () => {
+  it("allows saving over the version the editor loaded", () => {
+    const d = draft();
+    const current = stored(d, 1000);
+    expect(planConflict(current, { ...d, name: "Renamed" }, planVersions(current), new Set())).toBeNull();
+  });
+
+  it("refuses when the phone changed a row since loading", () => {
+    const d = draft();
+    const loaded = stored(d, 1000);
+    const now = stored(d, 1000);
+    now.days[0].exercises[0].updated_at = 2000; // edited on the phone
+    expect(planConflict(now, { ...d, name: "Renamed" }, planVersions(loaded), new Set())).toBe(CHANGED_ELSEWHERE);
+  });
+
+  it("refuses to bring back a row the phone deleted", () => {
+    const d = draft();
+    const loaded = stored(d, 1000);
+    const now = stored({ ...d, days: [d.days[0]] }, 1000); // phone removed the second day
+    expect(planConflict(now, d, planVersions(loaded), new Set())).toBe(CHANGED_ELSEWHERE);
+  });
+
+  it("refuses to remove a row the phone changed", () => {
+    const d = draft();
+    const loaded = stored(d, 1000);
+    const now = stored(d, 1000);
+    now.days[1].updated_at = 2000;
+    expect(planConflict(now, { ...d, days: [d.days[0]] }, planVersions(loaded), new Set())).toBe(CHANGED_ELSEWHERE);
+  });
+
+  it("refuses new rows whose ids already exist elsewhere, and duplicates", () => {
+    const d = draft();
+    const foreign = newSyncId();
+    const withForeign: PlanDraft = { ...d, days: [...d.days, { sync_id: foreign, name: "Stolen", exercises: [] }] };
+    expect(planConflict(null, withForeign, {}, new Set([foreign]))).toMatch(/belongs elsewhere/);
+    const dup: PlanDraft = { ...d, days: [d.days[0], d.days[0]] };
+    expect(planConflict(null, dup, {}, new Set())).toMatch(/duplicated/);
+  });
+
+  it("allows a brand-new plan", () => {
+    expect(planConflict(null, draft(), {}, new Set())).toBeNull();
   });
 });

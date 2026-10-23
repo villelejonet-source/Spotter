@@ -100,7 +100,7 @@ class AccountService @Inject constructor(private val provider: SupabaseProvider)
     private fun requireClient() = provider.client ?: error("Cloud sync isn't configured in this build")
 }
 
-/** [SyncRemote] over the `sync_rows` table and `push_rows` function (see supabase/001_sync.sql). */
+/** [SyncRemote] over the `sync_rows` table and `push_rows` function (see supabase/migrations/20261004000000_sync.sql). */
 @Singleton
 class SupabaseSyncRemote @Inject constructor(private val provider: SupabaseProvider) : SyncRemote {
     private val client get() = provider.client ?: error("Cloud sync isn't configured in this build")

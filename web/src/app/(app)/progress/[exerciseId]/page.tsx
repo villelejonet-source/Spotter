@@ -2,7 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { LineChartView } from "@/components/charts";
 import { Badge, Card, CardTitle, PageHeader, Stat } from "@/components/ui";
-import { getCatalog, getPersonalRecords, getSessions, getSetHistory, getUnit } from "@/lib/data";
+import { getCatalog, getPersonalRecords, getSetHistory, getUnit } from "@/lib/data";
 import { formatDayMonth, formatFullDate } from "@/lib/dates";
 import { enumLabel, formatVolume, formatWeight, PR_LABELS, TIMED_EXERCISE_IDS, toUnit } from "@/lib/model";
 import { exerciseProgress } from "@/lib/stats";
@@ -10,18 +10,16 @@ import { exerciseProgress } from "@/lib/stats";
 export default async function ExerciseProgressPage({ params }: { params: Promise<{ exerciseId: string }> }) {
   const { exerciseId } = await params;
   const id = decodeURIComponent(exerciseId);
-  const [sets, sessions, records, catalog, unit] = await Promise.all([
-    getSetHistory(),
-    getSessions(),
+  const [mine, records, catalog, unit] = await Promise.all([
+    getSetHistory(id),
     getPersonalRecords(),
     getCatalog(),
     getUnit(),
   ]);
   const exercise = catalog.get(id);
-  const mine = sets.filter((s) => s.exercise_id === id);
   if (!exercise && !mine.length) notFound();
 
-  const sessionDates = new Map(sessions.filter((s) => s.ended_at != null).map((s) => [s.sync_id, s.started_at]));
+  const sessionDates = new Map(mine.map((s) => [s.session_id, s.session_started_at]));
   const points = exerciseProgress(mine, id, sessionDates);
   const timed = TIMED_EXERCISE_IDS.has(id);
   const loaded = points.some((p) => p.e1rmKg != null);
@@ -132,9 +130,12 @@ export default async function ExerciseProgressPage({ params }: { params: Promise
         <Card className="mt-4">
           <CardTitle>How to</CardTitle>
           <ul className="list-disc space-y-1 pl-5 text-sm">
-            {exercise.instructions.split("\n").map((line) => (
-              <li key={line}>{line}</li>
-            ))}
+            {exercise.instructions
+              .split("\n")
+              .filter((line) => line.trim())
+              .map((line, i) => (
+                <li key={i}>{line}</li>
+              ))}
           </ul>
         </Card>
       )}

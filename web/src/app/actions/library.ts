@@ -2,11 +2,13 @@
 
 import { getCatalog } from "@/lib/data";
 import { push } from "@/lib/push";
+import { requireUser } from "@/lib/supabase/server";
 import { customExercisePayload, customExerciseSchema, newCustomExerciseId, type CustomExerciseDraft } from "@/lib/sync-writer";
 import type { ActionResult } from "./plans";
 
 /** Creates a custom exercise; it syncs to the phone like one made in the app. */
 export async function createCustomExercise(input: CustomExerciseDraft): Promise<ActionResult & { id?: string }> {
+  await requireUser();
   const parsed = customExerciseSchema.safeParse(input);
   if (!parsed.success) return { ok: false, error: parsed.error.issues[0]?.message ?? "Invalid exercise" };
   const name = parsed.data.name.toLowerCase();

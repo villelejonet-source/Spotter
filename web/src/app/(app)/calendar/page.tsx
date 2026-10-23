@@ -40,11 +40,7 @@ export default async function CalendarPage({ searchParams }: { searchParams: Pro
   const gridStart = weekStart(first + 12 * 3_600_000); // noon avoids zone edge cases
   const cells = Math.ceil(((first - gridStart) / DAY_MS + daysInMonth) / 7) * 7;
 
-  const byDay = new Map<string, typeof sessions>();
-  for (const s of sessions) {
-    const key = dayKey(s.started_at);
-    byDay.set(key, [...(byDay.get(key) ?? []), s]);
-  }
+  const byDay = Map.groupBy(sessions, (s) => dayKey(s.started_at));
 
   const dayPosition = new Map(plans.flatMap((p) => p.days.map((d) => [d.sync_id, d.position] as const)));
   const colour = (planDayId: string | null) =>

@@ -4,7 +4,7 @@ import { activatePlan, duplicatePlan } from "@/app/actions/plans";
 import { PlanEditor } from "@/components/plan-editor";
 import { Badge, Button, PageHeader } from "@/components/ui";
 import { getPlans } from "@/lib/data";
-import type { PlanDraft } from "@/lib/sync-writer";
+import { planVersions, type PlanDraft } from "@/lib/sync-writer";
 import { exerciseOptions } from "../options";
 import { DeletePlan } from "./delete-plan";
 
@@ -62,7 +62,7 @@ export default async function PlanPage({ params }: { params: Promise<{ id: strin
         />
       </div>
       {/* Keyed by the newest change in the plan, so edits synced from the phone reset the editor. */}
-      <PlanEditor key={version} initial={draft} exercises={exercises} unit={unit} isNew={false} />
+      <PlanEditor key={version} initial={draft} base={planVersions(plan)} exercises={exercises} unit={unit} isNew={false} />
     </>
   );
 }

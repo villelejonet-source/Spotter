@@ -2,23 +2,20 @@ import Link from "next/link";
 import { LineChartView } from "@/components/charts";
 import { Card, CardTitle, EmptyState, PageHeader } from "@/components/ui";
 import { exerciseName } from "@/lib/catalog";
-import { getBodyWeight, getCatalog, getSessions, getSetHistory, getUnit } from "@/lib/data";
+import { getBodyWeight, getCatalog, getSetHistory, getUnit } from "@/lib/data";
 import { formatDateValue, formatRelative } from "@/lib/dates";
 import { formatWeight, TIMED_EXERCISE_IDS, toUnit } from "@/lib/model";
 import { epochDayToMs, exerciseProgress } from "@/lib/stats";
 
 export default async function ProgressPage() {
-  const [sets, sessions, bodyWeight, catalog, unit] = await Promise.all([
+  const [sets, bodyWeight, catalog, unit] = await Promise.all([
     getSetHistory(),
-    getSessions(),
     getBodyWeight(),
     getCatalog(),
     getUnit(),
   ]);
-  const sessionDates = new Map(sessions.filter((s) => s.ended_at != null).map((s) => [s.sync_id, s.started_at]));
-
-  const byExercise = new Map<string, typeof sets>();
-  for (const s of sets) byExercise.set(s.exercise_id, [...(byExercise.get(s.exercise_id) ?? []), s]);
+  const sessionDates = new Map(sets.map((s) => [s.session_id, s.session_started_at]));
+  const byExercise = Map.groupBy(sets, (s) => s.exercise_id);
 
   const exercises = [...byExercise]
     .map(([id, list]) => {
@@ -26,7 +23,8 @@ export default async function ProgressPage() {
       const last = points.at(-1);
       const best = Math.max(0, ...points.map((p) => p.e1rmKg ?? 0));
       const first = points.find((p) => p.e1rmKg != null)?.e1rmKg;
-      return { id, name: exerciseName(catalog, id), sessions: points.length, last, best, change: first && last?.e1rmKg ? last.e1rmKg - first : null };
+      const longestHold = Math.max(0, ...points.map((p) => p.bestReps));
+      return { id, name: exerciseName(catalog, id), sessions: points.length, last, best, longestHold, change: first && last?.e1rmKg ? last.e1rmKg - first : null };
     })
     .filter((e) => e.sessions > 0)
     .sort((a, b) => (b.last?.date ?? 0) - (a.last?.date ?? 0));
@@ -73,7 +71,7 @@ export default async function ProgressPage() {
                 </td>
                 <td className="hidden px-3 py-2.5 text-muted sm:table-cell">{e.last ? formatRelative(e.last.date) : "–"}</td>
                 <td className="px-3 py-2.5 text-right">
-                  {TIMED_EXERCISE_IDS.has(e.id) ? `${e.last?.bestReps ?? 0} s` : e.best ? formatWeight(e.best, unit) : "BW"}
+                  {TIMED_EXERCISE_IDS.has(e.id) ? `${e.longestHold} s` : e.best ? formatWeight(e.best, unit) : "BW"}
                 </td>
                 <td className="hidden px-3 py-2.5 text-right sm:table-cell">
                   {e.change != null && Math.abs(e.change) >= 0.05 ? (

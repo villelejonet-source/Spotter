@@ -18,7 +18,7 @@ import {
   toUnit,
   type WeightUnit,
 } from "@/lib/model";
-import { newSyncId, type DayDraft, type ExerciseDraft, type PlanDraft } from "@/lib/sync-writer";
+import { newSyncId, type DayDraft, type ExerciseDraft, type PlanDraft, type PlanVersions } from "@/lib/sync-writer";
 import { Badge, Button, Card, inputClass } from "./ui";
 
 export interface ExerciseOption {
@@ -67,11 +67,14 @@ export function newPlanDraft(): PlanDraft {
 
 export function PlanEditor({
   initial,
+  base = {},
   exercises,
   unit,
   isNew,
 }: {
   initial: PlanDraft;
+  /** Versions of the rows as loaded, so the server can refuse to overwrite newer edits. */
+  base?: PlanVersions;
   exercises: ExerciseOption[];
   unit: WeightUnit;
   isNew: boolean;
@@ -102,14 +105,14 @@ export function PlanEditor({
   function save() {
     setError(null);
     start(async () => {
-      const result = await savePlan(plan);
+      const result = await savePlan(plan, base);
       if (!result.ok) {
         setError(result.error);
         return;
       }
       setSaved(JSON.stringify(plan));
+      // The save revalidates every page, so an existing plan's page re-renders by itself.
       if (isNew) router.replace(`/plans/${plan.sync_id}`);
-      else router.refresh();
     });
   }
 

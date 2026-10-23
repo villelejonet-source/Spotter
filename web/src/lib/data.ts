@@ -16,24 +16,33 @@ import type {
 import { createClient } from "./supabase/server";
 
 type Client = Awaited<ReturnType<typeof createClient>>;
+type Query = ReturnType<ReturnType<Client["from"]>["select"]>;
 
 const PAGE = 1000;
 
-/** Every row of a view, paging past PostgREST's row limit. RLS limits it to the user. */
+/**
+ * Every matching row of a view, paging past PostgREST's row limit by key (each page
+ * continues after the last key, so deep pages stay as cheap as the first). RLS limits it
+ * to the signed-in user.
+ */
 async function selectAll<T>(
   client: Client,
   view: string,
-  build?: (q: ReturnType<ReturnType<Client["from"]>["select"]>) => typeof q,
-  key = "sync_id",
+  { filter, key = "sync_id", columns = "*" }: { filter?: (q: Query) => Query; key?: string; columns?: string } = {},
 ): Promise<T[]> {
   const rows: T[] = [];
-  for (let from = 0; ; from += PAGE) {
-    let q = client.from(view).select("*");
-    if (build) q = build(q);
-    const { data, error } = await q.order(key).range(from, from + PAGE - 1);
+  let after: string | null = null;
+  for (;;) {
+    // Typed as "*": the views aren't in generated types, so every column list returns loose rows anyway.
+    let q = client.from(view).select(columns as "*");
+    if (filter) q = filter(q);
+    if (after != null) q = q.gt(key, after);
+    const { data, error } = await q.order(key).limit(PAGE);
     if (error) throw new Error(`${view}: ${error.message}`);
-    rows.push(...(data as T[]));
-    if (data.length < PAGE) return rows;
+    const page = data as unknown as (T & Record<string, unknown>)[];
+    rows.push(...page);
+    if (page.length < PAGE) return rows;
+    after = String(page[page.length - 1][key]);
   }
 }
 
@@ -50,7 +59,7 @@ export async function getUnit(): Promise<WeightUnit> {
 
 export const getCatalog = cache(async () => {
   const client = await createClient();
-  return buildCatalog(await selectAll<CustomExerciseRow>(client, "v_custom_exercise", undefined, "id"));
+  return buildCatalog(await selectAll<CustomExerciseRow>(client, "v_custom_exercise", { key: "id" }));
 });
 
 /** All sessions, newest first. */
@@ -62,13 +71,13 @@ export const getSessions = cache(async (): Promise<SessionSummaryRow[]> => {
 
 export async function getSessionDetail(syncId: string) {
   const client = await createClient();
-  const { data: session, error } = await client.from("v_session_summary").select("*").eq("sync_id", syncId).maybeSingle();
+  const [{ data: session, error }, exercises, sets] = await Promise.all([
+    client.from("v_session_summary").select("*").eq("sync_id", syncId).maybeSingle(),
+    selectAll<SessionExerciseRow>(client, "v_session_exercise", { filter: (q) => q.eq("session_id", syncId) }),
+    selectAll<SetEntryRow>(client, "v_set_history", { filter: (q) => q.eq("session_id", syncId) }),
+  ]);
   if (error) throw new Error(error.message);
   if (!session) return null;
-  const exercises = await selectAll<SessionExerciseRow>(client, "v_session_exercise", (q) => q.eq("session_id", syncId));
-  const sets = exercises.length
-    ? await selectAll<SetEntryRow>(client, "v_set_entry", (q) => q.in("session_exercise_id", exercises.map((e) => e.sync_id)))
-    : [];
   return {
     session: session as SessionSummaryRow,
     exercises: exercises
@@ -80,20 +89,45 @@ export async function getSessionDetail(syncId: string) {
   };
 }
 
-/** Every logged set with its exercise and session, for progress charts. */
-export const getSetHistory = cache(async () => {
+/** A logged set with its exercise and workout (v_set_history). */
+export interface SetWithExercise extends SetEntryRow {
+  exercise_id: string;
+  session_id: string;
+  session_started_at: number;
+  session_finished: boolean;
+}
+
+/**
+ * Logged sets from finished workouts (or running ones too, for the export), filtered on
+ * the server: by exercise, and/or workouts started at or after [since] (epoch ms). With
+ * no filter it's every set, which only the progress overview and the export need.
+ */
+export const getSetHistory = cache(async (exerciseId?: string, since?: number, includeRunning = false): Promise<SetWithExercise[]> => {
   const client = await createClient();
-  const [exercises, sets] = await Promise.all([
-    selectAll<SessionExerciseRow>(client, "v_session_exercise"),
-    selectAll<SetEntryRow>(client, "v_set_entry"),
-  ]);
-  const byId = new Map(exercises.map((e) => [e.sync_id, e]));
-  return sets.flatMap((s) => {
-    const e = byId.get(s.session_exercise_id);
-    return e ? [{ ...s, exercise_id: e.exercise_id, session_id: e.session_id }] : [];
+  return selectAll<SetWithExercise>(client, "v_set_history", {
+    filter: (q) => {
+      let f = includeRunning ? q : q.eq("session_finished", true);
+      if (exerciseId) f = f.eq("exercise_id", exerciseId);
+      if (since != null) f = f.gte("session_started_at", since);
+      return f;
+    },
   });
 });
-export type SetWithExercise = Awaited<ReturnType<typeof getSetHistory>>[number];
+
+/** Distinct workouts each exercise was done in, for the exercise library. */
+export const getExerciseUsage = cache(async (): Promise<Map<string, number>> => {
+  const client = await createClient();
+  const rows = await selectAll<{ sync_id: string; exercise_id: string; session_id: string }>(client, "v_session_exercise", {
+    columns: "sync_id,exercise_id,session_id",
+  });
+  const sessions = new Map<string, Set<string>>();
+  for (const r of rows) {
+    const set = sessions.get(r.exercise_id) ?? new Set<string>();
+    set.add(r.session_id);
+    sessions.set(r.exercise_id, set);
+  }
+  return new Map([...sessions].map(([id, s]) => [id, s.size]));
+});
 
 export const getPersonalRecords = cache(async (): Promise<PersonalRecordRow[]> => {
   const client = await createClient();
@@ -107,6 +141,19 @@ export const getBodyWeight = cache(async (): Promise<BodyWeightRow[]> => {
   return rows.sort((a, b) => a.epoch_day - b.epoch_day);
 });
 
+/**
+ * Every plan-related sync id the user has ever had, deleted ones included, so the editor
+ * can't reuse an id that belongs to another plan or a deleted row.
+ */
+export async function getPlanSyncIds(): Promise<Set<string>> {
+  const client = await createClient();
+  const rows = await selectAll<{ sync_id: string }>(client, "sync_rows", {
+    columns: "sync_id",
+    filter: (q) => q.in("table_name", ["plan", "plan_day", "plan_exercise"]),
+  });
+  return new Set(rows.map((r) => r.sync_id));
+}
+
 export interface PlanTree extends PlanRow {
   days: (PlanDayRow & { exercises: PlanExerciseRow[] })[];
 }
@@ -119,16 +166,14 @@ export const getPlans = cache(async (): Promise<PlanTree[]> => {
     selectAll<PlanDayRow>(client, "v_plan_day"),
     selectAll<PlanExerciseRow>(client, "v_plan_exercise"),
   ]);
+  const exercisesByDay = Map.groupBy(exercises, (e) => e.plan_day_id);
+  const daysByPlan = Map.groupBy(days, (d) => d.plan_id);
   return plans
     .map((p) => ({
       ...p,
-      days: days
-        .filter((d) => d.plan_id === p.sync_id)
+      days: (daysByPlan.get(p.sync_id) ?? [])
         .sort((a, b) => a.position - b.position)
-        .map((d) => ({
-          ...d,
-          exercises: exercises.filter((e) => e.plan_day_id === d.sync_id).sort((a, b) => a.position - b.position),
-        })),
+        .map((d) => ({ ...d, exercises: (exercisesByDay.get(d.sync_id) ?? []).sort((a, b) => a.position - b.position) })),
     }))
     .sort((a, b) => Number(b.is_active) - Number(a.is_active) || b.created_at - a.created_at);
 });

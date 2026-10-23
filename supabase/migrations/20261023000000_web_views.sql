@@ -1,6 +1,6 @@
 -- Spotter web: typed read views over sync_rows.
 -- Run once in the Supabase dashboard (SQL Editor → New query → paste → Run), after
--- 001_sync.sql. Safe to re-run.
+-- the sync migration. Safe to re-run.
 --
 -- Each view unpacks one synced table's JSON payload into typed columns. The views run
 -- with the caller's rights (security_invoker), so the RLS on sync_rows still decides

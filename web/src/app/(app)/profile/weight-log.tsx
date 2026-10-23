@@ -1,21 +1,20 @@
 "use client";
 
-import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import { deleteBodyWeight, logBodyWeight } from "@/app/actions/profile";
 import { Button, inputClass } from "@/components/ui";
 import { fromUnit, toUnit, type BodyWeightRow, type WeightUnit } from "@/lib/model";
+import { dayKey } from "@/lib/stats";
 
 const DAY_MS = 86_400_000;
 
+/** Today in the display time zone, so server and browser agree (and so does the app's calendar). */
 function todayIso(): string {
-  const d = new Date();
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+  return dayKey(Date.now());
 }
 
 /** Body weight entries are per calendar day (epoch days), newest first. */
 export function WeightLog({ entries, unit }: { entries: BodyWeightRow[]; unit: WeightUnit }) {
-  const router = useRouter();
   const [date, setDate] = useState(todayIso);
   const [weight, setWeight] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -29,10 +28,7 @@ export function WeightLog({ entries, unit }: { entries: BodyWeightRow[]; unit: W
     start(async () => {
       const result = await logBodyWeight(epochDay, fromUnit(Number(weight), unit));
       if (!result.ok) setError(result.error);
-      else {
-        setWeight("");
-        router.refresh();
-      }
+      else setWeight("");
     });
   }
 
@@ -63,7 +59,7 @@ export function WeightLog({ entries, unit }: { entries: BodyWeightRow[]; unit: W
                   className="text-muted hover:text-error"
                   title="Delete entry"
                   disabled={pending}
-                  onClick={() => start(async () => { await deleteBodyWeight(e.sync_id); router.refresh(); })}
+                  onClick={() => start(async () => void (await deleteBodyWeight(e.sync_id)))}
                 >
                   ✕
                 </button>

@@ -70,7 +70,7 @@ export function splitEnumList(value: string | null | undefined): string[] {
   return value ? value.split(",").filter(Boolean) : [];
 }
 
-// ---- Rows as returned by the views in supabase/002_web_views.sql ----
+// ---- Rows as returned by the views in supabase/migrations/20261023000000_web_views.sql ----
 
 export interface ProfileRow {
   sync_id: string;

@@ -6,8 +6,8 @@ Vercel, Supabase for auth and data.
 
 ## How it gets data
 
-The app syncs every Room row into one table, `sync_rows`, as JSON (`supabase/001_sync.sql`).
-The web reads it through typed views (`supabase/002_web_views.sql`), which run with the
+The app syncs every Room row into one table, `sync_rows`, as JSON (`supabase/migrations/20261004000000_sync.sql`).
+The web reads it through typed views (`supabase/migrations/20261023000000_web_views.sql`), which run with the
 signed-in user's rights, so row-level security still limits everything to their own rows.
 
 Plan edits are written back with the same `push_rows` function the app uses
@@ -21,7 +21,8 @@ The seeded exercise catalog isn't synced; `scripts/copy-catalog.mjs` copies
 
 ## Setup
 
-1. Run `supabase/002_web_views.sql` in the Supabase SQL editor (after `001_sync.sql`).
+1. Apply every file in `supabase/migrations/` in order: `supabase db push` with the Supabase CLI,
+   or paste each into the SQL editor. They're all safe to re-run.
 2. In Supabase → Authentication → URL Configuration, add `http://localhost:3000/auth/callback`
    and the deployed URL's `/auth/callback` to the redirect URLs.
 3. `cp .env.example .env.local` and fill in the publishable key (same as `supabase.publishableKey`

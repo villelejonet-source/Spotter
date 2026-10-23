@@ -16,11 +16,7 @@ export default async function HistoryPage() {
     );
   }
 
-  const months = new Map<string, typeof sessions>();
-  for (const s of sessions) {
-    const key = formatMonthYear(s.started_at);
-    months.set(key, [...(months.get(key) ?? []), s]);
-  }
+  const months = Map.groupBy(sessions, (s) => formatMonthYear(s.started_at));
 
   return (
     <>

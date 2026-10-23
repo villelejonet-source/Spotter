@@ -13,10 +13,11 @@ const WEEK_MS = 7 * DAY_MS;
 const HEATMAP_WEEKS = 53;
 
 export default async function InsightsPage() {
+  const now = Date.now();
   const [profile, sessions, sets, records, catalog] = await Promise.all([
     getProfile(),
     getSessions(),
-    getSetHistory(),
+    getSetHistory(undefined, now - 4 * WEEK_MS),
     getPersonalRecords(),
     getCatalog(),
   ]);
@@ -31,10 +32,8 @@ export default async function InsightsPage() {
   }
 
   const unit = profile?.units ?? "KG";
-  const now = Date.now();
-  const startedAt = new Map(done.map((s) => [s.sync_id, s.started_at]));
   const muscles = (id: string) => catalog.get(id);
-  const inWindow = (from: number) => sets.filter((s) => (startedAt.get(s.session_id) ?? 0) >= from);
+  const inWindow = (from: number) => sets.filter((s) => s.session_started_at >= from);
 
   // Same window as the app's Progress tab: the last 7 days.
   const week = muscleVolume(inWindow(now - WEEK_MS), muscles);

@@ -118,6 +118,48 @@ function sameJson(a: unknown, b: unknown): boolean {
   return JSON.stringify(a) === JSON.stringify(b);
 }
 
+/** updated_at of every row of a plan as the editor loaded it, by sync id. */
+export type PlanVersions = Record<string, number>;
+
+export function planVersions(plan: StoredPlan): PlanVersions {
+  const versions: PlanVersions = { [plan.sync_id]: plan.updated_at };
+  for (const d of plan.days) {
+    versions[d.sync_id] = d.updated_at;
+    for (const e of d.exercises) versions[e.sync_id] = e.updated_at;
+  }
+  return versions;
+}
+
+export const CHANGED_ELSEWHERE = "This plan changed on another device since you opened it. Reload to get the latest version, then make your changes again.";
+
+/**
+ * Why [draft] can't be saved over [current], or null if it can. [base] is what the editor
+ * loaded; [knownIds] is every plan-related id the user has, deleted ones included.
+ * - A row changed or deleted elsewhere since loading would be overwritten or brought back.
+ * - A "new" id that already exists (another plan's row, a deleted row) would be hijacked.
+ * - A repeated id would make the batch fail.
+ */
+export function planConflict(current: StoredPlan | null, draft: PlanDraft, base: PlanVersions, knownIds: Set<string>): string | null {
+  const ids = [draft.sync_id, ...draft.days.flatMap((d) => [d.sync_id, ...d.exercises.map((e) => e.sync_id)])];
+  if (new Set(ids).size !== ids.length) return "The plan contains a duplicated day or exercise. Reload and try again.";
+
+  const now = current ? planVersions(current) : {};
+  for (const id of ids) {
+    if (id in now) {
+      if (!(id in base) || now[id] > base[id]) return CHANGED_ELSEWHERE;
+    } else if (id in base) {
+      return CHANGED_ELSEWHERE; // deleted elsewhere
+    } else if (knownIds.has(id)) {
+      return "The plan refers to a day or exercise that belongs elsewhere. Reload and try again.";
+    }
+  }
+  // Rows the user removed in the editor must not have changed since loading either.
+  for (const id of Object.keys(base)) {
+    if (!ids.includes(id) && id in now && now[id] > base[id]) return CHANGED_ELSEWHERE;
+  }
+  return null;
+}
+
 /**
  * The rows that turn [before] into [after]: new rows, changed rows, and tombstones for
  * days and exercises that were removed. Unchanged rows aren't sent, and kept rows keep
@@ -270,9 +312,9 @@ export const PROFILE_SYNC_ID = "user-profile";
 
 export const profileSchema = z.object({
   sex: z.enum(SEXES),
-  height_cm: z.number().min(100).max(250),
+  height_cm: z.number().min(100, "Enter a height between 100 and 250 cm").max(250, "Enter a height between 100 and 250 cm"),
   birth_date_epoch_day: z.number().int().min(-25_000).max(20_000),
-  body_weight_kg: z.number().min(25).max(300),
+  body_weight_kg: z.number().min(25, "Enter a realistic body weight").max(300, "Enter a realistic body weight"),
   units: z.enum(["KG", "LB"]),
   experience: z.enum(EXPERIENCE_LEVELS),
   goal: z.enum(GOALS),
@@ -325,7 +367,7 @@ export function profilePayload(p: ProfileDraft) {
 
 export const bodyWeightSchema = z.object({
   epoch_day: z.number().int().min(0).max(40_000),
-  weight_kg: z.number().min(25).max(300),
+  weight_kg: z.number().min(25, "Enter a realistic body weight").max(300, "Enter a realistic body weight"),
 });
 
 export function bodyWeightPayload(epochDay: number, weightKg: number) {

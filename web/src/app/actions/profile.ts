@@ -2,6 +2,7 @@
 
 import { getBodyWeight, getProfile } from "@/lib/data";
 import { push } from "@/lib/push";
+import { requireUser } from "@/lib/supabase/server";
 import {
   bodyWeightPayload,
   bodyWeightSchema,
@@ -16,12 +17,20 @@ import {
 } from "@/lib/sync-writer";
 import type { ActionResult } from "./plans";
 
-/** Saves the training profile. Only an existing profile is edited; onboarding stays in the app. */
-export async function updateProfile(input: ProfileDraft): Promise<ActionResult> {
+/**
+ * Saves the training profile. Only an existing profile is edited; onboarding stays in the
+ * app. [baseUpdatedAt] is the version the form loaded, so a change made on the phone in
+ * the meantime isn't overwritten.
+ */
+export async function updateProfile(input: ProfileDraft, baseUpdatedAt: number): Promise<ActionResult> {
+  await requireUser();
   const parsed = profileSchema.safeParse(input);
   if (!parsed.success) return { ok: false, error: parsed.error.issues[0]?.message ?? "Invalid profile" };
   const current = await getProfile();
   if (!current) return { ok: false, error: "Set up your profile in the app first" };
+  if (current.updated_at > baseUpdatedAt) {
+    return { ok: false, error: "Your profile changed on another device since you opened this page. Reload to get the latest version." };
+  }
   try {
     await push([profileRow(parsed.data, current.updated_at)]);
   } catch (e) {
@@ -39,6 +48,7 @@ function profileRow(p: ProfileDraft, previous: number): SyncRowInput {
  * profile's body weight to the latest entry (BodyWeightRepository.log).
  */
 export async function logBodyWeight(epochDay: number, weightKg: number): Promise<ActionResult> {
+  await requireUser();
   const parsed = bodyWeightSchema.safeParse({ epoch_day: epochDay, weight_kg: weightKg });
   if (!parsed.success) return { ok: false, error: parsed.error.issues[0]?.message ?? "Invalid weight" };
   const [entries, profile] = await Promise.all([getBodyWeight(), getProfile()]);
@@ -64,6 +74,7 @@ export async function logBodyWeight(epochDay: number, weightKg: number): Promise
 }
 
 export async function deleteBodyWeight(syncId: string): Promise<ActionResult> {
+  await requireUser();
   const entry = (await getBodyWeight()).find((e) => e.sync_id === syncId);
   if (!entry) return { ok: true };
   const at = stamp(Date.now(), entry.updated_at);

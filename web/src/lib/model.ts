@@ -86,6 +86,7 @@ export interface ProfileRow {
   equipment: string;
   focus_areas: string;
   limitations: string;
+  updated_at: number;
 }
 
 export interface PlanRow {
@@ -176,6 +177,7 @@ export interface BodyWeightRow {
   sync_id: string;
   epoch_day: number;
   weight_kg: number;
+  updated_at: number;
 }
 
 // ---- Formatting ----
@@ -219,4 +221,51 @@ export function formatSet(set: Pick<SetEntryRow, "weight_kg" | "reps">, exercise
 /** Epley estimated one-rep max; a single is its own 1RM (core/model Progress.kt). */
 export function epley(weightKg: number, reps: number): number {
   return reps <= 1 ? weightKg : weightKg * (1 + reps / 30);
+}
+
+// ---- Profile and exercise enums (core/model UserProfile.kt, BodyArea.kt, Exercise.kt) ----
+
+export const SEXES = ["FEMALE", "MALE"] as const;
+export const EXPERIENCE_LEVELS = ["NEW", "INTERMEDIATE", "ADVANCED"] as const;
+export const LIMITATIONS = ["SHOULDER", "KNEE", "LOWER_BACK", "WRIST"] as const;
+export const BODY_AREAS = ["CHEST", "BACK", "SHOULDERS", "ARMS", "LEGS", "GLUTES", "CORE"] as const;
+export const DAYS_PER_WEEK = [2, 3, 4, 5, 6] as const;
+export const SESSION_LENGTHS = [30, 45, 60, 75] as const;
+
+export const MOVEMENT_PATTERNS = [
+  "HORIZONTAL_PUSH", "VERTICAL_PUSH", "HORIZONTAL_PULL", "VERTICAL_PULL",
+  "SQUAT", "HINGE", "LUNGE", "HIP_THRUST", "CARRY",
+  "CHEST_FLY", "LATERAL_RAISE", "REAR_DELT_FLY", "SHRUG",
+  "ELBOW_FLEXION", "ELBOW_EXTENSION",
+  "KNEE_EXTENSION", "KNEE_FLEXION", "HIP_ABDUCTION", "HIP_ADDUCTION", "CALF_RAISE",
+  "CORE_ANTI_EXTENSION", "CORE_FLEXION", "CORE_ROTATION",
+] as const;
+
+/** Patterns the app treats as compound when creating a custom exercise (ExerciseRepository). */
+export const COMPOUND_PATTERNS = new Set<string>([
+  "HORIZONTAL_PUSH", "VERTICAL_PUSH", "HORIZONTAL_PULL", "VERTICAL_PULL",
+  "SQUAT", "HINGE", "LUNGE", "HIP_THRUST", "CARRY",
+]);
+
+/** Display groups for weekly volume (core/model Progress.kt MuscleGroup). */
+export const MUSCLE_GROUPS: Record<string, readonly Muscle[]> = {
+  Chest: ["CHEST"],
+  Back: ["LATS", "UPPER_BACK", "TRAPS", "LOWER_BACK"],
+  Shoulders: ["FRONT_DELTS", "SIDE_DELTS", "REAR_DELTS"],
+  Biceps: ["BICEPS", "FOREARMS"],
+  Triceps: ["TRICEPS"],
+  Quads: ["QUADS"],
+  Hamstrings: ["HAMSTRINGS"],
+  Glutes: ["GLUTES", "ABDUCTORS", "ADDUCTORS"],
+  Calves: ["CALVES"],
+  Core: ["ABS", "OBLIQUES"],
+};
+
+export function muscleGroupOf(muscle: string): string | undefined {
+  return Object.keys(MUSCLE_GROUPS).find((g) => (MUSCLE_GROUPS[g] as readonly string[]).includes(muscle));
+}
+
+/** Weekly working sets per muscle group, by goal (core/engine MuscleBalance.target). */
+export function volumeTarget(goal: string | null | undefined): [number, number] {
+  return goal === "HYPERTROPHY" ? [10, 20] : [8, 12];
 }

@@ -1,8 +1,10 @@
 import { DeleteAccount } from "@/components/delete-account";
-import { Badge, Card, CardTitle, PageHeader } from "@/components/ui";
-import { getProfile } from "@/lib/data";
+import { buttonClass, Card, CardTitle, PageHeader } from "@/components/ui";
+import { getBodyWeight, getProfile } from "@/lib/data";
 import { requireUser } from "@/lib/supabase/server";
-import { enumLabel, formatWeight, GOAL_LABELS, splitEnumList } from "@/lib/model";
+import { profileDraftFrom } from "@/lib/sync-writer";
+import { ProfileForm } from "./profile-form";
+import { WeightLog } from "./weight-log";
 
 function Row({ label, children }: { label: string; children: React.ReactNode }) {
   return (
@@ -13,42 +15,21 @@ function Row({ label, children }: { label: string; children: React.ReactNode }) 
   );
 }
 
-function Chips({ value }: { value: string }) {
-  const items = splitEnumList(value);
-  if (!items.length) return <span className="text-muted">None</span>;
-  return (
-    <span className="flex flex-wrap justify-end gap-1">
-      {items.map((i) => (
-        <Badge key={i}>{enumLabel(i)}</Badge>
-      ))}
-    </span>
-  );
-}
-
 export default async function ProfilePage() {
   const { supabase } = await requireUser();
-  const [{ data: { user } }, profile] = await Promise.all([supabase.auth.getUser(), getProfile()]);
+  const [{ data: { user } }, profile, bodyWeight] = await Promise.all([supabase.auth.getUser(), getProfile(), getBodyWeight()]);
   if (!user) return null;
+  const unit = profile?.units ?? "KG";
 
   return (
     <>
-      <PageHeader title="Profile" subtitle="Edit your training profile in the app; it syncs here." />
-      <div className="grid gap-4 lg:grid-cols-2">
+      <PageHeader title="Profile" subtitle="Changes here sync to the app the next time it opens." />
+      <div className="grid gap-4 lg:grid-cols-[3fr_2fr]">
         <Card>
           <CardTitle>Training profile</CardTitle>
           {profile ? (
-            <dl className="divide-y divide-outline">
-              <Row label="Goal">{GOAL_LABELS[profile.goal] ?? enumLabel(profile.goal)}</Row>
-              <Row label="Experience">{enumLabel(profile.experience)}</Row>
-              <Row label="Days per week">{profile.days_per_week}</Row>
-              <Row label="Session length">{profile.session_length_minutes} min</Row>
-              <Row label="Body weight">{formatWeight(profile.body_weight_kg, profile.units)}</Row>
-              <Row label="Height">{Math.round(profile.height_cm)} cm</Row>
-              <Row label="Units">{profile.units.toLowerCase()}</Row>
-              <Row label="Focus areas"><Chips value={profile.focus_areas} /></Row>
-              <Row label="Limitations"><Chips value={profile.limitations} /></Row>
-              <Row label="Equipment"><Chips value={profile.equipment} /></Row>
-            </dl>
+            // Keyed so a profile synced from the phone replaces the form's state.
+            <ProfileForm key={profile.updated_at} initial={profileDraftFrom(profile)} />
           ) : (
             <p className="text-sm text-muted">No profile synced yet. Finish onboarding in the app with cloud backup on.</p>
           )}
@@ -56,15 +37,26 @@ export default async function ProfilePage() {
 
         <div className="space-y-4">
           <Card>
+            <CardTitle>Body weight</CardTitle>
+            <WeightLog entries={bodyWeight} unit={unit} />
+          </Card>
+          <Card>
+            <CardTitle>Your data</CardTitle>
+            <p className="mb-3 text-sm text-muted">Download everything Spotter has backed up for you.</p>
+            <div className="flex flex-wrap gap-2">
+              <a href="/export?format=json" className={buttonClass()}>Everything (JSON)</a>
+              <a href="/export?format=csv" className={buttonClass()}>Sets (CSV)</a>
+            </div>
+          </Card>
+          <Card>
             <CardTitle>Account</CardTitle>
             <dl className="divide-y divide-outline">
               <Row label="Email">{user.email}</Row>
               <Row label="Member since">{new Date(user.created_at).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" })}</Row>
             </dl>
-          </Card>
-          <Card>
-            <CardTitle>Delete account</CardTitle>
-            <DeleteAccount />
+            <div className="mt-4">
+              <DeleteAccount />
+            </div>
           </Card>
         </div>
       </div>

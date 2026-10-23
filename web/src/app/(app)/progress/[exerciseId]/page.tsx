@@ -63,28 +63,34 @@ export default async function ExerciseProgressPage({ params }: { params: Promise
         <Stat label="Records" value={prs.length} />
       </div>
 
-      <div className="mt-4 grid gap-4 lg:grid-cols-2">
-        {loaded && (
-          <Card>
-            <CardTitle>Estimated 1RM ({u})</CardTitle>
-            <LineChartView
-              unit={u}
-              data={points.map((p) => ({ label: formatDayMonth(p.date), value: p.e1rmKg != null ? Number(toUnit(p.e1rmKg, unit).toFixed(1)) : null }))}
-            />
-          </Card>
-        )}
-        {loaded ? (
-          <Card>
-            <CardTitle>Volume per session ({u})</CardTitle>
-            <LineChartView unit={u} data={points.map((p) => ({ label: formatDayMonth(p.date), value: Math.round(toUnit(p.volumeKg, unit)) }))} />
-          </Card>
-        ) : (
-          <Card>
-            <CardTitle>{timed ? "Best hold (s)" : "Best set (reps)"}</CardTitle>
-            <LineChartView unit={timed ? "s" : "reps"} data={points.map((p) => ({ label: formatDayMonth(p.date), value: p.bestReps }))} />
-          </Card>
-        )}
-      </div>
+      {!points.length && (
+        <Card className="mt-4 text-sm text-muted">Not logged yet. Add it to a plan, or log it in the app, and its progress shows here.</Card>
+      )}
+
+      {points.length > 0 && (
+        <div className="mt-4 grid gap-4 lg:grid-cols-2">
+          {loaded && (
+            <Card>
+              <CardTitle>Estimated 1RM ({u})</CardTitle>
+              <LineChartView
+                unit={u}
+                data={points.map((p) => ({ label: formatDayMonth(p.date), value: p.e1rmKg != null ? Number(toUnit(p.e1rmKg, unit).toFixed(1)) : null }))}
+              />
+            </Card>
+          )}
+          {loaded ? (
+            <Card>
+              <CardTitle>Volume per session ({u})</CardTitle>
+              <LineChartView unit={u} data={points.map((p) => ({ label: formatDayMonth(p.date), value: Math.round(toUnit(p.volumeKg, unit)) }))} />
+            </Card>
+          ) : (
+            <Card>
+              <CardTitle>{timed ? "Best hold (s)" : "Best set (reps)"}</CardTitle>
+              <LineChartView unit={timed ? "s" : "reps"} data={points.map((p) => ({ label: formatDayMonth(p.date), value: p.bestReps }))} />
+            </Card>
+          )}
+        </div>
+      )}
 
       <div className="mt-4 grid gap-4 lg:grid-cols-2">
         <Card>

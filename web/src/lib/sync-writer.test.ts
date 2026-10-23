@@ -3,6 +3,10 @@ import { resolve } from "node:path";
 import { describe, expect, it } from "vitest";
 import {
   activatePlanRows,
+  bodyWeightPayload,
+  customExercisePayload,
+  newCustomExerciseId,
+  profilePayload,
   deletePlanRows,
   diffPlan,
   newSyncId,
@@ -18,13 +22,13 @@ import {
 } from "./sync-writer";
 
 // The Room schema the phone runs; the newest exported version wins.
-function roomColumns(table: string): { name: string; notNull: boolean }[] {
+function roomColumns(table: string, keepsId = false): { name: string; notNull: boolean }[] {
   const dir = resolve(__dirname, "../../../core/data/schemas/com.viktorolsson.spotter.core.data.db.SpotterDatabase");
   const latest = Math.max(...readdirSync(dir).map((f) => parseInt(f)));
   const schema = JSON.parse(readFileSync(resolve(dir, `${latest}.json`), "utf8"));
   const entity = schema.database.entities.find((e: { tableName: string }) => e.tableName === table);
   return entity.fields
-    .filter((f: { columnName: string }) => !["id", "syncId", "updatedAt"].includes(f.columnName))
+    .filter((f: { columnName: string }) => !["syncId", "updatedAt", ...(keepsId ? [] : ["id"])].includes(f.columnName))
     .map((f: { columnName: string; notNull?: boolean }) => ({ name: f.columnName, notNull: !!f.notNull }));
 }
 
@@ -46,12 +50,58 @@ describe("payloads match the Room entities", () => {
     ["plan", planPayload({ name: "P", split_type: "FULL_BODY", goal: "STRENGTH", created_at: 1, is_active: true })],
     ["plan_day", planDayPayload(newSyncId(), 0, "Day A")],
     ["plan_exercise", planExercisePayload(newSyncId(), 0, exercise)],
+    [
+      "exercise",
+      customExercisePayload(newCustomExerciseId(), {
+        name: "Band pull-apart",
+        primary: ["REAR_DELTS"],
+        secondary: ["UPPER_BACK"],
+        pattern: "REAR_DELT_FLY",
+        equipment: ["RESISTANCE_BAND"],
+        unilateral: false,
+        instructions: null,
+      }),
+    ],
+    [
+      "user_profile",
+      profilePayload({
+        sex: "FEMALE",
+        height_cm: 170,
+        birth_date_epoch_day: 11000,
+        body_weight_kg: 65,
+        units: "KG",
+        experience: "NEW",
+        goal: "STRENGTH",
+        days_per_week: 3,
+        session_length_minutes: 45,
+        equipment: [],
+        focus_areas: [],
+        limitations: [],
+      }),
+    ],
+    ["body_weight_entry", bodyWeightPayload(20000, 70)],
   ])("%s", (table, payload) => {
-    const columns = roomColumns(table);
+    // Custom exercises and the profile keep their own id column (LocalSyncStore.keepsLocalId).
+    const columns = roomColumns(table, table === "exercise" || table === "user_profile");
     expect(Object.keys(payload).sort()).toEqual(columns.map((c) => c.name).sort());
     for (const c of columns.filter((c) => c.notNull)) {
       expect(payload[c.name as keyof typeof payload], c.name).not.toBeNull();
     }
+  });
+});
+
+describe("custom exercise payload", () => {
+  it("drops secondary muscles that are also primary and derives mechanics like the app", () => {
+    const p = customExercisePayload("custom-x", {
+      name: "Landmine press",
+      primary: ["FRONT_DELTS"],
+      secondary: ["FRONT_DELTS", "TRICEPS"],
+      pattern: "VERTICAL_PUSH",
+      equipment: ["LANDMINE", "BARBELL"],
+      unilateral: true,
+      instructions: "",
+    });
+    expect(p).toMatchObject({ secondaryMuscles: "TRICEPS", mechanics: "COMPOUND", equipment: "LANDMINE,BARBELL", unilateral: 1, instructions: null });
   });
 });
 

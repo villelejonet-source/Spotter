@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { dayKey, exerciseProgress, nextPlanDay, weekStart, weekStreak, weeklyTotals } from "./stats";
+import { dayKey, exerciseProgress, muscleVolume, workoutsPerDay, nextPlanDay, weekStart, weekStreak, weeklyTotals } from "./stats";
 
 // Thursday 2026-10-22, 14:00 in Stockholm.
 const NOW = Date.UTC(2026, 9, 22, 12);
@@ -77,5 +77,29 @@ describe("nextPlanDay", () => {
 
   it("follows the latest session and wraps around", () => {
     expect(nextPlanDay(days, [{ plan_day_id: "d1", started_at: 1 }, { plan_day_id: "d2", started_at: 2 }])?.sync_id).toBe("d1");
+  });
+});
+
+describe("muscleVolume", () => {
+  const muscles = (id: string) =>
+    ({ bench: { primary: ["CHEST"], secondary: ["FRONT_DELTS", "TRICEPS"] }, row: { primary: ["LATS", "UPPER_BACK"], secondary: ["BICEPS"] } })[id];
+  const set = (exercise_id: string, set_type: "WARMUP" | "WORKING" = "WORKING") => ({ exercise_id, session_id: "s", set_type, completed_at: 1 });
+
+  it("counts primary groups once and secondary-only groups half", () => {
+    const v = Object.fromEntries(muscleVolume([set("bench"), set("bench"), set("row"), set("bench", "WARMUP")], muscles).map((g) => [g.group, g.sets]));
+    expect(v.Chest).toBe(2);
+    expect(v.Triceps).toBe(1);
+    expect(v.Shoulders).toBe(1);
+    expect(v.Back).toBe(1); // lats and upper back are one group
+    expect(v.Biceps).toBe(0.5);
+    expect(v.Quads).toBe(0);
+  });
+});
+
+describe("workoutsPerDay", () => {
+  it("counts finished workouts by local day", () => {
+    const days = workoutsPerDay([session(day(2026, 10, 20)), session(day(2026, 10, 20)), { ...session(day(2026, 10, 21)), ended_at: null }]);
+    expect(days.get("2026-10-20")).toBe(2);
+    expect(days.has("2026-10-21")).toBe(false);
   });
 });

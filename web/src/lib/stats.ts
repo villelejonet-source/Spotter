@@ -1,5 +1,5 @@
 import { TIME_ZONE } from "./tz";
-import { epley, TIMED_EXERCISE_IDS, type SessionSummaryRow, type SetEntryRow } from "./model";
+import { epley, MUSCLE_GROUPS, muscleGroupOf, TIMED_EXERCISE_IDS, type SessionSummaryRow, type SetEntryRow } from "./model";
 
 const DAY_MS = 86_400_000;
 
@@ -158,4 +158,40 @@ export function nextPlanDay<D extends { sync_id: string; position: number }>(
   if (!last) return ordered[0];
   const i = ordered.findIndex((d) => d.sync_id === last.plan_day_id);
   return ordered[(i + 1) % ordered.length];
+}
+
+type MuscleSet = Pick<SetEntryRow, "set_type" | "completed_at"> & { exercise_id: string; session_id: string };
+
+export interface GroupVolume {
+  group: string;
+  /** Primary muscles count a full set, secondary-only groups half (core/engine MuscleBalance). */
+  sets: number;
+}
+
+/**
+ * Working sets per muscle group for the given sets. A set counts once for each group its
+ * primary muscles belong to, and half for groups hit only by secondary muscles.
+ */
+export function muscleVolume(sets: MuscleSet[], muscles: (exerciseId: string) => { primary: string[]; secondary: string[] } | undefined): GroupVolume[] {
+  const totals = new Map(Object.keys(MUSCLE_GROUPS).map((g) => [g, 0]));
+  for (const s of sets) {
+    if (s.completed_at == null || s.set_type === "WARMUP") continue;
+    const m = muscles(s.exercise_id);
+    if (!m) continue;
+    const primary = new Set(m.primary.map(muscleGroupOf).filter((g): g is string => !!g));
+    const secondary = new Set(m.secondary.map(muscleGroupOf).filter((g): g is string => !!g && !primary.has(g)));
+    primary.forEach((g) => totals.set(g, totals.get(g)! + 1));
+    secondary.forEach((g) => totals.set(g, totals.get(g)! + 0.5));
+  }
+  return [...totals].map(([group, sets]) => ({ group, sets }));
+}
+
+/** Finished workouts per calendar day (display time zone), keyed by [dayKey]. */
+export function workoutsPerDay(sessions: Session[]): Map<string, number> {
+  const days = new Map<string, number>();
+  for (const s of finished(sessions)) {
+    const key = dayKey(s.started_at);
+    days.set(key, (days.get(key) ?? 0) + 1);
+  }
+  return days;
 }

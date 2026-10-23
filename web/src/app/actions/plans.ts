@@ -1,29 +1,11 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { getCatalog, getPlans } from "@/lib/data";
-import { createClient } from "@/lib/supabase/server";
-import {
-  activatePlanRows,
-  copyPlan,
-  deletePlanRows,
-  diffPlan,
-  orderForPush,
-  planDraftSchema,
-  type PlanDraft,
-  type SyncRowInput,
-} from "@/lib/sync-writer";
+import { push } from "@/lib/push";
+import { activatePlanRows, copyPlan, deletePlanRows, diffPlan, planDraftSchema, type PlanDraft } from "@/lib/sync-writer";
 
-export type ActionResult = { ok: true } | { ok: false, error: string };
-
-async function push(rows: SyncRowInput[]) {
-  if (!rows.length) return;
-  const supabase = await createClient();
-  const { error } = await supabase.rpc("push_rows", { rows: orderForPush(rows) });
-  if (error) throw new Error(error.message);
-  revalidatePath("/", "layout");
-}
+export type ActionResult = { ok: true } | { ok: false; error: string };
 
 /** Creates or updates a plan from the editor. A user's first plan becomes the active one. */
 export async function savePlan(input: PlanDraft): Promise<ActionResult> {

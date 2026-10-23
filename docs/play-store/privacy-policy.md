@@ -1,6 +1,6 @@
 # Spotter privacy policy
 
-_Last updated: 5 October 2026_
+_Last updated: 23 October 2026_
 
 Spotter is a workout logging app. This policy explains what happens to your data.
 
@@ -17,6 +17,11 @@ syncs it between your phones. It's sent encrypted
 (HTTPS), and database rules ensure only your account can read or change your backup. Your
 email address is used only to sign you in; sign-in emails are sent through Gmail. If you
 never sign in, nothing leaves your phone.
+
+**Spotter on the web.** With the same account you can sign in on the Spotter website to see
+your backed-up training and edit your plans; plan changes sync back to your phone. The
+website is hosted by Vercel, which passes your backup between Supabase and your browser
+but doesn't store it. The website sets only the cookie that keeps you signed in.
 
 **What Spotter doesn't do.** No analytics, no advertising, no tracking, no selling or
 sharing of data with anyone. Spotter doesn't access your location, contacts, photos or sensors.

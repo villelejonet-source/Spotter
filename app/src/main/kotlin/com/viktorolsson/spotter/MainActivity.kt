@@ -51,6 +51,11 @@ class MainActivity : ComponentActivity() {
         }
     }
 
+    override fun onStart() {
+        super.onStart()
+        syncRepository.syncOnOpen()
+    }
+
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
         syncRepository.handleDeeplink(intent)

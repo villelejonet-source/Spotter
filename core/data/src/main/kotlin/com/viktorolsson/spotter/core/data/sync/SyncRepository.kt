@@ -60,13 +60,14 @@ class SyncRepository @Inject constructor(
     private val profiles: UserProfileRepository,
     private val scheduler: SyncScheduler,
     @param:ApplicationScope private val scope: CoroutineScope,
-    clock: Clock,
+    private val clock: Clock,
 ) {
     private val engine = SyncEngine(store, remote, cursors, clock)
     private val mutex = Mutex()
     private val running = MutableStateFlow(false)
     private val error = MutableStateFlow<SyncError?>(null)
     private val needsChoice = MutableStateFlow(false)
+    private var lastOpenSyncAt = 0L
 
     val status: Flow<SyncStatus> = combine(accounts.account, cursors.cursor, running, error, needsChoice) { account, cursor, running, error, choice ->
         SyncStatus(
@@ -133,6 +134,17 @@ class SyncRepository @Inject constructor(
         if (accounts.currentAccount() != null) scheduler.syncSoon()
     }
 
+    /**
+     * The app came to the foreground: pick up changes made elsewhere, such as a plan
+     * edited on the website. At most once a minute, so switching apps doesn't spam syncs.
+     */
+    fun syncOnOpen() {
+        val now = clock.millis()
+        if (now - lastOpenSyncAt < OPEN_SYNC_INTERVAL_MS) return
+        lastOpenSyncAt = now
+        requestSync()
+    }
+
     /** Signs out on this phone. Local data stays; the backup stays in the cloud. */
     suspend fun signOut() {
         accounts.signOut()
@@ -157,6 +169,8 @@ class SyncRepository @Inject constructor(
         }
     }
 }
+
+private const val OPEN_SYNC_INTERVAL_MS = 60_000L
 
 /** Background sync with WorkManager: every few hours, and soon after workouts. */
 @Singleton

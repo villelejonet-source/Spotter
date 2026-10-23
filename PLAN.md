@@ -200,6 +200,14 @@ Material 3 theme with light, dark and "follow system" settings, plus dynamic col
 
 **Privacy and safety:** no analytics. Health data stays on the device unless the user signs in to cloud backup (milestone 8), and then only in their own row-level-secured Supabase rows. Show a "consult a professional" note for limitations, and make no medical claims.
 
+## Platform roadmap (beyond the app)
+The app stays offline-first and free of ads. Around it, Spotter grows into a small platform:
+
+1. **Spotter Web (in progress, `web/`):** Next.js site on Vercel, same Supabase account as the app. Dashboard, history, calendar, per-exercise progress, profile, and a plan editor whose changes sync to the phone (rows written through `push_rows` exactly as the app writes them). Reads go through typed views (`supabase/002_web_views.sql`). The app syncs when it comes to the foreground so web edits show up quickly.
+2. **Scheduled sessions:** a synced `scheduled_session` table (date, plan day, notes; Room v7) so workouts can be planned on dates in the web calendar and show up on Today.
+3. **Personal trainers:** `profiles` (role, display name) and `trainer_links` (trainer, client, status, invite code). An extra RLS policy lets a trainer read a client's rows while the link is active; clients can revoke any time. Trainers send plan suggestions (a plan stored as JSON) that the client accepts, which writes normal plan rows. A trainer view on the web lists clients and their recent training.
+4. **Freemium (low priority):** logging, history, plans, sync and the basic dashboard stay free. Candidates for paid: advanced analytics, program templates, and a recurring trainer tier for coaching many clients. Entitlements in one table, fed by Google Play Billing and Stripe webhooks; app and web both read it.
+
 ## Milestones
 1. **Foundation (week 1):** project setup, modules, theme and dark mode, navigation shell, Room schema, seeded exercise library.
 2. **Logging core (weeks 2–3):** empty workout, exercise picker, set logging, auto-save, rest timer service, stopwatch, finish summary.

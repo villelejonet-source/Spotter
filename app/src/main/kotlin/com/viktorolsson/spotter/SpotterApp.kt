@@ -1,22 +1,17 @@
 package com.viktorolsson.spotter
 
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.consumeWindowInsets
-import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.rounded.KeyboardArrowUp
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Button
 import androidx.compose.material3.Icon
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -25,11 +20,9 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.produceState
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LocalLifecycleOwner
@@ -43,9 +36,9 @@ import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
-import com.viktorolsson.spotter.core.data.repository.ActiveSession
 import com.viktorolsson.spotter.core.data.sync.FirstSyncChoice
-import com.viktorolsson.spotter.core.ui.formatClock
+import com.viktorolsson.spotter.core.ui.component.WorkoutMiniBar
+import com.viktorolsson.spotter.core.ui.theme.Spacing
 import com.viktorolsson.spotter.feature.history.ExerciseHistoryRoute
 import com.viktorolsson.spotter.feature.history.WorkoutDetailRoute
 import com.viktorolsson.spotter.feature.history.exerciseHistoryScreen
@@ -88,19 +81,9 @@ fun SpotterApp(
 
     KeepWorkoutServiceRunning(activeSession != null)
 
-    val needsSyncChoice by syncChoiceViewModel.needsChoice.collectAsStateWithLifecycle()
-    if (needsSyncChoice) {
-        AlertDialog(
-            onDismissRequest = {},
-            title = { Text(stringResource(R.string.sync_choice_title)) },
-            text = { Text(stringResource(R.string.sync_choice_body)) },
-            confirmButton = {
-                TextButton(onClick = { syncChoiceViewModel.choose(FirstSyncChoice.USE_BACKUP) }) { Text(stringResource(R.string.sync_choice_backup)) }
-            },
-            dismissButton = {
-                TextButton(onClick = { syncChoiceViewModel.choose(FirstSyncChoice.MERGE) }) { Text(stringResource(R.string.sync_choice_merge)) }
-            },
-        )
+    val syncChoice by syncChoiceViewModel.uiState.collectAsStateWithLifecycle()
+    if (syncChoice.needsChoice) {
+        SyncChoiceDialog(email = syncChoice.email, onChoose = syncChoiceViewModel::choose)
     }
 
     val recoveringPassword by passwordRecoveryViewModel.recovering.collectAsStateWithLifecycle()
@@ -124,7 +107,13 @@ fun SpotterApp(
             if (onTab) {
                 Column {
                     activeSession?.let { session ->
-                        WorkoutMiniBar(session) { navController.navigate(SessionRoute(session.id)) }
+                        val elapsed by produceState(Duration.ZERO, session.startedAt) {
+                            while (true) {
+                                value = Duration.between(session.startedAt, Instant.now())
+                                delay(1000L - System.currentTimeMillis() % 1000L)
+                            }
+                        }
+                        WorkoutMiniBar(elapsed, onClick = { navController.navigate(SessionRoute(session.id)) })
                     }
                     NavigationBar {
                         TopLevelDestination.entries.forEach { destination ->
@@ -196,32 +185,32 @@ fun SpotterApp(
     }
 }
 
-/** "Workout in progress · 32:10" above the tabs; tap to jump back in. */
+/**
+ * The first sync found data both here and in the backup. It can only be answered, not
+ * dismissed: syncing (and so the two data sets) stays untouched until the user decides.
+ */
 @Composable
-private fun WorkoutMiniBar(session: ActiveSession, onClick: () -> Unit) {
-    val elapsed by produceState(Duration.ZERO, session.startedAt) {
-        while (true) {
-            value = Duration.between(session.startedAt, Instant.now())
-            delay(1000L - System.currentTimeMillis() % 1000L)
-        }
-    }
-    Surface(
-        color = MaterialTheme.colorScheme.primaryContainer,
-        modifier = Modifier.fillMaxWidth().clickable(onClickLabel = stringResource(R.string.open_workout), onClick = onClick),
-    ) {
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
-        ) {
-            Text(
-                stringResource(R.string.workout_in_progress) + " · " + formatClock(elapsed),
-                style = MaterialTheme.typography.titleSmall,
-                color = MaterialTheme.colorScheme.onPrimaryContainer,
-                modifier = Modifier.weight(1f),
-            )
-            Icon(Icons.Rounded.KeyboardArrowUp, contentDescription = null, tint = MaterialTheme.colorScheme.onPrimaryContainer)
-        }
-    }
+internal fun SyncChoiceDialog(email: String?, onChoose: (FirstSyncChoice) -> Unit) {
+    AlertDialog(
+        onDismissRequest = {},
+        title = { Text(stringResource(R.string.sync_choice_title)) },
+        text = {
+            Column(verticalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(Spacing.sm)) {
+                Text(if (email != null) stringResource(R.string.sync_choice_body_account, email) else stringResource(R.string.sync_choice_body))
+                Text(
+                    stringResource(R.string.sync_choice_note),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+        },
+        confirmButton = {
+            Button(onClick = { onChoose(FirstSyncChoice.USE_BACKUP) }) { Text(stringResource(R.string.sync_choice_backup)) }
+        },
+        dismissButton = {
+            TextButton(onClick = { onChoose(FirstSyncChoice.MERGE) }) { Text(stringResource(R.string.sync_choice_merge)) }
+        },
+    )
 }
 
 /**

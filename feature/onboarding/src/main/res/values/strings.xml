@@ -1,5 +1,4 @@
 <resources>
-    <string name="onb_back">Back</string>
     <string name="onb_skip">Skip</string>
     <string name="welcome_title">Spotter</string>
     <string name="welcome_tagline">Your training plan, progression and history in one place.</string>
@@ -14,7 +13,6 @@
     <string name="onb_next">Next</string>
     <string name="onb_build">Build my plan</string>
     <string name="onb_start">Start training</string>
-    <string name="onb_optional">Optional</string>
 
     <string name="onb_body_title">About you</string>
     <string name="onb_body_subtitle">Used to pick sensible starting weights and defaults. It stays on your phone.</string>
@@ -48,7 +46,10 @@
     <string name="onb_exp_advanced_sub">More than 2 years</string>
 
     <string name="onb_days_title">How many days a week can you train?</string>
-    <string name="onb_days_hint">%1$d days a week</string>
+    <plurals name="onb_days_hint">
+        <item quantity="one">%1$d day a week</item>
+        <item quantity="other">%1$d days a week</item>
+    </plurals>
     <string name="onb_length_title">How long is a typical session?</string>
     <string name="onb_length_option">%1$d min</string>
     <string name="onb_length_long">75+ min</string>
@@ -89,7 +90,7 @@
     <string name="onb_split_full">Full body</string>
     <string name="onb_split_upper_lower">Upper / Lower</string>
     <string name="onb_split_ppl">Push / Pull / Legs</string>
-    <string name="onb_summary_day_meta">~%1$d min · %2$d exercises</string>
+    <string name="onb_summary_day_meta">~%1$d min · %2$s</string>
     <string name="onb_summary_calibration">Starting weights are estimates. Your first session calibrates them, so log what you actually lift.</string>
     <string name="onb_summary_missing">Some movements couldn\'t be programmed with your equipment (%1$s). Adding a pull-up bar or resistance bands fixes most of this.</string>
 </resources>

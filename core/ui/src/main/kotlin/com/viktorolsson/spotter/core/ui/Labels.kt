@@ -2,7 +2,10 @@
 package com.viktorolsson.spotter.core.ui
 
 import androidx.annotation.StringRes
+import androidx.compose.runtime.Composable
+import androidx.compose.ui.res.stringResource
 import com.viktorolsson.spotter.core.model.BodyArea
+import com.viktorolsson.spotter.core.model.EffortScale
 import com.viktorolsson.spotter.core.model.Equipment
 import com.viktorolsson.spotter.core.model.MovementPattern
 import com.viktorolsson.spotter.core.model.MuscleGroup
@@ -108,3 +111,11 @@ val PersonalRecordType.labelRes: Int
         PersonalRecordType.REPS_AT_WEIGHT -> R.string.record_reps_at_weight
         PersonalRecordType.VOLUME -> R.string.record_volume
     }
+
+/** "RIR" or "RPE" as a column header; empty when effort isn't rated. */
+@Composable
+fun EffortScale.label(): String = when (this) {
+    EffortScale.OFF -> ""
+    EffortScale.RIR -> stringResource(R.string.effort_scale_rir)
+    EffortScale.RPE -> stringResource(R.string.effort_scale_rpe)
+}

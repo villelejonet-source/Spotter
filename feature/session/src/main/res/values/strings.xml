@@ -13,10 +13,10 @@
     <string name="col_previous">Previous</string>
     <string name="col_reps">Reps</string>
     <string name="col_seconds">Sec</string>
-    <string name="set_complete">Complete set</string>
-    <string name="set_completed">Set completed</string>
     <string name="add_set">Add set</string>
-    <string name="delete">Delete</string>
+    <string name="set_deleted">Set deleted</string>
+    <string name="set_no_previous">—</string>
+    <string name="set_label_with_note">%1$s•</string>
     <string name="set_warmup_short">W</string>
     <string name="set_drop_short">D</string>
     <string name="set_failure_short">F</string>
@@ -36,8 +36,10 @@
     <string name="swap_filter_dumbbell">Dumbbell</string>
     <string name="swap_filter_machine">Machine / cable</string>
     <string name="swap_filter_bodyweight">Bodyweight</string>
+    <string name="swap_none_title">No close alternatives</string>
     <string name="swap_none">No close alternatives with this filter.</string>
     <string name="swap_bodyweight">Bodyweight</string>
+    <string name="swap_pick">Swap to this exercise</string>
 
     <string name="progress_calibration">First time: estimated weight. Adjust to what feels right.</string>
     <string name="progress_first_time">First time: pick a weight you can do for the target reps.</string>
@@ -54,15 +56,17 @@
 
     <string name="exercise_note">Exercise note</string>
     <string name="exercise_rest">Rest time</string>
-    <string name="exercise_rest_label">Rest %1$s</string>
+    <string name="a11y_change_rest">Change rest time</string>
     <string name="exercise_superset_next">Superset with next</string>
     <string name="exercise_superset_remove">Remove from superset</string>
-    <string name="exercise_superset_badge">Superset</string>
     <string name="exercise_target">Target %1$s</string>
     <string name="exercise_target_rir">Target %1$s · %2$s</string>
     <string name="exercise_move_up">Move up</string>
     <string name="exercise_move_down">Move down</string>
     <string name="exercise_remove">Remove exercise</string>
+    <string name="exercise_remove_title">Remove %1$s?</string>
+    <string name="exercise_remove_body">Its sets in this workout are deleted. The exercise stays in your plan.</string>
+    <string name="exercise_remove_confirm">Remove</string>
 
     <string name="rest_title">Rest</string>
     <string name="rest_minus">−15 s</string>
@@ -74,11 +78,11 @@
     <string name="stopwatch_reset">Reset</string>
     <string name="stopwatch_countdown">Countdown</string>
 
-    <string name="note_save">Save</string>
-    <string name="cancel">Cancel</string>
-
     <string name="finish_title">Finish workout?</string>
-    <string name="finish_body_incomplete">%1$d unticked sets will be removed.</string>
+    <plurals name="finish_body_incomplete">
+        <item quantity="one">%1$d unticked set will be removed.</item>
+        <item quantity="other">%1$d unticked sets will be removed.</item>
+    </plurals>
     <string name="finish_body_ok">Nice work. Ready to wrap up?</string>
     <string name="finish_body_nothing">You haven\'t completed any sets yet. Discard the workout instead?</string>
     <string name="discard_title">Discard workout?</string>
@@ -88,8 +92,7 @@
     <string name="summary_duration">Duration</string>
     <string name="summary_volume">Volume</string>
     <string name="summary_sets">Sets</string>
-    <string name="summary_exercise_line">%1$d sets · best %2$s</string>
-    <string name="summary_exercise_sets">%1$d sets</string>
+    <string name="summary_exercise_line">%1$s · best %2$s</string>
     <string name="summary_done">Done</string>
 
     <string name="notif_channel_workout">Workout in progress</string>
@@ -122,17 +125,18 @@
     <string name="a11y_edit">Edit</string>
     <string name="a11y_set_label">Set %1$s, %2$s</string>
     <string name="a11y_change_type">Change set type</string>
+    <string name="a11y_complete_set">Complete set %1$s</string>
     <string name="a11y_previous">Last time %1$s</string>
     <string name="a11y_copy_previous">Copy last time\'s values</string>
     <string name="a11y_no_previous">No previous set</string>
     <string name="plates_title">Plates per side</string>
-    <string name="plates_bar">%1$s bar</string>
+    <string name="plates_summary">%1$s · %2$s bar</string>
     <string name="plates_none">Just the bar.</string>
     <string name="plates_not_exact">%1$s can\'t be loaded exactly; the closest is %2$s.</string>
     <string name="plates_not_bar">The plate calculator is for barbell exercises.</string>
     <string name="warmup_add">Add warm-up sets</string>
     <string name="pr_banner_title">New PR!</string>
-    <string name="pr_banner_body">%1$s · %2$s</string>
+    <string name="pr_banner_body">%1$s · %2$s · %3$s</string>
     <string name="pr_1rm">est. 1RM %1$s</string>
     <string name="pr_reps">rep record</string>
     <string name="a11y_exercise_info">Show how to do this exercise</string>
@@ -141,4 +145,5 @@
     <string name="info_equipment">Equipment</string>
     <string name="info_bodyweight">None (bodyweight)</string>
     <string name="info_how_to">How to</string>
+    <string name="info_step_number">%1$d.</string>
 </resources>

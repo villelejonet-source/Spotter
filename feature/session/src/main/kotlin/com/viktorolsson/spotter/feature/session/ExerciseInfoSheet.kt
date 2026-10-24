@@ -17,6 +17,8 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
+import com.viktorolsson.spotter.core.ui.theme.Dimens
+import com.viktorolsson.spotter.core.ui.theme.Spacing
 import com.viktorolsson.spotter.core.model.Exercise
 import com.viktorolsson.spotter.core.ui.labelRes
 
@@ -24,10 +26,15 @@ import com.viktorolsson.spotter.core.ui.labelRes
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 internal fun ExerciseInfoSheet(exercise: Exercise, onDismiss: () -> Unit) {
-    ModalBottomSheet(onDismissRequest = onDismiss) {
+    ModalBottomSheet(onDismissRequest = onDismiss) { ExerciseInfoSheetContent(exercise) }
+}
+
+/** The sheet's body, usable on its own (screenshot tests). */
+@Composable
+internal fun ExerciseInfoSheetContent(exercise: Exercise) {
         Column(
-            Modifier.verticalScroll(rememberScrollState()).padding(horizontal = 24.dp).padding(bottom = 24.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp),
+            Modifier.verticalScroll(rememberScrollState()).padding(horizontal = Dimens.SheetPadding).padding(bottom = Dimens.SheetPadding),
+            verticalArrangement = Arrangement.spacedBy(Spacing.lg),
         ) {
             Text(exercise.name, style = MaterialTheme.typography.titleLarge, modifier = Modifier.semantics { heading() })
 
@@ -40,7 +47,7 @@ internal fun ExerciseInfoSheet(exercise: Exercise, onDismiss: () -> Unit) {
 
             val cues = exercise.instructions?.lines()?.map(String::trim)?.filter(String::isNotEmpty).orEmpty()
             if (cues.isNotEmpty()) {
-                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Column(verticalArrangement = Arrangement.spacedBy(Spacing.sm)) {
                     Text(
                         stringResource(R.string.info_how_to),
                         style = MaterialTheme.typography.titleSmall,
@@ -49,10 +56,10 @@ internal fun ExerciseInfoSheet(exercise: Exercise, onDismiss: () -> Unit) {
                     cues.forEachIndexed { i, cue ->
                         Row {
                             Text(
-                                "${i + 1}.",
+                                stringResource(R.string.info_step_number, i + 1),
                                 style = MaterialTheme.typography.bodyLarge,
                                 color = MaterialTheme.colorScheme.primary,
-                                modifier = Modifier.width(28.dp),
+                                modifier = Modifier.width(STEP_NUMBER_WIDTH),
                             )
                             Text(cue, style = MaterialTheme.typography.bodyLarge)
                         }
@@ -60,7 +67,6 @@ internal fun ExerciseInfoSheet(exercise: Exercise, onDismiss: () -> Unit) {
                 }
             }
         }
-    }
 }
 
 @Composable
@@ -71,3 +77,5 @@ private fun InfoLine(label: Int, values: List<String>) {
         Text(values.joinToString(", "), style = MaterialTheme.typography.bodyLarge)
     }
 }
+
+private val STEP_NUMBER_WIDTH = 28.dp

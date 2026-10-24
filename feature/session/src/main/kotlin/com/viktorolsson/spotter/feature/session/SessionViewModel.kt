@@ -26,12 +26,16 @@ import com.viktorolsson.spotter.core.model.SessionExercise
 import com.viktorolsson.spotter.core.model.SetType
 import com.viktorolsson.spotter.core.model.UserPreferences
 import com.viktorolsson.spotter.core.model.WorkoutSession
+import com.viktorolsson.spotter.core.model.WorkoutSet
 import com.viktorolsson.spotter.core.model.isTimed
 import com.viktorolsson.spotter.core.model.parseToKg
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharedFlow
@@ -49,6 +53,7 @@ import kotlinx.coroutines.flow.onStart
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 enum class SetField { WEIGHT, REPS, EFFORT }
 
@@ -67,27 +72,34 @@ enum class SwapFilter { ALL, SAME_EQUIPMENT, DUMBBELL, MACHINE, BODYWEIGHT }
 
 data class SwapUiState(
     val sessionExercise: SessionExercise,
-    val candidates: List<Exercise> = emptyList(),
+    /** Null while the alternatives are still being ranked. */
+    val candidates: List<Exercise>? = null,
     val filter: SwapFilter = SwapFilter.ALL,
 ) {
     val canReplaceInPlan: Boolean get() = sessionExercise.target != null
+    val loading: Boolean get() = candidates == null
 
-    val visible: List<Exercise>
-        get() = candidates.filter { candidate ->
-            val eq = candidate.equipment.toSet()
-            when (filter) {
-                SwapFilter.ALL -> true
-                SwapFilter.SAME_EQUIPMENT -> eq == sessionExercise.exercise.equipment.toSet()
-                SwapFilter.DUMBBELL -> Equipment.DUMBBELL in eq
-                SwapFilter.MACHINE -> eq.any { it in setOf(Equipment.MACHINE, Equipment.CABLE, Equipment.SMITH_MACHINE) }
-                SwapFilter.BODYWEIGHT -> eq.all { it in setOf(Equipment.PULL_UP_BAR, Equipment.DIP_STATION, Equipment.BENCH, Equipment.RESISTANCE_BAND) }
-            }
+    /** The candidates passing [filter]; computed once per state, not per read. */
+    val visible: List<Exercise> = candidates.orEmpty().filter { candidate ->
+        val eq = candidate.equipment.toSet()
+        when (filter) {
+            SwapFilter.ALL -> true
+            SwapFilter.SAME_EQUIPMENT -> eq == sessionExercise.exercise.equipment.toSet()
+            SwapFilter.DUMBBELL -> Equipment.DUMBBELL in eq
+            SwapFilter.MACHINE -> eq.any { it in MACHINE_LIKE }
+            SwapFilter.BODYWEIGHT -> eq.all { it in BODYWEIGHT_LIKE }
         }
+    }
+
+    private companion object {
+        val MACHINE_LIKE = setOf(Equipment.MACHINE, Equipment.CABLE, Equipment.SMITH_MACHINE)
+        val BODYWEIGHT_LIKE = setOf(Equipment.PULL_UP_BAR, Equipment.DIP_STATION, Equipment.BENCH, Equipment.RESISTANCE_BAND)
+    }
 }
 
 data class SessionUiState(
     val loading: Boolean = true,
-    /** Null once loaded means the session no longer exists (discarded). */
+    /** Null once loaded means the session no longer exists (discarded). Sets awaiting undo are left out. */
     val session: WorkoutSession? = null,
     /** Last time's completed sets, by exercise id. */
     val previous: Map<String, List<PreviousSet>> = emptyMap(),
@@ -117,14 +129,18 @@ class SessionViewModel @Inject constructor(
         _swap.value = SwapUiState(exercise)
         val profile = profileRepository.get()
         val inSession = uiState.value.session?.exercises.orEmpty().map { it.exercise.id }.toSet()
-        val ranked = ExerciseSimilarity.rank(
-            original = exercise.exercise,
-            library = exerciseRepository.observeAll().first(),
-            availableEquipment = profile?.equipment ?: Equipment.entries.toSet(),
-            limitations = profile?.limitations.orEmpty(),
-            exclude = inSession,
-        )
-        _swap.value = _swap.value?.copy(candidates = ranked.map { it.exercise })
+        val library = exerciseRepository.observeAll().first()
+        // Scoring every exercise in the library is work for a background thread.
+        val ranked = withContext(Dispatchers.Default) {
+            ExerciseSimilarity.rank(
+                original = exercise.exercise,
+                library = library,
+                availableEquipment = profile?.equipment ?: Equipment.entries.toSet(),
+                limitations = profile?.limitations.orEmpty(),
+                exclude = inSession,
+            )
+        }
+        _swap.update { it?.copy(candidates = ranked.map { c -> c.exercise }) }
     }
 
     fun setSwapFilter(filter: SwapFilter) = _swap.update { it?.copy(filter = filter) }
@@ -149,22 +165,33 @@ class SessionViewModel @Inject constructor(
         .mapLatest { ids -> ids.associateWith { workoutRepository.getPreviousSets(it) } }
         .onStart { emit(emptyMap()) }
 
+    /** Sets swiped away but still undoable; hidden from the screen until the delete commits. */
+    private val pendingDeletes = MutableStateFlow<Set<Long>>(emptySet())
+    private val deleteJobs = mutableMapOf<Long, Job>()
+
     val uiState: StateFlow<SessionUiState> = combine(
         session,
         previous,
         preferencesRepository.preferences,
         restTimerRepository.restTimer,
-    ) { session, previous, prefs, rest ->
-        SessionUiState(loading = false, session = session, previous = previous, preferences = prefs, restTimer = rest)
+        pendingDeletes,
+    ) { session, previous, prefs, rest, hidden ->
+        val shown = if (hidden.isEmpty() || session == null) session else session.copy(
+            exercises = session.exercises.map { ex -> ex.copy(sets = ex.sets.filter { it.id !in hidden }) },
+        )
+        SessionUiState(loading = false, session = shown, previous = previous, preferences = prefs, restTimer = rest)
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), SessionUiState())
 
     private val prefs get() = uiState.value.preferences
 
     /** Ticks a set; on completion starts the rest timer unless mid-superset. */
     fun toggleSet(exercise: SessionExercise, setId: Long) = launch {
+        commitEdit()
         val completed = workoutRepository.toggleSetCompleted(setId)
         if (!completed) return@launch
-        checkForPr(exercise, setId)
+        // Re-read: a value typed moments ago may not have reached the screen's copy yet.
+        val fresh = workoutRepository.getSession(sessionId)?.exercises?.firstOrNull { it.id == exercise.id } ?: exercise
+        checkForPr(fresh, setId)
         val restSeconds = exercise.restSeconds ?: prefs.defaultRestSeconds
         if (!exercise.isMidSuperset()) restTimerRepository.start(restSeconds)
     }
@@ -175,19 +202,46 @@ class SessionViewModel @Inject constructor(
         return members.maxByOrNull { it.position }?.id != id
     }
 
-    /** Writes one field from keypad text; the other values come from the stored set. */
-    fun updateSetField(setId: Long, field: SetField, text: String) = launch {
-        val set = findSet(setId) ?: return@launch
+    // Keypad edits: the screen shows what's typed at once; Room gets it a moment later
+    // (or straight away when focus moves, a set is ticked or the workout ends).
+    private data class FieldEdit(val setId: Long, val field: SetField, val text: String)
+    private var pendingEdit: FieldEdit? = null
+    private var editJob: Job? = null
+
+    /** Queues one field from keypad text; written after a short pause in typing. */
+    fun updateSetField(setId: Long, field: SetField, text: String) {
+        pendingEdit = FieldEdit(setId, field, text)
+        editJob?.cancel()
+        editJob = viewModelScope.launch {
+            delay(EDIT_DEBOUNCE_MS)
+            commitEdit()
+        }
+    }
+
+    /** Writes the queued edit now (focus moved, keypad closed). */
+    fun flushEdit() = launch { commitEdit() }
+
+    private suspend fun commitEdit() {
+        editJob?.cancel()
+        editJob = null
+        val edit = pendingEdit ?: return
+        pendingEdit = null
+        writeField(edit)
+    }
+
+    private suspend fun writeField(edit: FieldEdit) {
+        val set = findSet(edit.setId) ?: return
         val unit = prefs.weightUnit
+        val text = edit.text
         workoutRepository.updateSetValues(
-            setId = setId,
-            weightKg = if (field == SetField.WEIGHT) unit.parseToKg(text) else set.weightKg,
-            reps = if (field == SetField.REPS) text.toIntOrNull()?.takeIf { it in 0..999 } else set.reps,
-            rir = if (field == SetField.EFFORT) text.toIntOrNull()?.let(prefs.effortScale::toRir) else set.rir,
+            setId = edit.setId,
+            weightKg = if (edit.field == SetField.WEIGHT) unit.parseToKg(text) else set.weightKg,
+            reps = if (edit.field == SetField.REPS) text.toIntOrNull()?.takeIf { it in 0..999 } else set.reps,
+            rir = if (edit.field == SetField.EFFORT) text.toIntOrNull()?.let(prefs.effortScale::toRir) else set.rir,
         )
     }
 
-    private fun findSet(setId: Long) = uiState.value.session?.exercises?.flatMap { it.sets }?.firstOrNull { it.id == setId }
+    private fun findSet(setId: Long): WorkoutSet? = uiState.value.session?.exercises?.flatMap { it.sets }?.firstOrNull { it.id == setId }
 
     private val _prEvents = MutableSharedFlow<PrEvent>(extraBufferCapacity = 4)
     /** Fires when a ticked set beats the best from earlier sessions (and earlier sets today). */
@@ -205,7 +259,7 @@ class SessionViewModel @Inject constructor(
         if (history.isEmpty) return // First time: this session sets the baseline.
         val earlierToday = exercise.sets
             .filter { it.id != setId && it.isCompleted && it.setType != SetType.WARMUP && it.reps != null }
-            .map { LoggedSet(it.weightKg, it.reps!!) }
+            .map { LoggedSet(it.weightKg, it.reps ?: 0) }
         val before = history.withSets(earlierToday)
         val records = PersonalRecords.detect(listOf(LoggedSet(set.weightKg, reps)), before)
             .filter { it.type != PersonalRecordType.VOLUME }
@@ -223,7 +277,32 @@ class SessionViewModel @Inject constructor(
     }
 
     fun addSet(sessionExerciseId: Long) = launch { workoutRepository.addSet(sessionExerciseId) }
-    fun deleteSet(setId: Long) = launch { workoutRepository.deleteSet(setId) }
+
+    /** Hides the set and deletes it after [UNDO_WINDOW_MS] unless [undoDeleteSet] is called. */
+    fun deleteSet(setId: Long) {
+        if (pendingEdit?.setId == setId) {
+            pendingEdit = null
+            editJob?.cancel()
+        }
+        pendingDeletes.update { it + setId }
+        deleteJobs[setId]?.cancel()
+        deleteJobs[setId] = viewModelScope.launch {
+            delay(UNDO_WINDOW_MS)
+            commitDelete(setId)
+        }
+    }
+
+    fun undoDeleteSet(setId: Long) {
+        deleteJobs.remove(setId)?.cancel()
+        pendingDeletes.update { it - setId }
+    }
+
+    private suspend fun commitDelete(setId: Long) {
+        deleteJobs.remove(setId)
+        workoutRepository.deleteSet(setId)
+        pendingDeletes.update { it - setId }
+    }
+
     fun setSetType(setId: Long, type: SetType) = launch { workoutRepository.setSetType(setId, type) }
     fun setSetNote(setId: Long, note: String) = launch { workoutRepository.setSetNotes(setId, note) }
 
@@ -241,6 +320,8 @@ class SessionViewModel @Inject constructor(
     fun startCountdown(seconds: Int) = launch { restTimerRepository.start(seconds) }
 
     fun finish(onFinished: (Long) -> Unit) = launch {
+        commitEdit()
+        commitPendingDeletes()
         restTimerRepository.stop()
         workoutRepository.finishWorkout(sessionId)
         // Outlives this screen: re-evaluate plateaus and suggestions with the new session.
@@ -250,10 +331,40 @@ class SessionViewModel @Inject constructor(
     }
 
     fun discard(onDiscarded: () -> Unit) = launch {
+        editJob?.cancel()
+        pendingEdit = null
+        deleteJobs.values.forEach { it.cancel() }
+        deleteJobs.clear()
         restTimerRepository.stop()
         workoutRepository.discardWorkout(sessionId)
         onDiscarded()
     }
 
+    private suspend fun commitPendingDeletes() {
+        deleteJobs.values.forEach { it.cancel() }
+        deleteJobs.clear()
+        pendingDeletes.value.forEach { workoutRepository.deleteSet(it) }
+        pendingDeletes.value = emptySet()
+    }
+
+    override fun onCleared() {
+        // Nothing typed or swiped away is lost when the screen goes: write it now, off this scope.
+        val edit = pendingEdit
+        val deletes = pendingDeletes.value
+        pendingEdit = null
+        deleteJobs.values.forEach { it.cancel() }
+        if (edit != null || deletes.isNotEmpty()) {
+            applicationScope.launch {
+                edit?.let { writeField(it) }
+                deletes.forEach { workoutRepository.deleteSet(it) }
+            }
+        }
+    }
+
     private fun launch(block: suspend () -> Unit) = viewModelScope.launch { block() }
+
+    private companion object {
+        const val EDIT_DEBOUNCE_MS = 300L
+        const val UNDO_WINDOW_MS = 4_000L
+    }
 }

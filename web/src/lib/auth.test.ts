@@ -1,5 +1,48 @@
 import { describe, expect, it } from "vitest";
-import { authErrorMessage, GENERIC_AUTH_ERROR, passwordProblem, safeNext } from "./auth";
+import {
+  authErrorMessage,
+  GENERIC_AUTH_ERROR,
+  parseEmailCode,
+  passwordProblem,
+  RECOVERY_COOKIE_MAX_AGE,
+  recoveryCookieOptions,
+  safeNext,
+} from "./auth";
+
+describe("parseEmailCode", () => {
+  const ok = { email: " runner@example.com ", token: "123456", type: "recovery" };
+
+  it("accepts a well-formed code and trims the email", () => {
+    expect(parseEmailCode(ok)).toEqual({ email: "runner@example.com", token: "123456", type: "recovery" });
+    expect(parseEmailCode({ ...ok, token: "12345678", type: "signup" })?.type).toBe("signup");
+    expect(parseEmailCode({ ...ok, type: "email" })?.type).toBe("email");
+  });
+
+  it("refuses anything else", () => {
+    for (const bad of [
+      null,
+      "x",
+      { ...ok, type: "invite" },
+      { ...ok, type: "magiclink" },
+      { ...ok, token: "12345" },
+      { ...ok, token: "12345678901" },
+      { ...ok, token: "12a456" },
+      { ...ok, token: 123456 },
+      { ...ok, email: "not-an-email" },
+      { ...ok, email: `${"a".repeat(320)}@x.y` },
+    ]) {
+      expect(parseEmailCode(bad), JSON.stringify(bad)).toBeNull();
+    }
+  });
+});
+
+describe("recoveryCookieOptions", () => {
+  it("is httpOnly, lax, site-wide and short-lived", () => {
+    expect(recoveryCookieOptions(true)).toEqual({ httpOnly: true, sameSite: "lax", secure: true, path: "/", maxAge: RECOVERY_COOKIE_MAX_AGE });
+    expect(recoveryCookieOptions(false).secure).toBe(false);
+    expect(RECOVERY_COOKIE_MAX_AGE).toBe(15 * 60);
+  });
+});
 
 describe("safeNext", () => {
   it("keeps same-site paths", () => {

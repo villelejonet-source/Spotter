@@ -6,7 +6,7 @@ import { Suspense, useState } from "react";
 import { AuthCard, useAuthForm } from "@/components/auth-ui";
 import { CodeForm } from "@/components/code-form";
 import { Button, Field, InlineMessage, inputClass } from "@/components/ui";
-import { authErrorMessage } from "@/lib/auth";
+import { authErrorMessage, verifyEmailCode } from "@/lib/auth";
 
 export default function ForgotPasswordPage() {
   return (
@@ -57,8 +57,9 @@ function ForgotPassword() {
           email={email}
           submitLabel="Continue"
           onVerify={async (token) => {
-            const { error } = await supabase.auth.verifyOtp({ email, token, type: "recovery" });
-            if (error) return authErrorMessage(error);
+            // Verified on the server so it can set the recovery cookie /reset-password needs.
+            const problem = await verifyEmailCode(email, token, "recovery");
+            if (problem) return problem;
             router.replace("/reset-password");
             return null;
           }}

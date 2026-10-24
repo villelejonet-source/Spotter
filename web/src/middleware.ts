@@ -1,6 +1,7 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
-import { RECOVERY_COOKIE } from "@/lib/auth";
+// Relative, not "@/lib/auth": vitest has no path aliases configured (see middleware.test.ts).
+import { RECOVERY_COOKIE } from "./lib/auth";
 
 /** Reachable signed out. /reset-password is not: the reset email's link or code signs in first. */
 const PUBLIC_PATHS = ["/login", "/signup", "/forgot-password", "/auth"];

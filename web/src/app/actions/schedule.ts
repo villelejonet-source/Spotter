@@ -28,7 +28,7 @@ function today(): number {
 /** Plans a workout on a date: a plan day (any plan), or a free workout when plan_day_id is null. */
 export async function scheduleWorkout(input: ScheduleDraft): Promise<ActionResult> {
   await requireUser();
-  const parsed = scheduleSchema.safeParse(input);
+  const parsed = scheduleSchema.safeParse(input, { error: () => "Check the workout and try again." });
   if (!parsed.success) return { ok: false, error: parsed.error.issues[0]?.message ?? "Check the workout and try again." };
   const draft = parsed.data;
   if (draft.epoch_day < today() || draft.epoch_day > today() + MAX_SCHEDULE_DAYS_AHEAD) {

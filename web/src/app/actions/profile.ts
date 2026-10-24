@@ -30,7 +30,7 @@ const versionSchema = z.number().int().nonnegative();
  */
 export async function updateProfile(input: ProfileDraft, baseUpdatedAt: number): Promise<ActionResult> {
   await requireUser();
-  const parsed = profileSchema.safeParse(input);
+  const parsed = profileSchema.safeParse(input, { error: () => "Check the profile and try again." });
   if (!parsed.success) return { ok: false, error: parsed.error.issues[0]?.message ?? "Check the profile and try again." };
   const base = versionSchema.safeParse(baseUpdatedAt);
   if (!base.success) return { ok: false, error: RELOAD };
@@ -58,7 +58,7 @@ function profileRow(p: ProfileDraft, previous?: number): SyncRowInput {
  */
 export async function logBodyWeight(epochDay: number, weightKg: number): Promise<ActionResult> {
   await requireUser();
-  const parsed = bodyWeightSchema.safeParse({ epoch_day: epochDay, weight_kg: weightKg });
+  const parsed = bodyWeightSchema.safeParse({ epoch_day: epochDay, weight_kg: weightKg }, { error: () => "Check the weight and try again." });
   if (!parsed.success) return { ok: false, error: parsed.error.issues[0]?.message ?? "Check the weight and try again." };
   const [entries, profile] = await Promise.all([getBodyWeight(), getProfile()]);
   const existing = entries.find((e) => e.epoch_day === epochDay);

@@ -9,7 +9,7 @@ import type { ActionResult } from "./plans";
 /** Creates a custom exercise; it syncs to the phone like one made in the app. */
 export async function createCustomExercise(input: CustomExerciseDraft): Promise<ActionResult & { id?: string }> {
   await requireUser();
-  const parsed = customExerciseSchema.safeParse(input);
+  const parsed = customExerciseSchema.safeParse(input, { error: () => "Check the exercise and try again." });
   if (!parsed.success) return { ok: false, error: parsed.error.issues[0]?.message ?? "Check the exercise and try again." };
   const name = parsed.data.name.toLowerCase();
   if ([...(await getCatalog()).values()].some((e) => e.name.toLowerCase() === name)) {

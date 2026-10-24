@@ -2,7 +2,9 @@ package com.viktorolsson.spotter.core.data.sync
 
 import android.content.Context
 import android.content.Intent
+import android.util.Log
 import androidx.hilt.work.HiltWorker
+import androidx.work.BackoffPolicy
 import androidx.work.Constraints
 import androidx.work.CoroutineWorker
 import androidx.work.ExistingPeriodicWorkPolicy
@@ -18,15 +20,16 @@ import com.viktorolsson.spotter.core.data.repository.UserProfileRepository
 import dagger.assisted.Assisted
 import dagger.assisted.AssistedInject
 import dagger.hilt.android.qualifiers.ApplicationContext
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.launch
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChangedBy
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
@@ -44,8 +47,15 @@ data class SyncStatus(
     val syncing: Boolean = false,
     val lastSyncedAt: Instant? = null,
     val error: SyncError? = null,
-    /** The first sync found data both here and in the backup: ask what to keep. */
+    /** The first sync needs a decision before it goes on (see [fromLink] for which one). */
     val needsChoice: Boolean = false,
+    /**
+     * With [needsChoice]: false means both this phone and the backup have data (use the
+     * backup, or merge). True means the backup is empty and the sign-in came from an
+     * emailed link, so ask "Upload this phone's data to [account]'s email?": yes is
+     * [SyncRepository.syncNow] with [FirstSyncChoice.MERGE], no is [SyncRepository.signOut].
+     */
+    val fromLink: Boolean = false,
 )
 
 enum class SyncError { OFFLINE, FAILED }
@@ -67,17 +77,18 @@ class SyncRepository @Inject constructor(
     private val mutex = Mutex()
     private val running = MutableStateFlow(false)
     private val error = MutableStateFlow<SyncError?>(null)
-    private val needsChoice = MutableStateFlow(false)
+    private val choice = MutableStateFlow<SyncOutcome.NeedsChoice?>(null)
     private var lastOpenSyncAt = 0L
 
-    val status: Flow<SyncStatus> = combine(accounts.account, cursors.cursor, running, error, needsChoice) { account, cursor, running, error, choice ->
+    val status: Flow<SyncStatus> = combine(accounts.account, cursors.cursor, running, error, choice) { account, cursor, running, error, choice ->
         SyncStatus(
             available = accounts.isAvailable,
             account = account,
             syncing = running,
             lastSyncedAt = cursor.lastSyncedAt.takeIf { it > 0 && cursor.userId == account?.userId }?.let(Instant::ofEpochMilli),
             error = error,
-            needsChoice = choice,
+            needsChoice = choice != null,
+            fromLink = choice?.fromLink == true,
         )
     }
 
@@ -121,24 +132,32 @@ class SyncRepository @Inject constructor(
 
     /** Runs a sync now if signed in. Returns false when it failed (worth retrying). */
     suspend fun syncNow(choice: FirstSyncChoice? = null): Boolean {
-        val account = accounts.currentAccount() ?: return true
+        val account = accounts.awaitAccount() ?: return true
         return mutex.withLock {
             running.value = true
             try {
-                when (withContext(Dispatchers.IO) { engine.sync(account.userId, choice) }) {
-                    SyncOutcome.NeedsChoice -> needsChoice.value = true
+                val outcome = withContext(Dispatchers.IO) { engine.sync(account.userId, choice, fromLink = accounts.signedInFromLink) }
+                when (outcome) {
+                    is SyncOutcome.NeedsChoice -> this.choice.value = outcome
                     is SyncOutcome.Done -> {
-                        needsChoice.value = false
+                        this.choice.value = null
+                        accounts.signedInFromLink = false
                         finishRestore()
                     }
                 }
                 error.value = null
                 true
+            } catch (e: CancellationException) {
+                throw e
             } catch (e: IOException) {
                 error.value = SyncError.OFFLINE
+                Log.w(TAG, "Sync failed: offline (${e.javaClass.simpleName})")
                 false
             } catch (e: Exception) {
-                error.value = if (e.cause is IOException) SyncError.OFFLINE else SyncError.FAILED
+                val offline = e.cause is IOException
+                error.value = if (offline) SyncError.OFFLINE else SyncError.FAILED
+                // Class names only: no payloads, tokens or addresses in the log.
+                Log.w(TAG, "Sync failed: ${e.javaClass.simpleName}" + (e.cause?.let { " caused by ${it.javaClass.simpleName}" } ?: ""))
                 false
             } finally {
                 running.value = false
@@ -167,7 +186,7 @@ class SyncRepository @Inject constructor(
         accounts.signOut()
         accounts.finishRecovery()
         cursors.clear()
-        needsChoice.value = false
+        choice.value = null
         error.value = null
     }
 
@@ -175,16 +194,22 @@ class SyncRepository @Inject constructor(
     suspend fun deleteAccount() {
         accounts.deleteAccount()
         cursors.clear()
-        needsChoice.value = false
+        choice.value = null
     }
 
-    /** A restored profile means setup is done; take the units from it too. */
+    /**
+     * After a successful sync: a restored profile means setup is done, and the profile's
+     * units (the synced source of truth) are mirrored into the unit preference.
+     */
     private suspend fun finishRestore() {
         val profile = profiles.get() ?: return
-        if (!preferences.preferences.first().onboardingCompleted) {
-            preferences.setWeightUnit(profile.units)
-            preferences.setOnboardingCompleted(true)
-        }
+        val prefs = preferences.preferences.first()
+        if (!prefs.onboardingCompleted) preferences.setOnboardingCompleted(true)
+        if (prefs.weightUnit != profile.units) preferences.setWeightUnit(profile.units)
+    }
+
+    private companion object {
+        const val TAG = "SpotterSync"
     }
 }
 
@@ -199,15 +224,22 @@ class SyncScheduler @Inject constructor(@param:ApplicationContext private val co
         WorkManager.getInstance(context).enqueueUniquePeriodicWork(
             "sync-periodic",
             ExistingPeriodicWorkPolicy.KEEP,
-            PeriodicWorkRequestBuilder<SyncWorker>(6, TimeUnit.HOURS).setConstraints(online).build(),
+            PeriodicWorkRequestBuilder<SyncWorker>(6, TimeUnit.HOURS)
+                .setConstraints(online)
+                .setBackoffCriteria(BackoffPolicy.EXPONENTIAL, 1, TimeUnit.MINUTES)
+                .build(),
         )
     }
 
+    /** Runs after any sync already in flight instead of cancelling it (APPEND_OR_REPLACE). */
     fun syncSoon() {
         WorkManager.getInstance(context).enqueueUniqueWork(
             "sync-soon",
-            ExistingWorkPolicy.REPLACE,
-            OneTimeWorkRequestBuilder<SyncWorker>().setConstraints(online).build(),
+            ExistingWorkPolicy.APPEND_OR_REPLACE,
+            OneTimeWorkRequestBuilder<SyncWorker>()
+                .setConstraints(online)
+                .setBackoffCriteria(BackoffPolicy.EXPONENTIAL, 1, TimeUnit.MINUTES)
+                .build(),
         )
     }
 }

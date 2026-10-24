@@ -1,6 +1,7 @@
 import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
+import { cache } from "react";
 
 /** Supabase client for server components, route handlers and server actions. */
 export async function createClient() {
@@ -24,10 +25,14 @@ export async function createClient() {
   );
 }
 
-/** The signed-in user's id and email (checked locally, see middleware), or a redirect to /login. */
-export async function requireUser() {
+/**
+ * The signed-in user's id and email (checked locally, see middleware), or a redirect to
+ * /login. Memoised per request with React's cache(), so the layout, the page, an action and
+ * push() share one getClaims call (the middleware runs separately and can't share it).
+ */
+export const requireUser = cache(async () => {
   const supabase = await createClient();
   const { data } = await supabase.auth.getClaims();
   if (!data) redirect("/login");
   return { supabase, user: { id: data.claims.sub, email: data.claims.email as string | undefined } };
-}
+});

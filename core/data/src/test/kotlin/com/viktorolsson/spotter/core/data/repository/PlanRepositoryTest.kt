@@ -55,7 +55,7 @@ class PlanRepositoryTest {
         val seed = parseExerciseSeed(File("src/main/assets/exercises.json").readText())
         db.exerciseDao().upsertAll(seed.exercises.map(SeedExercise::toEntity))
         plans = PlanRepository(db, db.planDao())
-        workouts = WorkoutRepository(db, db.workoutDao(), db.planDao(), db.exerciseDao(), testPreferences(), clock)
+        workouts = WorkoutRepository(db, db.workoutDao(), db.planDao(), db.exerciseDao(), testPreferences(db), clock)
         profiles = UserProfileRepository(db.userProfileDao())
     }
 

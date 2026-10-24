@@ -8,6 +8,7 @@
 // - A deletion is the row with deleted_at set and no payload. The phone cascades its own
 //   children without writing tombstones, so the web tombstones children explicitly.
 import { z } from "zod";
+import { newSyncId } from "./ids";
 import {
   BODY_AREAS,
   COMPOUND_PATTERNS,
@@ -36,42 +37,50 @@ export interface SyncRowInput {
   deleted_at: number | null;
 }
 
-export function newSyncId(): string {
-  return crypto.randomUUID().replace(/-/g, "");
-}
+// newSyncId lives in ./ids so client components can make ids without pulling in zod.
+export { newSyncId };
 
 // ---- What the editor sends: a whole plan, positions implied by array order ----
 
-const syncId = z.string().regex(/^[0-9a-f]{32}$/);
-const int = (min: number, max: number) => z.number().int().min(min).max(max);
+/** A sync id as the phone makes them: 32 lowercase hex characters. Actions check every id they get with it. */
+export const syncIdSchema = z.string().regex(/^[0-9a-f]{32}$/, "Reload the page and try again.");
+const syncId = syncIdSchema;
+/** A whole number in [min, max]; every way it can fail shows [message]. */
+const int = (min: number, max: number, message: string) =>
+  z.number({ error: message }).int(message).min(min, message).max(max, message);
+/** A number in [min, max]; every way it can fail shows [message]. */
+const num = (min: number, max: number, message: string) => z.number({ error: message }).min(min, message).max(max, message);
+/** A required name, with messages in the user's words instead of zod's. */
+const name = (what: string, max: number) =>
+  z.string().trim().min(1, `Give the ${what} a name.`).max(max, `Keep the ${what} name under ${max} characters.`);
 
 export const exerciseDraftSchema = z
   .object({
     sync_id: syncId,
-    exercise_id: z.string().min(1).max(100),
-    sets: int(1, 20),
-    rep_min: int(1, 300),
-    rep_max: int(1, 300),
-    target_rir: int(0, 10).nullable(),
-    rest_seconds: int(0, 900),
+    exercise_id: z.string().min(1, "Pick an exercise.").max(100, "Pick an exercise."),
+    sets: int(1, 20, "Use 1 to 20 sets."),
+    rep_min: int(1, 300, "Use 1 to 300 reps."),
+    rep_max: int(1, 300, "Use 1 to 300 reps."),
+    target_rir: int(0, 10, "Use a target effort from 0 to 10.").nullable(),
+    rest_seconds: int(0, 900, "Use a rest from 0 to 15 minutes."),
     progression_rule: z.enum(PROGRESSION_RULES),
-    superset_group: int(1, 50).nullable(),
-    starting_weight_kg: z.number().min(0).max(1000).nullable(),
+    superset_group: int(1, 50, "Reload the page and try again.").nullable(),
+    starting_weight_kg: num(0, 1000, "Use a starting weight from 0 to 1000 kg.").nullable(),
   })
-  .refine((e) => e.rep_min <= e.rep_max, { message: "Rep range minimum is above the maximum" });
+  .refine((e) => e.rep_min <= e.rep_max, { message: "The rep range minimum is above the maximum." });
 
 export const dayDraftSchema = z.object({
   sync_id: syncId,
-  name: z.string().trim().min(1).max(60),
-  exercises: z.array(exerciseDraftSchema).max(30),
+  name: name("day", 60),
+  exercises: z.array(exerciseDraftSchema).max(30, "A day can have at most 30 exercises."),
 });
 
 export const planDraftSchema = z.object({
   sync_id: syncId,
-  name: z.string().trim().min(1).max(80),
+  name: name("plan", 80),
   split_type: z.enum(SPLIT_TYPES),
   goal: z.enum(GOALS),
-  days: z.array(dayDraftSchema).min(1).max(7),
+  days: z.array(dayDraftSchema).min(1, "Add at least one day.").max(7, "A plan can have at most 7 days."),
 });
 
 export type ExerciseDraft = z.infer<typeof exerciseDraftSchema>;
@@ -280,8 +289,8 @@ export function newCustomExerciseId(): string {
 }
 
 export const customExerciseSchema = z.object({
-  name: z.string().trim().min(1).max(60),
-  primary: z.array(z.enum(MUSCLES)).min(1).max(3),
+  name: name("exercise", 60),
+  primary: z.array(z.enum(MUSCLES)).min(1, "Pick at least one primary muscle.").max(3, "Pick at most three primary muscles."),
   secondary: z.array(z.enum(MUSCLES)).max(5),
   pattern: z.enum(MOVEMENT_PATTERNS),
   equipment: z.array(z.enum(EQUIPMENT)).max(5),
@@ -312,14 +321,14 @@ export const PROFILE_SYNC_ID = "user-profile";
 
 export const profileSchema = z.object({
   sex: z.enum(SEXES),
-  height_cm: z.number().min(100, "Enter a height between 100 and 250 cm").max(250, "Enter a height between 100 and 250 cm"),
-  birth_date_epoch_day: z.number().int().min(-25_000).max(20_000),
-  body_weight_kg: z.number().min(25, "Enter a realistic body weight").max(300, "Enter a realistic body weight"),
+  height_cm: num(100, 250, "Enter a height between 100 and 250 cm."),
+  birth_date_epoch_day: int(-25_000, 20_000, "Enter a valid birth date."),
+  body_weight_kg: num(30, 300, "Enter a body weight between 30 and 300 kg."),
   units: z.enum(["KG", "LB"]),
   experience: z.enum(EXPERIENCE_LEVELS),
   goal: z.enum(GOALS),
-  days_per_week: z.number().int().refine((d) => (DAYS_PER_WEEK as readonly number[]).includes(d)),
-  session_length_minutes: z.number().int().refine((m) => (SESSION_LENGTHS as readonly number[]).includes(m)),
+  days_per_week: z.number({ error: "Pick how many days a week you train." }).refine((d) => (DAYS_PER_WEEK as readonly number[]).includes(d), "Pick how many days a week you train."),
+  session_length_minutes: z.number({ error: "Pick a session length." }).refine((m) => (SESSION_LENGTHS as readonly number[]).includes(m), "Pick a session length."),
   equipment: z.array(z.enum(EQUIPMENT)),
   focus_areas: z.array(z.enum(BODY_AREAS)),
   limitations: z.array(z.enum(LIMITATIONS)),
@@ -365,9 +374,10 @@ export function profilePayload(p: ProfileDraft) {
 
 // ---- Body weight (Room `body_weight_entry`, one per day) ----
 
+// 30–300 kg, as the app's weight log and onboarding (ProgressViewModel, OnboardingViewModel).
 export const bodyWeightSchema = z.object({
-  epoch_day: z.number().int().min(0).max(40_000),
-  weight_kg: z.number().min(25, "Enter a realistic body weight").max(300, "Enter a realistic body weight"),
+  epoch_day: int(0, 40_000, "Pick a valid date."),
+  weight_kg: num(30, 300, "Enter a body weight between 30 and 300 kg."),
 });
 
 export function bodyWeightPayload(epochDay: number, weightKg: number) {
@@ -379,9 +389,9 @@ export function bodyWeightPayload(epochDay: number, weightKg: number) {
 export const MAX_SCHEDULE_DAYS_AHEAD = 120;
 
 export const scheduleSchema = z.object({
-  epoch_day: z.number().int().min(0).max(40_000),
+  epoch_day: int(0, 40_000, "Pick a valid date."),
   plan_day_id: syncId.nullable(),
-  notes: z.string().trim().max(200).nullable(),
+  notes: z.string().trim().max(200, "Keep the note under 200 characters.").nullable(),
 });
 export type ScheduleDraft = z.infer<typeof scheduleSchema>;
 

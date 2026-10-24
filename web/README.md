@@ -21,14 +21,21 @@ The seeded exercise catalog isn't synced; `scripts/copy-catalog.mjs` copies
 
 ## Setup
 
-1. Apply every file in `supabase/migrations/` in order: `supabase db push` with the Supabase CLI,
-   or paste each into the SQL editor. They're all safe to re-run.
+1. Apply every file in `supabase/migrations/` in order (currently `20261004000000_sync`,
+   `20261023000000_web_views`, `20261024000000_hardening_and_performance`,
+   `20261025000000_scheduled_sessions`, `20261026000000_audit_hardening`; the last adds
+   `v_exercise_usage`, which `/library` needs) with `supabase db push` (linked CLI) or
+   the Supabase MCP's `apply_migration`, never by pasting into the SQL editor: pasting runs the
+   SQL but leaves no entry in the migration history, so the next `db push` would try to run it
+   again. They're all safe to re-run. See "Database migrations" in
+   `docs/platform/infrastructure.md`, including how to repair the history on the current project.
 2. In Supabase → Authentication → URL Configuration, add `http://localhost:3000/auth/callback`
    and the deployed URL's `/auth/callback` to the redirect URLs.
 3. Set up the sign-in emails and auth settings in `docs/platform/auth-emails.md` (email
    templates with both a link and a code, password rules, redirect URLs).
 4. `cp .env.example .env.local` and fill in the publishable key (same as `supabase.publishableKey`
-   in the app's `local.properties`).
+   in the app's `local.properties`). Only publishable values go in `.env*` files and
+   `NEXT_PUBLIC_*` variables; they end up in the browser bundle.
 
 ```bash
 npm install
@@ -39,7 +46,19 @@ npm run dev
 
 ```bash
 npm run lint && npm run typecheck && npm test
+npm audit --omit=dev --audit-level=high   # CI runs this too, visibly but without failing the job
 ```
+
+Units (kg or lb) come from the synced profile (`user_profile.units`); the app writes it when the
+setting changes and both app and web read it from there, so the two can't disagree.
+
+## Wording, formats and locale
+
+The app is the source of truth for wording. `src/lib/labels.ts` mirrors the app's string
+resources (goal names, "Lighter week", equipment and movement labels, progression reasons, set
+and record formats): when wording changes, update the app's `strings.xml`/`labels.xml` **and**
+`labels.ts` together. Dates and numbers use one locale constant in `src/lib/tz.ts` (`en-GB`)
+next to the Europe/Stockholm time zone.
 
 ## Deploy (Vercel)
 

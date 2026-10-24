@@ -9,6 +9,13 @@ import com.viktorolsson.spotter.core.model.Muscle
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
 
+/**
+ * The `version` inside `assets/exercises.json`, duplicated here so start-up can skip opening
+ * and parsing the asset once that version is installed. Bump both together whenever the
+ * file changes (ExerciseSeedTest fails if they drift) so installed apps re-seed.
+ */
+const val EXERCISE_CATALOG_VERSION = 2
+
 /** Shape of `assets/exercises.json`. Bump [version] whenever the file changes so installed apps re-seed. */
 @Serializable
 data class ExerciseSeedFile(

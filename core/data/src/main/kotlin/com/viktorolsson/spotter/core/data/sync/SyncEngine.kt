@@ -54,8 +54,12 @@ class SyncCursorStore @Inject constructor(private val dataStore: DataStore<Prefe
 
 sealed interface SyncOutcome {
     data class Done(val pulled: Int, val pushed: Int) : SyncOutcome
-    /** This phone has its own data and so does the backup: ask which to keep. */
-    data object NeedsChoice : SyncOutcome
+    /**
+     * Ask before going on: this phone has its own data and so does the backup, or the
+     * backup is empty and the sign-in came from an emailed link ([fromLink]), so the data
+     * must not be uploaded to an account the user hasn't confirmed.
+     */
+    data class NeedsChoice(val fromLink: Boolean = false) : SyncOutcome
 }
 
 /**
@@ -69,7 +73,12 @@ class SyncEngine(
     private val cursors: SyncCursorStore,
     private val clock: Clock,
 ) {
-    suspend fun sync(userId: String, choice: FirstSyncChoice? = null): SyncOutcome {
+    /**
+     * [fromLink]: the session came from a tapped email link rather than typed
+     * credentials. The first sync then never uploads this phone's data to an empty
+     * account without an explicit [choice] (any choice means "go ahead").
+     */
+    suspend fun sync(userId: String, choice: FirstSyncChoice? = null, fromLink: Boolean = false): SyncOutcome {
         var cursor = cursors.get().takeIf { it.userId == userId } ?: SyncCursor(userId = userId)
         val firstSync = cursor.lastSyncedAt == 0L
 
@@ -77,7 +86,8 @@ class SyncEngine(
             val backupExists = remote.hasRows()
             val phoneHasData = store.hasLocalData()
             when {
-                backupExists && phoneHasData && choice == null -> return SyncOutcome.NeedsChoice
+                backupExists && phoneHasData && choice == null -> return SyncOutcome.NeedsChoice(fromLink = false)
+                !backupExists && phoneHasData && fromLink && choice == null -> return SyncOutcome.NeedsChoice(fromLink = true)
                 // Restore: drop this phone's own data first (often just a fresh onboarding plan).
                 backupExists && (!phoneHasData || choice == FirstSyncChoice.USE_BACKUP) -> store.wipe()
             }
@@ -85,18 +95,29 @@ class SyncEngine(
             cursor = cursor.copy(pushedUpTo = 0, pulledUpTo = null)
         }
 
-        // Pull: collect all pages, then apply together so parents land before children.
-        val pulled = mutableListOf<RemoteRow>()
+        // Pull page by page, applying each as it arrives so a large backup never sits in
+        // memory. Rows whose parent is in a later page are retried once the pull is done.
         val since = cursor.pulledUpTo?.let(::withOverlap)
         var offset = 0
+        var pulled = 0
+        var newestServerTime: Instant? = null
+        var newPulledUpTo = cursor.pulledUpTo
+        val deferred = mutableListOf<SyncRow>()
         while (true) {
             val page = remote.pull(since, offset, PAGE)
-            pulled += page
+            pulled += page.size
+            page.forEach { row ->
+                val at = parse(row.serverUpdatedAt)
+                if (newestServerTime == null || at > newestServerTime) {
+                    newestServerTime = at
+                    newPulledUpTo = row.serverUpdatedAt
+                }
+            }
+            deferred += store.applyAll(page.map { it.toSyncRow() }).deferred
             if (page.size < PAGE) break
             offset += PAGE
         }
-        store.apply(pulled.map { it.toSyncRow() })
-        val newPulledUpTo = pulled.maxByOrNull { parse(it.serverUpdatedAt) }?.serverUpdatedAt ?: cursor.pulledUpTo
+        if (deferred.isNotEmpty()) store.apply(deferred)
 
         // Push: anything changed locally since the last push (rows just pulled are skipped
         // by the server, which only keeps strictly newer versions).
@@ -105,7 +126,7 @@ class SyncEngine(
         changes.chunked(PAGE).forEach { remote.push(it) }
 
         cursors.save(SyncCursor(userId, newPulledUpTo, pushStartedAt, clock.millis()))
-        return SyncOutcome.Done(pulled = pulled.size, pushed = changes.size)
+        return SyncOutcome.Done(pulled = pulled, pushed = changes.size)
     }
 
     /** Re-reads a couple of minutes back, so rows committed slightly out of order aren't missed. */

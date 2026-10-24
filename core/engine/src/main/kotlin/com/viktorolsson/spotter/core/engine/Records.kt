@@ -58,11 +58,13 @@ object PersonalRecords {
         if (previous.isEmpty || session.isEmpty()) return emptyList()
         val records = mutableListOf<DetectedRecord>()
 
-        val bestSet = session.filter { it.weightKg != null }.maxByOrNull { epley(it.weightKg!!, it.reps) }
-        if (bestSet != null) {
-            val e1rm = epley(bestSet.weightKg!!, bestSet.reps)
+        val best = session
+            .mapNotNull { set -> set.weightKg?.let { kg -> Triple(epley(kg, set.reps), kg, set.reps) } }
+            .maxByOrNull { it.first }
+        if (best != null) {
+            val (e1rm, weightKg, reps) = best
             if (previous.estimatedOneRepMax == null || e1rm > previous.estimatedOneRepMax + EPS) {
-                records += DetectedRecord(PersonalRecordType.ESTIMATED_1RM, e1rm, bestSet.weightKg, bestSet.reps)
+                records += DetectedRecord(PersonalRecordType.ESTIMATED_1RM, e1rm, weightKg, reps)
             }
         }
 

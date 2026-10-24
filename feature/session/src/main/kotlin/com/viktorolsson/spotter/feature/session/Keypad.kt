@@ -12,6 +12,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.Backspace
 import androidx.compose.material.icons.rounded.KeyboardHide
+import androidx.compose.material3.Button
 import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -25,7 +26,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
-import androidx.compose.ui.unit.dp
+import com.viktorolsson.spotter.core.ui.theme.Dimens
+import com.viktorolsson.spotter.core.ui.theme.Spacing
 
 /**
  * In-app numeric keypad for set logging: digits, ± steppers (2.5 kg / 5 lb for
@@ -44,16 +46,16 @@ internal fun Keypad(
     onNext: () -> Unit,
     onDone: () -> Unit,
 ) {
-    Surface(color = MaterialTheme.colorScheme.surfaceContainerHigh, tonalElevation = 3.dp, modifier = Modifier.fillMaxWidth()) {
+    Surface(color = MaterialTheme.colorScheme.surfaceContainerHigh, modifier = Modifier.fillMaxWidth()) {
         Column(
-            Modifier.navigationBarsPadding().padding(horizontal = 8.dp, vertical = 6.dp),
-            verticalArrangement = Arrangement.spacedBy(6.dp),
+            Modifier.navigationBarsPadding().padding(horizontal = Spacing.sm, vertical = Spacing.xs),
+            verticalArrangement = Arrangement.spacedBy(Spacing.xs),
         ) {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Text(title, style = MaterialTheme.typography.labelLarge, modifier = Modifier.weight(1f).padding(start = 8.dp))
+                Text(title, style = MaterialTheme.typography.labelLarge, modifier = Modifier.weight(1f).padding(start = Spacing.sm))
                 TextButton(onClick = onDone) {
                     Icon(Icons.Rounded.KeyboardHide, contentDescription = null)
-                    Text(stringResource(R.string.keypad_done), modifier = Modifier.padding(start = 6.dp))
+                    Text(stringResource(R.string.keypad_done), modifier = Modifier.padding(start = Spacing.xs))
                 }
             }
             KeyRow {
@@ -82,7 +84,7 @@ internal fun Keypad(
                     onClick = onBackspace,
                     modifier = Modifier.weight(1f).height(KEY_HEIGHT).semantics { contentDescription = backspace },
                 ) { Icon(Icons.AutoMirrored.Rounded.Backspace, contentDescription = null) }
-                androidx.compose.material3.Button(onClick = onNext, modifier = Modifier.weight(1f).height(KEY_HEIGHT)) {
+                Button(onClick = onNext, modifier = Modifier.weight(1f).height(KEY_HEIGHT)) {
                     Text(stringResource(R.string.keypad_next))
                 }
             }
@@ -90,11 +92,11 @@ internal fun Keypad(
     }
 }
 
-private val KEY_HEIGHT = 52.dp
+private val KEY_HEIGHT = Dimens.KeypadKeyHeight
 
 @Composable
 private fun KeyRow(content: @Composable RowScope.() -> Unit) {
-    Row(horizontalArrangement = Arrangement.spacedBy(6.dp), content = content)
+    Row(horizontalArrangement = Arrangement.spacedBy(Spacing.xs), content = content)
 }
 
 @Composable

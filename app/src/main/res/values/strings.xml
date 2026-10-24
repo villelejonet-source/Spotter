@@ -4,10 +4,16 @@
     <string name="nav_history">History</string>
     <string name="nav_progress">Progress</string>
     <string name="nav_profile">Profile</string>
-    <string name="workout_in_progress">Workout in progress</string>
-    <string name="open_workout">Open workout</string>
     <string name="sync_choice_title">This phone has its own data</string>
     <string name="sync_choice_body">Both your backup and this phone have training data. Use the backup to replace what\'s on this phone, or merge both: the newest version of each workout and setting is kept.</string>
+    <string name="sync_choice_body_account">You\'re signed in as %1$s. Both that backup and this phone have training data. Use the backup to replace what\'s on this phone, or merge both: the newest version of each workout and setting is kept.</string>
+    <string name="sync_choice_note">Syncing waits until you choose.</string>
     <string name="sync_choice_backup">Use backup</string>
     <string name="sync_choice_merge">Merge both</string>
+    <!-- Signed in from an emailed link into an account with no data yet -->
+    <string name="sync_upload_title">Upload this phone\'s data?</string>
+    <string name="sync_upload_body">You signed in as %1$s. That account has no training data yet. Upload what\'s on this phone to it, or sign out again.</string>
+    <string name="sync_upload_body_no_email">The account you signed in to has no training data yet. Upload what\'s on this phone to it, or sign out again.</string>
+    <string name="sync_upload_confirm">Upload</string>
+    <string name="sync_upload_decline">Sign out</string>
 </resources>

@@ -16,7 +16,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.unit.dp
+import com.viktorolsson.spotter.core.ui.theme.Spacing
 import com.viktorolsson.spotter.core.model.RestTimer
 import com.viktorolsson.spotter.core.ui.formatClock
 import java.time.Instant
@@ -34,15 +34,14 @@ internal fun RestTimerBar(
     val progress = if (rest.totalSeconds > 0) remaining.toFloat() / rest.totalSeconds else 0f
     Surface(
         color = MaterialTheme.colorScheme.secondaryContainer,
-        tonalElevation = 3.dp,
         modifier = Modifier.fillMaxWidth(),
     ) {
         Column(if (compact) Modifier else Modifier.navigationBarsPadding()) {
             LinearProgressIndicator(progress = { progress.coerceIn(0f, 1f) }, modifier = Modifier.fillMaxWidth())
             Row(
                 verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                modifier = Modifier.padding(horizontal = 16.dp, vertical = if (compact) 4.dp else 10.dp),
+                horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
+                modifier = Modifier.padding(horizontal = Spacing.lg, vertical = if (compact) Spacing.xs else Spacing.sm),
             ) {
                 Column(Modifier.weight(1f)) {
                     Text(

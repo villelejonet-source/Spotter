@@ -60,7 +60,12 @@ data class ExerciseSessionLog(
 ) {
     private val working get() = sets.filter { it.setType != SetType.WARMUP && it.reps != null }
     val bestSet: WorkoutSet? get() = working.maxWithOrNull(compareBy({ it.weightKg ?: 0.0 }, { it.reps ?: 0 }))
-    val estimatedOneRepMax: Double? get() = working.mapNotNull { set -> set.weightKg?.let { epley(it, set.reps!!) } }.maxOrNull()
+    val estimatedOneRepMax: Double?
+        get() = working.mapNotNull { set ->
+            val kg = set.weightKg
+            val reps = set.reps
+            if (kg != null && reps != null) epley(kg, reps) else null
+        }.maxOrNull()
     val volumeKg: Double get() = working.sumOf { (it.weightKg ?: 0.0) * (it.reps ?: 0) }
 }
 

@@ -1,34 +1,25 @@
 "use client";
 
-import clsx from "clsx";
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import { createCustomExercise } from "@/app/actions/library";
-import { Button, Card, inputClass } from "@/components/ui";
-import { EQUIPMENT, enumLabel, MOVEMENT_PATTERNS, MUSCLES } from "@/lib/model";
+import { Button, Card, Chip, ChipGroup, Field, InlineMessage, inputClass } from "@/components/ui";
+import { EQUIPMENT_LABELS, label, MUSCLE_LABELS, PATTERN_LABELS } from "@/lib/labels";
+import { EQUIPMENT, MOVEMENT_PATTERNS, MUSCLES } from "@/lib/model";
 import type { CustomExerciseDraft } from "@/lib/sync-writer";
 
-function Toggles<T extends string>({ options, value, onChange, max }: { options: readonly T[]; value: T[]; onChange: (v: T[]) => void; max?: number }) {
+function Toggles<T extends string>({ options, labels, value, onChange, max }: { options: readonly T[]; labels: Record<string, string>; value: T[]; onChange: (v: T[]) => void; max?: number }) {
   return (
-    <div className="flex flex-wrap gap-1.5">
+    <>
       {options.map((o) => {
         const on = value.includes(o);
         return (
-          <button
-            key={o}
-            type="button"
-            disabled={!on && max != null && value.length >= max}
-            onClick={() => onChange(on ? value.filter((v) => v !== o) : [...value, o])}
-            className={clsx(
-              "rounded-full px-2.5 py-1 text-xs transition disabled:opacity-40",
-              on ? "bg-primary-container text-on-primary-container" : "bg-surface-high text-muted hover:text-foreground",
-            )}
-          >
-            {enumLabel(o)}
-          </button>
+          <Chip key={o} on={on} disabled={!on && max != null && value.length >= max} onClick={() => onChange(on ? value.filter((v) => v !== o) : [...value, o])}>
+            {label(labels, o)}
+          </Chip>
         );
       })}
-    </div>
+    </>
   );
 }
 
@@ -59,51 +50,40 @@ export function CustomExerciseForm() {
   return (
     <form onSubmit={submit} className="max-w-2xl space-y-4">
       <Card className="space-y-4">
-        <label className="block space-y-1 text-sm">
-          <span className="text-muted">Name</span>
+        <Field label="Name">
           <input required maxLength={60} className={inputClass} value={draft.name} onChange={(e) => setDraft({ ...draft, name: e.target.value })} />
-        </label>
-        <label className="block space-y-1 text-sm">
-          <span className="text-muted">Movement</span>
+        </Field>
+        <Field label="Movement" hint="Used to suggest swaps and to tell compound from isolation lifts.">
           <select className={inputClass} value={draft.pattern} onChange={(e) => setDraft({ ...draft, pattern: e.target.value as CustomExerciseDraft["pattern"] })}>
             {MOVEMENT_PATTERNS.map((p) => (
-              <option key={p} value={p}>{enumLabel(p)}</option>
+              <option key={p} value={p}>
+                {label(PATTERN_LABELS, p)}
+              </option>
             ))}
           </select>
-          <span className="block text-xs text-muted">Used to suggest swaps and to tell compound from isolation lifts.</span>
-        </label>
-        <div className="space-y-1.5 text-sm">
-          <span className="text-muted">Main muscles (up to 3)</span>
-          <Toggles options={MUSCLES} value={draft.primary} max={3} onChange={(primary) => setDraft({ ...draft, primary, secondary: draft.secondary.filter((m) => !primary.includes(m)) })} />
-        </div>
-        <div className="space-y-1.5 text-sm">
-          <span className="text-muted">Also works (optional)</span>
-          <Toggles options={MUSCLES.filter((m) => !draft.primary.includes(m))} value={draft.secondary} max={5} onChange={(secondary) => setDraft({ ...draft, secondary })} />
-        </div>
-        <div className="space-y-1.5 text-sm">
-          <span className="text-muted">Equipment (none means bodyweight)</span>
-          <Toggles options={EQUIPMENT} value={draft.equipment} max={5} onChange={(equipment) => setDraft({ ...draft, equipment })} />
-        </div>
+        </Field>
+        <ChipGroup label="Main muscles (up to 3)">
+          <Toggles options={MUSCLES} labels={MUSCLE_LABELS} value={draft.primary} max={3} onChange={(primary) => setDraft({ ...draft, primary, secondary: draft.secondary.filter((m) => !primary.includes(m)) })} />
+        </ChipGroup>
+        <ChipGroup label="Also works (optional)">
+          <Toggles options={MUSCLES.filter((m) => !draft.primary.includes(m))} labels={MUSCLE_LABELS} value={draft.secondary} max={5} onChange={(secondary) => setDraft({ ...draft, secondary })} />
+        </ChipGroup>
+        <ChipGroup label="Equipment" hint="None means bodyweight.">
+          <Toggles options={EQUIPMENT} labels={EQUIPMENT_LABELS} value={draft.equipment} max={5} onChange={(equipment) => setDraft({ ...draft, equipment })} />
+        </ChipGroup>
         <label className="flex items-center gap-2 text-sm">
           <input type="checkbox" checked={draft.unilateral} onChange={(e) => setDraft({ ...draft, unilateral: e.target.checked })} />
           One side at a time
         </label>
-        <label className="block space-y-1 text-sm">
-          <span className="text-muted">How to (optional, one cue per line)</span>
-          <textarea
-            rows={4}
-            maxLength={1000}
-            className={inputClass}
-            value={draft.instructions ?? ""}
-            onChange={(e) => setDraft({ ...draft, instructions: e.target.value || null })}
-          />
-        </label>
+        <Field label="How to (optional)" hint="One cue per line.">
+          <textarea rows={4} maxLength={1000} className={inputClass} value={draft.instructions ?? ""} onChange={(e) => setDraft({ ...draft, instructions: e.target.value || null })} />
+        </Field>
       </Card>
-      <div className="flex items-center gap-3">
-        <Button variant="primary" disabled={pending || !draft.name.trim() || !draft.primary.length}>
+      <div className="flex flex-wrap items-center gap-3">
+        <Button type="submit" variant="primary" disabled={pending || !draft.name.trim() || !draft.primary.length}>
           {pending ? "Creating…" : "Create exercise"}
         </Button>
-        {error && <span className="text-sm text-error">{error}</span>}
+        {error && <InlineMessage tone="error">{error}</InlineMessage>}
       </div>
     </form>
   );

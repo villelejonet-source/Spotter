@@ -32,11 +32,17 @@ class PlanRepository @Inject constructor(
     fun observeDay(planDayId: Long): Flow<PlanDay?> = dao.observeDay(planDayId).map { it?.toModel() }
 
     /** The day after the last one completed, wrapping around; the first day for a fresh plan. */
-    fun observeNextDay(): Flow<PlanDay?> = observeActivePlan().flatMapLatest { plan ->
-        if (plan == null || plan.days.isEmpty()) return@flatMapLatest flowOf(null)
+    fun observeNextDay(): Flow<PlanDay?> = observePlanAndNextDay().map { (_, next) -> next }
+
+    /**
+     * The active plan and its next day from one plan subscription, for screens that show
+     * both (Today, Plan): the plan is read once per change instead of once per flow.
+     */
+    fun observePlanAndNextDay(): Flow<Pair<Plan?, PlanDay?>> = observeActivePlan().flatMapLatest { plan ->
+        if (plan == null || plan.days.isEmpty()) return@flatMapLatest flowOf(plan to null)
         dao.observeLastCompletedDayId(plan.id).map { lastDayId ->
             val lastIndex = plan.days.indexOfFirst { it.id == lastDayId }
-            plan.days[(lastIndex + 1) % plan.days.size]
+            plan to plan.days[(lastIndex + 1) % plan.days.size]
         }
     }
 

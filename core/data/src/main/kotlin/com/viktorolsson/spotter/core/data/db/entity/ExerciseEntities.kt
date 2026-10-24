@@ -14,7 +14,7 @@ import com.viktorolsson.spotter.core.model.Muscle
 /** Seeded exercises use stable slug ids (e.g. `barbell-bench-press`); custom ones use `custom-<uuid>`. */
 @Entity(
     tableName = "exercise",
-    indices = [Index("syncId", unique = true), Index("movementPattern"), Index("name")],
+    indices = [Index("syncId", unique = true), Index("updatedAt"), Index("movementPattern"), Index("name")],
 )
 data class ExerciseEntity(
     @PrimaryKey val id: String,

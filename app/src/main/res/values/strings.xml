@@ -13,6 +13,7 @@
     <!-- Signed in from an emailed link into an account with no data yet -->
     <string name="sync_upload_title">Upload this phone\'s data?</string>
     <string name="sync_upload_body">You signed in as %1$s. That account has no training data yet. Upload what\'s on this phone to it, or sign out again.</string>
+    <string name="sync_upload_body_no_email">The account you signed in to has no training data yet. Upload what\'s on this phone to it, or sign out again.</string>
     <string name="sync_upload_confirm">Upload</string>
     <string name="sync_upload_decline">Sign out</string>
 </resources>

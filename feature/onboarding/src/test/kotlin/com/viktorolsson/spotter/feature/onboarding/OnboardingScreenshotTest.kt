@@ -8,7 +8,6 @@ import com.github.takahirom.roborazzi.RoborazziComposeOptions
 import com.github.takahirom.roborazzi.captureRoboImage
 import com.github.takahirom.roborazzi.fontScale
 import com.viktorolsson.spotter.core.engine.GeneratedPlan
-import com.viktorolsson.spotter.core.model.Equipment
 import com.viktorolsson.spotter.core.model.ExperienceLevel
 import com.viktorolsson.spotter.core.model.Goal
 import com.viktorolsson.spotter.core.model.Limitation
@@ -109,7 +108,4 @@ class OnboardingScreenshotTest {
             state = OnboardingUiState(step = Step.SUMMARY, answers = answers, generated = GeneratedPlan(PreviewData.plan, listOf(52, 58), emptySet())),
         )
     }
-
-    @Suppress("unused")
-    private val keepImports = Equipment.BARBELL
 }

@@ -199,7 +199,7 @@ internal fun UploadChoiceDialog(email: String?, onUpload: () -> Unit, onSignOut:
     AlertDialog(
         onDismissRequest = {},
         title = { Text(stringResource(R.string.sync_upload_title)) },
-        text = { Text(stringResource(R.string.sync_upload_body, email.orEmpty())) },
+        text = { Text(if (email != null) stringResource(R.string.sync_upload_body, email) else stringResource(R.string.sync_upload_body_no_email)) },
         confirmButton = { Button(onClick = onUpload) { Text(stringResource(R.string.sync_upload_confirm)) } },
         dismissButton = { TextButton(onClick = onSignOut) { Text(stringResource(R.string.sync_upload_decline)) } },
     )

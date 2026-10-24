@@ -1,6 +1,5 @@
 package com.viktorolsson.spotter.feature.session
 
-import com.viktorolsson.spotter.core.model.EffortScale
 import android.Manifest
 import android.content.pm.PackageManager
 import android.os.Build
@@ -13,7 +12,6 @@ import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -22,6 +20,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Add
 import androidx.compose.material.icons.rounded.EmojiEvents
+import androidx.compose.material.icons.rounded.FitnessCenter
 import androidx.compose.material.icons.rounded.KeyboardArrowDown
 import androidx.compose.material.icons.rounded.MoreVert
 import androidx.compose.material3.AlertDialog
@@ -30,23 +29,27 @@ import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
-import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarDuration
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.SnackbarResult
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
-import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -59,25 +62,37 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.semantics
-import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.viktorolsson.spotter.core.engine.Plates
+import com.viktorolsson.spotter.core.model.EffortScale
 import com.viktorolsson.spotter.core.model.PersonalRecordType
 import com.viktorolsson.spotter.core.model.SessionExercise
 import com.viktorolsson.spotter.core.model.SetType
+import com.viktorolsson.spotter.core.model.UserPreferences
 import com.viktorolsson.spotter.core.model.WeightUnit
+import com.viktorolsson.spotter.core.model.WorkoutSession
 import com.viktorolsson.spotter.core.model.format
 import com.viktorolsson.spotter.core.model.isTimed
-import com.viktorolsson.spotter.core.model.label
+import com.viktorolsson.spotter.core.ui.R as CoreR
 import com.viktorolsson.spotter.core.ui.component.Confetti
+import com.viktorolsson.spotter.core.ui.component.EmptyState
+import com.viktorolsson.spotter.core.ui.component.LoadingState
+import com.viktorolsson.spotter.core.ui.component.SecondaryButton
+import com.viktorolsson.spotter.core.ui.component.SpotterTopBar
 import com.viktorolsson.spotter.core.ui.formatClock
+import com.viktorolsson.spotter.core.ui.formatOneRepMax
 import com.viktorolsson.spotter.core.ui.formatSet
+import com.viktorolsson.spotter.core.ui.label
+import com.viktorolsson.spotter.core.ui.theme.Dimens
+import com.viktorolsson.spotter.core.ui.theme.Spacing
+import java.math.BigDecimal
+import java.math.RoundingMode
 import java.time.Duration
 import java.time.Instant
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 
 @Composable
 internal fun SessionRoute(
@@ -96,41 +111,74 @@ internal fun SessionRoute(
     KeepScreenOn()
     RequestNotificationPermission()
 
+    if (uiState.loading) {
+        Scaffold { padding -> LoadingState(Modifier.padding(padding).fillMaxSize()) }
+        return
+    }
     val session = uiState.session ?: return
     if (!session.isActive) return
 
-    var menuOpen by remember { mutableStateOf(false) }
-    var editingNote by rememberSaveable { mutableStateOf(false) }
-    var stopwatchOpen by rememberSaveable { mutableStateOf(false) }
-    var confirmFinish by rememberSaveable { mutableStateOf(false) }
-    var confirmDiscard by rememberSaveable { mutableStateOf(false) }
-    val now by rememberTicker()
-
-    val unit = uiState.preferences.weightUnit
     val keypad = rememberKeypadState()
-    var platesFor by remember { mutableStateOf<Pair<SessionExercise, Double>?>(null) }
-    // The focused set can disappear (deleted, swapped): close the keypad then.
-    LaunchedEffect(session.exercises) {
-        val target = keypad.target ?: return@LaunchedEffect
-        if (session.exercises.none { ex -> ex.sets.any { it.id == target.setId } }) keypad.target = null
+    val snackbar = remember { SnackbarHostState() }
+    val scope = rememberCoroutineScope()
+    val context = LocalContext.current
+    val currentSession by rememberUpdatedState(session)
+    val currentPreferences by rememberUpdatedState(uiState.preferences)
+
+    // One actions object for every card: built once, reads the latest session through the updated state.
+    val cardActions = remember(viewModel, keypad) {
+        ExerciseCardActions(
+            onFieldClick = { setId, field ->
+                viewModel.flushEdit()
+                keypad.focus(KeypadTarget(setId, field), fieldText(currentSession, currentPreferences, KeypadTarget(setId, field)))
+            },
+            onWarmUps = viewModel::addWarmUps,
+            onToggleSet = { exercise, setId ->
+                // Ticking a set off means it's logged: close the keypad too.
+                if (exercise.sets.none { it.id == setId && it.isCompleted }) keypad.focus(null, "")
+                viewModel.toggleSet(exercise, setId)
+            },
+            onCopyPrevious = viewModel::copyPrevious,
+            onAddSet = viewModel::addSet,
+            onDeleteSet = { setId ->
+                if (keypad.target?.setId == setId) keypad.focus(null, "")
+                viewModel.deleteSet(setId)
+                scope.launch {
+                    val result = snackbar.showSnackbar(
+                        message = context.getString(R.string.set_deleted),
+                        actionLabel = context.getString(CoreR.string.action_undo),
+                        duration = SnackbarDuration.Short,
+                    )
+                    if (result == SnackbarResult.ActionPerformed) viewModel.undoDeleteSet(setId)
+                }
+            },
+            onSetType = viewModel::setSetType,
+            onSetNote = viewModel::setSetNote,
+            onSwap = viewModel::openSwap,
+            onExerciseNote = viewModel::setExerciseNote,
+            onRest = viewModel::setExerciseRest,
+            onSupersetNext = viewModel::supersetWithNext,
+            onRemoveSuperset = viewModel::removeFromSuperset,
+            onMove = viewModel::moveExercise,
+            onRemove = viewModel::removeExercise,
+        )
     }
-    fun fieldText(target: KeypadTarget): String {
-        val set = session.exercises.flatMap { it.sets }.firstOrNull { it.id == target.setId } ?: return ""
-        return when (target.field) {
-            SetField.WEIGHT -> set.weightKg?.let(unit::format).orEmpty()
-            SetField.REPS -> set.reps?.toString().orEmpty()
-            SetField.EFFORT -> set.rir?.let(uiState.preferences.effortScale::display)?.toString().orEmpty()
-        }
-    }
-    fun focus(target: KeypadTarget?) {
-        keypad.target = target
-        keypad.buffer = target?.let(::fieldText).orEmpty()
-        keypad.fresh = true
-    }
-    fun write(text: String) {
-        val target = keypad.target ?: return
-        keypad.buffer = text
-        viewModel.updateSetField(target.setId, target.field, text)
+    val actions = remember(viewModel) {
+        SessionActions(
+            onMinimize = onClose,
+            onFinish = { viewModel.finish(onFinished) },
+            onDiscard = { viewModel.discard(onClose) },
+            onSessionNote = viewModel::setSessionNote,
+            onCountdown = viewModel::startCountdown,
+            onAdjustRest = viewModel::adjustRest,
+            onSkipRest = viewModel::skipRest,
+            onAddExercises = { onAddExercises(currentSession.id) },
+            onFieldEdit = viewModel::updateSetField,
+            onKeypadDone = viewModel::flushEdit,
+            onSwapFilter = viewModel::setSwapFilter,
+            onSwapPick = viewModel::swapTo,
+            onSwapClose = viewModel::closeSwap,
+        )
     }
 
     var celebration by remember { mutableStateOf<PrEvent?>(null) }
@@ -143,9 +191,72 @@ internal fun SessionRoute(
     }
     LaunchedEffect(celebration?.id) {
         if (celebration != null) {
-            delay(3500)
+            delay(CELEBRATION_MS)
             celebration = null
         }
+    }
+    val now by rememberTicker()
+
+    SessionScreen(
+        state = uiState,
+        session = session,
+        swap = swap,
+        now = now,
+        keypad = keypad,
+        cardActions = cardActions,
+        actions = actions,
+        snackbarHostState = snackbar,
+        celebration = celebration,
+    )
+}
+
+/** Screen-level callbacks; one instance per screen. */
+@Immutable
+internal class SessionActions(
+    val onMinimize: () -> Unit,
+    val onFinish: () -> Unit,
+    val onDiscard: () -> Unit,
+    val onSessionNote: (String) -> Unit,
+    val onCountdown: (seconds: Int) -> Unit,
+    val onAdjustRest: (seconds: Int) -> Unit,
+    val onSkipRest: () -> Unit,
+    val onAddExercises: () -> Unit,
+    val onFieldEdit: (setId: Long, SetField, text: String) -> Unit,
+    val onKeypadDone: () -> Unit,
+    val onSwapFilter: (SwapFilter) -> Unit,
+    val onSwapPick: (exerciseId: String, replaceInPlan: Boolean) -> Unit,
+    val onSwapClose: () -> Unit,
+)
+
+@Composable
+internal fun SessionScreen(
+    state: SessionUiState,
+    session: WorkoutSession,
+    swap: SwapUiState?,
+    now: Instant,
+    keypad: KeypadState,
+    cardActions: ExerciseCardActions,
+    actions: SessionActions,
+    snackbarHostState: SnackbarHostState = remember { SnackbarHostState() },
+    celebration: PrEvent? = null,
+) {
+    var menuOpen by remember { mutableStateOf(false) }
+    var editingNote by rememberSaveable { mutableStateOf(false) }
+    var stopwatchOpen by rememberSaveable { mutableStateOf(false) }
+    var confirmFinish by rememberSaveable { mutableStateOf(false) }
+    var confirmDiscard by rememberSaveable { mutableStateOf(false) }
+    var platesFor by remember { mutableStateOf<Pair<SessionExercise, Double>?>(null) }
+    val unit = state.preferences.weightUnit
+
+    // The focused set can disappear (deleted, swapped): close the keypad then.
+    LaunchedEffect(session.exercises) {
+        val target = keypad.target ?: return@LaunchedEffect
+        if (session.exercises.none { ex -> ex.sets.any { it.id == target.setId } }) keypad.focus(null, "")
+    }
+    fun write(text: String) {
+        val target = keypad.target ?: return
+        keypad.buffer = text
+        actions.onFieldEdit(target.setId, target.field, text)
     }
 
     Scaffold(
@@ -155,21 +266,22 @@ internal fun SessionRoute(
                 elapsed = Duration.between(session.startedAt, now),
                 menuOpen = menuOpen,
                 onMenuOpenChange = { menuOpen = it },
-                onMinimize = onClose,
+                onMinimize = actions.onMinimize,
                 onFinish = { confirmFinish = true },
                 onNote = { editingNote = true },
                 onStopwatch = { stopwatchOpen = true },
                 onDiscard = { confirmDiscard = true },
             )
         },
+        snackbarHost = { SnackbarHost(snackbarHostState) },
         bottomBar = {
             Column {
-                uiState.restTimer?.let { rest ->
+                state.restTimer?.let { rest ->
                     RestTimerBar(
                         rest = rest,
                         now = now,
-                        onAdjust = viewModel::adjustRest,
-                        onSkip = viewModel::skipRest,
+                        onAdjust = actions.onAdjustRest,
+                        onSkip = actions.onSkipRest,
                         compact = keypad.target != null,
                     )
                 }
@@ -186,10 +298,10 @@ internal fun SessionRoute(
                                 if (exercise?.exercise?.isTimed == true) R.string.keypad_editing_seconds else R.string.keypad_editing_reps,
                                 number,
                             )
-                            SetField.EFFORT -> stringResource(R.string.keypad_editing_effort, uiState.preferences.effortScale.name, number)
+                            SetField.EFFORT -> stringResource(R.string.keypad_editing_effort, state.preferences.effortScale.label(), number)
                         },
                         field = target.field,
-                        stepLabel = if (isWeight) "${java.math.BigDecimal(step).stripTrailingZeros().toPlainString()}" else "1",
+                        stepLabel = if (isWeight) BigDecimal(step).stripTrailingZeros().toPlainString() else "1",
                         showPlates = isWeight && exercise != null && Plates.bar(exercise.exercise, unit) != null,
                         onDigit = { c ->
                             val base = if (keypad.fresh) "" else keypad.buffer
@@ -205,25 +317,27 @@ internal fun SessionRoute(
                         onStep = { sign ->
                             val value = (keypad.buffer.replace(',', '.').toDoubleOrNull() ?: 0.0) + sign * step
                             keypad.fresh = true
-                            write(java.math.BigDecimal(value.coerceAtLeast(0.0)).setScale(2, java.math.RoundingMode.HALF_UP).stripTrailingZeros().toPlainString())
+                            write(BigDecimal(value.coerceAtLeast(0.0)).setScale(2, RoundingMode.HALF_UP).stripTrailingZeros().toPlainString())
                         },
                         onPlates = {
                             val kg = set?.weightKg ?: return@Keypad
                             platesFor = exercise to kg
                         },
                         onNext = {
+                            actions.onKeypadDone()
                             val order = session.exercises.flatMap { ex ->
                                 ex.sets.flatMap { st ->
                                     listOfNotNull(
                                         KeypadTarget(st.id, SetField.WEIGHT),
                                         KeypadTarget(st.id, SetField.REPS),
-                                        KeypadTarget(st.id, SetField.EFFORT).takeIf { uiState.preferences.effortScale != EffortScale.OFF },
+                                        KeypadTarget(st.id, SetField.EFFORT).takeIf { state.preferences.effortScale != EffortScale.OFF },
                                     )
                                 }
                             }
-                            focus(order.getOrNull(order.indexOf(target) + 1))
+                            val next = order.getOrNull(order.indexOf(target) + 1)
+                            keypad.focus(next, next?.let { fieldText(session, state.preferences, it) }.orEmpty())
                         },
-                        onDone = { focus(null) },
+                        onDone = { actions.onKeypadDone(); keypad.focus(null, "") },
                     )
                 }
             }
@@ -231,8 +345,8 @@ internal fun SessionRoute(
     ) { padding ->
         LazyColumn(
             modifier = Modifier.padding(padding).fillMaxSize().imePadding(),
-            contentPadding = PaddingValues(start = 12.dp, end = 12.dp, top = 4.dp, bottom = 32.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp),
+            contentPadding = PaddingValues(start = Spacing.md, end = Spacing.md, top = Spacing.xs, bottom = Spacing.xxl),
+            verticalArrangement = Arrangement.spacedBy(Dimens.ListGap),
         ) {
             session.notes?.let { note ->
                 item(key = "note") {
@@ -240,67 +354,36 @@ internal fun SessionRoute(
                         note,
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.padding(horizontal = 4.dp),
+                        modifier = Modifier.padding(horizontal = Spacing.xs),
                     )
                 }
             }
             if (session.exercises.isEmpty()) {
                 item(key = "empty") {
-                    Column(
-                        Modifier.fillMaxWidth().padding(vertical = 48.dp),
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                        verticalArrangement = Arrangement.spacedBy(8.dp),
-                    ) {
-                        Text(stringResource(R.string.session_empty_title), style = MaterialTheme.typography.titleLarge)
-                        Text(
-                            stringResource(R.string.session_empty_body),
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            textAlign = TextAlign.Center,
-                        )
-                    }
+                    EmptyState(
+                        icon = Icons.Rounded.FitnessCenter,
+                        title = stringResource(R.string.session_empty_title),
+                        body = stringResource(R.string.session_empty_body),
+                    )
                 }
             }
             items(session.exercises, key = { it.id }) { exercise ->
+                // Only the card being edited sees the keypad's target and buffer.
+                val focus = keypad.target?.takeIf { t -> exercise.sets.any { it.id == t.setId } }
                 ExerciseCard(
                     exercise = exercise,
                     isFirst = exercise.position == 0,
                     isLast = exercise.position == session.exercises.lastIndex,
-                    previous = uiState.previous[exercise.exercise.id].orEmpty(),
-                    preferences = uiState.preferences,
-                    focus = keypad.target,
-                    buffer = keypad.buffer,
-                    actions = ExerciseCardActions(
-                        onFieldClick = { setId, field -> focus(KeypadTarget(setId, field)) },
-                        onWarmUps = { viewModel.addWarmUps(exercise.id) },
-                        onToggleSet = { setId ->
-                            // Ticking a set off means it's logged: close the keypad too.
-                            if (exercise.sets.none { it.id == setId && it.isCompleted }) focus(null)
-                            viewModel.toggleSet(exercise, setId)
-                        },
-                        onCopyPrevious = viewModel::copyPrevious,
-                        onAddSet = { viewModel.addSet(exercise.id) },
-                        onDeleteSet = viewModel::deleteSet,
-                        onSetType = viewModel::setSetType,
-                        onSetNote = viewModel::setSetNote,
-                        onSwap = { viewModel.openSwap(exercise) },
-                        onExerciseNote = { viewModel.setExerciseNote(exercise.id, it) },
-                        onRest = { viewModel.setExerciseRest(exercise.id, it) },
-                        onSupersetNext = { viewModel.supersetWithNext(exercise.id) },
-                        onRemoveSuperset = { viewModel.removeFromSuperset(exercise.id) },
-                        onMove = { viewModel.moveExercise(exercise.id, it) },
-                        onRemove = { viewModel.removeExercise(exercise.id) },
-                    ),
+                    previous = state.previous[exercise.exercise.id].orEmpty(),
+                    preferences = state.preferences,
+                    focus = focus,
+                    buffer = if (focus != null) keypad.buffer else "",
+                    actions = cardActions,
                     modifier = Modifier.animateItem(),
                 )
             }
             item(key = "add") {
-                OutlinedButton(
-                    onClick = { onAddExercises(session.id) },
-                    modifier = Modifier.fillMaxWidth().height(56.dp),
-                ) {
-                    Icon(Icons.Rounded.Add, contentDescription = null)
-                    Text(stringResource(R.string.session_add_exercises), modifier = Modifier.padding(start = 8.dp))
-                }
+                SecondaryButton(stringResource(R.string.session_add_exercises), actions.onAddExercises, icon = Icons.Rounded.Add)
             }
         }
     }
@@ -308,84 +391,91 @@ internal fun SessionRoute(
     celebration?.let { event ->
         Box(Modifier.fillMaxSize()) {
             Confetti(key = event.id)
-            PrBanner(event, unit, Modifier.align(Alignment.TopCenter).padding(top = 96.dp, start = 16.dp, end = 16.dp))
+            PrBanner(event, unit, Modifier.align(Alignment.TopCenter).padding(top = BANNER_TOP, start = Dimens.ScreenPadding, end = Dimens.ScreenPadding))
         }
     }
     platesFor?.let { (exercise, kg) ->
         PlateSheet(exercise.exercise, kg, unit, onDismiss = { platesFor = null })
     }
-    swap?.let { state ->
+    swap?.let { swapState ->
         SwapSheet(
-            state = state,
-            onFilter = viewModel::setSwapFilter,
-            onPick = viewModel::swapTo,
-            onDismiss = viewModel::closeSwap,
+            state = swapState,
+            onFilter = actions.onSwapFilter,
+            onPick = actions.onSwapPick,
+            onDismiss = actions.onSwapClose,
         )
     }
     if (editingNote) {
         TextInputDialog(
             title = stringResource(R.string.session_workout_note),
             initial = session.notes.orEmpty(),
-            onSave = { viewModel.setSessionNote(it); editingNote = false },
+            onSave = { actions.onSessionNote(it); editingNote = false },
             onDismiss = { editingNote = false },
         )
     }
     if (stopwatchOpen) {
         StopwatchSheet(
-            onCountdown = { viewModel.startCountdown(it); stopwatchOpen = false },
+            onCountdown = { actions.onCountdown(it); stopwatchOpen = false },
             onDismiss = { stopwatchOpen = false },
         )
     }
     if (confirmFinish) {
         val allSets = session.exercises.flatMap { it.sets }
         val completed = allSets.count { it.isCompleted }
-        val incomplete = allSets.size - completed
-        AlertDialog(
-            onDismissRequest = { confirmFinish = false },
-            title = { Text(stringResource(R.string.finish_title)) },
-            text = {
-                Text(
-                    when {
-                        completed == 0 -> stringResource(R.string.finish_body_nothing)
-                        incomplete > 0 -> stringResource(R.string.finish_body_incomplete, incomplete)
-                        else -> stringResource(R.string.finish_body_ok)
-                    },
-                )
-            },
-            confirmButton = {
-                if (completed == 0) {
-                    TextButton(onClick = { confirmFinish = false; viewModel.discard(onClose) }) {
-                        Text(stringResource(R.string.session_discard))
-                    }
-                } else {
-                    Button(onClick = { confirmFinish = false; viewModel.finish(onFinished) }) {
-                        Text(stringResource(R.string.session_finish))
-                    }
-                }
-            },
-            dismissButton = {
-                TextButton(onClick = { confirmFinish = false }) { Text(stringResource(R.string.cancel)) }
-            },
+        FinishWorkoutDialog(
+            completed = completed,
+            incomplete = allSets.size - completed,
+            onFinish = { confirmFinish = false; actions.onFinish() },
+            onDiscard = { confirmFinish = false; actions.onDiscard() },
+            onDismiss = { confirmFinish = false },
         )
     }
     if (confirmDiscard) {
-        AlertDialog(
-            onDismissRequest = { confirmDiscard = false },
-            title = { Text(stringResource(R.string.discard_title)) },
-            text = { Text(stringResource(R.string.discard_body)) },
-            confirmButton = {
-                TextButton(onClick = { confirmDiscard = false; viewModel.discard(onClose) }) {
-                    Text(stringResource(R.string.session_discard), color = MaterialTheme.colorScheme.error)
-                }
-            },
-            dismissButton = {
-                TextButton(onClick = { confirmDiscard = false }) { Text(stringResource(R.string.cancel)) }
-            },
+        DiscardWorkoutDialog(
+            onConfirm = { confirmDiscard = false; actions.onDiscard() },
+            onDismiss = { confirmDiscard = false },
         )
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
+/** "Finish workout?"; with nothing completed the only way on is to discard, in the error colour. */
+@Composable
+internal fun FinishWorkoutDialog(completed: Int, incomplete: Int, onFinish: () -> Unit, onDiscard: () -> Unit, onDismiss: () -> Unit) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(stringResource(R.string.finish_title)) },
+        text = {
+            Text(
+                when {
+                    completed == 0 -> stringResource(R.string.finish_body_nothing)
+                    incomplete > 0 -> androidx.compose.ui.res.pluralStringResource(R.plurals.finish_body_incomplete, incomplete, incomplete)
+                    else -> stringResource(R.string.finish_body_ok)
+                },
+            )
+        },
+        confirmButton = {
+            if (completed == 0) {
+                TextButton(onClick = onDiscard) { Text(stringResource(R.string.session_discard), color = MaterialTheme.colorScheme.error) }
+            } else {
+                Button(onClick = onFinish) { Text(stringResource(R.string.session_finish)) }
+            }
+        },
+        dismissButton = { TextButton(onClick = onDismiss) { Text(stringResource(CoreR.string.action_cancel)) } },
+    )
+}
+
+@Composable
+internal fun DiscardWorkoutDialog(onConfirm: () -> Unit, onDismiss: () -> Unit) {
+    com.viktorolsson.spotter.core.ui.component.ConfirmDialog(
+        title = stringResource(R.string.discard_title),
+        text = stringResource(R.string.discard_body),
+        confirmText = stringResource(R.string.session_discard),
+        onConfirm = onConfirm,
+        onDismiss = onDismiss,
+        destructive = true,
+    )
+}
+
 @Composable
 private fun SessionTopBar(
     dayName: String?,
@@ -398,7 +488,7 @@ private fun SessionTopBar(
     onStopwatch: () -> Unit,
     onDiscard: () -> Unit,
 ) {
-    TopAppBar(
+    SpotterTopBar(
         navigationIcon = {
             IconButton(onClick = onMinimize) {
                 Icon(Icons.Rounded.KeyboardArrowDown, stringResource(R.string.session_minimize))
@@ -435,7 +525,7 @@ private fun SessionTopBar(
                     )
                 }
             }
-            FilledTonalButton(onClick = onFinish, modifier = Modifier.padding(end = 8.dp)) {
+            FilledTonalButton(onClick = onFinish, modifier = Modifier.padding(end = Spacing.sm)) {
                 Text(stringResource(R.string.session_finish))
             }
         },
@@ -484,32 +574,58 @@ internal class KeypadState {
     var target by mutableStateOf<KeypadTarget?>(null)
     var buffer by mutableStateOf("")
     var fresh by mutableStateOf(true)
+
+    /** Moves focus to [target] with its current [text]; null closes the keypad. */
+    fun focus(target: KeypadTarget?, text: String) {
+        this.target = target
+        buffer = text
+        fresh = true
+    }
 }
 
 @Composable
-private fun rememberKeypadState() = remember { KeypadState() }
+internal fun rememberKeypadState() = remember { KeypadState() }
+
+/** The stored value behind a field, as the keypad should first show it. */
+private fun fieldText(session: WorkoutSession, preferences: UserPreferences, target: KeypadTarget): String {
+    val set = session.exercises.asSequence().flatMap { it.sets }.firstOrNull { it.id == target.setId } ?: return ""
+    return when (target.field) {
+        SetField.WEIGHT -> set.weightKg?.let(preferences.weightUnit::format).orEmpty()
+        SetField.REPS -> set.reps?.toString().orEmpty()
+        SetField.EFFORT -> set.rir?.let(preferences.effortScale::display)?.toString().orEmpty()
+    }
+}
 
 /** Announced politely to screen readers; the confetti itself is decorative. */
 @Composable
-private fun PrBanner(event: PrEvent, unit: WeightUnit, modifier: Modifier = Modifier) {
+internal fun PrBanner(event: PrEvent, unit: WeightUnit, modifier: Modifier = Modifier) {
     val oneRepMax = event.records.firstOrNull { it.type == PersonalRecordType.ESTIMATED_1RM }
     val parts = listOfNotNull(
-        oneRepMax?.let { stringResource(R.string.pr_1rm, "${unit.format(it.value).substringBefore('.')} ${unit.label}") },
+        oneRepMax?.let { stringResource(R.string.pr_1rm, formatOneRepMax(it.value, unit)) },
         stringResource(R.string.pr_reps).takeIf { event.records.any { it.type == PersonalRecordType.REPS_AT_WEIGHT } },
     )
-    val detail = parts.joinToString(" · ")
-    val body = stringResource(R.string.pr_banner_body, event.exerciseName, formatSet(event.weightKg, event.reps, unit, event.timed)) + " · " + detail
+    val body = stringResource(
+        R.string.pr_banner_body,
+        event.exerciseName,
+        formatSet(event.weightKg, event.reps, unit, event.timed),
+        parts.joinToString(" · "),
+    )
     Card(
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.tertiaryContainer),
-        elevation = CardDefaults.cardElevation(defaultElevation = 6.dp),
+        elevation = CardDefaults.cardElevation(defaultElevation = BANNER_ELEVATION),
         modifier = modifier.fillMaxWidth().semantics { liveRegion = LiveRegionMode.Polite },
     ) {
-        Row(Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
-            Icon(Icons.Rounded.EmojiEvents, contentDescription = null, tint = MaterialTheme.colorScheme.onTertiaryContainer, modifier = Modifier.size(36.dp))
-            Column(Modifier.padding(start = 12.dp)) {
+        Row(Modifier.padding(Dimens.CardPadding), verticalAlignment = Alignment.CenterVertically) {
+            Icon(Icons.Rounded.EmojiEvents, contentDescription = null, tint = MaterialTheme.colorScheme.onTertiaryContainer, modifier = Modifier.size(BANNER_ICON))
+            Column(Modifier.padding(start = Spacing.md)) {
                 Text(stringResource(R.string.pr_banner_title), style = MaterialTheme.typography.titleLarge, color = MaterialTheme.colorScheme.onTertiaryContainer)
                 Text(body, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onTertiaryContainer)
             }
         }
     }
 }
+
+private const val CELEBRATION_MS = 3_500L
+private val BANNER_TOP = androidx.compose.ui.unit.Dp(96f)
+private val BANNER_ICON = androidx.compose.ui.unit.Dp(36f)
+private val BANNER_ELEVATION = androidx.compose.ui.unit.Dp(6f)

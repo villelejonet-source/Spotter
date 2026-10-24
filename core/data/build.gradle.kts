@@ -32,6 +32,9 @@ dependencies {
     implementation(libs.supabase.auth)
     implementation(libs.supabase.postgrest)
     implementation(libs.ktor.client.okhttp)
+    // Auth session and PKCE verifier live in EncryptedSharedPreferences (see SupabaseProvider).
+    implementation(libs.androidx.security.crypto)
+    implementation(libs.multiplatform.settings)
     implementation(libs.androidx.work.runtime)
     implementation(libs.androidx.hilt.work)
     ksp(libs.androidx.hilt.compiler)

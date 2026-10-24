@@ -6,7 +6,6 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -15,10 +14,10 @@ import com.patrykandpatrick.vico.compose.cartesian.CartesianChartHost
 import com.patrykandpatrick.vico.compose.cartesian.Zoom
 import com.patrykandpatrick.vico.compose.cartesian.axis.HorizontalAxis
 import com.patrykandpatrick.vico.compose.cartesian.axis.VerticalAxis
-import com.patrykandpatrick.vico.compose.cartesian.data.CartesianChartModelProducer
+import com.patrykandpatrick.vico.compose.cartesian.data.CartesianChartModel
 import com.patrykandpatrick.vico.compose.cartesian.data.CartesianLayerRangeProvider
 import com.patrykandpatrick.vico.compose.cartesian.data.CartesianValueFormatter
-import com.patrykandpatrick.vico.compose.cartesian.data.lineModel
+import com.patrykandpatrick.vico.compose.cartesian.data.LineCartesianLayerModel
 import com.patrykandpatrick.vico.compose.cartesian.layer.LineCartesianLayer
 import com.patrykandpatrick.vico.compose.cartesian.layer.rememberLine
 import com.patrykandpatrick.vico.compose.cartesian.layer.rememberLineCartesianLayer
@@ -28,16 +27,17 @@ import com.patrykandpatrick.vico.compose.cartesian.rememberVicoZoomState
 import com.patrykandpatrick.vico.compose.common.Fill
 import com.patrykandpatrick.vico.compose.common.ProvideVicoTheme
 import com.patrykandpatrick.vico.compose.m3.common.rememberM3VicoTheme
+import com.viktorolsson.spotter.core.ui.formatAxisDate
 import java.time.LocalDate
-import java.time.format.DateTimeFormatter
 import kotlin.math.ceil
 import kotlin.math.floor
 import kotlin.math.roundToInt
 
 data class ChartPoint(val date: LocalDate, val value: Double)
 
-private val axisDate = DateTimeFormatter.ofPattern("d MMM")
 private const val Y_LABELS = 4
+private val CHART_HEIGHT = 200.dp
+private val EMPTY_HEIGHT = 120.dp
 
 /**
  * A dated line chart that fits all points on screen, with the y-axis fitted to the
@@ -57,25 +57,26 @@ fun TrendChart(
     emptyText: String = "",
 ) {
     if (primary.size < 2) {
-        Box(modifier.fillMaxWidth().height(120.dp), contentAlignment = Alignment.Center) {
+        Box(modifier.fillMaxWidth().height(EMPTY_HEIGHT), contentAlignment = Alignment.Center) {
             Text(emptyText, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
         return
     }
     fun x(points: List<ChartPoint>) =
         if (evenlySpaced) points.indices.map { it.toDouble() } else points.map { it.date.toEpochDay().toDouble() }
-    val producer = remember { CartesianChartModelProducer() }
-    LaunchedEffect(primary, secondary, evenlySpaced) {
-        producer.runTransaction {
-            lineModel {
+    // Built synchronously: the data is small, and the chart is then complete on its first frame
+    // (which also keeps screenshot tests deterministic).
+    val model = remember(primary, secondary, evenlySpaced) {
+        CartesianChartModel(
+            LineCartesianLayerModel.build {
                 series(x(primary), primary.map { it.value })
                 if (secondary.isNotEmpty()) series(x(secondary), secondary.map { it.value })
-            }
-        }
+            },
+        )
     }
-    val values = (primary + secondary).map { it.value }
-    val spread = (values.max() - values.min()).coerceAtLeast(values.max() * 0.05).coerceAtLeast(1.0)
-    val rangeProvider = remember(values) {
+    val rangeProvider = remember(primary, secondary) {
+        val values = (primary + secondary).map { it.value }
+        val spread = (values.max() - values.min()).coerceAtLeast(values.max() * 0.05).coerceAtLeast(1.0)
         val minY = floor((values.min() - spread * 0.25).coerceAtLeast(0.0))
         // Round the span up to whole steps between the axis labels, so every label is a distinct whole number.
         val intervals = Y_LABELS - 1
@@ -111,14 +112,14 @@ fun TrendChart(
                 ),
                 bottomAxis = HorizontalAxis.rememberBottom(
                     valueFormatter = remember(dateFor) {
-                        CartesianValueFormatter { _, value, _ -> dateFor(value).format(axisDate) }
+                        CartesianValueFormatter { _, value, _ -> formatAxisDate(dateFor(value)) }
                     },
                 ),
             ),
-            modelProducer = producer,
+            model = model,
             scrollState = rememberVicoScrollState(scrollEnabled = false),
             zoomState = rememberVicoZoomState(zoomEnabled = false, initialZoom = Zoom.Content),
-            modifier = modifier.fillMaxWidth().height(200.dp),
+            modifier = modifier.fillMaxWidth().height(CHART_HEIGHT),
         )
     }
 }

@@ -34,7 +34,7 @@ class SyncTriggersTest {
             Room.inMemoryDatabaseBuilder(ApplicationProvider.getApplicationContext<Context>(), SpotterDatabase::class.java),
         ).allowMainThreadQueries().build()
         db.exerciseDao().upsertAll(parseExerciseSeed(File("src/main/assets/exercises.json").readText()).exercises.map(SeedExercise::toEntity))
-        workouts = WorkoutRepository(db, db.workoutDao(), db.planDao(), db.exerciseDao(), testPreferences(), MutableClock(Instant.parse("2026-10-03T10:00:00Z")))
+        workouts = WorkoutRepository(db, db.workoutDao(), db.planDao(), db.exerciseDao(), testPreferences(db), MutableClock(Instant.parse("2026-10-03T10:00:00Z")))
     }
 
     @After

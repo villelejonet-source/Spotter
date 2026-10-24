@@ -44,7 +44,7 @@ class RecommendationRepositoryTest {
             .build()
         val seed = parseExerciseSeed(File("src/main/assets/exercises.json").readText())
         db.exerciseDao().upsertAll(seed.exercises.map(SeedExercise::toEntity))
-        prefs = testPreferences()
+        prefs = testPreferences(db)
         plans = PlanRepository(db, db.planDao())
         workouts = WorkoutRepository(db, db.workoutDao(), db.planDao(), db.exerciseDao(), prefs, clock)
         val profiles = UserProfileRepository(db.userProfileDao())

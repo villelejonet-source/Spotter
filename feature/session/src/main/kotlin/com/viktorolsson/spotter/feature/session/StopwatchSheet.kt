@@ -23,7 +23,8 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.unit.dp
+import com.viktorolsson.spotter.core.ui.theme.Dimens
+import com.viktorolsson.spotter.core.ui.theme.Spacing
 import kotlinx.coroutines.delay
 
 /**
@@ -50,46 +51,62 @@ internal fun StopwatchSheet(
     }
 
     ModalBottomSheet(onDismissRequest = onDismiss) {
+        StopwatchSheetContent(
+            displayMs = displayMs,
+            running = runningSince != null,
+            onCountdown = onCountdown,
+            onReset = { bankedMs = 0; runningSince = null; displayMs = 0 },
+            onStartPause = {
+                val since = runningSince
+                if (since == null) {
+                    runningSince = SystemClock.elapsedRealtime()
+                } else {
+                    bankedMs += SystemClock.elapsedRealtime() - since
+                    runningSince = null
+                }
+            },
+        )
+    }
+}
+
+/** The sheet's body, usable on its own (screenshot tests). */
+@Composable
+internal fun StopwatchSheetContent(
+    displayMs: Long,
+    running: Boolean,
+    onCountdown: (seconds: Int) -> Unit,
+    onReset: () -> Unit,
+    onStartPause: () -> Unit,
+) {
         Column(
-            Modifier.fillMaxWidth().padding(horizontal = 24.dp).padding(bottom = 32.dp),
+            Modifier.fillMaxWidth().padding(horizontal = Dimens.SheetPadding).padding(bottom = Dimens.SheetPadding),
             horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(16.dp),
+            verticalArrangement = Arrangement.spacedBy(Spacing.lg),
         ) {
             Text(
                 formatStopwatch(displayMs),
                 style = MaterialTheme.typography.displayLarge.copy(fontFeatureSettings = "tnum"),
             )
-            Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                OutlinedButton(
-                    onClick = { bankedMs = 0; runningSince = null; displayMs = 0 },
-                    enabled = runningSince == null && displayMs > 0,
-                ) { Text(stringResource(R.string.stopwatch_reset)) }
-                Button(
-                    onClick = {
-                        val since = runningSince
-                        if (since == null) {
-                            runningSince = SystemClock.elapsedRealtime()
-                        } else {
-                            bankedMs += SystemClock.elapsedRealtime() - since
-                            runningSince = null
-                        }
-                    },
-                ) {
-                    Text(stringResource(if (runningSince == null) R.string.stopwatch_start else R.string.stopwatch_pause))
+            Row(horizontalArrangement = Arrangement.spacedBy(Spacing.md)) {
+                OutlinedButton(onClick = onReset, enabled = !running && displayMs > 0) { Text(stringResource(R.string.stopwatch_reset)) }
+                Button(onClick = onStartPause) {
+                    Text(stringResource(if (running) R.string.stopwatch_pause else R.string.stopwatch_start))
                 }
             }
             Text(
                 stringResource(R.string.stopwatch_countdown),
                 style = MaterialTheme.typography.titleSmall,
-                modifier = Modifier.padding(top = 8.dp),
+                modifier = Modifier.padding(top = Spacing.sm),
             )
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            Row(horizontalArrangement = Arrangement.spacedBy(Spacing.sm)) {
                 listOf(30, 45, 60, 90).forEach { seconds ->
-                    AssistChip(onClick = { onCountdown(seconds) }, label = { Text("${seconds}s") })
+                    AssistChip(
+                        onClick = { onCountdown(seconds) },
+                        label = { Text(stringResource(com.viktorolsson.spotter.core.ui.R.string.seconds_short, seconds)) },
+                    )
                 }
             }
         }
-    }
 }
 
 private fun formatStopwatch(ms: Long): String {

@@ -14,6 +14,11 @@ class ExerciseSeedTest {
     private val exercises = seed.exercises
 
     @Test
+    fun `the catalog version constant matches the asset`() {
+        assertEquals("bump EXERCISE_CATALOG_VERSION with exercises.json", seed.version, EXERCISE_CATALOG_VERSION)
+    }
+
+    @Test
     fun `library size is within the planned range`() {
         assertTrue("got ${exercises.size}", exercises.size in 150..250)
     }

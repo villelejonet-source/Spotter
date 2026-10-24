@@ -64,8 +64,15 @@ class ProgressViewModel @Inject constructor(
 
     fun dismiss(id: Long) = viewModelScope.launch { recommendationRepository.dismiss(id) }
 
-    fun logWeight(text: String) = viewModelScope.launch {
-        val kg = uiState.value.unit.parseToKg(text)?.takeIf { it in 30.0..300.0 } ?: return@launch
-        bodyWeightRepository.log(LocalDate.now(), kg)
+    /** Saves today's body weight; returns false (and saves nothing) for text outside the accepted range. */
+    fun logWeight(text: String): Boolean {
+        val kg = uiState.value.unit.parseToKg(text)?.takeIf { it in MIN_WEIGHT_KG..MAX_WEIGHT_KG } ?: return false
+        viewModelScope.launch { bodyWeightRepository.log(LocalDate.now(), kg) }
+        return true
+    }
+
+    companion object {
+        const val MIN_WEIGHT_KG = 30.0
+        const val MAX_WEIGHT_KG = 300.0
     }
 }

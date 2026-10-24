@@ -8,15 +8,13 @@
     <string name="progress_balance">Muscle balance · last 7 days</string>
     <string name="progress_balance_hint">Working sets per muscle group. Target %1$d–%2$d for your goal.</string>
     <string name="progress_balance_row">%1$s / %2$d–%3$d</string>
-    <string name="progress_under">Under</string>
-    <string name="progress_over">Over</string>
     <string name="progress_body_weight">Body weight</string>
     <string name="progress_log_weight">Log weight</string>
     <string name="progress_weight_label">Weight (%1$s)</string>
+    <string name="progress_weight_invalid">Enter a weight between %1$s and %2$s.</string>
     <string name="progress_weight_average">7-day average %1$s</string>
     <string name="progress_weight_empty">Log your weight a few times to see the trend.</string>
     <string name="progress_lifts">Your lifts</string>
-    <string name="progress_lift_meta">%1$d sessions · last %2$s</string>
-    <string name="save">Save</string>
-    <string name="cancel">Cancel</string>
+    <string name="progress_lift_meta">%1$s · last %2$s</string>
+    <string name="progress_open_exercise">Open exercise history</string>
 </resources>

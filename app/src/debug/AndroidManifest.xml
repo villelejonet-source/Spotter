@@ -1,12 +1,17 @@
 <?xml version="1.0" encoding="utf-8"?>
-<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
 
     <application>
-        <!-- Demo data for screenshots; debug builds only (see DemoData.kt). -->
+        <!--
+          Demo data for screenshots; debug builds only (see DemoData.kt). Exported so
+          `adb shell am broadcast` reaches it, but guarded by DUMP (a development permission
+          the shell holds and ordinary apps can't get), so no other app can fill the database.
+        -->
         <receiver
             android:name=".debug.DemoDataReceiver"
             android:exported="true"
-            tools:ignore="ExportedReceiver"
-            xmlns:tools="http://schemas.android.com/tools" />
+            android:permission="android.permission.DUMP"
+            tools:ignore="ExportedReceiver" />
     </application>
 </manifest>

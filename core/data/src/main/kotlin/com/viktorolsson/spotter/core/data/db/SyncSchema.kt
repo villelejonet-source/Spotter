@@ -1,5 +1,6 @@
 package com.viktorolsson.spotter.core.data.db
 
+import androidx.room.migration.AutoMigrationSpec
 import androidx.room.migration.Migration
 import androidx.sqlite.db.SupportSQLiteDatabase
 
@@ -51,6 +52,16 @@ object SyncSchema {
     const val NOW_MS = "CAST((julianday('now') - 2440587.5) * 86400000 AS INTEGER)"
     private const val RANDOM_ID = "lower(hex(randomblob(16)))"
     private const val ACTIVE = "(SELECT applying FROM sync_state WHERE id = 1) = 0"
+
+    /** Re-installs the triggers after an automatic migration (a new synced table needs its own). */
+    class TriggerSpec : AutoMigrationSpec {
+        override fun onPostMigrate(db: SupportSQLiteDatabase) = createTriggers(db)
+    }
+
+    /** True when every synced table has its three triggers; one indexed sqlite_master query. */
+    fun triggersInstalled(db: SupportSQLiteDatabase): Boolean =
+        db.query("SELECT COUNT(*) FROM sqlite_master WHERE type = 'trigger' AND name LIKE 'sync\\_%' ESCAPE '\\'")
+            .use { it.moveToFirst() && it.getInt(0) >= tables.size * 3 }
 
     /** [upTo]: only tables that exist at that schema version (for migrations). */
     fun createTriggers(db: SupportSQLiteDatabase, upTo: Int = Int.MAX_VALUE) {

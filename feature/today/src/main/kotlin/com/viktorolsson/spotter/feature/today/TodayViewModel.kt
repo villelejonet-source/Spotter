@@ -57,13 +57,13 @@ class TodayViewModel @Inject constructor(
         day.map { Schedule(pending, it, todays.isNotEmpty() && pending == null, upcoming) }
     }
 
+    // One plan subscription: the next day is derived inside the repository.
     val uiState: StateFlow<TodayUiState> = combine(
-        planRepository.observeActivePlan(),
-        planRepository.observeNextDay(),
+        planRepository.observePlanAndNextDay(),
         workoutRepository.observeActiveSession(),
         preferencesRepository.preferences,
         schedule,
-    ) { plan, next, active, prefs, schedule ->
+    ) { (plan, next), active, prefs, schedule ->
         TodayUiState(
             loading = false,
             hasPlan = plan != null,

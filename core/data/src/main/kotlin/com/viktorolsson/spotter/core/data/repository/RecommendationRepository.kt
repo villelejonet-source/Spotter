@@ -57,11 +57,12 @@ class RecommendationRepository @Inject constructor(
      * apply are removed, and anything dismissed or applied recently isn't repeated.
      */
     suspend fun refresh() {
-        val context = buildContext() ?: return
-        val drafts = RecommendationEngine.evaluate(context)
-        val now = clock.instant()
         db.withTransaction {
+            // One read of the recommendation table serves both the engine's context and the diff below.
             val existing = dao.getAll()
+            val context = buildContext(existing) ?: return@withTransaction
+            val drafts = RecommendationEngine.evaluate(context)
+            val now = clock.instant()
             val active = existing.filter { it.status == RecommendationStatus.ACTIVE }.associateBy { it.dedupKey }
             val byKey = drafts.associateBy(::keyOf)
             // Cards whose problem went away, or whose best fix changed, are replaced.
@@ -133,7 +134,7 @@ class RecommendationRepository @Inject constructor(
         refresh()
     }
 
-    private suspend fun buildContext(): RecommendationContext? {
+    private suspend fun buildContext(all: List<RecommendationEntity>): RecommendationContext? {
         val plan = planDao.getActivePlan() ?: return null
         val zone = ZoneId.systemDefault()
         val today = LocalDate.now(clock)
@@ -156,7 +157,6 @@ class RecommendationRepository @Inject constructor(
             prefs.deloadUntil?.takeIf { !it.isAfter(today) },
             workoutDao.getLastDeloadSession()?.atZone(zone)?.toLocalDate(),
         ).maxOrNull()
-        val all = dao.getAll()
         val deloadRecentlyHandled = all.any {
             it.type == RecommendationType.DELOAD && it.resolvedAt != null && Duration.between(it.resolvedAt, clock.instant()) < COOLDOWN
         }
@@ -203,12 +203,3 @@ class RecommendationRepository @Inject constructor(
         val COOLDOWN: Duration = Duration.ofDays(28)
     }
 }
-
-private fun RecommendationEntity.toModel() = Recommendation(
-    id = id,
-    type = type,
-    exerciseId = exerciseId,
-    payload = RecommendationPayload.decode(payload),
-    createdAt = createdAt,
-    status = status,
-)

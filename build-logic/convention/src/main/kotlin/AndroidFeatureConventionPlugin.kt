@@ -5,7 +5,11 @@ import org.gradle.kotlin.dsl.dependencies
 import org.gradle.kotlin.dsl.project
 import org.gradle.kotlin.dsl.withType
 
-/** A feature module: Android library + Compose + Hilt + type-safe navigation, wired to the core modules. */
+/**
+ * A feature module: Android library + Compose + Hilt + type-safe navigation, wired to the
+ * core modules. `material-icons-extended` is not included: a module that needs an icon
+ * outside the core set declares it itself, so modules on core icons stay light.
+ */
 class AndroidFeatureConventionPlugin : Plugin<Project> {
     override fun apply(target: Project) = with(target) {
         pluginManager.apply("spotter.android.library")
@@ -25,7 +29,7 @@ class AndroidFeatureConventionPlugin : Plugin<Project> {
             add("implementation", libs.lib("androidx-hilt-lifecycle-viewmodel-compose"))
             add("implementation", libs.lib("androidx-lifecycle-runtime-compose"))
             add("implementation", libs.lib("androidx-lifecycle-viewmodel-compose"))
-            add("implementation", libs.lib("androidx-compose-material-icons-extended"))
+            add("implementation", libs.lib("androidx-compose-material-icons-core"))
             add("implementation", libs.lib("kotlinx-serialization-json"))
         }
     }

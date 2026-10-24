@@ -154,8 +154,16 @@ class WorkoutRepository @Inject constructor(
         }
     }
 
+    /**
+     * [getPreviousSets] for several exercises in two queries (not one per exercise):
+     * last session's working sets of each, warm-ups left out. Exercises with no history
+     * are absent from the map.
+     */
+    suspend fun previousSetsFor(exerciseIds: Set<String>): Map<String, List<PreviousSet>> =
+        previousSetEntitiesFor(exerciseIds).mapValues { (_, sets) -> sets.filter { it.setType != SetType.WARMUP }.map { it.toPrevious() } }
+
     /** The completed sets from the most recent finished session of each exercise, in logged order. */
-    private suspend fun previousSetsFor(exerciseIds: Collection<String>): Map<String, List<SetEntryEntity>> {
+    private suspend fun previousSetEntitiesFor(exerciseIds: Collection<String>): Map<String, List<SetEntryEntity>> {
         val ids = exerciseIds.distinct()
         if (ids.isEmpty()) return emptyMap()
         val latest = dao.getExerciseSessionRefs(ids).groupBy { it.exerciseId }.mapValues { (_, refs) -> refs.first().sessionId }
@@ -232,7 +240,7 @@ class WorkoutRepository @Inject constructor(
     suspend fun addExercises(sessionId: Long, exerciseIds: List<String>, defaultSetCount: Int = 3) =
         db.withTransaction {
             var position = dao.nextExercisePosition(sessionId)
-            val previousByExercise = previousSetsFor(exerciseIds)
+            val previousByExercise = previousSetEntitiesFor(exerciseIds)
             exerciseIds.forEach { exerciseId ->
                 val sessionExerciseId = dao.insertSessionExercise(
                     SessionExerciseEntity(

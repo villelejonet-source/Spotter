@@ -7,11 +7,14 @@ import android.net.Uri
 import android.util.Log
 import androidx.security.crypto.EncryptedSharedPreferences
 import androidx.security.crypto.MasterKey
+import com.russhwolf.settings.Settings
 import com.russhwolf.settings.SharedPreferencesSettings
 import com.viktorolsson.spotter.core.data.di.ApplicationScope
 import io.github.jan.supabase.SupabaseClient
 import io.github.jan.supabase.auth.Auth
 import io.github.jan.supabase.auth.FlowType
+import io.github.jan.supabase.auth.MemoryCodeVerifierCache
+import io.github.jan.supabase.auth.MemorySessionManager
 import io.github.jan.supabase.auth.OtpType
 import io.github.jan.supabase.auth.SettingsCodeVerifierCache
 import io.github.jan.supabase.auth.SettingsSessionManager
@@ -31,6 +34,7 @@ import io.github.jan.supabase.postgrest.postgrest
 import io.github.jan.supabase.postgrest.query.Columns
 import io.github.jan.supabase.postgrest.query.Order
 import dagger.hilt.android.qualifiers.ApplicationContext
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.Deferred
@@ -80,8 +84,10 @@ class SupabaseProvider @Inject constructor(
 
     private val deferred: Deferred<SupabaseClient?> = scope.async(Dispatchers.IO, start = CoroutineStart.LAZY) {
         if (!config.isConfigured) return@async null
-        val secure = SharedPreferencesSettings(AuthStorage.encryptedPreferences(context))
-        AuthStorage.migratePlainSession(context, secure)
+        // Null when the encrypted store can't be opened even after a reset: keep the
+        // session in memory for this process instead of failing every account flow.
+        val secure = AuthStorage.open(context)
+        if (secure != null) AuthStorage.migratePlainSession(context, secure)
         createSupabaseClient(config.url, config.publishableKey) {
             install(Auth) {
                 // Sign-in links in emails open the app at spotter://login (must be listed under
@@ -91,8 +97,8 @@ class SupabaseProvider @Inject constructor(
                 // PKCE: the link carries a one-time ?code= that only this phone can exchange
                 // (the verifier never leaves the device), and no tokens travel in the URL.
                 flowType = FlowType.PKCE
-                sessionManager = SettingsSessionManager(secure)
-                codeVerifierCache = SettingsCodeVerifierCache(secure)
+                sessionManager = secure?.let(::SettingsSessionManager) ?: MemorySessionManager()
+                codeVerifierCache = secure?.let(::SettingsCodeVerifierCache) ?: MemoryCodeVerifierCache()
             }
             install(Postgrest)
         }
@@ -108,7 +114,32 @@ class SupabaseProvider @Inject constructor(
 /** Where the auth session and PKCE verifier live: EncryptedSharedPreferences (AES-256, Keystore master key). */
 internal object AuthStorage {
     private const val FILE = "spotter_auth"
+    /** Jetpack Security keeps the wrapped keysets for every encrypted prefs file here. */
+    private const val KEYSET_FILE = "__androidx_security_crypto_encrypted_prefs__"
     private const val TAG = "SpotterAuth"
+
+    /**
+     * Opens the store, recovering from a broken one: if the encrypted file can't be opened
+     * (a corrupt or restored file, a Keystore key that no longer matches), the file and its
+     * keysets are deleted and it is created fresh once (the user signs in again). If even
+     * that fails it returns null and the caller keeps the session in memory for this
+     * process, so the app keeps working and sign-in is asked for again on the next launch.
+     * [create] is the seam for tests.
+     */
+    fun open(context: Context, create: (Context) -> SharedPreferences = ::encryptedPreferences): Settings? {
+        repeat(2) { attempt ->
+            try {
+                return SharedPreferencesSettings(create(context))
+            } catch (e: Exception) {
+                if (e is CancellationException) throw e
+                Log.w(TAG, "Could not open the session store (attempt ${attempt + 1}): ${e.javaClass.simpleName}")
+                context.deleteSharedPreferences(FILE)
+                context.deleteSharedPreferences(KEYSET_FILE)
+            }
+        }
+        Log.w(TAG, "Session store unavailable; keeping the session in memory for this process")
+        return null
+    }
 
     @Suppress("DEPRECATION") // Jetpack Security is in maintenance but still the supported Keystore-backed store.
     fun encryptedPreferences(context: Context): SharedPreferences {
@@ -127,7 +158,7 @@ internal object AuthStorage {
      * supabase-kt's default session manager. Move it over once so nobody is signed out by
      * the update, and wipe the plain copy.
      */
-    fun migratePlainSession(context: Context, secure: SharedPreferencesSettings) {
+    fun migratePlainSession(context: Context, secure: Settings) {
         val plain = context.getSharedPreferences("${context.packageName}_preferences", Context.MODE_PRIVATE)
         val keys = listOf(SettingsSessionManager.SETTINGS_KEY, SettingsCodeVerifierCache.SETTINGS_KEY)
         if (keys.none { plain.contains(it) }) return

@@ -23,6 +23,7 @@
     <string name="effort_scale_rir">RIR</string>
     <string name="effort_scale_rpe">RPE</string>
     <string name="date_at_time">%1$s, %2$s</string>
+    <string name="value_none">—</string>
     <plurals name="reps_count">
         <item quantity="one">%1$d rep</item>
         <item quantity="other">%1$d reps</item>

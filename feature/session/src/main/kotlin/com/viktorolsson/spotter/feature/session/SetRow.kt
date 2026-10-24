@@ -39,6 +39,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
@@ -99,9 +100,12 @@ internal fun SetRow(
             }
         },
     ) {
+        // A done row is tinted towards the secondary container. Opaque on purpose: the row sits
+        // on the swipe-to-delete background, whose error colour would bleed through any alpha
+        // (which is what made done rows look red in dark).
+        val scheme = MaterialTheme.colorScheme
         val rowColor by animateColorAsState(
-            if (set.isCompleted) MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.55f)
-            else MaterialTheme.colorScheme.surfaceContainerLow,
+            if (set.isCompleted) lerp(scheme.surfaceContainerLow, scheme.secondaryContainer, 0.6f) else scheme.surfaceContainerLow,
             label = "setRow",
         )
         Row(

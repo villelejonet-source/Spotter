@@ -1,4 +1,4 @@
-<resources xmlns:tools="http://schemas.android.com/tools">
+<resources>
     <string name="app_name">Spotter</string>
     <string name="nav_today">Today</string>
     <string name="nav_history">History</string>
@@ -10,9 +10,9 @@
     <string name="sync_choice_note">Syncing waits until you choose.</string>
     <string name="sync_choice_backup">Use backup</string>
     <string name="sync_choice_merge">Merge both</string>
-    <!-- Signed in from an emailed link into an account with no data yet (used once Agent C's fromLink flag lands) -->
-    <string name="sync_upload_title" tools:ignore="UnusedResources">Upload this phone\'s data?</string>
-    <string name="sync_upload_body" tools:ignore="UnusedResources">You signed in as %1$s. That account has no training data yet. Upload what\'s on this phone to it, or sign out again.</string>
-    <string name="sync_upload_confirm" tools:ignore="UnusedResources">Upload</string>
-    <string name="sync_upload_decline" tools:ignore="UnusedResources">Sign out</string>
+    <!-- Signed in from an emailed link into an account with no data yet -->
+    <string name="sync_upload_title">Upload this phone\'s data?</string>
+    <string name="sync_upload_body">You signed in as %1$s. That account has no training data yet. Upload what\'s on this phone to it, or sign out again.</string>
+    <string name="sync_upload_confirm">Upload</string>
+    <string name="sync_upload_decline">Sign out</string>
 </resources>

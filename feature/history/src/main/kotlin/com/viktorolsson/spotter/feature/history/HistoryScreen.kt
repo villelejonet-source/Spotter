@@ -81,7 +81,7 @@ internal fun HistoryScreen(
     Scaffold(topBar = { SpotterTopBar(title = stringResource(R.string.history_title)) }) { padding ->
         when {
             state.loading -> LoadingState(Modifier.padding(padding).fillMaxSize())
-            state.sessions.isEmpty() -> EmptyState(
+            !state.hasAnySession -> EmptyState(
                 icon = Icons.Rounded.CalendarMonth,
                 title = stringResource(R.string.history_empty_title),
                 body = stringResource(R.string.history_empty_body),

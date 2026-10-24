@@ -14,7 +14,6 @@ import com.viktorolsson.spotter.core.data.repository.WorkoutRepository
 import com.viktorolsson.spotter.core.data.sync.SyncRepository
 import com.viktorolsson.spotter.core.engine.DetectedRecord
 import com.viktorolsson.spotter.core.engine.ExerciseBests
-import com.viktorolsson.spotter.core.engine.ExerciseSimilarity
 import com.viktorolsson.spotter.core.engine.LoggedSet
 import com.viktorolsson.spotter.core.engine.PersonalRecords
 import com.viktorolsson.spotter.core.model.Equipment
@@ -32,7 +31,6 @@ import com.viktorolsson.spotter.core.model.parseToKg
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
 import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
@@ -46,14 +44,12 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.filterNotNull
-import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.mapLatest
 import kotlinx.coroutines.flow.onStart
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 
 enum class SetField { WEIGHT, REPS, EFFORT }
 
@@ -129,17 +125,12 @@ class SessionViewModel @Inject constructor(
         _swap.value = SwapUiState(exercise)
         val profile = profileRepository.get()
         val inSession = uiState.value.session?.exercises.orEmpty().map { it.exercise.id }.toSet()
-        val library = exerciseRepository.observeAll().first()
-        // Scoring every exercise in the library is work for a background thread.
-        val ranked = withContext(Dispatchers.Default) {
-            ExerciseSimilarity.rank(
-                original = exercise.exercise,
-                library = library,
-                availableEquipment = profile?.equipment ?: Equipment.entries.toSet(),
-                limitations = profile?.limitations.orEmpty(),
-                exclude = inSession,
-            )
-        }
+        val ranked = exerciseRepository.rankSwapCandidates(
+            original = exercise.exercise,
+            availableEquipment = profile?.equipment ?: Equipment.entries.toSet(),
+            limitations = profile?.limitations.orEmpty(),
+            exclude = inSession,
+        )
         _swap.update { it?.copy(candidates = ranked.map { c -> c.exercise }) }
     }
 

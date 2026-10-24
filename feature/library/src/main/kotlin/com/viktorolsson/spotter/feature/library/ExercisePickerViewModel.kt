@@ -12,12 +12,13 @@ import com.viktorolsson.spotter.core.model.Exercise
 import com.viktorolsson.spotter.core.model.MovementPattern
 import com.viktorolsson.spotter.core.model.Muscle
 import dagger.hilt.android.lifecycle.HiltViewModel
-import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
-import kotlinx.coroutines.flow.flowOn
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
@@ -33,14 +34,7 @@ data class PickerFilters(
     val query: String = "",
     val bodyArea: BodyArea? = null,
     val equipment: EquipmentFilter? = null,
-) {
-    /** The query's lower-case words, computed once per filter change rather than per exercise. */
-    val words: List<String> = query.trim().lowercase().split(WHITESPACE).filter(String::isNotEmpty)
-
-    private companion object {
-        val WHITESPACE = Regex("\\s+")
-    }
-}
+)
 
 data class ExercisePickerUiState(
     val loading: Boolean = true,
@@ -50,6 +44,7 @@ data class ExercisePickerUiState(
     val selectedIds: List<String> = emptyList(),
 )
 
+@OptIn(ExperimentalCoroutinesApi::class)
 @HiltViewModel
 class ExercisePickerViewModel @Inject constructor(
     savedStateHandle: SavedStateHandle,
@@ -60,13 +55,15 @@ class ExercisePickerViewModel @Inject constructor(
     private val filters = MutableStateFlow(PickerFilters())
     private val selected = MutableStateFlow<List<String>>(emptyList())
 
-    // Filtering the whole library on every keystroke is cheap, but not main-thread cheap.
+    // The repository matches the query and runs the filter off the main thread.
+    private val results = filters.flatMapLatest { f ->
+        exerciseRepository.search(f.query) { it.matches(f) }.map { f to it }
+    }
+
     val uiState: StateFlow<ExercisePickerUiState> =
-        combine(exerciseRepository.observeAll(), filters, selected) { all, f, sel ->
-            ExercisePickerUiState(loading = false, filters = f, exercises = all.filter { it.matches(f) }, selectedIds = sel)
-        }
-            .flowOn(Dispatchers.Default)
-            .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), ExercisePickerUiState())
+        combine(results, selected) { (f, exercises), sel ->
+            ExercisePickerUiState(loading = false, filters = f, exercises = exercises, selectedIds = sel)
+        }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), ExercisePickerUiState())
 
     fun setQuery(query: String) = filters.update { it.copy(query = query) }
 
@@ -89,13 +86,11 @@ class ExercisePickerViewModel @Inject constructor(
         }
 }
 
-private fun Exercise.matches(f: PickerFilters): Boolean {
-    val text = name.lowercase()
-    return f.words.all { it in text } &&
-        (f.bodyArea == null || primaryMuscles.any { it in f.bodyArea.muscles }) &&
+/** The chip filters; the text query is matched by the repository. */
+private fun Exercise.matches(f: PickerFilters): Boolean =
+    (f.bodyArea == null || primaryMuscles.any { it in f.bodyArea.muscles }) &&
         when (val e = f.equipment) {
             null -> true
             EquipmentFilter.Bodyweight -> equipment.isEmpty()
             is EquipmentFilter.Item -> e.equipment in equipment
         }
-}

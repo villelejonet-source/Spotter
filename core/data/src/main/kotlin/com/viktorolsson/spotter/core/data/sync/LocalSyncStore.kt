@@ -2,6 +2,7 @@ package com.viktorolsson.spotter.core.data.sync
 
 import android.content.ContentValues
 import android.database.Cursor
+import android.database.sqlite.SQLiteConstraintException
 import android.database.sqlite.SQLiteDatabase
 import androidx.sqlite.db.SupportSQLiteDatabase
 import com.viktorolsson.spotter.core.data.db.SpotterDatabase
@@ -39,6 +40,15 @@ class LocalSyncStore @Inject constructor(private val database: SpotterDatabase) 
                         if (parent in order && parent !in keepsLocalId) put(from, parent)
                     }
                 }
+            }
+        }
+    }
+
+    /** Each synced table's columns, so fields from newer app versions or the website are skipped. */
+    private val columns: Map<String, Set<String>> by lazy {
+        order.associateWith { table ->
+            db.query("PRAGMA table_info($table)").use { c ->
+                buildSet { while (c.moveToNext()) add(c.getString(c.getColumnIndexOrThrow("name"))) }
             }
         }
     }
@@ -90,8 +100,10 @@ class LocalSyncStore @Inject constructor(private val database: SpotterDatabase) 
 
     /**
      * Writes pulled rows, last-write-wins: a row only replaces local data that is older.
-     * Parents are applied before children; deletions children-first. Returns how many
-     * rows changed locally.
+     * Upserts go first (parents before children), then deletions (children first). That
+     * way a row moved to a new parent in the same batch as its old parent's deletion is
+     * already under the new parent when the old one's cascade runs. Returns how many rows
+     * changed locally.
      */
     fun apply(rows: List<SyncRow>): Int {
         if (rows.isEmpty()) return 0
@@ -100,6 +112,9 @@ class LocalSyncStore @Inject constructor(private val database: SpotterDatabase) 
         try {
             db.execSQL("UPDATE sync_state SET applying = 1 WHERE id = 1")
             val (deletes, upserts) = rows.partition { it.deletedAt != null }
+            upserts.sortedBy { order.indexOf(it.tableName) }.forEach { row ->
+                if (row.tableName in order && upsert(row)) changed++
+            }
             deletes.sortedByDescending { order.indexOf(it.tableName) }.forEach { row ->
                 if (row.tableName !in order) return@forEach
                 val local = localVersion(row.tableName, row.syncId) ?: return@forEach
@@ -107,9 +122,6 @@ class LocalSyncStore @Inject constructor(private val database: SpotterDatabase) 
                     db.delete(row.tableName, "syncId = ?", arrayOf(row.syncId))
                     changed++
                 }
-            }
-            upserts.sortedBy { order.indexOf(it.tableName) }.forEach { row ->
-                if (row.tableName in order && upsert(row)) changed++
             }
             db.execSQL("UPDATE sync_state SET applying = 0 WHERE id = 1")
             // Merging two phones can leave two active plans: keep the newest. (Triggers are
@@ -124,6 +136,29 @@ class LocalSyncStore @Inject constructor(private val database: SpotterDatabase) 
         }
         database.invalidationTracker.refreshVersionsAsync()
         return changed
+    }
+
+    /**
+     * Body weight is one entry per day, but two devices can each log the same day under
+     * different sync ids. The newer entry wins; the other is tombstoned so the backup and
+     * other devices drop it too. Returns false when the incoming row lost.
+     */
+    private fun resolveSameDayWeight(row: SyncRow, values: ContentValues): Boolean {
+        val date = values.getAsLong("date") ?: return true
+        val other = db.query(
+            "SELECT syncId, updatedAt FROM body_weight_entry WHERE date = ? AND syncId <> ?",
+            arrayOf<Any>(date, row.syncId),
+        ).use { if (it.moveToFirst()) it.getString(0) to it.getLong(1) else null } ?: return true
+        val (otherId, otherUpdatedAt) = other
+        val loser = if (otherUpdatedAt >= row.updatedAt) row.syncId else otherId
+        if (loser == otherId) db.delete("body_weight_entry", "syncId = ?", arrayOf(otherId))
+        // Stamped "now" so the next push picks it up (triggers are off while applying).
+        db.execSQL(
+            "INSERT OR REPLACE INTO sync_tombstone (tableName, syncId, deletedAt) VALUES ('body_weight_entry', ?, " +
+                "MAX(${SyncSchema.NOW_MS}, ?))",
+            arrayOf<Any>(loser, maxOf(otherUpdatedAt, row.updatedAt) + 1),
+        )
+        return loser != row.syncId
     }
 
     /** Clears all synced data (before restoring a backup over a phone's own data). */
@@ -165,7 +200,9 @@ class LocalSyncStore @Inject constructor(private val database: SpotterDatabase) 
 
         val values = ContentValues()
         val fks = foreignKeys.getValue(row.tableName)
+        val known = columns.getValue(row.tableName)
         for ((name, element) in payload) {
+            if (name !in known) continue
             val parent = fks[name]
             if (parent != null && element is JsonPrimitive && element.isString) {
                 val localId = db.query("SELECT id FROM $parent WHERE syncId = ?", arrayOf(element.content))
@@ -177,10 +214,17 @@ class LocalSyncStore @Inject constructor(private val database: SpotterDatabase) 
         }
         values.put("syncId", row.syncId)
         values.put("updatedAt", row.updatedAt)
-        if (local != null) {
-            db.update(row.tableName, SQLiteDatabase.CONFLICT_REPLACE, values, "syncId = ?", arrayOf(row.syncId))
-        } else {
-            db.insert(row.tableName, SQLiteDatabase.CONFLICT_REPLACE, values)
+        if (row.tableName == "body_weight_entry" && !resolveSameDayWeight(row, values)) return false
+        try {
+            if (local != null) {
+                db.update(row.tableName, SQLiteDatabase.CONFLICT_REPLACE, values, "syncId = ?", arrayOf(row.syncId))
+            } else {
+                db.insert(row.tableName, SQLiteDatabase.CONFLICT_REPLACE, values)
+            }
+        } catch (e: SQLiteConstraintException) {
+            // A row this version can't hold (e.g. a plan exercise using an exercise from a
+            // newer catalog): skip it rather than fail the whole pull and block sync.
+            return false
         }
         if (tombstone != null) {
             db.delete("sync_tombstone", "tableName = ? AND syncId = ?", arrayOf(row.tableName, row.syncId))

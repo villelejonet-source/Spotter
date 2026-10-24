@@ -28,6 +28,9 @@ class PlanRepository @Inject constructor(
 ) {
     fun observeActivePlan(): Flow<Plan?> = dao.observeActivePlan().map { it?.toModel() }
 
+    /** Any plan day, active plan or not (a scheduled workout can use another plan's day). */
+    fun observeDay(planDayId: Long): Flow<PlanDay?> = dao.observeDay(planDayId).map { it?.toModel() }
+
     /** The day after the last one completed, wrapping around; the first day for a fresh plan. */
     fun observeNextDay(): Flow<PlanDay?> = observeActivePlan().flatMapLatest { plan ->
         if (plan == null || plan.days.isEmpty()) return@flatMapLatest flowOf(null)

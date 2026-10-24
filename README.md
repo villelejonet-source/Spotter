@@ -42,7 +42,7 @@ deletions, and sync is last-write-wins per record.
 
 One-time setup in the Supabase dashboard:
 
-1. **SQL Editor:** run [supabase/001_sync.sql](supabase/001_sync.sql).
+1. **SQL Editor:** run [supabase/migrations/20261004000000_sync.sql](supabase/migrations/20261004000000_sync.sql).
 2. **Authentication → URL Configuration → Redirect URLs:** add `spotter://login` (the
    emailed link opens the app there).
 3. **Authentication → Emails → SMTP Settings:** custom SMTP (currently Gmail:

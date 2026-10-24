@@ -7,6 +7,6 @@ import kotlinx.serialization.Serializable
 @Serializable
 data object ProfileRoute
 
-fun NavGraphBuilder.profileScreen(onOpenPlan: () -> Unit, onRebuildPlan: () -> Unit, onOpenAccount: (newAccount: Boolean) -> Unit) {
+fun NavGraphBuilder.profileScreen(onOpenPlan: () -> Unit, onRebuildPlan: () -> Unit, onOpenAccount: (AccountRoute) -> Unit) {
     composable<ProfileRoute> { SettingsRoute(onOpenPlan = onOpenPlan, onRebuildPlan = onRebuildPlan, onOpenAccount = onOpenAccount) }
 }

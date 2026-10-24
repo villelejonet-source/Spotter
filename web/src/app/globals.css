@@ -1,0 +1,69 @@
+@import "tailwindcss";
+
+/* The app's Material 3 colour scheme (core/ui theme/Color.kt). */
+:root {
+  --primary: #9a4521;
+  --on-primary: #ffffff;
+  --primary-container: #ffdbcd;
+  --on-primary-container: #380d00;
+  --tertiary: #6a5e2f;
+  --tertiary-container: #f3e2a7;
+  --error: #ba1a1a;
+  --background: #fff8f6;
+  --foreground: #231a16;
+  --muted: #53433e;
+  --outline: #d8c2ba;
+  --surface: #ffffff;
+  --surface-low: #fff1ec;
+  --surface-high: #f6e5de;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --primary: #ffb596;
+    --on-primary: #5b1a00;
+    --primary-container: #7b2e0c;
+    --on-primary-container: #ffdbcd;
+    --tertiary: #d6c68d;
+    --tertiary-container: #51461a;
+    --error: #ffb4ab;
+    --background: #1a110e;
+    --foreground: #f1dfd9;
+    --muted: #d8c2ba;
+    --outline: #53433e;
+    --surface: #271e1a;
+    --surface-low: #231a16;
+    --surface-high: #322824;
+  }
+}
+
+@theme inline {
+  --color-primary: var(--primary);
+  --color-on-primary: var(--on-primary);
+  --color-primary-container: var(--primary-container);
+  --color-on-primary-container: var(--on-primary-container);
+  --color-tertiary: var(--tertiary);
+  --color-tertiary-container: var(--tertiary-container);
+  --color-error: var(--error);
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-muted: var(--muted);
+  --color-outline: var(--outline);
+  --color-surface: var(--surface);
+  --color-surface-low: var(--surface-low);
+  --color-surface-high: var(--surface-high);
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+}
+
+input,
+select,
+textarea {
+  background: var(--surface);
+  color: var(--foreground);
+}

@@ -10,6 +10,7 @@ import com.viktorolsson.spotter.core.data.db.SpotterDatabase
 import com.viktorolsson.spotter.core.data.db.dao.ExerciseDao
 import com.viktorolsson.spotter.core.data.db.dao.PlanDao
 import com.viktorolsson.spotter.core.data.db.dao.RecommendationDao
+import com.viktorolsson.spotter.core.data.db.dao.ScheduleDao
 import com.viktorolsson.spotter.core.data.db.dao.UserProfileDao
 import com.viktorolsson.spotter.core.data.db.dao.WorkoutDao
 import dagger.Module
@@ -51,6 +52,9 @@ object DataModule {
 
     @Provides
     fun provideRecommendationDao(db: SpotterDatabase): RecommendationDao = db.recommendationDao()
+
+    @Provides
+    fun provideScheduleDao(db: SpotterDatabase): ScheduleDao = db.scheduleDao()
 
     @Provides
     @Singleton

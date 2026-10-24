@@ -11,6 +11,8 @@ import com.viktorolsson.spotter.core.data.repository.testPreferences
 import com.viktorolsson.spotter.core.data.seed.SeedExercise
 import com.viktorolsson.spotter.core.data.seed.parseExerciseSeed
 import kotlinx.coroutines.test.runTest
+import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.JsonPrimitive
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
@@ -76,4 +78,82 @@ class SyncTriggersTest {
         assertEquals("0", scalar("SELECT COUNT(*) FROM sync_tombstone"))
         w.execSQL("UPDATE sync_state SET applying = 0 WHERE id = 1")
     }
+
+    @Test
+    fun pulledRowsSkipFieldsThisVersionDoesNotKnow() {
+        // A newer app or the website may send fields this schema lacks; the rest still applies.
+        val plan = JsonObject(
+            mapOf(
+                "name" to JsonPrimitive("From the web"),
+                "splitType" to JsonPrimitive("CUSTOM"),
+                "goal" to JsonPrimitive("STRENGTH"),
+                "createdAt" to JsonPrimitive(1L),
+                "isActive" to JsonPrimitive(0),
+                "colour" to JsonPrimitive("orange"),
+            ),
+        )
+        val changed = LocalSyncStore(db).apply(listOf(SyncRow("plan", "web-plan", plan, 5L)))
+        assertEquals(1, changed)
+        assertEquals("From the web", scalar("SELECT name FROM plan WHERE syncId = 'web-plan'"))
+    }
+
+    private fun obj(vararg pairs: Pair<String, Any?>) = JsonObject(
+        pairs.associate { (k, v) ->
+            k to when (v) {
+                null -> kotlinx.serialization.json.JsonNull
+                is Number -> JsonPrimitive(v)
+                else -> JsonPrimitive(v.toString())
+            }
+        },
+    )
+
+    private fun planRow(id: String) =
+        SyncRow("plan", id, obj("name" to "P", "splitType" to "CUSTOM", "goal" to "STRENGTH", "createdAt" to 1L, "isActive" to 0), 5L)
+
+    private fun dayRow(id: String, plan: String) = SyncRow("plan_day", id, obj("planId" to plan, "position" to 0, "name" to id), 5L)
+
+    private fun exerciseRow(id: String, day: String, exercise: String = "barbell-bench-press", at: Long = 5L) = SyncRow(
+        "plan_exercise", id,
+        obj(
+            "planDayId" to day, "exerciseId" to exercise, "position" to 0, "sets" to 3, "repMin" to 8, "repMax" to 12,
+            "targetRir" to 2, "restSeconds" to 90, "progressionRule" to "DOUBLE_PROGRESSION", "supersetGroup" to null, "startingWeightKg" to null,
+        ),
+        at,
+    )
+
+    @Test
+    fun exerciseMovedOutOfADeletedDayKeepsItsRow() {
+        val store = LocalSyncStore(db)
+        store.apply(listOf(planRow("p"), dayRow("old", "p"), dayRow("new", "p"), exerciseRow("x", "old")))
+        val localId = scalar("SELECT id FROM plan_exercise WHERE syncId = 'x'")
+        // One pull: the exercise moves to "new" and "old" is deleted.
+        store.apply(listOf(exerciseRow("x", "new", at = 9L), SyncRow("plan_day", "old", null, 9L, 9L)))
+        assertEquals(localId, scalar("SELECT id FROM plan_exercise WHERE syncId = 'x'"))
+        assertEquals(scalar("SELECT id FROM plan_day WHERE syncId = 'new'"), scalar("SELECT planDayId FROM plan_exercise WHERE syncId = 'x'"))
+    }
+
+    @Test
+    fun rowsThisVersionCannotHoldAreSkippedNotFatal() {
+        val changed = LocalSyncStore(db).apply(
+            listOf(planRow("p"), dayRow("d", "p"), exerciseRow("future", "d", exercise = "exercise-from-a-newer-catalog"), exerciseRow("ok", "d")),
+        )
+        assertEquals(3, changed)
+        assertEquals(null, scalar("SELECT id FROM plan_exercise WHERE syncId = 'future'"))
+        assertNotNull(scalar("SELECT id FROM plan_exercise WHERE syncId = 'ok'"))
+    }
+
+    @Test
+    fun sameDayBodyWeightFromTwoDevicesKeepsTheNewer() {
+        val store = LocalSyncStore(db)
+        val weight = { id: String, kg: Double, at: Long -> SyncRow("body_weight_entry", id, obj("date" to 20000L, "weightKg" to kg), at) }
+        store.apply(listOf(weight("phone", 80.0, 10L)))
+        store.apply(listOf(weight("web", 81.0, 20L))) // newer: replaces, phone's entry is tombstoned
+        assertEquals(81.0, scalar("SELECT weightKg FROM body_weight_entry")!!.toDouble(), 0.0)
+        assertEquals("1", scalar("SELECT COUNT(*) FROM body_weight_entry"))
+        assertNotNull(scalar("SELECT deletedAt FROM sync_tombstone WHERE syncId = 'phone'"))
+        store.apply(listOf(weight("older", 79.0, 15L))) // older: skipped and tombstoned
+        assertEquals(81.0, scalar("SELECT weightKg FROM body_weight_entry")!!.toDouble(), 0.0)
+        assertNotNull(scalar("SELECT deletedAt FROM sync_tombstone WHERE syncId = 'older'"))
+    }
 }
+

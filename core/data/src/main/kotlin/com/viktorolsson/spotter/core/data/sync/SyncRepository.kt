@@ -23,6 +23,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChangedBy
 import kotlinx.coroutines.flow.first
@@ -60,13 +61,14 @@ class SyncRepository @Inject constructor(
     private val profiles: UserProfileRepository,
     private val scheduler: SyncScheduler,
     @param:ApplicationScope private val scope: CoroutineScope,
-    clock: Clock,
+    private val clock: Clock,
 ) {
     private val engine = SyncEngine(store, remote, cursors, clock)
     private val mutex = Mutex()
     private val running = MutableStateFlow(false)
     private val error = MutableStateFlow<SyncError?>(null)
     private val needsChoice = MutableStateFlow(false)
+    private var lastOpenSyncAt = 0L
 
     val status: Flow<SyncStatus> = combine(accounts.account, cursors.cursor, running, error, needsChoice) { account, cursor, running, error, choice ->
         SyncStatus(
@@ -96,10 +98,26 @@ class SyncRepository @Inject constructor(
 
     fun handleDeeplink(intent: Intent) = accounts.handleDeeplink(intent)
 
+    // Account calls throw AuthException. Any sign-in triggers the first sync by itself.
+
+    suspend fun signUp(email: String, password: String) = accounts.signUp(email, password)
+
+    suspend fun signIn(email: String, password: String) = accounts.signIn(email, password)
+
     suspend fun sendCode(email: String) = accounts.sendCode(email)
 
-    /** Signs in with a typed code; the sign-in itself triggers the first sync. */
-    suspend fun verifyCode(email: String, code: String) = accounts.verifyCode(email, code)
+    suspend fun resendConfirmation(email: String) = accounts.resendConfirmation(email)
+
+    suspend fun sendPasswordReset(email: String) = accounts.sendPasswordReset(email)
+
+    suspend fun verifyCode(email: String, code: String, purpose: CodePurpose) = accounts.verifyCode(email, code, purpose)
+
+    suspend fun updatePassword(password: String, nonce: String? = null) = accounts.updatePassword(password, nonce)
+
+    /** True after a password-reset link opened the app: ask for a new password. */
+    val recoveringPassword: StateFlow<Boolean> get() = accounts.recovering
+
+    fun finishPasswordRecovery() = accounts.finishRecovery()
 
     /** Runs a sync now if signed in. Returns false when it failed (worth retrying). */
     suspend fun syncNow(choice: FirstSyncChoice? = null): Boolean {
@@ -133,9 +151,21 @@ class SyncRepository @Inject constructor(
         if (accounts.currentAccount() != null) scheduler.syncSoon()
     }
 
+    /**
+     * The app came to the foreground: pick up changes made elsewhere, such as a plan
+     * edited on the website. At most once a minute, so switching apps doesn't spam syncs.
+     */
+    fun syncOnOpen() {
+        val now = clock.millis()
+        if (now - lastOpenSyncAt < OPEN_SYNC_INTERVAL_MS) return
+        lastOpenSyncAt = now
+        requestSync()
+    }
+
     /** Signs out on this phone. Local data stays; the backup stays in the cloud. */
     suspend fun signOut() {
         accounts.signOut()
+        accounts.finishRecovery()
         cursors.clear()
         needsChoice.value = false
         error.value = null
@@ -157,6 +187,8 @@ class SyncRepository @Inject constructor(
         }
     }
 }
+
+private const val OPEN_SYNC_INTERVAL_MS = 60_000L
 
 /** Background sync with WorkManager: every few hours, and soon after workouts. */
 @Singleton

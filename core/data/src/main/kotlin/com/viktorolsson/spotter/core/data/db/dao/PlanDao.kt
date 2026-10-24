@@ -34,6 +34,10 @@ interface PlanDao {
     @Query("SELECT * FROM plan_day WHERE id = :planDayId")
     suspend fun getDay(planDayId: Long): PlanDayWithExercises?
 
+    @Transaction
+    @Query("SELECT * FROM plan_day WHERE id = :planDayId")
+    fun observeDay(planDayId: Long): Flow<PlanDayWithExercises?>
+
     /** "Replace in plan" from a swap: future sessions use the new exercise. */
     @Query("UPDATE plan_exercise SET exerciseId = :exerciseId, startingWeightKg = :startingWeightKg WHERE id = :planExerciseId")
     suspend fun replaceExercise(planExerciseId: Long, exerciseId: String, startingWeightKg: Double?)

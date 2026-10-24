@@ -7,10 +7,12 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Add
+import androidx.compose.material.icons.rounded.CheckCircle
 import androidx.compose.material.icons.rounded.PlayArrow
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -26,17 +28,23 @@ import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.heading
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.viktorolsson.spotter.core.engine.PlanGenerator
 import com.viktorolsson.spotter.core.model.PlanDay
+import com.viktorolsson.spotter.core.model.ScheduledWorkout
 import com.viktorolsson.spotter.core.model.isTimed
 import com.viktorolsson.spotter.core.ui.formatTarget
+import java.time.format.DateTimeFormatter
 
 @Composable
 internal fun TodayRoute(
@@ -94,13 +102,18 @@ internal fun TodayScreen(
                     }
                 }
             }
+            val scheduled = uiState.scheduledToday
+            if (uiState.scheduledTodayDone) DoneCard()
             when {
-                next != null -> NextWorkoutCard(next, onOpenPlan)
+                scheduled != null && uiState.scheduledDay != null ->
+                    WorkoutCard(uiState.scheduledDay, R.string.today_scheduled_label, scheduled.notes, onOpenPlan)
+                scheduled != null -> FreeWorkoutCard(scheduled.notes)
+                next != null -> WorkoutCard(next, R.string.today_next_label, notes = null, onOpenPlan)
                 !uiState.hasPlan -> NoPlanCard(onBuildPlan)
             }
             when {
                 uiState.activeSessionId != null -> BigButton(R.string.today_resume_workout, onResume)
-                next != null -> BigButton(R.string.today_start_workout, onStartNext)
+                scheduled != null || next != null -> BigButton(R.string.today_start_workout, onStartNext)
             }
             if (uiState.activeSessionId == null) {
                 OutlinedButton(onClick = onEmptyWorkout, modifier = Modifier.fillMaxWidth().height(56.dp)) {
@@ -108,6 +121,7 @@ internal fun TodayScreen(
                     Text(stringResource(R.string.today_empty_workout), modifier = Modifier.padding(start = ButtonDefaults.IconSpacing))
                 }
             }
+            if (uiState.upcoming.isNotEmpty()) UpcomingCard(uiState.upcoming)
         }
     }
 }
@@ -125,18 +139,19 @@ private fun BigButton(label: Int, onClick: () -> Unit) {
 }
 
 @Composable
-private fun NextWorkoutCard(day: PlanDay, onOpenPlan: () -> Unit) {
+private fun WorkoutCard(day: PlanDay, label: Int, notes: String?, onOpenPlan: () -> Unit) {
     Card(
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.secondaryContainer),
         modifier = Modifier.fillMaxWidth(),
     ) {
         Column(Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
             Text(
-                stringResource(R.string.today_next_label).uppercase(),
+                stringResource(label).uppercase(),
                 style = MaterialTheme.typography.labelMedium,
                 color = MaterialTheme.colorScheme.primary,
             )
             Text(day.name, style = MaterialTheme.typography.headlineSmall)
+            notes?.let { Text(it, style = MaterialTheme.typography.bodyMedium, fontStyle = FontStyle.Italic) }
             Text(
                 stringResource(R.string.today_day_meta, PlanGenerator.estimateMinutes(day.exercises), day.exercises.size),
                 style = MaterialTheme.typography.bodyMedium,
@@ -166,6 +181,75 @@ private fun NextWorkoutCard(day: PlanDay, onOpenPlan: () -> Unit) {
                     Spacer(Modifier.weight(1f))
                 }
                 TextButton(onClick = onOpenPlan) { Text(stringResource(R.string.today_view_plan)) }
+            }
+        }
+    }
+}
+
+/** A free workout planned for today (no plan day). */
+@Composable
+private fun FreeWorkoutCard(notes: String?) {
+    Card(
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.secondaryContainer),
+        modifier = Modifier.fillMaxWidth(),
+    ) {
+        Column(Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+            Text(
+                stringResource(R.string.today_scheduled_label).uppercase(),
+                style = MaterialTheme.typography.labelMedium,
+                color = MaterialTheme.colorScheme.primary,
+            )
+            Text(stringResource(R.string.today_free_workout), style = MaterialTheme.typography.headlineSmall)
+            Text(notes ?: stringResource(R.string.today_free_workout_body), style = MaterialTheme.typography.bodyMedium)
+        }
+    }
+}
+
+@Composable
+private fun DoneCard() {
+    Card(
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.tertiaryContainer),
+        modifier = Modifier.fillMaxWidth(),
+    ) {
+        Row(Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
+            Icon(Icons.Rounded.CheckCircle, contentDescription = null, tint = MaterialTheme.colorScheme.onTertiaryContainer)
+            Text(
+                stringResource(R.string.today_scheduled_done),
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onTertiaryContainer,
+                modifier = Modifier.padding(start = 12.dp),
+            )
+        }
+    }
+}
+
+/** The rest of the week's planned workouts. */
+@Composable
+private fun UpcomingCard(upcoming: List<ScheduledWorkout>) {
+    Card(modifier = Modifier.fillMaxWidth()) {
+        Column(Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Text(
+                stringResource(R.string.today_coming_up),
+                style = MaterialTheme.typography.titleMedium,
+                modifier = Modifier.semantics { heading() },
+            )
+            val format = remember { DateTimeFormatter.ofPattern("EEE d MMM") }
+            upcoming.forEach { item ->
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(
+                        item.date.format(format),
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.width(96.dp),
+                    )
+                    Text(
+                        item.planDayName ?: stringResource(R.string.today_free_workout),
+                        style = MaterialTheme.typography.bodyLarge,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.weight(1f),
+                    )
+                }
             }
         }
     }

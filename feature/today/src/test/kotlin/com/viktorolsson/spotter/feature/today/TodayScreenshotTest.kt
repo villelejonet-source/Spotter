@@ -7,6 +7,7 @@ import com.viktorolsson.spotter.core.model.MovementPattern
 import com.viktorolsson.spotter.core.model.PlanDay
 import com.viktorolsson.spotter.core.model.PlanExercise
 import com.viktorolsson.spotter.core.model.ProgressionRule
+import com.viktorolsson.spotter.core.model.ScheduledWorkout
 import com.viktorolsson.spotter.core.ui.PreviewData
 import com.viktorolsson.spotter.core.ui.theme.SpotterTheme
 import org.junit.Test
@@ -50,4 +51,29 @@ class TodayScreenshotTest {
 
     @Test
     fun noPlan_light() = capture("today_no_plan_light", false, TodayUiState(loading = false, hasPlan = false))
+
+    private fun scheduled(id: Long, date: LocalDate, day: String?, notes: String? = null) =
+        ScheduledWorkout(id = id, date = date, planDayId = if (day != null) id else null, planDayName = day, notes = notes, sessionId = null, done = false)
+
+    @Test
+    fun scheduled_light() = capture(
+        "today_scheduled_light", false,
+        TodayUiState(
+            loading = false, hasPlan = true, nextDay = lowerA,
+            scheduledToday = scheduled(1, LocalDate.of(2026, 10, 24), "Lower A", notes = "Go heavy on squats"),
+            scheduledDay = lowerA,
+            upcoming = listOf(
+                scheduled(2, LocalDate.of(2026, 10, 26), "Upper A"),
+                scheduled(3, LocalDate.of(2026, 10, 28), null),
+                scheduled(4, LocalDate.of(2026, 10, 30), "Lower B"),
+            ),
+        ),
+    )
+
+    @Test
+    fun scheduledFree_dark() = capture(
+        "today_scheduled_free_dark", true,
+        TodayUiState(loading = false, hasPlan = true, nextDay = lowerA, scheduledToday = scheduled(1, LocalDate.of(2026, 10, 24), null)),
+    )
 }
+

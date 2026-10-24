@@ -55,7 +55,7 @@ import com.viktorolsson.spotter.core.ui.theme.supportsDynamicColor
 internal fun SettingsRoute(
     onOpenPlan: () -> Unit,
     onRebuildPlan: () -> Unit,
-    onOpenAccount: (newAccount: Boolean) -> Unit,
+    onOpenAccount: (AccountRoute) -> Unit,
     viewModel: SettingsViewModel = hiltViewModel(),
 ) {
     val preferences by viewModel.preferences.collectAsStateWithLifecycle()
@@ -65,7 +65,13 @@ internal fun SettingsRoute(
         preferences = preferences,
         planName = planName,
         syncStatus = syncStatus,
-        sync = SyncActions(onOpenAccount, viewModel::syncNow, viewModel::signOut, viewModel::deleteAccount),
+        sync = SyncActions(
+            onSignIn = { onOpenAccount(AccountRoute(newAccount = it)) },
+            onChangePassword = { onOpenAccount(AccountRoute(newPassword = true)) },
+            onSyncNow = viewModel::syncNow,
+            onSignOut = viewModel::signOut,
+            onDeleteAccount = viewModel::deleteAccount,
+        ),
         onOpenPlan = onOpenPlan,
         onRebuildPlan = onRebuildPlan,
         onThemeModeChange = { viewModel.setThemeMode(it) },
@@ -220,6 +226,8 @@ private fun SectionHeader(@StringRes title: Int) {
 internal class SyncActions(
     /** Opens sign-in; true for creating a new account. */
     val onSignIn: (newAccount: Boolean) -> Unit,
+    /** Also how an account made with email codes gets its first password. */
+    val onChangePassword: () -> Unit,
     val onSyncNow: () -> Unit,
     val onSignOut: () -> Unit,
     val onDeleteAccount: () -> Unit,
@@ -261,6 +269,7 @@ private fun BackupSection(status: SyncStatus, actions: SyncActions) {
         OutlinedButton(onClick = actions.onSyncNow, enabled = !status.syncing) { Text(stringResource(R.string.backup_sync_now)) }
         OutlinedButton(onClick = { confirmSignOut = true }) { Text(stringResource(R.string.backup_sign_out)) }
     }
+    TextButton(onClick = actions.onChangePassword) { Text(stringResource(R.string.backup_change_password)) }
     TextButton(onClick = { confirmDelete = true }) {
         Text(stringResource(R.string.backup_delete), color = MaterialTheme.colorScheme.error)
     }
@@ -328,7 +337,7 @@ private fun <T> SegmentedChoice(
 private fun SettingsScreenPreview() {
     SpotterTheme {
         SettingsScreen(
-            UserPreferences(), "Upper / Lower · 4 days", SyncStatus(), SyncActions({}, {}, {}, {}),
+            UserPreferences(), "Upper / Lower · 4 days", SyncStatus(), SyncActions({}, {}, {}, {}, {}),
             {}, {}, {}, {}, {}, {}, {},
         )
     }

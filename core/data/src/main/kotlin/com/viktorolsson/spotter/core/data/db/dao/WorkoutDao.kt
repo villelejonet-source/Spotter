@@ -6,6 +6,8 @@ import androidx.room.Query
 import androidx.room.Transaction
 import androidx.room.Update
 import com.viktorolsson.spotter.core.data.db.entity.DatedSet
+import com.viktorolsson.spotter.core.data.db.entity.ExerciseHistorySet
+import com.viktorolsson.spotter.core.data.db.entity.ExerciseSessionRef
 import com.viktorolsson.spotter.core.data.db.entity.HistorySet
 import com.viktorolsson.spotter.core.data.db.entity.LoggedExercise
 import com.viktorolsson.spotter.core.data.db.entity.PersonalRecordEntity
@@ -55,6 +57,15 @@ interface WorkoutDao {
     @Query("SELECT * FROM workout_session WHERE endedAt IS NOT NULL AND startedAt >= :since ORDER BY startedAt DESC")
     fun observeFinishedSessionsSince(since: Instant): Flow<List<SessionWithExercises>>
 
+    /** Finished sessions started in [start, end), newest first. */
+    @Transaction
+    @Query("SELECT * FROM workout_session WHERE endedAt IS NOT NULL AND startedAt >= :start AND startedAt < :end ORDER BY startedAt DESC")
+    fun observeFinishedSessionsBetween(start: Instant, end: Instant): Flow<List<SessionWithExercises>>
+
+    @Transaction
+    @Query("SELECT * FROM workout_session WHERE endedAt IS NOT NULL ORDER BY startedAt DESC LIMIT :limit")
+    fun observeRecentFinished(limit: Int): Flow<List<SessionWithExercises>>
+
     // --- Exercises in a session ---
 
     @Insert
@@ -102,11 +113,50 @@ interface WorkoutDao {
 
     @Query(
         """
-        DELETE FROM session_exercise WHERE sessionId = :sessionId AND id NOT IN
-            (SELECT sessionExerciseId FROM set_entry)
+        DELETE FROM session_exercise WHERE sessionId = :sessionId
+          AND NOT EXISTS (SELECT 1 FROM set_entry se WHERE se.sessionExerciseId = session_exercise.id)
         """,
     )
     suspend fun deleteExercisesWithoutSets(sessionId: Long)
+
+    // --- Batched history for a set of exercises (one or two queries, not one per exercise) ---
+
+    /** Each finished session that included one of [exerciseIds], newest first. */
+    @Query(
+        """
+        SELECT DISTINCT sx.exerciseId AS exerciseId, ws.id AS sessionId, ws.startedAt AS startedAt, ws.isDeload AS isDeload
+        FROM workout_session ws
+        JOIN session_exercise sx ON sx.sessionId = ws.id
+        WHERE sx.exerciseId IN (:exerciseIds) AND ws.endedAt IS NOT NULL
+        ORDER BY ws.startedAt DESC
+        """,
+    )
+    suspend fun getExerciseSessionRefs(exerciseIds: List<String>): List<ExerciseSessionRef>
+
+    /** Completed sets of [exerciseIds] in [sessionIds], newest session first, in logged order. */
+    @Query(
+        """
+        SELECT se.*, sx.sessionId AS sessionId, sx.exerciseId AS exerciseId, ws.startedAt AS startedAt FROM set_entry se
+        JOIN session_exercise sx ON se.sessionExerciseId = sx.id
+        JOIN workout_session ws ON sx.sessionId = ws.id
+        WHERE sx.sessionId IN (:sessionIds) AND sx.exerciseId IN (:exerciseIds) AND se.completedAt IS NOT NULL
+        ORDER BY ws.startedAt DESC, sx.position, se.position
+        """,
+    )
+    suspend fun getCompletedSets(sessionIds: List<Long>, exerciseIds: List<String>): List<ExerciseHistorySet>
+
+    /** Completed working sets of [exerciseIds] from sessions finished before [before], oldest first. */
+    @Query(
+        """
+        SELECT se.*, sx.sessionId AS sessionId, sx.exerciseId AS exerciseId, ws.startedAt AS startedAt FROM set_entry se
+        JOIN session_exercise sx ON se.sessionExerciseId = sx.id
+        JOIN workout_session ws ON sx.sessionId = ws.id
+        WHERE sx.exerciseId IN (:exerciseIds) AND ws.endedAt IS NOT NULL AND ws.startedAt < :before
+          AND se.completedAt IS NOT NULL AND se.setType != 'WARMUP'
+        ORDER BY ws.startedAt, sx.position, se.position
+        """,
+    )
+    suspend fun getWorkingSetsBeforeFor(exerciseIds: List<String>, before: Instant): List<ExerciseHistorySet>
 
     /**
      * Completed working sets for [exerciseId] from its last [sessions] finished

@@ -7,11 +7,13 @@ import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.longPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
+import com.viktorolsson.spotter.core.data.db.dao.UserProfileDao
 import com.viktorolsson.spotter.core.model.EffortScale
 import com.viktorolsson.spotter.core.model.ThemeMode
 import com.viktorolsson.spotter.core.model.UserPreferences
 import com.viktorolsson.spotter.core.model.WeightUnit
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import java.time.LocalDate
 import javax.inject.Inject
@@ -20,6 +22,7 @@ import javax.inject.Singleton
 @Singleton
 class UserPreferencesRepository @Inject constructor(
     private val dataStore: DataStore<Preferences>,
+    private val profileDao: UserProfileDao,
 ) {
     private val defaults = UserPreferences()
 
@@ -46,8 +49,14 @@ class UserPreferencesRepository @Inject constructor(
         dataStore.edit { it[Keys.DYNAMIC_COLOR] = enabled }
     }
 
+    /**
+     * The unit preference and the synced profile's `units` are one setting: changing it here
+     * also updates the profile (the sync trigger stamps it, so the website and other phones
+     * follow), and a profile pulled by sync is mirrored back here by [SyncRepository].
+     */
     suspend fun setWeightUnit(unit: WeightUnit) {
         dataStore.edit { it[Keys.WEIGHT_UNIT] = unit.name }
+        profileDao.get()?.takeIf { it.units != unit }?.let { profileDao.upsert(it.copy(units = unit)) }
     }
 
     suspend fun setDefaultRestSeconds(seconds: Int) {
@@ -65,6 +74,9 @@ class UserPreferencesRepository @Inject constructor(
     suspend fun setOnboardingCompleted(done: Boolean) {
         dataStore.edit { it[Keys.ONBOARDING_COMPLETED] = done }
     }
+
+    /** The current unit preference, for callers that only need it once. */
+    suspend fun weightUnit(): WeightUnit = preferences.first().weightUnit
 
     private object Keys {
         val THEME_MODE = stringPreferencesKey("theme_mode")

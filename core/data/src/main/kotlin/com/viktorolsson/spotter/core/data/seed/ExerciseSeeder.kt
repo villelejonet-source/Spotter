@@ -14,9 +14,10 @@ import javax.inject.Inject
 import javax.inject.Singleton
 
 /**
- * Loads the bundled exercise library into Room. Runs on every launch but only
- * writes when the asset's version is newer than the last one applied. Seed rows
- * are upserted by id, so custom exercises and history references are untouched.
+ * Loads the bundled exercise library into Room. Runs on every launch, but on an install
+ * that already has [EXERCISE_CATALOG_VERSION] it returns after one preference read: the
+ * asset is neither opened nor parsed. Seed rows are upserted by id, so custom exercises
+ * and history references are untouched.
  */
 @Singleton
 class ExerciseSeeder @Inject constructor(
@@ -25,10 +26,11 @@ class ExerciseSeeder @Inject constructor(
     private val dataStore: DataStore<Preferences>,
 ) {
     suspend fun seedIfNeeded() = withContext(Dispatchers.IO) {
-        val seed = context.assets.open(ASSET_NAME).bufferedReader().use { parseExerciseSeed(it.readText()) }
         val applied = dataStore.data.first()[SEED_VERSION_KEY] ?: 0
-        if (seed.version <= applied) return@withContext
+        if (applied >= EXERCISE_CATALOG_VERSION) return@withContext
 
+        val seed = context.assets.open(ASSET_NAME).bufferedReader().use { parseExerciseSeed(it.readText()) }
+        if (seed.version <= applied) return@withContext
         exerciseDao.upsertAll(seed.exercises.map(SeedExercise::toEntity))
         dataStore.edit { it[SEED_VERSION_KEY] = seed.version }
     }

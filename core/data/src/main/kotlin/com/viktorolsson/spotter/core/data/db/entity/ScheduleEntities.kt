@@ -18,7 +18,7 @@ import java.time.LocalDate
         ForeignKey(PlanDayEntity::class, ["id"], ["planDayId"], onDelete = ForeignKey.SET_NULL),
         ForeignKey(WorkoutSessionEntity::class, ["id"], ["sessionId"], onDelete = ForeignKey.SET_NULL),
     ],
-    indices = [Index("syncId", unique = true), Index("date"), Index("planDayId"), Index("sessionId")],
+    indices = [Index("syncId", unique = true), Index("updatedAt"), Index("date"), Index("planDayId"), Index("sessionId")],
 )
 data class ScheduledSessionEntity(
     @PrimaryKey(autoGenerate = true) val id: Long = 0,

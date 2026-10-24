@@ -14,7 +14,7 @@ import com.viktorolsson.spotter.core.model.WeightUnit
 import java.time.LocalDate
 
 /** Single-user app: the profile is always the row with [id] = [SINGLETON_ID]. */
-@Entity(tableName = "user_profile", indices = [Index("syncId", unique = true)])
+@Entity(tableName = "user_profile", indices = [Index("syncId", unique = true), Index("updatedAt")])
 data class UserProfileEntity(
     @PrimaryKey val id: Int = SINGLETON_ID,
     val sex: Sex,
@@ -40,7 +40,7 @@ data class UserProfileEntity(
     }
 }
 
-@Entity(tableName = "body_weight_entry", indices = [Index("syncId", unique = true), Index("date", unique = true)])
+@Entity(tableName = "body_weight_entry", indices = [Index("syncId", unique = true), Index("updatedAt"), Index("date", unique = true)])
 data class BodyWeightEntryEntity(
     @PrimaryKey(autoGenerate = true) val id: Long = 0,
     val date: LocalDate,

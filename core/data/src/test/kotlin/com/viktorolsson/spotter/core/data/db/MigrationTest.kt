@@ -4,6 +4,7 @@ import androidx.room.testing.MigrationTestHelper
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -152,6 +153,40 @@ class MigrationTest {
                 assertEquals(32, it.getString(0).length)
                 assertEquals(true, it.getLong(1) > 0)
             }
+        }
+    }
+
+    @Test
+    fun migrate7To8AddsIndicesAndKeepsTriggers() {
+        helper.createDatabase(DB, 7).use { db ->
+            SyncSchema.createTriggers(db)
+            db.execSQL("INSERT INTO workout_session (id, startedAt, endedAt, planDayId, notes, perceivedDifficulty, isDeload) VALUES (1, 0, 1, NULL, NULL, NULL, 0)")
+        }
+        helper.runMigrationsAndValidate(DB, 8, true).use { db ->
+            fun indices(table: String) = db.query("PRAGMA index_list($table)").use { c ->
+                buildList { while (c.moveToNext()) add(c.getString(c.getColumnIndexOrThrow("name"))) }
+            }
+            SyncSchema.tables.forEach { t -> assertTrue(t.name, "index_${t.name}_updatedAt" in indices(t.name)) }
+            assertTrue("index_sync_tombstone_deletedAt" in indices("sync_tombstone"))
+            assertTrue("index_personal_record_achievedAt" in indices("personal_record"))
+            assertTrue("index_workout_session_endedAt" in indices("workout_session"))
+            // The row and its sync id survived, and the triggers are still live after the migration.
+            db.query("SELECT syncId FROM workout_session WHERE id = 1").use { it.moveToFirst(); assertEquals(32, it.getString(0).length) }
+            assertTrue(SyncSchema.triggersInstalled(db))
+            db.execSQL("DELETE FROM workout_session WHERE id = 1")
+            db.query("SELECT COUNT(*) FROM sync_tombstone WHERE tableName = 'workout_session'").use {
+                it.moveToFirst(); assertEquals(1, it.getInt(0))
+            }
+        }
+    }
+
+    @Test
+    fun migratingFrom6InstallsTheScheduledSessionTriggers() {
+        helper.createDatabase(DB, 6).use { SyncSchema.createTriggers(it, upTo = 6) }
+        helper.runMigrationsAndValidate(DB, 8, true).use { db ->
+            assertTrue(SyncSchema.triggersInstalled(db))
+            db.execSQL("INSERT INTO scheduled_session (date, planDayId, notes, sessionId) VALUES (20000, NULL, 'Easy day', NULL)")
+            db.query("SELECT syncId FROM scheduled_session").use { it.moveToFirst(); assertEquals(32, it.getString(0).length) }
         }
     }
 

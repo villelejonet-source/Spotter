@@ -3,11 +3,10 @@
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useState } from "react";
-import { AuthCard, FormMessage } from "@/components/auth-ui";
+import { AuthCard, useAuthForm } from "@/components/auth-ui";
 import { CodeForm } from "@/components/code-form";
-import { Button, inputClass } from "@/components/ui";
+import { Button, Field, InlineMessage, inputClass } from "@/components/ui";
 import { authErrorMessage } from "@/lib/auth";
-import { createClient } from "@/lib/supabase/client";
 
 export default function ForgotPasswordPage() {
   return (
@@ -23,28 +22,24 @@ export default function ForgotPasswordPage() {
  */
 function ForgotPassword() {
   const router = useRouter();
-  const [email, setEmail] = useState(useSearchParams().get("email") ?? "");
   const [sent, setSent] = useState(false);
-  const [busy, setBusy] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const supabase = createClient();
+  const { email, rawEmail, setEmail, busy, error, run, supabase } = useAuthForm(useSearchParams().get("email") ?? "");
 
   async function sendLink(): Promise<string | null> {
-    const { error } = await supabase.auth.resetPasswordForEmail(email.trim(), {
-      redirectTo: `${location.origin}/auth/callback?next=/reset-password`,
-    });
+    const { error } = await supabase.auth.resetPasswordForEmail(email, { redirectTo: `${location.origin}/auth/callback?next=/reset-password` });
     return error ? authErrorMessage(error) : null;
   }
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
-    setBusy(true);
-    setError(null);
-    const problem = await sendLink();
-    setBusy(false);
-    if (problem) setError(problem);
-    else setSent(true);
+    if (await run(sendLink)) setSent(true);
   }
+
+  const back = (
+    <Link href="/login" className="rounded-md hover:text-foreground">
+      ← Back to sign in
+    </Link>
+  );
 
   if (sent) {
     return (
@@ -52,17 +47,17 @@ function ForgotPassword() {
         title="Check your email"
         subtitle={
           <>
-            If there&apos;s an account for <span className="font-medium text-foreground">{email}</span>, we sent a link to choose a
-            new password. Open it on this device, or enter the code from the email.
+            If there&apos;s an account for <span className="font-medium text-foreground">{email}</span>, we sent a link to choose a new password. Open it on this
+            device, or enter the code from the email.
           </>
         }
-        footer={<Link href="/login" className="hover:text-foreground">← Back to sign in</Link>}
+        footer={back}
       >
         <CodeForm
           email={email}
           submitLabel="Continue"
           onVerify={async (token) => {
-            const { error } = await supabase.auth.verifyOtp({ email: email.trim(), token, type: "recovery" });
+            const { error } = await supabase.auth.verifyOtp({ email, token, type: "recovery" });
             if (error) return authErrorMessage(error);
             router.replace("/reset-password");
             return null;
@@ -74,17 +69,15 @@ function ForgotPassword() {
   }
 
   return (
-    <AuthCard
-      title="Reset your password"
-      subtitle="We'll email you a link to choose a new one. Works for accounts made in the app too."
-      footer={<Link href="/login" className="hover:text-foreground">← Back to sign in</Link>}
-    >
+    <AuthCard title="Reset your password" subtitle="We'll email you a link to choose a new one. Works for accounts made in the app too." footer={back}>
       <form onSubmit={submit} className="space-y-3">
-        <input type="email" required autoFocus autoComplete="email" placeholder="Email" aria-label="Email" value={email} onChange={(e) => setEmail(e.target.value)} className={inputClass} />
-        <Button variant="primary" className="w-full" disabled={busy}>
+        <Field label="Email">
+          <input type="email" required autoFocus autoComplete="email" value={rawEmail} onChange={(e) => setEmail(e.target.value)} className={inputClass} />
+        </Field>
+        <Button type="submit" variant="primary" className="w-full" disabled={busy}>
           {busy ? "Sending…" : "Email me a reset link"}
         </Button>
-        {error && <FormMessage tone="error">{error}</FormMessage>}
+        {error && <InlineMessage tone="error">{error}</InlineMessage>}
       </form>
     </AuthCard>
   );

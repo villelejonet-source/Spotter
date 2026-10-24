@@ -3,8 +3,14 @@ import { resolve } from "node:path";
 import { describe, expect, it } from "vitest";
 import {
   activatePlanRows,
+  bodyWeightSchema,
+  customExerciseSchema,
+  dayDraftSchema,
+  exerciseDraftSchema,
   planWeeksAhead,
+  profileSchema,
   scheduledPayload,
+  syncIdSchema,
   CHANGED_ELSEWHERE,
   planConflict,
   planVersions,
@@ -227,6 +233,62 @@ describe("planDraftSchema", () => {
     expect(planDraftSchema.safeParse(d).success).toBe(false);
     expect(planDraftSchema.safeParse({ ...draft(), sync_id: "nope" }).success).toBe(false);
     expect(planDraftSchema.safeParse(draft()).success).toBe(true);
+  });
+});
+
+/** The first message a failed parse would show. */
+function firstIssue(result: { success: boolean; error?: { issues: { message: string }[] } }): string | undefined {
+  return result.success ? undefined : result.error?.issues[0]?.message;
+}
+
+describe("validation messages are in the user's words", () => {
+  it("names the plan, day and exercise that lack a name", () => {
+    expect(firstIssue(planDraftSchema.safeParse({ ...draft(), name: "   " }))).toBe("Give the plan a name.");
+    expect(firstIssue(planDraftSchema.safeParse({ ...draft(), name: "x".repeat(81) }))).toBe("Keep the plan name under 80 characters.");
+    expect(firstIssue(dayDraftSchema.safeParse({ sync_id: newSyncId(), name: "", exercises: [] }))).toBe("Give the day a name.");
+    expect(firstIssue(dayDraftSchema.safeParse({ sync_id: newSyncId(), name: "x".repeat(61), exercises: [] }))).toBe("Keep the day name under 60 characters.");
+    expect(firstIssue(exerciseDraftSchema.safeParse({ ...exercise, exercise_id: "" }))).toBe("Pick an exercise.");
+    expect(firstIssue(planDraftSchema.safeParse({ ...draft(), days: [] }))).toBe("Add at least one day.");
+  });
+
+  it("names a custom exercise that lacks a name or a primary muscle", () => {
+    const valid = { name: "Band pull-apart", primary: ["REAR_DELTS"], secondary: [], pattern: "REAR_DELT_FLY", equipment: [], unilateral: false, instructions: null };
+    expect(customExerciseSchema.safeParse(valid).success).toBe(true);
+    expect(firstIssue(customExerciseSchema.safeParse({ ...valid, name: " " }))).toBe("Give the exercise a name.");
+    expect(firstIssue(customExerciseSchema.safeParse({ ...valid, name: "x".repeat(61) }))).toBe("Keep the exercise name under 60 characters.");
+    expect(firstIssue(customExerciseSchema.safeParse({ ...valid, primary: [] }))).toBe("Pick at least one primary muscle.");
+  });
+
+  it("never falls back to zod's default wording for a name", () => {
+    for (const message of [firstIssue(planDraftSchema.safeParse({ ...draft(), name: "" })), firstIssue(customExerciseSchema.safeParse({ name: "" }))]) {
+      expect(message).not.toMatch(/Too small|expected string|>=1/);
+    }
+  });
+});
+
+describe("body weight range matches the app (30–300 kg)", () => {
+  it.each([29.9, 300.1, 0, -5])("rejects %s kg", (kg) => {
+    expect(firstIssue(bodyWeightSchema.safeParse({ epoch_day: 20000, weight_kg: kg }))).toBe("Enter a body weight between 30 and 300 kg.");
+  });
+
+  it("accepts the bounds", () => {
+    expect(bodyWeightSchema.safeParse({ epoch_day: 20000, weight_kg: 30 }).success).toBe(true);
+    expect(bodyWeightSchema.safeParse({ epoch_day: 20000, weight_kg: 300 }).success).toBe(true);
+  });
+
+  it("applies the same range to the profile", () => {
+    const profile = { sex: "FEMALE", height_cm: 170, birth_date_epoch_day: 11000, body_weight_kg: 29, units: "KG", experience: "NEW", goal: "STRENGTH", days_per_week: 3, session_length_minutes: 45, equipment: [], focus_areas: [], limitations: [] };
+    expect(firstIssue(profileSchema.safeParse(profile))).toBe("Enter a body weight between 30 and 300 kg.");
+    expect(profileSchema.safeParse({ ...profile, body_weight_kg: 30 }).success).toBe(true);
+  });
+});
+
+describe("syncIdSchema", () => {
+  it("accepts the phone's ids and refuses anything else", () => {
+    expect(syncIdSchema.safeParse(newSyncId()).success).toBe(true);
+    for (const bad of ["", "nope", newSyncId().toUpperCase(), `${newSyncId()}0`, "user-profile", "custom-abc", "../x", "' or 1=1"]) {
+      expect(syncIdSchema.safeParse(bad).success, bad).toBe(false);
+    }
   });
 });
 

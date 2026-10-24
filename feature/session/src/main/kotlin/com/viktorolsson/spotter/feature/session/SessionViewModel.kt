@@ -156,9 +156,12 @@ class SessionViewModel @Inject constructor(
         .mapLatest { ids -> ids.associateWith { workoutRepository.getPreviousSets(it) } }
         .onStart { emit(emptyMap()) }
 
-    /** Sets swiped away but still undoable; hidden from the screen until the delete commits. */
+    /**
+     * Sets swiped away but still undoable; hidden from the screen until the delete commits.
+     * The screen's undo snackbar decides: [undoDeleteSet] or [confirmDeleteSet]. There is no
+     * timer here, so a slow (or accessibility-lengthened) snackbar can always still undo.
+     */
     private val pendingDeletes = MutableStateFlow<Set<Long>>(emptySet())
-    private val deleteJobs = mutableMapOf<Long, Job>()
 
     val uiState: StateFlow<SessionUiState> = combine(
         session,
@@ -269,29 +272,24 @@ class SessionViewModel @Inject constructor(
 
     fun addSet(sessionExerciseId: Long) = launch { workoutRepository.addSet(sessionExerciseId) }
 
-    /** Hides the set and deletes it after [UNDO_WINDOW_MS] unless [undoDeleteSet] is called. */
+    /** Hides the set; it's deleted by [confirmDeleteSet] (or finishing the workout) unless [undoDeleteSet] comes first. */
     fun deleteSet(setId: Long) {
         if (pendingEdit?.setId == setId) {
             pendingEdit = null
             editJob?.cancel()
         }
         pendingDeletes.update { it + setId }
-        deleteJobs[setId]?.cancel()
-        deleteJobs[setId] = viewModelScope.launch {
-            delay(UNDO_WINDOW_MS)
-            commitDelete(setId)
+    }
+
+    fun undoDeleteSet(setId: Long) = pendingDeletes.update { it - setId }
+
+    /** The undo snackbar went away without Undo: delete for real. No-op if already settled. */
+    fun confirmDeleteSet(setId: Long) {
+        if (setId !in pendingDeletes.value) return
+        viewModelScope.launch {
+            workoutRepository.deleteSet(setId)
+            pendingDeletes.update { it - setId }
         }
-    }
-
-    fun undoDeleteSet(setId: Long) {
-        deleteJobs.remove(setId)?.cancel()
-        pendingDeletes.update { it - setId }
-    }
-
-    private suspend fun commitDelete(setId: Long) {
-        deleteJobs.remove(setId)
-        workoutRepository.deleteSet(setId)
-        pendingDeletes.update { it - setId }
     }
 
     fun setSetType(setId: Long, type: SetType) = launch { workoutRepository.setSetType(setId, type) }
@@ -324,16 +322,13 @@ class SessionViewModel @Inject constructor(
     fun discard(onDiscarded: () -> Unit) = launch {
         editJob?.cancel()
         pendingEdit = null
-        deleteJobs.values.forEach { it.cancel() }
-        deleteJobs.clear()
+        pendingDeletes.value = emptySet()
         restTimerRepository.stop()
         workoutRepository.discardWorkout(sessionId)
         onDiscarded()
     }
 
     private suspend fun commitPendingDeletes() {
-        deleteJobs.values.forEach { it.cancel() }
-        deleteJobs.clear()
         pendingDeletes.value.forEach { workoutRepository.deleteSet(it) }
         pendingDeletes.value = emptySet()
     }
@@ -343,7 +338,6 @@ class SessionViewModel @Inject constructor(
         val edit = pendingEdit
         val deletes = pendingDeletes.value
         pendingEdit = null
-        deleteJobs.values.forEach { it.cancel() }
         if (edit != null || deletes.isNotEmpty()) {
             applicationScope.launch {
                 edit?.let { writeField(it) }
@@ -356,6 +350,5 @@ class SessionViewModel @Inject constructor(
 
     private companion object {
         const val EDIT_DEBOUNCE_MS = 300L
-        const val UNDO_WINDOW_MS = 4_000L
     }
 }

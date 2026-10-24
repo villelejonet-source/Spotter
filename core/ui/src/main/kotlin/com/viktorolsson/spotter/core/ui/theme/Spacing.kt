@@ -49,10 +49,23 @@ object Dimens {
     val SetRowHeight = 52.dp
     val FieldHeight = 44.dp
 
+    /** Inside a small tag such as the superset badge. */
+    val BadgePaddingHorizontal = 6.dp
+
+    /** Bottom clearance for a list scrolling under an extended floating action button. */
+    val FabClearance = 96.dp
+
+    /** Distance from the top of the screen to an overlay banner (the PR celebration). */
+    val OverlayTopOffset = 96.dp
+
+    /** Elevation of a banner floating over content. */
+    val BannerElevation = 6.dp
+
     /** Minimum touch target. */
     val TouchTarget = 48.dp
 
     val IconSmall = 16.dp
     val IconMedium = 24.dp
+    val IconBanner = 36.dp
     val IconLarge = 56.dp
 }

@@ -134,8 +134,8 @@ internal fun ExercisePickerScreen(
                 contentPadding = PaddingValues(horizontal = Dimens.ScreenPadding, vertical = Spacing.sm),
                 horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
             ) {
-                item { EquipmentFilterChip(uiState.filters.equipment, onEquipmentChange) }
-                items(BodyArea.entries) { area ->
+                item(key = "equipment") { EquipmentFilterChip(uiState.filters.equipment, onEquipmentChange) }
+                items(BodyArea.entries, key = { it.name }) { area ->
                     FilterChip(
                         selected = uiState.filters.bodyArea == area,
                         onClick = { onBodyAreaChange(if (uiState.filters.bodyArea == area) null else area) },
@@ -153,7 +153,7 @@ internal fun ExercisePickerScreen(
                     modifier = Modifier.fillMaxWidth(),
                 )
                 else -> LazyColumn(
-                    contentPadding = PaddingValues(bottom = FAB_CLEARANCE),
+                    contentPadding = PaddingValues(bottom = Dimens.FabClearance),
                     modifier = Modifier.imePadding(),
                 ) {
                     items(uiState.exercises, key = { it.id }) { exercise ->
@@ -245,4 +245,3 @@ private fun ExerciseRow(exercise: Exercise, selectedOrder: Int?, onClick: () -> 
 }
 
 private val ORDER_BADGE_SIZE = 28.dp
-private val FAB_CLEARANCE = 96.dp

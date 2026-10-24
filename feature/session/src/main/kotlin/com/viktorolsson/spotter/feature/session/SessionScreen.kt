@@ -144,12 +144,18 @@ internal fun SessionRoute(
                 if (keypad.target?.setId == setId) keypad.focus(null, "")
                 viewModel.deleteSet(setId)
                 scope.launch {
-                    val result = snackbar.showSnackbar(
-                        message = context.getString(R.string.set_deleted),
-                        actionLabel = context.getString(CoreR.string.action_undo),
-                        duration = SnackbarDuration.Short,
-                    )
-                    if (result == SnackbarResult.ActionPerformed) viewModel.undoDeleteSet(setId)
+                    // The snackbar's own outcome settles the delete: Undo restores the set; a
+                    // dismissal (timeout, swipe, or the screen going away mid-snackbar) commits it.
+                    var undone = false
+                    try {
+                        undone = snackbar.showSnackbar(
+                            message = context.getString(R.string.set_deleted),
+                            actionLabel = context.getString(CoreR.string.action_undo),
+                            duration = SnackbarDuration.Short,
+                        ) == SnackbarResult.ActionPerformed
+                    } finally {
+                        if (undone) viewModel.undoDeleteSet(setId) else viewModel.confirmDeleteSet(setId)
+                    }
                 }
             },
             onSetType = viewModel::setSetType,
@@ -391,7 +397,7 @@ internal fun SessionScreen(
     celebration?.let { event ->
         Box(Modifier.fillMaxSize()) {
             Confetti(key = event.id)
-            PrBanner(event, unit, Modifier.align(Alignment.TopCenter).padding(top = BANNER_TOP, start = Dimens.ScreenPadding, end = Dimens.ScreenPadding))
+            PrBanner(event, unit, Modifier.align(Alignment.TopCenter).padding(top = Dimens.OverlayTopOffset, start = Dimens.ScreenPadding, end = Dimens.ScreenPadding))
         }
     }
     platesFor?.let { (exercise, kg) ->
@@ -612,11 +618,11 @@ internal fun PrBanner(event: PrEvent, unit: WeightUnit, modifier: Modifier = Mod
     )
     Card(
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.tertiaryContainer),
-        elevation = CardDefaults.cardElevation(defaultElevation = BANNER_ELEVATION),
+        elevation = CardDefaults.cardElevation(defaultElevation = Dimens.BannerElevation),
         modifier = modifier.fillMaxWidth().semantics { liveRegion = LiveRegionMode.Polite },
     ) {
         Row(Modifier.padding(Dimens.CardPadding), verticalAlignment = Alignment.CenterVertically) {
-            Icon(Icons.Rounded.EmojiEvents, contentDescription = null, tint = MaterialTheme.colorScheme.onTertiaryContainer, modifier = Modifier.size(BANNER_ICON))
+            Icon(Icons.Rounded.EmojiEvents, contentDescription = null, tint = MaterialTheme.colorScheme.onTertiaryContainer, modifier = Modifier.size(Dimens.IconBanner))
             Column(Modifier.padding(start = Spacing.md)) {
                 Text(stringResource(R.string.pr_banner_title), style = MaterialTheme.typography.titleLarge, color = MaterialTheme.colorScheme.onTertiaryContainer)
                 Text(body, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onTertiaryContainer)
@@ -626,6 +632,3 @@ internal fun PrBanner(event: PrEvent, unit: WeightUnit, modifier: Modifier = Mod
 }
 
 private const val CELEBRATION_MS = 3_500L
-private val BANNER_TOP = androidx.compose.ui.unit.Dp(96f)
-private val BANNER_ICON = androidx.compose.ui.unit.Dp(36f)
-private val BANNER_ELEVATION = androidx.compose.ui.unit.Dp(6f)

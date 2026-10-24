@@ -1,17 +1,17 @@
-import Link from "next/link";
 import { notFound } from "next/navigation";
-import { activatePlan, duplicatePlan } from "@/app/actions/plans";
+import { activatePlan, deletePlan, duplicatePlan } from "@/app/actions/plans";
+import { ConfirmButton } from "@/components/confirm-button";
 import { PlanEditor } from "@/components/plan-editor";
-import { Badge, Button, PageHeader } from "@/components/ui";
-import { getPlans } from "@/lib/data";
+import { BackLink, Badge, Button, PageHeader } from "@/components/ui";
+import { getPlan } from "@/lib/data";
 import { planVersions, type PlanDraft } from "@/lib/sync-writer";
 import { exerciseOptions } from "../options";
-import { DeletePlan } from "./delete-plan";
+
+export const metadata = { title: "Plan" };
 
 export default async function PlanPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const [plans, { exercises, unit }] = await Promise.all([getPlans(), exerciseOptions()]);
-  const plan = plans.find((p) => p.sync_id === id);
+  const [plan, { exercises, unit }] = await Promise.all([getPlan(id), exerciseOptions()]);
   if (!plan) notFound();
 
   const draft: PlanDraft = {
@@ -41,26 +41,38 @@ export default async function PlanPage({ params }: { params: Promise<{ id: strin
 
   return (
     <>
-      <Link href="/plans" className="text-sm text-muted hover:text-foreground">← Plans</Link>
-      <div className="mt-2">
-        <PageHeader
-          title={plan.name}
-          subtitle={plan.is_active ? <Badge tone="primary">Active plan</Badge> : "Not active"}
-          actions={
-            <>
-              {!plan.is_active && (
-                <form action={activatePlan.bind(null, plan.sync_id)}>
-                  <Button variant="primary">Make active</Button>
-                </form>
-              )}
-              <form action={duplicatePlan.bind(null, plan.sync_id)}>
-                <Button>Duplicate</Button>
-              </form>
-              <DeletePlan planId={plan.sync_id} isActive={plan.is_active} />
-            </>
-          }
-        />
-      </div>
+      <BackLink href="/plans">Plans</BackLink>
+      <PageHeader
+        title={plan.name}
+        subtitle={plan.is_active ? <Badge tone="primary">Active plan</Badge> : "Not active"}
+        actions={
+          <>
+            {!plan.is_active && (
+              <ConfirmButton
+                action={activatePlan.bind(null, plan.sync_id)}
+                variant="primary"
+                title="Make this your active plan?"
+                body="The app's Today tab switches to this plan. Your current plan stays in the list."
+                confirmLabel="Make active"
+              >
+                Make active
+              </ConfirmButton>
+            )}
+            <form action={duplicatePlan.bind(null, plan.sync_id)}>
+              <Button type="submit">Duplicate</Button>
+            </form>
+            <ConfirmButton
+              action={deletePlan.bind(null, plan.sync_id)}
+              variant="danger"
+              title={plan.is_active ? "Delete your active plan?" : "Delete this plan?"}
+              body="Past workouts stay in your history. The plan is removed from the app at its next sync."
+              confirmLabel="Delete plan"
+            >
+              Delete
+            </ConfirmButton>
+          </>
+        }
+      />
       {/* Keyed by the newest change in the plan, so edits synced from the phone reset the editor. */}
       <PlanEditor key={version} initial={draft} base={planVersions(plan)} exercises={exercises} unit={unit} isNew={false} />
     </>

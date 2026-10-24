@@ -1,25 +1,18 @@
 import { DeleteAccount } from "@/components/delete-account";
 import { buttonClass, Card, CardTitle, PageHeader } from "@/components/ui";
 import { getBodyWeight, getProfile } from "@/lib/data";
+import { APP_BACKUP_PATH } from "@/lib/labels";
 import { requireUser } from "@/lib/supabase/server";
 import { profileDraftFrom } from "@/lib/sync-writer";
 import { ChangePassword } from "./change-password";
 import { ProfileForm } from "./profile-form";
 import { WeightLog } from "./weight-log";
 
-function Row({ label, children }: { label: string; children: React.ReactNode }) {
-  return (
-    <div className="flex justify-between gap-4 py-2.5 text-sm">
-      <dt className="text-muted">{label}</dt>
-      <dd className="text-right">{children}</dd>
-    </div>
-  );
-}
+export const metadata = { title: "Profile" };
 
 export default async function ProfilePage() {
-  const { supabase } = await requireUser();
-  const [{ data: { user } }, profile, bodyWeight] = await Promise.all([supabase.auth.getUser(), getProfile(), getBodyWeight()]);
-  if (!user) return null;
+  // The email comes from the session's claims (checked locally), not a round trip to Supabase.
+  const [{ user }, profile, bodyWeight] = await Promise.all([requireUser(), getProfile(), getBodyWeight()]);
   const unit = profile?.units ?? "KG";
 
   return (
@@ -31,7 +24,18 @@ export default async function ProfilePage() {
           {profile ? (
             <ProfileForm initial={profileDraftFrom(profile)} version={profile.updated_at} />
           ) : (
-            <p className="text-sm text-muted">No profile synced yet. Finish onboarding in the app with cloud backup on.</p>
+            <div className="space-y-3 text-sm">
+              <p className="text-muted">
+                No profile synced yet. The app&apos;s two-minute questionnaire sets it up and builds your first plan: install Spotter, sign in under {APP_BACKUP_PATH} with
+                this email, and it appears here after the first sync.
+              </p>
+              <details className="rounded-lg border border-outline p-3">
+                <summary className="cursor-pointer font-medium">Don&apos;t have the app yet? Set up your profile here</summary>
+                <div className="mt-3">
+                  <ProfileForm create />
+                </div>
+              </details>
+            </div>
           )}
         </Card>
 
@@ -44,21 +48,27 @@ export default async function ProfilePage() {
             <CardTitle>Your data</CardTitle>
             <p className="mb-3 text-sm text-muted">Download everything Spotter has backed up for you.</p>
             <div className="flex flex-wrap gap-2">
-              <a href="/export?format=json" className={buttonClass()}>Everything (JSON)</a>
-              <a href="/export?format=csv" className={buttonClass()}>Sets (CSV)</a>
+              <a href="/export?format=json" className={buttonClass()}>
+                Everything (JSON)
+              </a>
+              <a href="/export?format=csv" className={buttonClass()}>
+                Sets (CSV)
+              </a>
             </div>
           </Card>
           <Card>
             <CardTitle>Account</CardTitle>
-            <dl className="divide-y divide-outline">
-              <Row label="Email">{user.email}</Row>
-              <Row label="Member since">{new Date(user.created_at).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" })}</Row>
+            <dl className="text-sm">
+              <div className="flex justify-between gap-4 py-2.5">
+                <dt className="text-muted">Email</dt>
+                <dd className="truncate text-right">{user.email}</dd>
+              </div>
             </dl>
-            <div className="mt-4 border-t border-outline pt-4">
+            <div className="mt-2 border-t border-outline pt-4">
               <ChangePassword />
             </div>
             <div className="mt-4 border-t border-outline pt-4">
-              <DeleteAccount />
+              <DeleteAccount email={user.email} />
             </div>
           </Card>
         </div>

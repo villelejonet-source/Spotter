@@ -4,3 +4,6 @@
  * from the profile later.
  */
 export const TIME_ZONE = "Europe/Stockholm";
+
+/** One locale for dates and numbers, so "3 Oct 2026" and "4,520 kg" always match. */
+export const LOCALE = "en-GB";

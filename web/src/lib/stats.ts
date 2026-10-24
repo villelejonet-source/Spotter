@@ -1,41 +1,47 @@
-import { TIME_ZONE } from "./tz";
-import { epley, MUSCLE_GROUPS, muscleGroupOf, TIMED_EXERCISE_IDS, type SessionSummaryRow, type SetEntryRow } from "./model";
+import { LOCALE, TIME_ZONE } from "./tz";
+import { epley, isTimed, MUSCLE_GROUPS, muscleGroupOf, type SessionSummaryRow, type SetEntryRow } from "./model";
 
-const DAY_MS = 86_400_000;
+export const DAY_MS = 86_400_000;
+export const WEEK_MS = 7 * DAY_MS;
 
-const parts = new Intl.DateTimeFormat("en-US", {
-  timeZone: TIME_ZONE,
-  year: "numeric",
-  month: "numeric",
-  day: "numeric",
-  weekday: "short",
-});
-const WEEKDAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
+// One formatter per zone; formatToParts is the expensive part, so results are memoised too.
+const parts = new Intl.DateTimeFormat(LOCALE, { timeZone: TIME_ZONE, year: "numeric", month: "numeric", day: "numeric" });
+const dateCache = new Map<number, number>();
+const DATE_CACHE_MAX = 20_000;
 
 /**
  * The calendar date of [ms] in the display time zone, as UTC midnight of that date. Day
  * and week maths runs on these "date values" so it doesn't depend on the server's zone.
  */
 export function localDate(ms: number): number {
+  const hit = dateCache.get(ms);
+  if (hit != null) return hit;
   const p = Object.fromEntries(parts.formatToParts(ms).map((x) => [x.type, x.value]));
-  return Date.UTC(Number(p.year), Number(p.month) - 1, Number(p.day));
+  const date = Date.UTC(Number(p.year), Number(p.month) - 1, Number(p.day));
+  if (dateCache.size >= DATE_CACHE_MAX) dateCache.clear();
+  dateCache.set(ms, date);
+  return date;
+}
+
+/** Weekday of a date value, 0 = Monday … 6 = Sunday (the app's week starts on Monday). */
+function weekdayOf(dateMs: number): number {
+  return (new Date(dateMs).getUTCDay() + 6) % 7;
 }
 
 /** Monday of the week containing [ms], as a date value (see [localDate]). */
 export function weekStart(ms: number): number {
   const date = localDate(ms);
-  const weekday = WEEKDAYS.indexOf(parts.formatToParts(ms).find((x) => x.type === "weekday")!.value);
-  return date - weekday * DAY_MS;
+  return date - weekdayOf(date) * DAY_MS;
 }
 
 function addWeeks(weekMs: number, n: number): number {
-  return weekMs + n * 7 * DAY_MS;
+  return weekMs + n * WEEK_MS;
 }
 
-type Session = Pick<SessionSummaryRow, "started_at" | "ended_at" | "volume_kg" | "completed_sets">;
+type Session = Pick<SessionSummaryRow, "started_at" | "ended_at"> & Partial<Pick<SessionSummaryRow, "volume_kg" | "completed_sets">>;
 
 /** Finished sessions only; a running workout doesn't count yet. */
-export function finished<T extends Session>(sessions: T[]): T[] {
+export function finished<T extends Pick<SessionSummaryRow, "ended_at">>(sessions: T[]): T[] {
   return sessions.filter((s) => s.ended_at != null);
 }
 
@@ -60,17 +66,22 @@ export function weeklyTotals(sessions: Session[], weeks: number, now = Date.now(
     const i = index.get(weekStart(s.started_at));
     if (i == null) continue;
     buckets[i].sessions++;
-    buckets[i].volumeKg += Number(s.volume_kg);
-    buckets[i].sets += Number(s.completed_sets);
+    buckets[i].volumeKg += Number(s.volume_kg ?? 0);
+    buckets[i].sets += Number(s.completed_sets ?? 0);
   }
   return buckets;
+}
+
+/** The start of the week [weeks] - 1 weeks before this one: the oldest week in a [weeklyTotals] window. */
+export function windowStart(weeks: number, now = Date.now()): number {
+  return addWeeks(weekStart(now), 1 - weeks);
 }
 
 /**
  * Weeks in a row, ending this week or last, with at least one finished session. This
  * week still counts as "in progress", so a streak isn't broken until the week is over.
  */
-export function weekStreak(sessions: Session[], now = Date.now()): number {
+export function weekStreak(sessions: Pick<SessionSummaryRow, "started_at" | "ended_at">[], now = Date.now()): number {
   const weeks = new Set(finished(sessions).map((s) => weekStart(s.started_at)));
   let week = weekStart(now);
   if (!weeks.has(week)) week = addWeeks(week, -1);
@@ -84,7 +95,12 @@ export function weekStreak(sessions: Session[], now = Date.now()): number {
 
 /** Calendar day key in the display time zone, "2026-10-23". */
 export function dayKey(ms: number): string {
-  return new Date(localDate(ms)).toISOString().slice(0, 10);
+  return dateValueKey(localDate(ms));
+}
+
+/** "2026-10-23" for a date value (UTC midnight). */
+export function dateValueKey(dateMs: number): string {
+  return new Date(dateMs).toISOString().slice(0, 10);
 }
 
 export function epochDayToMs(epochDay: number): number {
@@ -110,7 +126,7 @@ export interface ExerciseSessionPoint {
  * history shows (core/model ExerciseSessionLog). Warm-ups and unfinished sets are skipped.
  */
 export function exerciseProgress(sets: LoggedSet[], exerciseId: string, sessionDates: Map<string, number>): ExerciseSessionPoint[] {
-  const timed = TIMED_EXERCISE_IDS.has(exerciseId);
+  const timed = isTimed(exerciseId);
   const bySession = new Map<string, LoggedSet[]>();
   for (const s of sets) {
     if (s.completed_at == null || s.set_type === "WARMUP" || s.reps == null) continue;
@@ -128,15 +144,17 @@ export function exerciseProgress(sets: LoggedSet[], exerciseId: string, sessionD
       const bw = best.weight_kg ?? 0;
       return w > bw || (w === bw && (s.reps ?? 0) > (best.reps ?? 0)) ? s : best;
     }, null);
-    const e1rms = timed ? [] : working.filter((s) => s.weight_kg != null).map((s) => epley(s.weight_kg!, s.reps!));
-    points.push({
-      sessionId,
-      date,
-      e1rmKg: e1rms.length ? Math.max(...e1rms) : null,
-      topSet: top ? { weightKg: top.weight_kg, reps: top.reps } : null,
-      volumeKg: timed ? 0 : working.reduce((sum, s) => sum + (s.weight_kg ?? 0) * (s.reps ?? 0), 0),
-      bestReps: Math.max(...working.map((s) => s.reps ?? 0)),
-    });
+    let e1rm: number | null = null;
+    let volume = 0;
+    let bestReps = 0;
+    for (const s of working) {
+      const reps = s.reps ?? 0;
+      bestReps = Math.max(bestReps, reps);
+      if (timed || s.weight_kg == null) continue;
+      volume += s.weight_kg * reps;
+      e1rm = Math.max(e1rm ?? 0, epley(s.weight_kg, reps));
+    }
+    points.push({ sessionId, date, e1rmKg: e1rm, topSet: top ? { weightKg: top.weight_kg, reps: top.reps } : null, volumeKg: volume, bestReps });
   }
   return points.sort((a, b) => a.date - b.date);
 }
@@ -160,7 +178,7 @@ export function nextPlanDay<D extends { sync_id: string; position: number }>(
   return ordered[(i + 1) % ordered.length];
 }
 
-type MuscleSet = Pick<SetEntryRow, "set_type" | "completed_at"> & { exercise_id: string; session_id: string };
+type MuscleSet = Pick<SetEntryRow, "set_type" | "completed_at"> & { exercise_id: string };
 
 export interface GroupVolume {
   group: string;
@@ -187,7 +205,7 @@ export function muscleVolume(sets: MuscleSet[], muscles: (exerciseId: string) =>
 }
 
 /** Finished workouts per calendar day (display time zone), keyed by [dayKey]. */
-export function workoutsPerDay(sessions: Session[]): Map<string, number> {
+export function workoutsPerDay(sessions: Pick<SessionSummaryRow, "started_at" | "ended_at">[]): Map<string, number> {
   const days = new Map<string, number>();
   for (const s of finished(sessions)) {
     const key = dayKey(s.started_at);

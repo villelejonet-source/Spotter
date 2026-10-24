@@ -12,7 +12,9 @@ import com.viktorolsson.spotter.core.model.MuscleVolume
 import com.viktorolsson.spotter.core.model.PersonalRecord
 import com.viktorolsson.spotter.core.model.SetType
 import com.viktorolsson.spotter.core.model.WorkoutSession
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.map
 import java.time.Clock
 import java.time.Duration
@@ -20,14 +22,26 @@ import java.time.Instant
 import javax.inject.Inject
 import javax.inject.Singleton
 
-/** Read side of workouts: finished sessions, per-exercise history, records and weekly volume. */
+/**
+ * Read side of workouts: finished sessions, per-exercise history, records and weekly volume.
+ * Mapping whole sessions to models is the heavy part, so those flows run on Default.
+ */
 @Singleton
 class HistoryRepository @Inject constructor(
     private val dao: WorkoutDao,
     private val clock: Clock,
 ) {
+    /** Every finished session. Prefer [observeFinishedSessionsBetween] or [observeRecentFinished] for a screen. */
     fun observeFinishedSessions(): Flow<List<WorkoutSession>> =
-        dao.observeFinishedSessions().map { it.map(SessionWithExercises::toModel) }
+        dao.observeFinishedSessions().map { it.map(SessionWithExercises::toModel) }.flowOn(Dispatchers.Default)
+
+    /** Finished sessions started in [start, end), newest first (e.g. one calendar month). */
+    fun observeFinishedSessionsBetween(start: Instant, end: Instant): Flow<List<WorkoutSession>> =
+        dao.observeFinishedSessionsBetween(start, end).map { it.map(SessionWithExercises::toModel) }.flowOn(Dispatchers.Default)
+
+    /** The [limit] most recent finished sessions, newest first. */
+    fun observeRecentFinished(limit: Int): Flow<List<WorkoutSession>> =
+        dao.observeRecentFinished(limit).map { it.map(SessionWithExercises::toModel) }.flowOn(Dispatchers.Default)
 
     /** Each session the exercise was done in, oldest first. */
     fun observeExerciseLogs(exerciseId: String): Flow<List<ExerciseSessionLog>> =
@@ -35,7 +49,7 @@ class HistoryRepository @Inject constructor(
             rows.groupBy { it.sessionId }.map { (sessionId, sets) ->
                 ExerciseSessionLog(sessionId, sets.first().startedAt, sets.map { it.set.toModel() })
             }
-        }
+        }.flowOn(Dispatchers.Default)
 
     fun observeLoggedExercises(): Flow<List<LoggedExerciseSummary>> =
         dao.observeLoggedExercises().map { rows ->
@@ -61,7 +75,7 @@ class HistoryRepository @Inject constructor(
                 }
             }
             MuscleBalance.weekly(sets, goal)
-        }
+        }.flowOn(Dispatchers.Default)
 }
 
 data class LoggedExerciseSummary(val exercise: Exercise, val lastDone: Instant, val sessionCount: Int)

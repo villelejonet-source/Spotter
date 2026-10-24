@@ -2,6 +2,7 @@ package com.viktorolsson.spotter.core.data.db
 
 import com.viktorolsson.spotter.core.data.db.entity.BodyWeightEntryEntity
 import com.viktorolsson.spotter.core.data.db.entity.ExerciseEntity
+import com.viktorolsson.spotter.core.data.db.entity.RecommendationEntity
 import com.viktorolsson.spotter.core.data.db.entity.RecordWithExercise
 import com.viktorolsson.spotter.core.data.db.entity.PlanDayWithExercises
 import com.viktorolsson.spotter.core.data.db.entity.PlanExerciseEntity
@@ -17,6 +18,8 @@ import com.viktorolsson.spotter.core.model.Plan
 import com.viktorolsson.spotter.core.model.PlanDay
 import com.viktorolsson.spotter.core.model.PlanExercise
 import com.viktorolsson.spotter.core.model.PlanTarget
+import com.viktorolsson.spotter.core.model.Recommendation
+import com.viktorolsson.spotter.core.model.RecommendationPayload
 import com.viktorolsson.spotter.core.model.UserProfile
 import com.viktorolsson.spotter.core.model.PreviousSet
 import com.viktorolsson.spotter.core.model.SessionExercise
@@ -161,3 +164,12 @@ fun RecordWithExercise.toModel() = PersonalRecord(
 )
 
 fun BodyWeightEntryEntity.toModel() = BodyWeightEntry(id = id, date = date, weightKg = weightKg)
+
+fun RecommendationEntity.toModel() = Recommendation(
+    id = id,
+    type = type,
+    exerciseId = exerciseId,
+    payload = RecommendationPayload.decode(payload),
+    createdAt = createdAt,
+    status = status,
+)

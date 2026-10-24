@@ -19,6 +19,7 @@ import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
+import com.viktorolsson.spotter.core.ui.theme.Spacing
 
 /** A large tappable answer card; radio-like for single choice, checkbox-like for multi. */
 @Composable
@@ -40,7 +41,7 @@ internal fun OptionCard(
         ),
         modifier = modifier.fillMaxWidth(),
     ) {
-        Row(Modifier.padding(horizontal = 20.dp, vertical = 16.dp), verticalAlignment = Alignment.CenterVertically) {
+        Row(Modifier.padding(horizontal = Spacing.xl, vertical = Spacing.lg), verticalAlignment = Alignment.CenterVertically) {
             Column(Modifier.weight(1f)) {
                 Text(title, style = MaterialTheme.typography.titleMedium)
                 if (subtitle != null) {

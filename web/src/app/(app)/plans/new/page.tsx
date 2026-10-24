@@ -1,16 +1,15 @@
-import Link from "next/link";
-import { PageHeader } from "@/components/ui";
+import { BackLink, PageHeader } from "@/components/ui";
 import { exerciseOptions } from "../options";
 import { NewPlan } from "./new-plan";
+
+export const metadata = { title: "New plan" };
 
 export default async function NewPlanPage() {
   const { exercises, unit } = await exerciseOptions();
   return (
     <>
-      <Link href="/plans" className="text-sm text-muted hover:text-foreground">← Plans</Link>
-      <div className="mt-2">
-        <PageHeader title="New plan" subtitle="Your first plan becomes the active one in the app." />
-      </div>
+      <BackLink href="/plans">Plans</BackLink>
+      <PageHeader title="New plan" subtitle="Your first plan becomes the active one in the app." />
       <NewPlan exercises={exercises} unit={unit} />
     </>
   );

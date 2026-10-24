@@ -1,58 +1,57 @@
 package com.viktorolsson.spotter.feature.history
 
-import com.viktorolsson.spotter.core.ui.formatEffort
-import com.viktorolsson.spotter.core.model.EffortScale
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.rounded.ArrowBack
 import androidx.compose.material.icons.automirrored.rounded.KeyboardArrowRight
 import androidx.compose.material.icons.rounded.EmojiEvents
 import androidx.compose.material.icons.rounded.Replay
-import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
-import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.viktorolsson.spotter.core.model.EffortScale
 import com.viktorolsson.spotter.core.model.PersonalRecord
 import com.viktorolsson.spotter.core.model.SessionExercise
 import com.viktorolsson.spotter.core.model.SetType
 import com.viktorolsson.spotter.core.model.WeightUnit
 import com.viktorolsson.spotter.core.model.WorkoutSummary
 import com.viktorolsson.spotter.core.model.isTimed
+import com.viktorolsson.spotter.core.ui.component.ErrorState
+import com.viktorolsson.spotter.core.ui.component.LoadingState
+import com.viktorolsson.spotter.core.ui.component.PrimaryButton
+import com.viktorolsson.spotter.core.ui.component.RecordsCard
+import com.viktorolsson.spotter.core.ui.component.SpotterTopBar
+import com.viktorolsson.spotter.core.ui.component.StatTile
 import com.viktorolsson.spotter.core.ui.formatClock
+import com.viktorolsson.spotter.core.ui.formatEffort
 import com.viktorolsson.spotter.core.ui.formatMediumDate
-import com.viktorolsson.spotter.core.ui.formatRecordValue
 import com.viktorolsson.spotter.core.ui.formatSet
 import com.viktorolsson.spotter.core.ui.formatTotal
-import com.viktorolsson.spotter.core.ui.labelRes
 import com.viktorolsson.spotter.core.ui.localDate
+import com.viktorolsson.spotter.core.ui.theme.Dimens
+import com.viktorolsson.spotter.core.ui.theme.Spacing
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 internal fun WorkoutDetailRoute(
     onBack: () -> Unit,
@@ -61,109 +60,76 @@ internal fun WorkoutDetailRoute(
     viewModel: WorkoutDetailViewModel = hiltViewModel(),
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
+    WorkoutDetailScreen(
+        state = state,
+        onBack = onBack,
+        onOpenExercise = onOpenExercise,
+        onRepeat = { viewModel.repeat(onOpenSession) },
+    )
+}
+
+@Composable
+internal fun WorkoutDetailScreen(
+    state: WorkoutDetailUiState,
+    onBack: () -> Unit,
+    onOpenExercise: (String) -> Unit,
+    onRepeat: () -> Unit,
+) {
     val session = state.session
     Scaffold(
         topBar = {
-            TopAppBar(
-                title = {
-                    Column {
-                        Text(session?.planDayName ?: stringResource(R.string.history_workout))
-                        session?.let {
-                            Text(
-                                formatMediumDate(it.startedAt.localDate()),
-                                style = MaterialTheme.typography.labelMedium,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            )
-                        }
-                    }
-                },
-                navigationIcon = {
-                    IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Rounded.ArrowBack, stringResource(R.string.history_back)) }
-                },
+            SpotterTopBar(
+                title = session?.planDayName ?: stringResource(R.string.history_workout),
+                subtitle = session?.let { formatMediumDate(it.startedAt.localDate()) },
+                onBack = onBack,
             )
         },
         bottomBar = {
             if (session != null) {
-                Button(
-                    onClick = { viewModel.repeat(onOpenSession) },
-                    modifier = Modifier.fillMaxWidth().navigationBarsPadding().padding(16.dp).height(56.dp),
-                ) {
-                    Icon(Icons.Rounded.Replay, contentDescription = null)
-                    Text(stringResource(R.string.detail_repeat), modifier = Modifier.padding(start = 8.dp))
-                }
+                PrimaryButton(
+                    text = stringResource(R.string.detail_repeat),
+                    onClick = onRepeat,
+                    icon = Icons.Rounded.Replay,
+                    modifier = Modifier.navigationBarsPadding().padding(Dimens.ScreenPadding),
+                )
             }
         },
     ) { padding ->
-        if (session == null) return@Scaffold
-        val summary = WorkoutSummary.of(session)
-        LazyColumn(
-            modifier = Modifier.padding(padding).fillMaxSize(),
-            contentPadding = PaddingValues(16.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp),
-        ) {
-            item {
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Stat(stringResource(R.string.detail_duration), formatClock(summary.duration), Modifier.weight(1f))
-                    Stat(stringResource(R.string.detail_volume), formatTotal(summary.volumeKg, state.unit), Modifier.weight(1f))
-                    Stat(stringResource(R.string.detail_sets), "${summary.completedSets}", Modifier.weight(1f))
-                }
-            }
-            session.notes?.let { notes -> item { Text(notes, style = MaterialTheme.typography.bodyMedium) } }
-            if (state.records.isNotEmpty()) {
-                item { RecordsCard(state.records, state.unit) }
-            }
-            items(session.exercises, key = { it.id }) { exercise ->
-                ExerciseSetsCard(
-                    exercise = exercise,
-                    unit = state.unit,
-                    effortScale = state.effortScale,
-                    recordReps = state.records.filter { it.exerciseId == exercise.exercise.id },
-                    onOpen = { onOpenExercise(exercise.exercise.id) },
-                )
-            }
-        }
-    }
-}
-
-@Composable
-internal fun Stat(label: String, value: String, modifier: Modifier = Modifier) {
-    Card(
-        modifier = modifier,
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerHigh),
-    ) {
-        Column(Modifier.padding(12.dp)) {
-            Text(label, style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-            Text(value, style = MaterialTheme.typography.titleMedium)
-        }
-    }
-}
-
-@Composable
-private fun RecordsCard(records: List<PersonalRecord>, unit: WeightUnit) {
-    Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.tertiaryContainer)) {
-        Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Icon(Icons.Rounded.EmojiEvents, contentDescription = null, tint = MaterialTheme.colorScheme.onTertiaryContainer)
-                Text(
-                    stringResource(R.string.detail_prs),
-                    style = MaterialTheme.typography.titleSmall,
-                    color = MaterialTheme.colorScheme.onTertiaryContainer,
-                    modifier = Modifier.padding(start = 8.dp),
-                )
-            }
-            records.forEach { record ->
-                Row {
-                    Text(
-                        "${record.exerciseName} · ${stringResource(record.type.labelRes)}",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onTertiaryContainer,
-                        modifier = Modifier.weight(1f),
-                    )
-                    Text(
-                        formatRecordValue(record, unit),
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onTertiaryContainer,
-                    )
+        when {
+            state.loading -> LoadingState(Modifier.padding(padding).fillMaxSize())
+            session == null -> ErrorState(
+                title = stringResource(R.string.detail_not_found_title),
+                body = stringResource(R.string.detail_not_found_body),
+                modifier = Modifier.padding(padding).fillMaxSize(),
+            )
+            else -> {
+                val summary = remember(session) { WorkoutSummary.of(session) }
+                val recordsByExercise = remember(state.records) { state.records.groupBy { it.exerciseId } }
+                LazyColumn(
+                    modifier = Modifier.padding(padding).fillMaxSize(),
+                    contentPadding = PaddingValues(Dimens.ScreenPadding),
+                    verticalArrangement = Arrangement.spacedBy(Dimens.ListGap),
+                ) {
+                    item {
+                        Row(horizontalArrangement = Arrangement.spacedBy(Spacing.sm)) {
+                            StatTile(stringResource(R.string.detail_duration), formatClock(summary.duration), Modifier.weight(1f))
+                            StatTile(stringResource(R.string.detail_volume), formatTotal(summary.volumeKg, state.unit), Modifier.weight(1f))
+                            StatTile(stringResource(R.string.detail_sets), summary.completedSets.toString(), Modifier.weight(1f))
+                        }
+                    }
+                    session.notes?.let { notes -> item { Text(notes, style = MaterialTheme.typography.bodyMedium) } }
+                    if (state.records.isNotEmpty()) {
+                        item { RecordsCard(stringResource(R.string.detail_prs), state.records, state.unit) }
+                    }
+                    items(session.exercises, key = { it.id }) { exercise ->
+                        ExerciseSetsCard(
+                            exercise = exercise,
+                            unit = state.unit,
+                            effortScale = state.effortScale,
+                            records = recordsByExercise[exercise.exercise.id].orEmpty(),
+                            onOpen = { onOpenExercise(exercise.exercise.id) },
+                        )
+                    }
                 }
             }
         }
@@ -175,11 +141,17 @@ private fun ExerciseSetsCard(
     exercise: SessionExercise,
     unit: WeightUnit,
     effortScale: EffortScale,
-    recordReps: List<PersonalRecord>,
+    records: List<PersonalRecord>,
     onOpen: () -> Unit,
 ) {
+    // The record was set once: mark the first set that achieved it.
+    val recordSetIds = remember(exercise, records) {
+        records.mapNotNull { record ->
+            exercise.sets.firstOrNull { it.weightKg == record.weightKg && it.reps == record.reps }?.id
+        }.toSet()
+    }
     Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow)) {
-        Column(Modifier.padding(start = 16.dp, end = 8.dp, top = 8.dp, bottom = 12.dp)) {
+        Column(Modifier.padding(start = Dimens.CardPadding, end = Spacing.sm, top = Spacing.sm, bottom = Spacing.md)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text(
                     exercise.exercise.name,
@@ -193,36 +165,44 @@ private fun ExerciseSetsCard(
                 }
             }
             exercise.substitutedFromName?.let {
-                Text("↔ $it", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.tertiary)
+                Text(stringResource(R.string.detail_swapped_from, it), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.tertiary)
             }
-            // The record was set once: mark the first set that achieved it.
-            val recordSetIds = recordReps.mapNotNull { record ->
-                exercise.sets.firstOrNull { it.weightKg == record.weightKg && it.reps == record.reps }?.id
-            }.toSet()
             var working = 0
             exercise.sets.forEach { set ->
                 if (set.setType != SetType.WARMUP) working++
-                val isRepRecord = set.id in recordSetIds
-                Row(Modifier.padding(vertical = 2.dp), verticalAlignment = Alignment.CenterVertically) {
+                val isRecord = set.id in recordSetIds
+                Row(Modifier.padding(vertical = Spacing.xxs), verticalAlignment = Alignment.CenterVertically) {
                     Text(
-                        if (set.setType == SetType.WARMUP) stringResource(R.string.detail_warmup) else "$working",
+                        if (set.setType == SetType.WARMUP) stringResource(R.string.detail_warmup) else working.toString(),
                         style = MaterialTheme.typography.labelLarge,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.width(32.dp),
+                        modifier = Modifier.width(SET_NUMBER_WIDTH),
                     )
-                    Text(formatSet(set.weightKg, set.reps, unit, exercise.exercise.isTimed), style = MaterialTheme.typography.bodyLarge, modifier = Modifier.weight(1f))
+                    Text(
+                        formatSet(set.weightKg, set.reps, unit, exercise.exercise.isTimed),
+                        style = MaterialTheme.typography.bodyLarge,
+                        modifier = Modifier.weight(1f),
+                    )
                     set.rir?.let {
                         Text(
                             formatEffort(it, effortScale),
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            modifier = Modifier.padding(end = 8.dp),
+                            modifier = Modifier.padding(end = Spacing.sm),
                         )
                     }
-                    if (isRepRecord) Icon(Icons.Rounded.EmojiEvents, contentDescription = null, tint = MaterialTheme.colorScheme.tertiary)
+                    if (isRecord) {
+                        Icon(
+                            Icons.Rounded.EmojiEvents,
+                            contentDescription = stringResource(R.string.detail_record_set),
+                            tint = MaterialTheme.colorScheme.tertiary,
+                        )
+                    }
                 }
             }
             exercise.notes?.let { Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant) }
         }
     }
 }
+
+private val SET_NUMBER_WIDTH = 32.dp

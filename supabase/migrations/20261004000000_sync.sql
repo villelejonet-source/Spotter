@@ -1,3 +1,8 @@
+-- History: first sync schema. Still creates everything a fresh database needs, but the
+-- sync_rows policies and grants, push_rows and delete_my_account defined here are superseded
+-- by 20261024000000_hardening_and_performance.sql and finally by
+-- 20261026000000_audit_hardening.sql, which runs last. Don't edit: add a new migration.
+--
 -- Spotter cloud backup + sync (milestone 8).
 -- Run once in the Supabase dashboard: SQL Editor → New query → paste → Run.
 -- Safe to re-run.

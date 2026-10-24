@@ -12,72 +12,94 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.KeyboardArrowLeft
 import androidx.compose.material.icons.automirrored.rounded.KeyboardArrowRight
 import androidx.compose.material.icons.rounded.CalendarMonth
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.viktorolsson.spotter.core.model.WeightUnit
 import com.viktorolsson.spotter.core.model.WorkoutSession
 import com.viktorolsson.spotter.core.model.WorkoutSummary
 import com.viktorolsson.spotter.core.ui.component.EmptyState
+import com.viktorolsson.spotter.core.ui.component.LoadingState
+import com.viktorolsson.spotter.core.ui.component.SpotterTopBar
 import com.viktorolsson.spotter.core.ui.formatClock
+import com.viktorolsson.spotter.core.ui.formatMonthYear
+import com.viktorolsson.spotter.core.ui.formatSetCount
 import com.viktorolsson.spotter.core.ui.formatShortDate
 import com.viktorolsson.spotter.core.ui.formatTotal
 import com.viktorolsson.spotter.core.ui.localDate
+import com.viktorolsson.spotter.core.ui.theme.Dimens
+import com.viktorolsson.spotter.core.ui.theme.Spacing
 import java.time.DayOfWeek
 import java.time.LocalDate
 import java.time.YearMonth
-import java.time.format.DateTimeFormatter
 import java.time.format.TextStyle
 import java.time.temporal.WeekFields
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 internal fun HistoryRoute(onOpenWorkout: (Long) -> Unit, viewModel: HistoryViewModel = hiltViewModel()) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
-    Scaffold(topBar = { TopAppBar(title = { Text(stringResource(R.string.history_title)) }) }) { padding ->
+    HistoryScreen(
+        state = state,
+        onOpenWorkout = onOpenWorkout,
+        onPreviousMonth = { viewModel.shiftMonth(-1) },
+        onNextMonth = { viewModel.shiftMonth(1) },
+    )
+}
+
+@Composable
+internal fun HistoryScreen(
+    state: HistoryUiState,
+    onOpenWorkout: (Long) -> Unit,
+    onPreviousMonth: () -> Unit,
+    onNextMonth: () -> Unit,
+    today: LocalDate = LocalDate.now(),
+) {
+    Scaffold(topBar = { SpotterTopBar(title = stringResource(R.string.history_title)) }) { padding ->
         when {
-            state.loading -> Unit
+            state.loading -> LoadingState(Modifier.padding(padding).fillMaxSize())
             state.sessions.isEmpty() -> EmptyState(
                 icon = Icons.Rounded.CalendarMonth,
                 title = stringResource(R.string.history_empty_title),
                 body = stringResource(R.string.history_empty_body),
-                modifier = Modifier.padding(padding),
+                modifier = Modifier.padding(padding).fillMaxSize(),
             )
             else -> LazyColumn(
                 modifier = Modifier.padding(padding).fillMaxSize(),
-                contentPadding = PaddingValues(16.dp),
-                verticalArrangement = Arrangement.spacedBy(12.dp),
+                contentPadding = PaddingValues(Dimens.ScreenPadding),
+                verticalArrangement = Arrangement.spacedBy(Dimens.ListGap),
             ) {
                 item {
                     MonthCalendar(
                         month = state.month,
-                        sessions = state.sessions,
-                        onPrevious = { viewModel.shiftMonth(-1) },
-                        onNext = { viewModel.shiftMonth(1) },
+                        volumeByDay = state.volumeByDay,
+                        unit = state.unit,
+                        today = today,
+                        onPrevious = onPreviousMonth,
+                        onNext = onNextMonth,
                     )
                 }
                 if (state.monthSessions.isEmpty()) {
@@ -85,7 +107,7 @@ internal fun HistoryRoute(onOpenWorkout: (Long) -> Unit, viewModel: HistoryViewM
                         Text(
                             stringResource(R.string.history_month_empty),
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            modifier = Modifier.padding(8.dp),
+                            modifier = Modifier.padding(Spacing.sm),
                         )
                     }
                 }
@@ -99,38 +121,38 @@ internal fun HistoryRoute(onOpenWorkout: (Long) -> Unit, viewModel: HistoryViewM
 
 /**
  * Month grid; each training day is tinted by its volume relative to the month's
- * biggest session (the heat-map).
+ * biggest session (the heat-map), from the primary container up to primary.
  */
 @Composable
 private fun MonthCalendar(
     month: YearMonth,
-    sessions: List<WorkoutSession>,
+    volumeByDay: Map<LocalDate, Double>,
+    unit: WeightUnit,
+    today: LocalDate,
     onPrevious: () -> Unit,
     onNext: () -> Unit,
 ) {
-    val volumeByDay = sessions
-        .filter { YearMonth.from(it.startedAt.localDate()) == month }
-        .groupBy { it.startedAt.localDate() }
-        .mapValues { (_, list) -> list.sumOf { WorkoutSummary.of(it).volumeKg }.coerceAtLeast(1.0) }
-    val maxVolume = volumeByDay.values.maxOrNull() ?: 1.0
+    val maxVolume = remember(volumeByDay) { volumeByDay.values.maxOrNull() ?: 1.0 }
     val locale = LocalConfiguration.current.locales[0]
-    val firstDay = WeekFields.of(locale).firstDayOfWeek
-    val leading = (month.atDay(1).dayOfWeek.value - firstDay.value + 7) % 7
-    val today = LocalDate.now()
+    val firstDay = remember(locale) { WeekFields.of(locale).firstDayOfWeek }
+    val cells = remember(month, firstDay) {
+        val leading = (month.atDay(1).dayOfWeek.value - firstDay.value + 7) % 7
+        (List(leading) { null } + (1..month.lengthOfMonth()).map { month.atDay(it) }).chunked(7)
+    }
 
     Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow)) {
-        Column(Modifier.padding(12.dp)) {
+        Column(Modifier.padding(Spacing.md)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 IconButton(onClick = onPrevious) {
                     Icon(Icons.AutoMirrored.Rounded.KeyboardArrowLeft, stringResource(R.string.history_prev_month))
                 }
                 Text(
-                    month.format(DateTimeFormatter.ofPattern("MMMM yyyy")),
+                    formatMonthYear(month),
                     style = MaterialTheme.typography.titleMedium,
                     textAlign = TextAlign.Center,
                     modifier = Modifier.weight(1f),
                 )
-                IconButton(onClick = onNext, enabled = month < YearMonth.now()) {
+                IconButton(onClick = onNext, enabled = month < YearMonth.from(today)) {
                     Icon(Icons.AutoMirrored.Rounded.KeyboardArrowRight, stringResource(R.string.history_next_month))
                 }
             }
@@ -145,36 +167,12 @@ private fun MonthCalendar(
                     )
                 }
             }
-            val cells = List(leading) { null } + (1..month.lengthOfMonth()).map { month.atDay(it) }
-            cells.chunked(7).forEach { week ->
+            cells.forEach { week ->
                 Row {
                     (0 until 7).forEach { i ->
                         val date = week.getOrNull(i)
-                        Box(Modifier.weight(1f).aspectRatio(1f).padding(3.dp), contentAlignment = Alignment.Center) {
-                            if (date != null) {
-                                val volume = volumeByDay[date]
-                                val trained = volume != null
-                                Box(
-                                    Modifier
-                                        .fillMaxSize()
-                                        .clip(RoundedCornerShape(8.dp))
-                                        .background(
-                                            if (trained) {
-                                                MaterialTheme.colorScheme.primary.copy(alpha = 0.3f + 0.7f * (volume / maxVolume).toFloat())
-                                            } else {
-                                                MaterialTheme.colorScheme.surfaceContainerHighest.copy(alpha = 0.5f)
-                                            },
-                                        ),
-                                    contentAlignment = Alignment.Center,
-                                ) {
-                                    Text(
-                                        "${date.dayOfMonth}",
-                                        style = MaterialTheme.typography.labelMedium,
-                                        fontWeight = if (date == today) FontWeight.Bold else FontWeight.Normal,
-                                        color = if (trained) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant,
-                                    )
-                                }
-                            }
+                        Box(Modifier.weight(1f).aspectRatio(1f).padding(Spacing.xs / 2), contentAlignment = Alignment.Center) {
+                            if (date != null) DayCell(date, volumeByDay[date], maxVolume, unit, isToday = date == today)
                         }
                     }
                 }
@@ -184,10 +182,49 @@ private fun MonthCalendar(
 }
 
 @Composable
+private fun DayCell(date: LocalDate, volumeKg: Double?, maxVolume: Double, unit: WeightUnit, isToday: Boolean) {
+    val scheme = MaterialTheme.colorScheme
+    val trained = volumeKg != null
+    // Heat steps run from the container to primary itself, so text stays readable at every step.
+    val intensity = if (volumeKg != null) (volumeKg / maxVolume).toFloat().coerceIn(0f, 1f) else 0f
+    val background = if (trained) lerp(scheme.primaryContainer, scheme.primary, intensity) else scheme.surfaceContainerHighest
+    val foreground = when {
+        !trained -> scheme.onSurfaceVariant
+        intensity > 0.5f -> scheme.onPrimary
+        else -> scheme.onPrimaryContainer
+    }
+    val label = formatShortDate(date)
+    val description = if (volumeKg != null) {
+        stringResource(R.string.history_day_trained, label, formatTotal(volumeKg, unit))
+    } else {
+        stringResource(R.string.history_day_rest, label)
+    }
+    Box(
+        Modifier
+            .fillMaxSize()
+            .clip(MaterialTheme.shapes.small)
+            .background(background)
+            .semantics { contentDescription = description },
+        contentAlignment = Alignment.Center,
+    ) {
+        Text(
+            date.dayOfMonth.toString(),
+            style = MaterialTheme.typography.labelMedium,
+            fontWeight = if (isToday) FontWeight.Bold else FontWeight.Normal,
+            color = foreground,
+        )
+    }
+}
+
+@Composable
 private fun SessionCard(session: WorkoutSession, unit: WeightUnit, onClick: () -> Unit) {
-    val summary = WorkoutSummary.of(session)
-    Card(onClick = onClick, modifier = Modifier.fillMaxWidth()) {
-        Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+    val summary = remember(session) { WorkoutSummary.of(session) }
+    Card(
+        onClick = onClick,
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow),
+        modifier = Modifier.fillMaxWidth(),
+    ) {
+        Column(Modifier.padding(Dimens.CardPadding), verticalArrangement = Arrangement.spacedBy(Spacing.xs)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text(
                     session.planDayName ?: stringResource(R.string.history_workout),
@@ -201,7 +238,12 @@ private fun SessionCard(session: WorkoutSession, unit: WeightUnit, onClick: () -
                 )
             }
             Text(
-                stringResource(R.string.history_session_meta, formatClock(summary.duration), summary.completedSets, formatTotal(summary.volumeKg, unit)),
+                stringResource(
+                    R.string.history_session_meta,
+                    formatClock(summary.duration),
+                    formatSetCount(summary.completedSets),
+                    formatTotal(summary.volumeKg, unit),
+                ),
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
@@ -214,3 +256,4 @@ private fun SessionCard(session: WorkoutSession, unit: WeightUnit, onClick: () -
         }
     }
 }
+

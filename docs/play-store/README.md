@@ -14,6 +14,7 @@ personal accounts.
 | 2 | 0.9.1 | Internal and closed test (alpha) |
 | 3 | 0.10.0 | Closed test (alpha); first production release, in review since 2026-10-23 (Sweden only). Lacks timed holds from 0.9.1. |
 | 4 | 0.10.1 | Built from tag `v0.10.1`, not uploaded yet: ship it as the first update once 0.10.0 is approved. |
+| 5 | 0.11.0 | Audit release (`docs/platform/audit-2026-10.md`): PKCE sign-in links, sync and database hardening, one design system on app and web. Upload after 0.10.0 is approved; replaces 0.10.1 unless 0.10.1 has already shipped. Not tagged until review passes. |
 
 Tag each uploaded build (`git tag v0.10.1 <commit>`) so it can be rebuilt exactly.
 
@@ -92,7 +93,11 @@ seen before, on any track. Then add the build to the table above.
 > elapsed workout time is shown live.
 
 A short screen recording of starting a workout, ticking a set and the rest notification
-counting down with the screen off is usually requested; record it on the emulator.
+counting down with the screen off is usually requested; record it on the emulator. The
+current recording is `docs/play-store/foreground-service-demo.mp4` on your machine only:
+`docs/play-store/*.mp4` is gitignored (3.9 MB binaries don't belong in the repository) and
+the file is uploaded to Play Console by hand under the foreground-service declaration.
+Keep a copy with the upload key.
 
 ### Data safety answers
 

@@ -1,10 +1,9 @@
 "use client";
 
 import { useState } from "react";
-import { FormMessage } from "./auth-ui";
-import { Button, inputClass } from "./ui";
+import { useAuthForm } from "./auth-ui";
+import { Button, Field, InlineMessage, inputClass } from "./ui";
 import { authErrorMessage, MIN_PASSWORD_LENGTH, passwordProblem } from "@/lib/auth";
-import { createClient } from "@/lib/supabase/client";
 
 /**
  * Sets the signed-in user's password. If the project requires a recent sign-in to change
@@ -14,26 +13,23 @@ export function NewPasswordForm({ submitLabel, onDone }: { submitLabel: string; 
   const [password, setPassword] = useState("");
   const [confirm, setConfirm] = useState("");
   const [nonce, setNonce] = useState<string | null>(null);
-  const [busy, setBusy] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const supabase = createClient();
+  const { busy, error, setError, run, supabase } = useAuthForm();
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
     const problem = passwordProblem(password, confirm);
     if (problem) return setError(problem);
-    setBusy(true);
-    setError(null);
-    const { error } = await supabase.auth.updateUser(nonce ? { password, nonce: nonce.replace(/\D/g, "") } : { password });
-    if (error?.code === "reauthentication_needed") {
-      const { error: sendError } = await supabase.auth.reauthenticate();
-      setBusy(false);
-      if (sendError) return setError(authErrorMessage(sendError));
-      setNonce("");
-      return setError(null);
-    }
-    setBusy(false);
-    if (error) return setError(authErrorMessage(error));
+    const ok = await run(async () => {
+      const { error } = await supabase.auth.updateUser(nonce ? { password, nonce: nonce.replace(/\D/g, "") } : { password });
+      if (error?.code === "reauthentication_needed") {
+        const { error: sendError } = await supabase.auth.reauthenticate();
+        if (sendError) return authErrorMessage(sendError);
+        setNonce("");
+        return null;
+      }
+      return error ? authErrorMessage(error) : null;
+    });
+    if (!ok || nonce === "") return; // a code was just requested: wait for it
     setPassword("");
     setConfirm("");
     setNonce(null);
@@ -42,46 +38,24 @@ export function NewPasswordForm({ submitLabel, onDone }: { submitLabel: string; 
 
   return (
     <form onSubmit={submit} className="space-y-3">
-      <input
-        type="password"
-        required
-        minLength={MIN_PASSWORD_LENGTH}
-        autoComplete="new-password"
-        placeholder={`New password (at least ${MIN_PASSWORD_LENGTH} characters)`}
-        aria-label="New password"
-        value={password}
-        onChange={(e) => setPassword(e.target.value)}
-        className={inputClass}
-      />
-      <input
-        type="password"
-        required
-        autoComplete="new-password"
-        placeholder="Repeat new password"
-        aria-label="Repeat new password"
-        value={confirm}
-        onChange={(e) => setConfirm(e.target.value)}
-        className={inputClass}
-      />
+      <Field label="New password" hint={`At least ${MIN_PASSWORD_LENGTH} characters.`}>
+        <input type="password" required minLength={MIN_PASSWORD_LENGTH} autoComplete="new-password" value={password} onChange={(e) => setPassword(e.target.value)} className={inputClass} />
+      </Field>
+      <Field label="Repeat new password">
+        <input type="password" required autoComplete="new-password" value={confirm} onChange={(e) => setConfirm(e.target.value)} className={inputClass} />
+      </Field>
       {nonce != null && (
         <>
-          <FormMessage tone="info">For your security we emailed you a code. Enter it to confirm the change.</FormMessage>
-          <input
-            inputMode="numeric"
-            autoComplete="one-time-code"
-            required
-            placeholder="Code from the email"
-            aria-label="Code from the email"
-            value={nonce}
-            onChange={(e) => setNonce(e.target.value)}
-            className={`${inputClass} text-center tracking-[0.3em]`}
-          />
+          <InlineMessage tone="info">For your security we emailed you a code. Enter it to confirm the change.</InlineMessage>
+          <Field label="Code from the email">
+            <input inputMode="numeric" autoComplete="one-time-code" required value={nonce} onChange={(e) => setNonce(e.target.value)} className={`${inputClass} text-center tracking-[0.3em]`} />
+          </Field>
         </>
       )}
-      <Button variant="primary" className="w-full" disabled={busy}>
+      <Button type="submit" variant="primary" className="w-full" disabled={busy}>
         {busy ? "Saving…" : submitLabel}
       </Button>
-      {error && <FormMessage tone="error">{error}</FormMessage>}
+      {error && <InlineMessage tone="error">{error}</InlineMessage>}
     </form>
   );
 }

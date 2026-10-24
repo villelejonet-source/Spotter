@@ -1,6 +1,5 @@
 package com.viktorolsson.spotter.feature.session
 
-import com.viktorolsson.spotter.core.model.EffortScale
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.ExperimentalFoundationApi
@@ -18,7 +17,6 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.relocation.BringIntoViewRequester
 import androidx.compose.foundation.relocation.bringIntoViewRequester
 import androidx.compose.foundation.selection.toggleable
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Check
 import androidx.compose.material.icons.rounded.Delete
@@ -50,12 +48,16 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import com.viktorolsson.spotter.core.model.EffortScale
 import com.viktorolsson.spotter.core.model.PreviousSet
 import com.viktorolsson.spotter.core.model.SetType
 import com.viktorolsson.spotter.core.model.WeightUnit
 import com.viktorolsson.spotter.core.model.WorkoutSet
 import com.viktorolsson.spotter.core.model.format
+import com.viktorolsson.spotter.core.ui.R as CoreR
 import com.viktorolsson.spotter.core.ui.formatSet
+import com.viktorolsson.spotter.core.ui.theme.Dimens
+import com.viktorolsson.spotter.core.ui.theme.Spacing
 
 /**
  * One set: label (tap for type/note/delete), previous (tap to copy), weight, reps,
@@ -81,7 +83,7 @@ internal fun SetRow(
     onNote: (String) -> Unit,
 ) {
     var editingNote by rememberSaveable { mutableStateOf(false) }
-    val setNumber = if (set.setType == SetType.WARMUP) stringResource(R.string.set_warmup_short) else "$workingNumber"
+    val setNumber = if (set.setType == SetType.WARMUP) stringResource(R.string.set_warmup_short) else workingNumber.toString()
 
     val dismissState = rememberSwipeToDismissBoxState()
     SwipeToDismissBox(
@@ -90,10 +92,10 @@ internal fun SetRow(
         onDismiss = { if (it == SwipeToDismissBoxValue.EndToStart) onDelete() },
         backgroundContent = {
             Box(
-                Modifier.fillMaxSize().background(MaterialTheme.colorScheme.errorContainer).padding(end = 24.dp),
+                Modifier.fillMaxSize().background(MaterialTheme.colorScheme.errorContainer).padding(end = Spacing.xl),
                 contentAlignment = Alignment.CenterEnd,
             ) {
-                Icon(Icons.Rounded.Delete, stringResource(R.string.delete), tint = MaterialTheme.colorScheme.onErrorContainer)
+                Icon(Icons.Rounded.Delete, stringResource(CoreR.string.action_delete), tint = MaterialTheme.colorScheme.onErrorContainer)
             }
         },
     ) {
@@ -106,10 +108,10 @@ internal fun SetRow(
             modifier = Modifier
                 .fillMaxWidth()
                 .background(rowColor)
-                .padding(horizontal = 8.dp, vertical = 2.dp)
-                .height(52.dp),
+                .padding(horizontal = Spacing.sm, vertical = Spacing.xxs)
+                .height(Dimens.SetRowHeight),
             verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(4.dp),
+            horizontalArrangement = Arrangement.spacedBy(Spacing.xs),
         ) {
             SetLabel(set, setNumber, onTypeChange, onNote = { editingNote = true }, onDelete = onDelete)
             PreviousCell(previous, unit, timed, onCopyPrevious, Modifier.weight(1f))
@@ -163,7 +165,8 @@ internal fun SetRow(
 
 @Composable
 private fun PreviousCell(previous: PreviousSet?, unit: WeightUnit, timed: Boolean, onCopy: (PreviousSet) -> Unit, modifier: Modifier) {
-    val text = previous?.let { formatSet(it.weightKg, it.reps, unit, timed).replace(" ${unit.name.lowercase()}", "") } ?: "—"
+    // The column header already names the unit, so the cell leaves it out.
+    val text = previous?.let { formatSet(it.weightKg, it.reps, unit, timed, withUnit = false) } ?: stringResource(R.string.set_no_previous)
     val description = previous?.let { stringResource(R.string.a11y_previous, formatSet(it.weightKg, it.reps, unit, timed)) }
         ?: stringResource(R.string.a11y_no_previous)
     val copyLabel = stringResource(R.string.a11y_copy_previous)
@@ -175,10 +178,10 @@ private fun PreviousCell(previous: PreviousSet?, unit: WeightUnit, timed: Boolea
         maxLines = 1,
         overflow = TextOverflow.Ellipsis,
         modifier = modifier
-            .clip(RoundedCornerShape(8.dp))
-            .clickable(enabled = previous != null, onClickLabel = copyLabel) { previous?.let(onCopy) }
+            .clip(MaterialTheme.shapes.small)
+            .clickable(enabled = previous != null, onClickLabel = copyLabel, role = Role.Button) { previous?.let(onCopy) }
             .semantics { contentDescription = description }
-            .padding(vertical = 12.dp),
+            .padding(vertical = Spacing.md),
     )
 }
 
@@ -197,13 +200,13 @@ private fun FieldBox(
     val empty = stringResource(R.string.a11y_empty)
     val editLabel = stringResource(R.string.a11y_edit)
     Surface(
-        shape = RoundedCornerShape(8.dp),
+        shape = MaterialTheme.shapes.small,
         color = if (focused) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceContainerHighest,
         border = if (focused) BorderStroke(2.dp, MaterialTheme.colorScheme.primary) else null,
         modifier = modifier
-            .height(44.dp)
+            .height(Dimens.FieldHeight)
             .bringIntoViewRequester(requester)
-            .clip(RoundedCornerShape(8.dp))
+            .clip(MaterialTheme.shapes.small)
             .clickable(onClickLabel = editLabel, role = Role.Button, onClick = onClick)
             .semantics {
                 contentDescription = description
@@ -245,17 +248,17 @@ private fun SetLabel(
     val changeLabel = stringResource(R.string.a11y_change_type)
     Box(Modifier.width(SetColumnWidth)) {
         Text(
-            shortLabel + if (set.notes != null) "•" else "",
+            if (set.notes != null) stringResource(R.string.set_label_with_note, shortLabel) else shortLabel,
             style = MaterialTheme.typography.titleSmall,
             fontWeight = FontWeight.Bold,
             color = color,
             textAlign = TextAlign.Center,
             modifier = Modifier
                 .fillMaxWidth()
-                .clip(RoundedCornerShape(8.dp))
-                .clickable(onClickLabel = changeLabel) { open = true }
+                .clip(MaterialTheme.shapes.small)
+                .clickable(onClickLabel = changeLabel, role = Role.Button) { open = true }
                 .semantics { contentDescription = description }
-                .padding(vertical = 14.dp),
+                .padding(vertical = Spacing.md),
         )
         DropdownMenu(expanded = open, onDismissRequest = { open = false }) {
             listOf(
@@ -272,7 +275,7 @@ private fun SetLabel(
             }
             DropdownMenuItem(text = { Text(stringResource(R.string.set_note)) }, onClick = { open = false; onNote() })
             DropdownMenuItem(
-                text = { Text(stringResource(R.string.delete), color = MaterialTheme.colorScheme.error) },
+                text = { Text(stringResource(CoreR.string.action_delete), color = MaterialTheme.colorScheme.error) },
                 onClick = { open = false; onDelete() },
             )
         }
@@ -282,20 +285,20 @@ private fun SetLabel(
 /** The tick; a checkbox for screen readers. */
 @Composable
 private fun CheckButton(completed: Boolean, enabled: Boolean, setLabel: String, onToggle: () -> Unit) {
-    val description = stringResource(R.string.set_complete) + " $setLabel"
+    val description = stringResource(R.string.a11y_complete_set, setLabel)
     Box(
         Modifier
             .width(CheckColumnWidth)
-            .height(48.dp)
-            .clip(RoundedCornerShape(10.dp))
+            .height(Dimens.TouchTarget)
+            .clip(MaterialTheme.shapes.medium)
             .toggleable(value = completed, enabled = enabled, role = Role.Checkbox, onValueChange = { onToggle() })
             .semantics { contentDescription = description },
         contentAlignment = Alignment.Center,
     ) {
         Surface(
-            shape = RoundedCornerShape(8.dp),
+            shape = MaterialTheme.shapes.small,
             color = if (completed) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceContainerHighest,
-            modifier = Modifier.size(38.dp),
+            modifier = Modifier.size(CHECK_SIZE),
         ) {
             Box(contentAlignment = Alignment.Center) {
                 Icon(
@@ -311,3 +314,5 @@ private fun CheckButton(completed: Boolean, enabled: Boolean, setLabel: String, 
         }
     }
 }
+
+private val CHECK_SIZE = 38.dp

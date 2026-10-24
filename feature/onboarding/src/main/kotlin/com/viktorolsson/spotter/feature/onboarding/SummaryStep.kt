@@ -1,7 +1,6 @@
 package com.viktorolsson.spotter.feature.onboarding
 
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -10,7 +9,6 @@ import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -19,24 +17,28 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.unit.dp
 import com.viktorolsson.spotter.core.model.SplitType
 import com.viktorolsson.spotter.core.model.isTimed
+import com.viktorolsson.spotter.core.ui.component.LoadingState
+import com.viktorolsson.spotter.core.ui.component.SectionHeader
+import com.viktorolsson.spotter.core.ui.formatExerciseCount
 import com.viktorolsson.spotter.core.ui.formatTarget
 import com.viktorolsson.spotter.core.ui.labelRes
+import com.viktorolsson.spotter.core.ui.theme.Dimens
+import com.viktorolsson.spotter.core.ui.theme.Spacing
 
 @Composable
 internal fun SummaryStep(state: OnboardingUiState, onSplit: (SplitType?) -> Unit) {
     val generated = state.generated
     Title(R.string.onb_summary_title)
     if (generated == null) {
-        Box(Modifier.fillMaxWidth().padding(48.dp), contentAlignment = Alignment.Center) { CircularProgressIndicator() }
+        LoadingState(Modifier.fillMaxWidth())
         return
     }
-    Text(generated.plan.name, style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.primary)
+    SectionHeader(generated.plan.name)
 
     Text(stringResource(R.string.onb_summary_split), style = MaterialTheme.typography.titleSmall)
-    LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+    LazyRow(horizontalArrangement = Arrangement.spacedBy(Spacing.sm)) {
         items(
             listOf(
                 null to R.string.onb_split_auto,
@@ -51,12 +53,13 @@ internal fun SummaryStep(state: OnboardingUiState, onSplit: (SplitType?) -> Unit
 
     if (generated.unfilledPatterns.isNotEmpty()) {
         val names = generated.unfilledPatterns.map { stringResource(it.labelRes).lowercase() }.joinToString(", ")
-        Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.errorContainer)) {
+        // A heads-up, not a failure: tertiary, not the error tones.
+        Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.tertiaryContainer)) {
             Text(
                 stringResource(R.string.onb_summary_missing, names),
                 style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onErrorContainer,
-                modifier = Modifier.padding(16.dp),
+                color = MaterialTheme.colorScheme.onTertiaryContainer,
+                modifier = Modifier.padding(Dimens.CardPadding),
             )
         }
     }
@@ -66,11 +69,11 @@ internal fun SummaryStep(state: OnboardingUiState, onSplit: (SplitType?) -> Unit
             colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow),
             modifier = Modifier.fillMaxWidth(),
         ) {
-            Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+            Column(Modifier.padding(Dimens.CardPadding), verticalArrangement = Arrangement.spacedBy(Spacing.xs)) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Text(day.name, style = MaterialTheme.typography.titleMedium, modifier = Modifier.weight(1f))
                     Text(
-                        stringResource(R.string.onb_summary_day_meta, generated.estimatedMinutes[i], day.exercises.size),
+                        stringResource(R.string.onb_summary_day_meta, generated.estimatedMinutes[i], formatExerciseCount(day.exercises.size)),
                         style = MaterialTheme.typography.labelMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )

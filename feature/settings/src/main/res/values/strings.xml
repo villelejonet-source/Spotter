@@ -20,6 +20,7 @@
     <string name="settings_section_workout">Workouts</string>
     <string name="settings_default_rest">Default rest</string>
     <string name="settings_default_rest_summary">Used when an exercise has no rest time of its own</string>
+    <string name="settings_default_rest_change">Change default rest</string>
     <string name="settings_effort_scale">Rate set effort</string>
     <string name="settings_effort_off">Off</string>
     <string name="settings_effort_rir">RIR</string>
@@ -40,6 +41,8 @@
     <string name="backup_error_failed">Couldn\'t sync. It\'ll retry automatically.</string>
     <string name="backup_sync_now">Sync now</string>
     <string name="backup_sign_out">Sign out</string>
+    <string name="backup_sign_out_failed">Couldn\'t sign out. Try again.</string>
+    <string name="backup_delete_failed">Couldn\'t delete the account. Check your connection and try again.</string>
     <string name="backup_delete">Delete account and backup</string>
     <string name="backup_delete_title">Delete your account?</string>
     <string name="backup_delete_body">This deletes your account and everything backed up in the cloud. The data on this phone stays.</string>
@@ -99,5 +102,4 @@
     <string name="account_error_other">Something went wrong. Try again.</string>
     <string name="account_privacy">Your training data is stored in your own private backup that only you can access. You can delete it any time.</string>
     <string name="backup_change_password">Change password</string>
-    <string name="back">Back</string>
 </resources>

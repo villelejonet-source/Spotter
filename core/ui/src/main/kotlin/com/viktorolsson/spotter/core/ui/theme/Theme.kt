@@ -37,6 +37,7 @@ fun SpotterTheme(
     MaterialTheme(
         colorScheme = colorScheme,
         typography = Typography(),
+        shapes = SpotterShapes,
         content = content,
     )
 }

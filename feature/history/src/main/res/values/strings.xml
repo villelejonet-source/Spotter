@@ -6,8 +6,9 @@
     <string name="history_next_month">Next month</string>
     <string name="history_month_empty">No workouts this month.</string>
     <string name="history_workout">Workout</string>
-    <string name="history_session_meta">%1$s · %2$d sets · %3$s</string>
-    <string name="history_back">Back</string>
+    <string name="history_session_meta">%1$s · %2$s · %3$s</string>
+    <string name="history_day_trained">%1$s: trained, %2$s</string>
+    <string name="history_day_rest">%1$s: no workout</string>
 
     <string name="detail_duration">Duration</string>
     <string name="detail_volume">Volume</string>
@@ -16,6 +17,10 @@
     <string name="detail_prs">Personal records</string>
     <string name="detail_warmup">W</string>
     <string name="detail_open_exercise">History</string>
+    <string name="detail_swapped_from">Swapped from %1$s</string>
+    <string name="detail_record_set">Personal record</string>
+    <string name="detail_not_found_title">Workout not found</string>
+    <string name="detail_not_found_body">It may have been deleted on another phone.</string>
 
     <string name="exercise_metric_1rm">Est. 1RM</string>
     <string name="exercise_metric_best">Best set</string>
@@ -24,9 +29,9 @@
     <string name="exercise_best_1rm">Best est. 1RM</string>
     <string name="exercise_heaviest">Heaviest</string>
     <string name="exercise_best_volume">Best volume</string>
+    <string name="exercise_no_value">—</string>
     <string name="exercise_rep_records">Rep records</string>
-    <string name="exercise_rep_record_row">%1$d reps</string>
-    <string name="exercise_hold_record_row">%1$d s</string>
     <string name="exercise_log">Log</string>
+    <string name="exercise_none_title">Nothing logged yet</string>
     <string name="exercise_none">No sets logged for this exercise yet.</string>
 </resources>

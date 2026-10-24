@@ -1,5 +1,8 @@
 // Mirrors the Android app's domain types (core/model) as far as the web needs them.
 // Enum values are stored by name in the synced payloads, so these names must match.
+// User-facing names live in labels.ts; formatting follows core/ui Formatting.kt.
+
+import { LOCALE } from "./tz";
 
 export const SPLIT_TYPES = ["FULL_BODY", "UPPER_LOWER", "PUSH_PULL_LEGS", "UPPER_LOWER_FULL", "PPL_UPPER_LOWER", "CUSTOM"] as const;
 export type SplitType = (typeof SPLIT_TYPES)[number];
@@ -27,43 +30,14 @@ export const EQUIPMENT = [
 ] as const;
 export type Equipment = (typeof EQUIPMENT)[number];
 
-/** Holds logged in seconds rather than reps; the seconds go in the set's reps field. */
-export const TIMED_EXERCISE_IDS = new Set(["plank", "side-plank", "copenhagen-plank", "hollow-body-hold"]);
+/**
+ * Holds logged in seconds rather than reps; the seconds go in the set's reps field
+ * (core/model Exercise.kt TIMED_EXERCISE_IDS). The SQL views repeat this list in
+ * supabase/migrations/20261023000000_web_views.sql (v_session_summary volume).
+ */
+const TIMED_EXERCISE_IDS: ReadonlySet<string> = new Set(["plank", "side-plank", "copenhagen-plank", "hollow-body-hold"]);
 
-export const SPLIT_LABELS: Record<SplitType, string> = {
-  FULL_BODY: "Full body",
-  UPPER_LOWER: "Upper / lower",
-  PUSH_PULL_LEGS: "Push / pull / legs",
-  UPPER_LOWER_FULL: "Upper / lower / full",
-  PPL_UPPER_LOWER: "PPL + upper / lower",
-  CUSTOM: "Custom",
-};
-
-export const GOAL_LABELS: Record<Goal, string> = {
-  STRENGTH: "Strength",
-  HYPERTROPHY: "Muscle growth",
-  GENERAL_FITNESS: "General fitness",
-  FAT_LOSS: "Fat loss",
-};
-
-export const PROGRESSION_LABELS: Record<ProgressionRule, string> = {
-  DOUBLE_PROGRESSION: "Double progression",
-  LINEAR: "Linear",
-  RIR_AUTOREGULATION: "RIR autoregulation",
-  NONE: "None",
-};
-
-export const PR_LABELS: Record<PersonalRecordType, string> = {
-  ESTIMATED_1RM: "Estimated 1RM",
-  REPS_AT_WEIGHT: "Reps at weight",
-  VOLUME: "Volume",
-};
-
-/** "FRONT_DELTS" → "Front delts". */
-export function enumLabel(value: string): string {
-  const s = value.toLowerCase().replace(/_/g, " ");
-  return s.charAt(0).toUpperCase() + s.slice(1);
-}
+export const isTimed = (exerciseId: string) => TIMED_EXERCISE_IDS.has(exerciseId);
 
 /** Enum lists are stored comma-joined (core/data Converters). */
 export function splitEnumList(value: string | null | undefined): string[] {
@@ -137,6 +111,9 @@ export interface SessionSummaryRow {
   volume_kg: number;
 }
 
+/** Just when a workout happened: enough for streaks, heatmaps and counts. */
+export type SessionTimeRow = Pick<SessionSummaryRow, "sync_id" | "started_at" | "ended_at">;
+
 export interface SessionExerciseRow {
   sync_id: string;
   session_id: string;
@@ -192,7 +169,7 @@ export interface BodyWeightRow {
   updated_at: number;
 }
 
-// ---- Formatting ----
+// ---- Formatting (core/ui Formatting.kt, core/model Weight.kt) ----
 
 const LB_PER_KG = 2.2046226218;
 
@@ -204,30 +181,79 @@ export function fromUnit(value: number, unit: WeightUnit): number {
   return unit === "LB" ? value / LB_PER_KG : value;
 }
 
-export function formatWeight(kg: number | null | undefined, unit: WeightUnit, digits = 1): string {
-  if (kg == null) return "BW";
-  const v = toUnit(kg, unit);
-  return `${Number(v.toFixed(digits))} ${unit.toLowerCase()}`;
+export const unitLabel = (unit: WeightUnit) => (unit === "LB" ? "lb" : "kg");
+
+const integer = new Intl.NumberFormat(LOCALE, { maximumFractionDigits: 0 });
+
+/** The number alone, at most two decimals and no trailing zeros: "80", "82.5", "102.06" (WeightUnit.format). */
+export function formatWeightValue(kg: number, unit: WeightUnit): string {
+  return String(Number(toUnit(kg, unit).toFixed(2)));
 }
 
+/** "82.5 kg" */
+export function formatWeight(kg: number, unit: WeightUnit): string {
+  return `${formatWeightValue(kg, unit)} ${unitLabel(unit)}`;
+}
+
+/** "4,520 kg": whole units with grouping, for totals like volume (formatTotal). */
 export function formatVolume(kg: number, unit: WeightUnit): string {
-  const v = Math.round(toUnit(kg, unit));
-  return `${v.toLocaleString("en-US")} ${unit.toLowerCase()}`;
+  return `${integer.format(Math.round(toUnit(kg, unit)))} ${unitLabel(unit)}`;
 }
 
+/** "45 min" or "1 h 5 min". */
 export function formatDuration(ms: number): string {
   const minutes = Math.round(ms / 60000);
   if (minutes < 60) return `${minutes} min`;
   return `${Math.floor(minutes / 60)} h ${minutes % 60} min`;
 }
 
-/** A set as text: "80 kg × 8", "BW × 12", or "45 s" for holds. */
-export function formatSet(set: Pick<SetEntryRow, "weight_kg" | "reps">, exerciseId: string, unit: WeightUnit): string {
-  if (TIMED_EXERCISE_IDS.has(exerciseId)) {
-    const load = set.weight_kg ? `${formatWeight(set.weight_kg, unit)} · ` : "";
-    return `${load}${set.reps ?? "–"} s`;
+/** "1 rep", "12 reps". */
+export function formatReps(reps: number): string {
+  return `${reps} ${reps === 1 ? "rep" : "reps"}`;
+}
+
+/**
+ * A set as the app shows it: "82.5 kg × 6", "12 reps" (or "1 rep") for bodyweight, and
+ * for a hold "45 s" or "10 kg × 45 s". Just the weight when no reps were logged, and "—"
+ * when nothing was (formatSet).
+ */
+export function formatSet(set: { weight_kg: number | null; reps: number | null }, exerciseId: string, unit: WeightUnit): string {
+  const timed = isTimed(exerciseId);
+  if (set.weight_kg == null && set.reps == null) return "—";
+  if (set.reps == null) return formatWeight(set.weight_kg!, unit);
+  const amount = timed ? `${set.reps} s` : `${set.reps}`;
+  if (set.weight_kg != null) return `${formatWeight(set.weight_kg, unit)} × ${amount}`;
+  return timed ? amount : formatReps(set.reps);
+}
+
+/** The headline value of a record: "101 kg", "82.5 kg × 9" or "2,080 kg" (formatRecordValue). */
+export function formatRecord(record: Pick<PersonalRecordRow, "type" | "value" | "weight_kg" | "reps" | "exercise_id">, unit: WeightUnit): string {
+  switch (record.type) {
+    case "ESTIMATED_1RM":
+      return `${Math.trunc(toUnit(record.value, unit))} ${unitLabel(unit)}`;
+    case "REPS_AT_WEIGHT":
+      return formatSet({ weight_kg: record.weight_kg, reps: record.reps }, record.exercise_id, unit);
+    case "VOLUME":
+      return formatVolume(record.value, unit);
   }
-  return `${formatWeight(set.weight_kg, unit)} × ${set.reps ?? "–"}`;
+}
+
+/** A prescription: "3 × 8–12", "3 × 10" when the range is one number, "3 × 30–60 s" for a hold (formatTarget). */
+export function formatTarget(sets: number, repMin: number, repMax: number, exerciseId: string): string {
+  const range = repMin === repMax ? `${repMin}` : `${repMin}–${repMax}`;
+  return `${sets} × ${range}${isTimed(exerciseId) ? " s" : ""}`;
+}
+
+/** "RIR 2" (formatEffort on the RIR scale; the app's scale preference isn't synced, see labels.ts). */
+function formatEffort(rir: number): string {
+  return `RIR ${rir}`;
+}
+
+/** The effort logged on a set, or null: RIR when present, else an RPE if an older set stored one. */
+export function formatSetEffort(set: Pick<SetEntryRow, "rir" | "rpe">): string | null {
+  if (set.rir != null) return formatEffort(set.rir);
+  if (set.rpe != null) return `RPE ${Number(set.rpe.toFixed(1))}`;
+  return null;
 }
 
 /** Epley estimated one-rep max; a single is its own 1RM (core/model Progress.kt). */
@@ -259,7 +285,7 @@ export const COMPOUND_PATTERNS = new Set<string>([
   "SQUAT", "HINGE", "LUNGE", "HIP_THRUST", "CARRY",
 ]);
 
-/** Display groups for weekly volume (core/model Progress.kt MuscleGroup). */
+/** Display groups for weekly volume (core/model Progress.kt MuscleGroup), named as the app does. */
 export const MUSCLE_GROUPS: Record<string, readonly Muscle[]> = {
   Chest: ["CHEST"],
   Back: ["LATS", "UPPER_BACK", "TRAPS", "LOWER_BACK"],

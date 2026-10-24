@@ -1,12 +1,11 @@
 package com.viktorolsson.spotter.feature.today
 
 import androidx.test.ext.junit.runners.AndroidJUnit4
+import com.github.takahirom.roborazzi.ExperimentalRoborazziApi
 import com.github.takahirom.roborazzi.RobolectricDeviceQualifiers
+import com.github.takahirom.roborazzi.RoborazziComposeOptions
 import com.github.takahirom.roborazzi.captureRoboImage
-import com.viktorolsson.spotter.core.model.MovementPattern
-import com.viktorolsson.spotter.core.model.PlanDay
-import com.viktorolsson.spotter.core.model.PlanExercise
-import com.viktorolsson.spotter.core.model.ProgressionRule
+import com.github.takahirom.roborazzi.fontScale
 import com.viktorolsson.spotter.core.model.ScheduledWorkout
 import com.viktorolsson.spotter.core.ui.PreviewData
 import com.viktorolsson.spotter.core.ui.theme.SpotterTheme
@@ -16,32 +15,36 @@ import org.robolectric.annotation.Config
 import org.robolectric.annotation.GraphicsMode
 import java.time.LocalDate
 
+@OptIn(ExperimentalRoborazziApi::class)
 @RunWith(AndroidJUnit4::class)
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
 @Config(qualifiers = RobolectricDeviceQualifiers.Pixel7)
 class TodayScreenshotTest {
-    private fun ex(name: String, position: Int, sets: Int, min: Int, max: Int) = PlanExercise(
-        id = position.toLong(), exercise = PreviewData.exercise(id = name, name = name, pattern = MovementPattern.SQUAT),
-        position = position, sets = sets, repMin = min, repMax = max, targetRir = 1, restSeconds = 120,
-        progressionRule = ProgressionRule.DOUBLE_PROGRESSION, supersetGroup = null, startingWeightKg = null,
-    )
+    private val lowerA = PreviewData.lowerA
 
-    private val lowerA = PlanDay(
-        2, 1, "Lower A",
-        listOf(
-            ex("Barbell Back Squat", 0, 3, 6, 12), ex("Romanian Deadlift", 1, 3, 8, 14), ex("Bulgarian Split Squat", 2, 3, 8, 14),
-            ex("Leg Extension", 3, 3, 10, 15), ex("Barbell Hip Thrust", 4, 3, 10, 15), ex("Lying Leg Curl", 5, 3, 10, 15),
-        ),
-    )
-
-    private fun capture(name: String, dark: Boolean, state: TodayUiState) = captureRoboImage("src/test/screenshots/$name.png") {
-        SpotterTheme(darkTheme = dark, dynamicColor = false) {
-            TodayScreen(state, onResume = {}, onStartNext = {}, onEmptyWorkout = {}, onOpenPlan = {}, onBuildPlan = {})
+    private fun capture(name: String, dark: Boolean, state: TodayUiState, dynamic: Boolean = false, fontScale: Float = 1f) =
+        captureRoboImage(
+            "src/test/screenshots/$name.png",
+            roborazziComposeOptions = RoborazziComposeOptions { fontScale(fontScale) },
+        ) {
+            SpotterTheme(darkTheme = dark, dynamicColor = dynamic) {
+                TodayScreen(state, onResume = {}, onStartNext = {}, onEmptyWorkout = {}, onOpenPlan = {}, onBuildPlan = {})
+            }
         }
-    }
 
     @Test
     fun nextWorkout_light() = capture("today_next_light", false, TodayUiState(loading = false, hasPlan = true, nextDay = lowerA))
+
+    @Test
+    fun nextWorkout_dark() = capture("today_next_dark", true, TodayUiState(loading = false, hasPlan = true, nextDay = lowerA))
+
+    @Test
+    fun nextWorkout_largeFont() =
+        capture("today_next_font_1_6", false, TodayUiState(loading = false, hasPlan = true, nextDay = lowerA), fontScale = 1.6f)
+
+    /** Dynamic colour on: Robolectric's framework resources supply a fixed system palette. */
+    @Test
+    fun nextWorkout_dynamic() = capture("today_next_dynamic", false, TodayUiState(loading = false, hasPlan = true, nextDay = lowerA), dynamic = true)
 
     @Test
     fun deloadWeek_dark() = capture(
@@ -51,6 +54,13 @@ class TodayScreenshotTest {
 
     @Test
     fun noPlan_light() = capture("today_no_plan_light", false, TodayUiState(loading = false, hasPlan = false))
+
+    @Test
+    fun loading_light() = capture("today_loading_light", false, TodayUiState(loading = true))
+
+    @Test
+    fun activeWorkout_light() =
+        capture("today_active_light", false, TodayUiState(loading = false, hasPlan = true, nextDay = lowerA, activeSessionId = 7))
 
     private fun scheduled(id: Long, date: LocalDate, day: String?, notes: String? = null) =
         ScheduledWorkout(id = id, date = date, planDayId = if (day != null) id else null, planDayName = day, notes = notes, sessionId = null, done = false)
@@ -76,4 +86,3 @@ class TodayScreenshotTest {
         TodayUiState(loading = false, hasPlan = true, nextDay = lowerA, scheduledToday = scheduled(1, LocalDate.of(2026, 10, 24), null)),
     )
 }
-

@@ -12,7 +12,12 @@ export JAVA_HOME="/Applications/Android Studio.app/Contents/jbr/Contents/Home"
 ./gradlew testDebugUnitTest :core:engine:test :core:model:test   # all unit tests
 ./gradlew verifyRoborazziDebug     # screenshot tests (recordRoborazziDebug updates the goldens)
 ./gradlew :app:lintRelease
+./gradlew :app:assembleRelease     # debug-signed R8 build; CI runs it to prove shrinking works
 ```
+
+CI (`.github/workflows/ci.yml`) runs all of the above plus the website's lint, type check,
+tests and build on every pull request. Actions are pinned to commit SHAs; the workflow has
+read-only repository permissions.
 
 Screenshot goldens (light, dark and large text) live in `*/src/test/screenshots`. Releasing
 to Google Play: see [docs/play-store/README.md](docs/play-store/README.md).
@@ -31,18 +36,38 @@ Or open the folder in Android Studio and run the `app` configuration.
 | `feature/*` | One module per tab (`today`, `history`, `progress`, `settings` = Profile), plus `session` (workout logger, rest timer service, summary), `library` (exercise picker), `onboarding` (questionnaire + plan summary) and `plan` (plan overview) |
 | `build-logic` | Convention plugins (`spotter.android.feature`, `spotter.jvm.library`, …) |
 
-The exercise library lives in `core/data/src/main/assets/exercises.json`. Bump its `version` after editing so installed apps re-seed.
+The exercise library lives in `core/data/src/main/assets/exercises.json`. Bump `EXERCISE_CATALOG_VERSION` in `ExerciseSeeder` whenever it changes so installed apps re-seed. Room is at schema version 8; every Room migration must re-create the sync triggers via `SyncSchema.TriggerSpec`.
 
 ## Supabase (optional backup + sync, milestone 8)
 
-The app works fully offline; signing in (an emailed sign-in link, or its 6-digit code) adds cloud backup and sync
+The app works fully offline; signing in (email + password, or an emailed link / 6-digit code) adds cloud backup and sync
 between phones. Each synced row lives in `public.sync_rows` (one row per record, payload as
 JSON, row-level security per user); SQLite triggers on the phone stamp changes and record
 deletions, and sync is last-write-wins per record.
 
+**Sign-in links use PKCE** (the 2026-10 audit, `docs/platform/audit-2026-10.md`). Every email
+carries both a link and a code: the **link** only works on the phone that asked for it, because
+the app keeps a secret (the PKCE verifier) that the link's one-time `code` is exchanged against;
+the **code** works anywhere you can type it. `SupabaseProvider` sets `flowType = FlowType.PKCE`
+and `SignInLinks.parse` accepts only `spotter://login?code=…`; a password-reset link is detected
+from the token's `amr` claim (`recovery`), falling back to the old `type=recovery` query. The
+session is kept in `EncryptedSharedPreferences` (`spotter_auth`). After a link sign-in into an
+account with no data, the first sync asks before uploading the phone's data. Before this, the
+link carried the session itself in the URL fragment and any app that opened a
+`spotter://login#…` link imported it, so a crafted link could sign a phone into someone else's
+account. Once the website has a public domain, the
+link will become an https App Link (`android:autoVerify` plus `/.well-known/assetlinks.json` on
+the site) so only this app can claim it; see `docs/platform/infrastructure.md`.
+
+**Units** (kg or lb) have one source of truth: the synced `user_profile.units` field. Changing
+the setting in the app writes it there; the website reads the same field.
+
 One-time setup in the Supabase dashboard:
 
-1. **SQL Editor:** run [supabase/migrations/20261004000000_sync.sql](supabase/migrations/20261004000000_sync.sql).
+1. **Database:** apply `supabase/migrations/` with `supabase db push` (linked CLI) or the Supabase
+   MCP's `apply_migration`, never by pasting SQL into the editor, so the migration history on the
+   server matches the repository. How to repair the history when it doesn't:
+   `docs/platform/infrastructure.md`, "Database migrations".
 2. **Authentication → URL Configuration → Redirect URLs:** add `spotter://login` (the
    emailed link opens the app there).
 3. **Authentication → Emails → SMTP Settings:** custom SMTP (currently Gmail:
@@ -61,3 +86,16 @@ supabase.publishableKey=sb_publishable_...
 ```
 
 Dashboard: https://supabase.com/dashboard/project/gaherwthntdonrsuowbh
+
+`.mcp.json` registers the Supabase MCP server for this project (schema, migrations, logs,
+advisors, SQL). It is **write-capable**: anyone who opens this repository in Claude Code and
+authenticates with a Supabase account that has access to the project can change the production
+database through it. It stays in the repo because the audit and release steps use it; treat
+project access like production access.
+
+## Website
+
+`web/` is the Next.js site that shows the same account's training and edits plans; see
+[web/README.md](web/README.md). Platform setup, environments and versioning rules:
+[docs/platform/infrastructure.md](docs/platform/infrastructure.md). The 2026-10 audit and its
+dashboard checklist: [docs/platform/audit-2026-10.md](docs/platform/audit-2026-10.md).

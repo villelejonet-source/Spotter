@@ -1,6 +1,7 @@
 # Spotter platform: hosting, environments and versioning
 
-_Written 2026-10-24. Covers the Android app, the website (`web/`) and the Supabase backend._
+_Written 2026-10-24; updated the same day with the audit (`audit-2026-10.md`). Covers the Android
+app, the website (`web/`) and the Supabase backend._
 
 ## How it fits together today
 
@@ -16,6 +17,44 @@ Website (Next.js on Vercel) ── server components, RLS ───────�
   database connections to pool and nothing to keep running besides Vercel and Supabase.
 - **Security boundary is the database**: row-level security on `sync_rows`, security-invoker
   views, revoked anon access. The website's checks (middleware, server actions) are extra layers.
+- **Units have one source of truth**: the synced `user_profile.units` field (kg or lb). The app
+  writes it when its unit setting changes (and mirrors it back into the setting on sync); the
+  website reads the same field. Neither side keeps a unit preference of its own.
+
+## Sign-in links: PKCE now, App Links later
+
+Every auth email (confirm, sign-in, reset) carries a **link** and a **code**
+(`auth-emails.md`). They are deliberately different in where they work:
+
+- The **link works only on the device that asked for it.** The app and the website use the
+  PKCE flow: the client that starts a flow keeps a random secret (the code verifier) and sends
+  its hash to Supabase; the link that comes back carries a one-time `code`, which the client
+  exchanges for a session together with the secret it kept. A link opened anywhere else has no
+  verifier to pair with and is useless. The website has used this since the start
+  (`@supabase/ssr`); the app switched to it in the 2026-10 audit. As implemented in the app:
+  `SupabaseProvider` installs Auth with `flowType = FlowType.PKCE`; `SignInLinks.parse` accepts
+  only `spotter://login?code=…` and ignores everything else, so a link carrying a session in the
+  fragment (`#access_token=…`) is dropped; a password-reset link is recognised from the
+  exchanged token's `amr` claim containing `recovery`, with the old `type=recovery` query
+  parameter as a fallback. The session itself is stored in `EncryptedSharedPreferences` (file
+  `spotter_auth`), with a one-time migration from the previous plain store. Before the audit the
+  app used the implicit flow: the link itself carried the session in the URL fragment, and the
+  app imported whatever session a link handed it, so a link crafted by someone else could sign a
+  phone into their account. The audit fix also stops the first sync after a link sign-in from
+  uploading the phone's data to an empty account without asking: the app asks first.
+- The **code works anywhere.** It's the 6-digit `{{ .Token }}` for the same email, typed into
+  the app or the website, and it is tied to the email address, not to a device.
+
+**Follow-up once the website has a public domain: https App Links.** `spotter://login` is a
+custom scheme, and Android lets any installed app register for a custom scheme, so another app
+could in principle receive our links (with PKCE it can't use them, but it could swallow them).
+The fix is to make the link an https URL on our domain, e.g. `https://<domain>/auth/app`, with
+`android:autoVerify="true"` on the intent filter and the website serving
+`/.well-known/assetlinks.json` listing the app's package name and signing-certificate
+fingerprint (the Play App Signing key, from Play Console → App integrity). Android verifies the
+file at install time and routes the link to this app only. The page at that URL also gives
+desktop users somewhere sensible to land. Deferred until the domain exists (listed in
+`audit-2026-10.md`).
 
 ## Environments
 
@@ -52,18 +91,62 @@ needs the backend to be up.
 ## Delivery pipeline
 
 1. **Branch and pull request** for every change; `main` is protected and always deployable.
-2. **CI on every pull request** (`.github/workflows/ci.yml`):
-   - Website: lint, type check, unit tests (including the payload-vs-Room-schema test), build.
-   - App: unit tests and a debug build.
+2. **CI on every pull request** (`.github/workflows/ci.yml`; read-only `permissions`, every
+   action pinned to a commit SHA):
+   - Website: `npm audit` on production dependencies (visible, non-blocking), lint, type check,
+     unit tests (including the payload-vs-Room-schema test), build.
+   - App: unit tests, Roborazzi screenshot tests against the committed goldens, `lintRelease`,
+     a debug build and a debug-signed `assembleRelease` (proves the R8 shrink step works). On
+     failure the screenshot diffs and lint reports are uploaded as a workflow artifact.
 3. **Preview**: Vercel builds every pull request against staging.
-4. **Database migrations** live in `supabase/migrations/` (timestamped, additive). They're applied
-   to staging when a pull request merges and to production with the Supabase CLI
-   (`supabase db push`) as an explicit step before deploying code that needs them. Later this can
+4. **Database migrations**: see the next section. Applied to staging when a pull request merges
+   and to production as an explicit step before deploying code that needs them. Later this can
    run from CI with a protected "production" environment that needs a manual approval.
 5. **Website release**: merging to `main` deploys production. Vercel keeps every deploy, so a bad
    release is rolled back in one click.
 6. **App release**: as in `docs/play-store/README.md`, plus staged rollouts in Play (10 % → 50 % →
    100 %) once there are enough users for it to matter.
+
+## Database migrations
+
+Migrations live in `supabase/migrations/<timestamp>_<name>.sql`, are additive and are written
+so they can be re-run (`create or replace`, `if not exists`, `drop policy if exists` before
+`create policy`). The timestamp prefix is the migration's **version**, and versions must be
+unique: two files with the same prefix can't both be recorded.
+
+Apply them in one of two ways, both of which record the version in the server's history table
+(`supabase_migrations.schema_migrations`):
+
+- **Supabase CLI**, linked once per machine: `supabase link --project-ref gaherwthntdonrsuowbh`,
+  then `supabase db push` (applies every file not yet in the history, in order; `--dry-run`
+  shows what it would do).
+- **Supabase MCP** (`.mcp.json`): `apply_migration` with the file's name and SQL. Same effect,
+  usable from a Claude Code session.
+
+**Never paste a migration into the SQL editor.** The SQL runs, but nothing is recorded, so the
+history no longer says what the database contains, and the next `db push` tries to apply the
+file again. That is the state of production today (2026-10-24). The files are:
+
+| Version | File | On production |
+|---|---|---|
+| `20261004000000` | `sync.sql` (sync_rows, RLS, first `push_rows`) | applied via the editor |
+| `20261023000000` | `web_views.sql` (typed views for the website) | applied via the editor |
+| `20261024000000` | `hardening_and_performance.sql` (`push_rows` limits, indexes, `v_set_history`) | applied via the editor |
+| `20261025000000` | `scheduled_sessions.sql` (`scheduled_session`, `v_scheduled_session`) | applied via the editor |
+| `20261026000000` | `audit_hardening.sql` (policies with `(select auth.uid())`, `push_rows` checks and row cap, revoked grants, `delete_my_account` cleanup, `v_exercise_usage` which `/library` needs) | **not yet applied**; goes live after the audit review |
+
+The history is empty (`list_migrations` returns `[]`). Because every file is re-runnable,
+`db push` would succeed anyway, but the history should say the truth. Repair it once, after
+linking, naming the four versions that are already live, then push the new one:
+
+```bash
+supabase migration repair --status applied 20261004000000 20261023000000 20261024000000 20261025000000
+supabase migration list   # remote should now show the four; 20261026000000 local only
+supabase db push          # applies 20261026000000_audit_hardening.sql and records it
+```
+
+From then on apply new migrations only via `db push` or `apply_migration`. Check `supabase
+migration list` before a push whenever in doubt.
 
 ## Versioning: keeping app, website and database compatible
 
@@ -76,6 +159,14 @@ Rules that keep that safe:
 2. **Room migrations that add a synced column must give it a default** (`ALTER TABLE … ADD COLUMN
    … DEFAULT …`). Rows written by older apps or by the website won't have the field, and the
    phone inserts with `ContentValues`, so a NOT NULL column without a default would fail there.
+   **Every Room migration must also re-create the sync triggers** through
+   `SyncSchema.TriggerSpec` (the triggers that stamp `updatedAt` and write tombstones are created
+   once, in the database callback, not on every open, so a migration that rebuilds or alters a
+   synced table has to put them back). The schema is at version 8 (7 added scheduled sessions,
+   8 the audit's indexes); the exported JSON lives in `core/data/schemas/`.
+   **The seeded exercise catalog** (`core/data/src/main/assets/exercises.json`) is versioned by
+   `EXERCISE_CATALOG_VERSION` in `ExerciseSeeder`; bump it whenever the JSON changes, or
+   installed apps keep the old catalog.
 3. **The phone ignores payload fields it doesn't know, and skips rows it can't hold**
    (`LocalSyncStore.upsert`), such as a plan exercise using an exercise from a newer catalog,
    so a newer app or the website can't block an older app's sync. Such rows simply don't
@@ -119,8 +210,12 @@ need. The plan:
 - **Abuse limits:** Supabase Auth rate limits on sign-in emails (dashboard). `push_rows` is the
   only way to write: it accepts known table names only, at most 1000 rows per call and 16 KB
   per row, and always writes as the caller.
-- **Secrets:** only the publishable key is used by the app and website. The secret/service key is
+- **Secrets:** only the publishable key is used by the app and website (`web/.env.example` says
+  so; `NEXT_PUBLIC_*` values are compiled into the browser bundle). The secret/service key is
   never put in Vercel or the app; anything that needs it later (webhooks for payments) goes in a
   Supabase Edge Function.
+- **Tooling access:** `.mcp.json` enables a write-capable Supabase MCP server for this project.
+  Anyone who authenticates with a Supabase account that can see the project can change the
+  production database through it, so project membership is production access.
 - **GDPR:** EU hosting, data processing agreements with Supabase and Vercel (both offer them),
   in-app and on-web account deletion, data export.

@@ -9,7 +9,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
@@ -21,11 +20,15 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.heading
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
+import com.viktorolsson.spotter.core.ui.formatWeight
+import com.viktorolsson.spotter.core.ui.theme.Dimens
+import com.viktorolsson.spotter.core.ui.theme.Spacing
 import com.viktorolsson.spotter.core.engine.Plates
 import com.viktorolsson.spotter.core.model.Exercise
 import com.viktorolsson.spotter.core.model.WeightUnit
-import com.viktorolsson.spotter.core.model.format
 import com.viktorolsson.spotter.core.model.label
 import java.math.BigDecimal
 
@@ -33,27 +36,34 @@ import java.math.BigDecimal
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
 internal fun PlateSheet(exercise: Exercise, weightKg: Double, unit: WeightUnit, onDismiss: () -> Unit) {
+    ModalBottomSheet(onDismissRequest = onDismiss) { PlateSheetContent(exercise, weightKg, unit) }
+}
+
+/** The sheet's body, usable on its own (screenshot tests). Plate values are in [unit] already. */
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+internal fun PlateSheetContent(exercise: Exercise, weightKg: Double, unit: WeightUnit) {
     val loading = Plates.load(weightKg, exercise, unit)
-    fun fmt(value: Double) = "${BigDecimal(value).stripTrailingZeros().toPlainString()} ${unit.label}"
-    ModalBottomSheet(onDismissRequest = onDismiss) {
-        Column(
-            Modifier.fillMaxWidth().padding(horizontal = 24.dp).padding(bottom = 32.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp),
-        ) {
-            Text(stringResource(R.string.plates_title), style = MaterialTheme.typography.titleLarge)
+    @Composable
+    fun fmt(value: Double) = stringResource(com.viktorolsson.spotter.core.ui.R.string.weight_with_unit, BigDecimal(value).stripTrailingZeros().toPlainString(), unit.label)
+    Column(
+        Modifier.fillMaxWidth().padding(horizontal = Dimens.SheetPadding).padding(bottom = Dimens.SheetPadding),
+        verticalArrangement = Arrangement.spacedBy(Spacing.md),
+    ) {
+            Text(stringResource(R.string.plates_title), style = MaterialTheme.typography.titleLarge, modifier = Modifier.semantics { heading() })
             if (loading == null) {
                 Text(stringResource(R.string.plates_not_bar), style = MaterialTheme.typography.bodyMedium)
                 return@Column
             }
-            Text("${unit.format(weightKg)} ${unit.label} · ${stringResource(R.string.plates_bar, fmt(loading.bar))}")
+            Text(stringResource(R.string.plates_summary, formatWeight(weightKg, unit), fmt(loading.bar)))
             if (loading.perSide.isEmpty()) {
                 Text(stringResource(R.string.plates_none), style = MaterialTheme.typography.bodyMedium)
             } else {
                 val heaviest = loading.perSide.max()
-                val description = loading.perSide.joinToString(", ") { fmt(it) }
+                val description = loading.perSide.map { fmt(it) }.joinToString(", ")
                 FlowRow(
-                    horizontalArrangement = Arrangement.spacedBy(6.dp),
-                    verticalArrangement = Arrangement.spacedBy(6.dp),
+                    horizontalArrangement = Arrangement.spacedBy(Spacing.xs),
+                    verticalArrangement = Arrangement.spacedBy(Spacing.xs),
                     itemVerticalAlignment = Alignment.CenterVertically,
                     modifier = Modifier.clearAndSetSemantics { contentDescription = description },
                 ) {
@@ -61,8 +71,8 @@ internal fun PlateSheet(exercise: Exercise, weightKg: Double, unit: WeightUnit, 
                         // Plate height scales with weight, like on the bar.
                         Surface(
                             color = MaterialTheme.colorScheme.primary,
-                            shape = RoundedCornerShape(6.dp),
-                            modifier = Modifier.width(44.dp).height((48 + 72 * plate / heaviest).dp),
+                            shape = MaterialTheme.shapes.small,
+                            modifier = Modifier.width(PLATE_WIDTH).height(PLATE_MIN_HEIGHT + PLATE_EXTRA_HEIGHT * (plate / heaviest).toFloat()),
                         ) {
                             Box(contentAlignment = Alignment.Center) {
                                 Text(
@@ -77,11 +87,14 @@ internal fun PlateSheet(exercise: Exercise, weightKg: Double, unit: WeightUnit, 
             }
             if (!loading.exact) {
                 Text(
-                    stringResource(R.string.plates_not_exact, "${unit.format(weightKg)} ${unit.label}", fmt(loading.total)),
+                    stringResource(R.string.plates_not_exact, formatWeight(weightKg, unit), fmt(loading.total)),
                     style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.error,
+                    color = MaterialTheme.colorScheme.tertiary,
                 )
             }
         }
-    }
 }
+
+private val PLATE_WIDTH = 44.dp
+private val PLATE_MIN_HEIGHT = 48.dp
+private val PLATE_EXTRA_HEIGHT = 72.dp

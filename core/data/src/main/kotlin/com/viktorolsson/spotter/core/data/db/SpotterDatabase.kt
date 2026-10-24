@@ -32,14 +32,15 @@ import com.viktorolsson.spotter.core.data.db.entity.WorkoutSessionEntity
  * exported JSON in `core/data/schemas` is what migration tests run against.
  */
 @Database(
-    version = 7,
+    version = 8,
     exportSchema = true,
     autoMigrations = [
         AutoMigration(from = 1, to = 2), // session_exercise.restSeconds
         AutoMigration(from = 2, to = 3), // plan_exercise.startingWeightKg, session_exercise.planExerciseId
         AutoMigration(from = 3, to = 4), // session_exercise.progressionReason
         AutoMigration(from = 4, to = 5), // workout_session.isDeload, recommendation.resolvedAt/dedupKey
-        AutoMigration(from = 6, to = 7), // scheduled_session (its sync triggers come from SyncSchema on open)
+        AutoMigration(from = 6, to = 7, spec = SyncSchema.TriggerSpec::class), // scheduled_session (+ its sync triggers)
+        AutoMigration(from = 7, to = 8, spec = SyncSchema.TriggerSpec::class), // updatedAt/deletedAt/achievedAt/endedAt indices
     ],
     entities = [
         UserProfileEntity::class,
@@ -76,8 +77,15 @@ abstract class SpotterDatabase : RoomDatabase() {
             .addMigrations(SyncSchema.MIGRATION_5_6)
             .addCallback(
                 object : Callback() {
-                    // Idempotent: also restores triggers if they're ever missing.
-                    override fun onOpen(db: SupportSQLiteDatabase) = SyncSchema.createTriggers(db)
+                    // Triggers are installed when the database is created and after every
+                    // migration (see TriggerSpec), not on every open.
+                    override fun onCreate(db: SupportSQLiteDatabase) = SyncSchema.createTriggers(db)
+
+                    // Safety net: one cheap sqlite_master count; the 36 CREATE TRIGGER
+                    // statements only run if some trigger has gone missing.
+                    override fun onOpen(db: SupportSQLiteDatabase) {
+                        if (!SyncSchema.triggersInstalled(db)) SyncSchema.createTriggers(db)
+                    }
                 },
             )
     }

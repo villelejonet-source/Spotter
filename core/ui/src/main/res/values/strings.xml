@@ -1,5 +1,53 @@
 <resources>
+    <!-- Actions shared by every screen -->
     <string name="action_cancel">Cancel</string>
+    <string name="action_back">Back</string>
+    <string name="action_save">Save</string>
+    <string name="action_delete">Delete</string>
+    <string name="action_undo">Undo</string>
+    <string name="action_retry">Try again</string>
+
+    <!-- Screen states -->
+    <string name="state_loading">Loading</string>
+    <string name="state_error_title">Something went wrong</string>
+    <string name="state_error_body">Try again in a moment.</string>
+
+    <!-- Numbers and units -->
+    <string name="weight_with_unit">%1$s %2$s</string>
+    <string name="set_weight_by_amount">%1$s × %2$s</string>
+    <string name="seconds_short">%1$d s</string>
+    <string name="target_sets_reps">%1$d × %2$d–%3$d</string>
+    <string name="target_sets_seconds">%1$d × %2$d–%3$d s</string>
+    <string name="effort_rir">RIR %1$d</string>
+    <string name="effort_rpe">RPE %1$d</string>
+    <string name="effort_scale_rir">RIR</string>
+    <string name="effort_scale_rpe">RPE</string>
+    <string name="date_at_time">%1$s, %2$s</string>
+    <string name="value_none">—</string>
+    <plurals name="reps_count">
+        <item quantity="one">%1$d rep</item>
+        <item quantity="other">%1$d reps</item>
+    </plurals>
+    <plurals name="exercise_count">
+        <item quantity="one">%1$d exercise</item>
+        <item quantity="other">%1$d exercises</item>
+    </plurals>
+    <plurals name="sets_count">
+        <item quantity="one">%1$d set</item>
+        <item quantity="other">%1$d sets</item>
+    </plurals>
+    <plurals name="sessions_count">
+        <item quantity="one">%1$d session</item>
+        <item quantity="other">%1$d sessions</item>
+    </plurals>
+
+    <!-- Shared components -->
+    <string name="superset_badge">Superset</string>
+    <string name="record_line">%1$s · %2$s</string>
+    <string name="mini_bar_in_progress">Workout in progress · %1$s</string>
+    <string name="mini_bar_open">Open workout</string>
+
+    <!-- Recommendations -->
     <string name="rec_dismiss">Dismiss</string>
     <string name="rec_apply">Apply to plan</string>
     <string name="rec_apply_deload">Start lighter week</string>

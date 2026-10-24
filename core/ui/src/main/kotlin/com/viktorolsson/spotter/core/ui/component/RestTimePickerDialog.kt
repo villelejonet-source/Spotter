@@ -15,10 +15,10 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
-import androidx.compose.ui.unit.dp
 import com.viktorolsson.spotter.core.ui.R
 import com.viktorolsson.spotter.core.ui.RestOptionsSeconds
 import com.viktorolsson.spotter.core.ui.formatClock
+import com.viktorolsson.spotter.core.ui.theme.Spacing
 
 @Composable
 fun RestTimePickerDialog(
@@ -41,11 +41,11 @@ fun RestTimePickerDialog(
                                 onClick = { onSelect(seconds) },
                                 role = Role.RadioButton,
                             )
-                            .padding(vertical = 4.dp),
+                            .padding(vertical = Spacing.xs),
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
                         RadioButton(selected = seconds == selectedSeconds, onClick = null)
-                        Text(formatClock(seconds.toLong()), modifier = Modifier.padding(start = 16.dp))
+                        Text(formatClock(seconds.toLong()), modifier = Modifier.padding(start = Spacing.lg))
                     }
                 }
             }

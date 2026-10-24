@@ -1,5 +1,6 @@
 "use client";
 
+import { LOCALE } from "@/lib/tz";
 import { Bar, BarChart, CartesianGrid, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 
 export interface Point {
@@ -21,7 +22,7 @@ export function BarChartView({ data, unit, height = 220 }: { data: Point[]; unit
         <CartesianGrid vertical={false} stroke="var(--outline)" strokeDasharray="3 3" />
         <XAxis dataKey="label" {...axis} />
         <YAxis {...axis} width={48} />
-        <Tooltip {...tooltip} formatter={(v) => [`${Number(v).toLocaleString("en-US")}${unit ? ` ${unit}` : ""}`, ""]} />
+        <Tooltip {...tooltip} formatter={(v) => [`${Number(v).toLocaleString(LOCALE)}${unit ? ` ${unit}` : ""}`, ""]} />
         <Bar dataKey="value" fill="var(--primary)" radius={[6, 6, 0, 0]} maxBarSize={36} />
       </BarChart>
     </ResponsiveContainer>
@@ -38,7 +39,7 @@ export function LineChartView({ data, unit, height = 240 }: { data: Point[]; uni
         <Tooltip
           {...tooltip}
           cursor={{ stroke: "var(--outline)" }}
-          formatter={(v) => [`${Number(v).toLocaleString("en-US", { maximumFractionDigits: 1 })}${unit ? ` ${unit}` : ""}`, ""]}
+          formatter={(v) => [`${Number(v).toLocaleString(LOCALE, { maximumFractionDigits: 1 })}${unit ? ` ${unit}` : ""}`, ""]}
         />
         <Line
           type="monotone"

@@ -11,8 +11,9 @@ interface NavLink {
 
 /** The app's four tabs (Today, History, Progress, Profile), each with the web pages that belong under it. */
 const GROUPS: { label: string; links: NavLink[] }[] = [
-  { label: "Today", links: [{ href: "/", label: "Dashboard" }, { href: "/calendar", label: "Calendar" }] },
-  { label: "History", links: [{ href: "/history", label: "History" }] },
+  { label: "Today", links: [{ href: "/", label: "Dashboard" }] },
+  // The app's History tab holds the calendar too.
+  { label: "History", links: [{ href: "/history", label: "History" }, { href: "/calendar", label: "Calendar" }] },
   { label: "Progress", links: [{ href: "/progress", label: "Progress" }, { href: "/insights", label: "Insights" }, { href: "/library", label: "Exercises" }] },
   { label: "Profile", links: [{ href: "/profile", label: "Profile" }, { href: "/plans", label: "Plans" }] },
 ];
@@ -76,11 +77,13 @@ export function MobileTabBar() {
       <div className="mx-auto grid max-w-lg grid-cols-4">
         {GROUPS.map((g) => {
           const active = g.links.some((l) => isActive(path, l.href));
+          // "page" only when this tab's own page is open; on a sub-page the tab is just the current section.
+          const current = isActive(path, g.links[0].href) ? "page" : active ? "true" : undefined;
           return (
             <Link
               key={g.label}
               href={g.links[0].href}
-              aria-current={active ? "page" : undefined}
+              aria-current={current}
               className={clsx("flex min-h-14 flex-col items-center justify-center gap-0.5 text-xs font-medium", active ? "text-primary" : "text-muted")}
             >
               <span className={clsx("rounded-full px-4 py-0.5", active && "bg-primary-container text-on-primary-container")}>{g.label}</span>

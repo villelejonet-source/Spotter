@@ -45,7 +45,7 @@ class HistoryScreenshotTest {
 
     private fun historyState(sessions: List<WorkoutSession>) = HistoryUiState(
         loading = false,
-        sessions = sessions,
+        hasAnySession = true,
         month = month,
         monthSessions = sessions,
         volumeByDay = sessions.groupBy { it.startedAt.localDate() }

@@ -21,10 +21,12 @@ import com.viktorolsson.spotter.core.model.WorkoutSummary
 import com.viktorolsson.spotter.core.ui.localDate
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.stateIn
@@ -32,11 +34,13 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import java.time.LocalDate
 import java.time.YearMonth
+import java.time.ZoneId
 import javax.inject.Inject
 
 data class HistoryUiState(
     val loading: Boolean = true,
-    val sessions: List<WorkoutSession> = emptyList(),
+    /** False until the first workout is finished; the screen then shows its empty state. */
+    val hasAnySession: Boolean = false,
     val month: YearMonth = YearMonth.now(),
     val unit: WeightUnit = WeightUnit.KG,
     /** The sessions in [month], newest first. */
@@ -45,6 +49,7 @@ data class HistoryUiState(
     val volumeByDay: Map<LocalDate, Double> = emptyMap(),
 )
 
+@OptIn(ExperimentalCoroutinesApi::class)
 @HiltViewModel
 class HistoryViewModel @Inject constructor(
     historyRepository: HistoryRepository,
@@ -52,15 +57,24 @@ class HistoryViewModel @Inject constructor(
 ) : ViewModel() {
     private val month = MutableStateFlow(YearMonth.now())
 
+    // Only the month on screen is read; one extra row tells us whether anything exists at all.
+    private val monthSessions = month.flatMapLatest { m ->
+        val zone = ZoneId.systemDefault()
+        historyRepository.observeFinishedSessionsBetween(
+            start = m.atDay(1).atStartOfDay(zone).toInstant(),
+            end = m.plusMonths(1).atDay(1).atStartOfDay(zone).toInstant(),
+        )
+    }
+
     val uiState: StateFlow<HistoryUiState> = combine(
-        historyRepository.observeFinishedSessions(),
+        historyRepository.observeRecentFinished(limit = 1),
+        monthSessions,
         month,
         preferencesRepository.preferences,
-    ) { sessions, month, prefs ->
-        val inMonth = sessions.filter { YearMonth.from(it.startedAt.localDate()) == month }
+    ) { latest, inMonth, month, prefs ->
         HistoryUiState(
             loading = false,
-            sessions = sessions,
+            hasAnySession = latest.isNotEmpty(),
             month = month,
             unit = prefs.weightUnit,
             monthSessions = inMonth,

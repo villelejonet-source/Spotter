@@ -13,3 +13,6 @@ keystore.properties
 
 # Play Console review recordings (large binaries; uploaded to Play Console by hand, see docs/play-store/README.md)
 docs/play-store/*.mp4
+
+# Supabase CLI link state (local only)
+supabase/.temp/

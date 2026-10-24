@@ -15,12 +15,8 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.FitnessCenter
-import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.Button
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -36,6 +32,12 @@ import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import com.viktorolsson.spotter.core.ui.component.ConfirmDialog
+import com.viktorolsson.spotter.core.ui.component.LoadingState
+import com.viktorolsson.spotter.core.ui.component.PrimaryButton
+import com.viktorolsson.spotter.core.ui.component.SecondaryButton
+import com.viktorolsson.spotter.core.ui.theme.Dimens
+import com.viktorolsson.spotter.core.ui.theme.Spacing
 
 /** First launch: create an account (backed up), sign in (restore), or stay on this phone only. */
 @Composable
@@ -43,27 +45,27 @@ internal fun WelcomeScreen(onCreateAccount: () -> Unit, onSignIn: () -> Unit, on
     var confirmWithout by rememberSaveable { mutableStateOf(false) }
     Surface(Modifier.fillMaxSize()) {
         Column(
-            Modifier.fillMaxSize().safeDrawingPadding().verticalScroll(rememberScrollState()).padding(24.dp),
+            Modifier.fillMaxSize().safeDrawingPadding().verticalScroll(rememberScrollState()).padding(Dimens.FocusedScreenPadding),
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
             Spacer(Modifier.weight(1f))
-            Surface(shape = CircleShape, color = MaterialTheme.colorScheme.primaryContainer, modifier = Modifier.size(96.dp)) {
+            Surface(shape = CircleShape, color = MaterialTheme.colorScheme.primaryContainer, modifier = Modifier.size(LOGO_SIZE)) {
                 Box(contentAlignment = Alignment.Center) {
                     Icon(
                         Icons.Rounded.FitnessCenter,
                         contentDescription = null,
                         tint = MaterialTheme.colorScheme.onPrimaryContainer,
-                        modifier = Modifier.size(48.dp),
+                        modifier = Modifier.size(LOGO_ICON_SIZE),
                     )
                 }
             }
-            Spacer(Modifier.height(24.dp))
+            Spacer(Modifier.height(Spacing.xl))
             Text(
                 stringResource(R.string.welcome_title),
                 style = MaterialTheme.typography.displaySmall,
                 modifier = Modifier.semantics { heading() },
             )
-            Spacer(Modifier.height(8.dp))
+            Spacer(Modifier.height(Spacing.sm))
             Text(
                 stringResource(R.string.welcome_tagline),
                 style = MaterialTheme.typography.bodyLarge,
@@ -71,13 +73,9 @@ internal fun WelcomeScreen(onCreateAccount: () -> Unit, onSignIn: () -> Unit, on
                 textAlign = TextAlign.Center,
             )
             Spacer(Modifier.weight(1f))
-            Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                Button(onClick = onCreateAccount, modifier = Modifier.fillMaxWidth().height(56.dp)) {
-                    Text(stringResource(R.string.welcome_create), style = MaterialTheme.typography.titleMedium)
-                }
-                OutlinedButton(onClick = onSignIn, modifier = Modifier.fillMaxWidth().height(56.dp)) {
-                    Text(stringResource(R.string.welcome_sign_in), style = MaterialTheme.typography.titleMedium)
-                }
+            Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(Spacing.md)) {
+                PrimaryButton(stringResource(R.string.welcome_create), onCreateAccount)
+                SecondaryButton(stringResource(R.string.welcome_sign_in), onSignIn)
                 TextButton(onClick = { confirmWithout = true }, modifier = Modifier.fillMaxWidth()) {
                     Text(stringResource(R.string.welcome_without))
                 }
@@ -92,20 +90,14 @@ internal fun WelcomeScreen(onCreateAccount: () -> Unit, onSignIn: () -> Unit, on
         }
     }
     if (confirmWithout) {
-        AlertDialog(
-            onDismissRequest = { confirmWithout = false },
-            title = { Text(stringResource(R.string.welcome_without_title)) },
-            text = { Text(stringResource(R.string.welcome_without_body)) },
-            confirmButton = {
-                TextButton(onClick = { confirmWithout = false; onCreateAccount() }) {
-                    Text(stringResource(R.string.welcome_create))
-                }
-            },
-            dismissButton = {
-                TextButton(onClick = { confirmWithout = false; onContinueWithout() }) {
-                    Text(stringResource(R.string.welcome_without_confirm))
-                }
-            },
+        // The confirming action is the one the title asks about; creating an account is the way out.
+        ConfirmDialog(
+            title = stringResource(R.string.welcome_without_title),
+            text = stringResource(R.string.welcome_without_body),
+            confirmText = stringResource(R.string.welcome_without_confirm),
+            onConfirm = { confirmWithout = false; onContinueWithout() },
+            onDismiss = { confirmWithout = false },
+            dismissText = stringResource(R.string.welcome_create),
         )
     }
 }
@@ -114,14 +106,9 @@ internal fun WelcomeScreen(onCreateAccount: () -> Unit, onSignIn: () -> Unit, on
 @Composable
 internal fun CheckingBackup() {
     Surface(Modifier.fillMaxSize()) {
-        Column(
-            Modifier.fillMaxSize().padding(24.dp),
-            verticalArrangement = Arrangement.Center,
-            horizontalAlignment = Alignment.CenterHorizontally,
-        ) {
-            CircularProgressIndicator()
-            Spacer(Modifier.height(16.dp))
-            Text(stringResource(R.string.welcome_checking_backup), style = MaterialTheme.typography.bodyLarge)
-        }
+        LoadingState(Modifier.fillMaxSize(), text = stringResource(R.string.welcome_checking_backup))
     }
 }
+
+private val LOGO_SIZE = 96.dp
+private val LOGO_ICON_SIZE = 48.dp

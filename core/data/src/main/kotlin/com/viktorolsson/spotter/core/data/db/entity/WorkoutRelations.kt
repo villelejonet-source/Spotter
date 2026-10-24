@@ -47,6 +47,22 @@ data class PlanExerciseWithExercise(
     val exercise: ExerciseEntity,
 )
 
+/** A logged set with its session and exercise, for history read for several exercises at once. */
+data class ExerciseHistorySet(
+    @Embedded val set: SetEntryEntity,
+    val sessionId: Long,
+    val exerciseId: String,
+    val startedAt: java.time.Instant,
+)
+
+/** One (exercise, finished session) pair; the session's start and whether it was a deload. */
+data class ExerciseSessionRef(
+    val exerciseId: String,
+    val sessionId: Long,
+    val startedAt: java.time.Instant,
+    val isDeload: Boolean,
+)
+
 /** A logged set with its session's start time, for per-exercise history. */
 data class DatedSet(
     @Embedded val set: SetEntryEntity,

@@ -87,7 +87,10 @@ class WorkoutRepository @Inject constructor(
                 isDeload = deload,
             ),
         )
-        day.exercises.sortedBy { it.planExercise.position }.forEachIndexed { position, (pe, exercise) ->
+        val planned = day.exercises.sortedBy { it.planExercise.position }
+        // Two queries for the whole day, instead of one history read per exercise.
+        val histories = recentHistoryFor(planned.map { it.planExercise.exerciseId }, sessions = 2)
+        planned.forEachIndexed { position, (pe, exercise) ->
             val progression = Progression.next(
                 ProgressionInput(
                     exercise = exercise.toModel(),
@@ -96,7 +99,7 @@ class WorkoutRepository @Inject constructor(
                     repMin = pe.repMin,
                     repMax = pe.repMax,
                     targetRir = pe.targetRir,
-                    history = recentHistory(pe.exerciseId),
+                    history = histories[pe.exerciseId].orEmpty(),
                     startingWeightKg = pe.startingWeightKg,
                     unit = unit,
                 ),
@@ -130,6 +133,38 @@ class WorkoutRepository @Inject constructor(
             .groupBy { it.sessionId }
             .values
             .map { sets -> sets.map { LoggedSet(it.set.weightKg, it.set.reps ?: 0, it.set.rir) } }
+
+    /**
+     * [recentHistory] for several exercises in two queries: the working sets of each
+     * exercise's last [sessions] finished non-deload sessions, most recent session first.
+     */
+    private suspend fun recentHistoryFor(exerciseIds: Collection<String>, sessions: Int): Map<String, List<List<LoggedSet>>> {
+        val ids = exerciseIds.distinct()
+        if (ids.isEmpty()) return emptyMap()
+        val wanted = dao.getExerciseSessionRefs(ids).filter { !it.isDeload }
+            .groupBy { it.exerciseId }
+            .mapValues { (_, refs) -> refs.take(sessions).map { it.sessionId }.toSet() }
+        val sessionIds = wanted.values.flatten().distinct()
+        if (sessionIds.isEmpty()) return emptyMap()
+        val sets = dao.getCompletedSets(sessionIds, ids).filter { it.set.setType != SetType.WARMUP }
+        return wanted.mapValues { (exerciseId, sessionsOfExercise) ->
+            sets.filter { it.exerciseId == exerciseId && it.sessionId in sessionsOfExercise }
+                .groupBy { it.sessionId }.values
+                .map { logged -> logged.map { LoggedSet(it.set.weightKg, it.set.reps ?: 0, it.set.rir) } }
+        }
+    }
+
+    /** The completed sets from the most recent finished session of each exercise, in logged order. */
+    private suspend fun previousSetsFor(exerciseIds: Collection<String>): Map<String, List<SetEntryEntity>> {
+        val ids = exerciseIds.distinct()
+        if (ids.isEmpty()) return emptyMap()
+        val latest = dao.getExerciseSessionRefs(ids).groupBy { it.exerciseId }.mapValues { (_, refs) -> refs.first().sessionId }
+        if (latest.isEmpty()) return emptyMap()
+        val sets = dao.getCompletedSets(latest.values.distinct(), ids)
+        return latest.mapValues { (exerciseId, sessionId) ->
+            sets.filter { it.exerciseId == exerciseId && it.sessionId == sessionId }.map { it.set }
+        }
+    }
 
     /**
      * Swaps an exercise for another (busy or missing equipment). Remaining sets get a
@@ -197,6 +232,7 @@ class WorkoutRepository @Inject constructor(
     suspend fun addExercises(sessionId: Long, exerciseIds: List<String>, defaultSetCount: Int = 3) =
         db.withTransaction {
             var position = dao.nextExercisePosition(sessionId)
+            val previousByExercise = previousSetsFor(exerciseIds)
             exerciseIds.forEach { exerciseId ->
                 val sessionExerciseId = dao.insertSessionExercise(
                     SessionExerciseEntity(
@@ -208,7 +244,7 @@ class WorkoutRepository @Inject constructor(
                         notes = null,
                     ),
                 )
-                val previous = dao.getPreviousSets(exerciseId)
+                val previous = previousByExercise[exerciseId].orEmpty()
                 val sets = if (previous.isNotEmpty()) {
                     previous.mapIndexed { i, prev ->
                         newSet(sessionExerciseId, i, prev.weightKg, prev.reps, prev.setType)
@@ -233,7 +269,7 @@ class WorkoutRepository @Inject constructor(
         val to = (from + offset).coerceIn(0, list.lastIndex)
         if (from == to) return@withTransaction
         list.add(to, list.removeAt(from))
-        dao.updateSessionExercises(list.mapIndexed { i, e -> e.copy(position = i) })
+        dao.updateSessionExercises(list.renumbered())
     }
 
     suspend fun setExerciseNotes(sessionExerciseId: Long, notes: String?) = updateExercise(sessionExerciseId) {
@@ -321,7 +357,8 @@ class WorkoutRepository @Inject constructor(
     suspend fun deleteSet(setId: Long) = db.withTransaction {
         val set = dao.getSet(setId) ?: return@withTransaction
         dao.deleteSet(setId)
-        dao.updateSets(dao.getSets(set.sessionExerciseId).mapIndexed { i, s -> s.copy(position = i) })
+        // Only the sets after the deleted one move; the rest are left untouched.
+        dao.updateSets(dao.getSets(set.sessionExerciseId).mapIndexedNotNull { i, s -> s.copy(position = i).takeIf { s.position != i } })
     }
 
     suspend fun updateSetValues(setId: Long, weightKg: Double?, reps: Int?, rir: Int?) = updateSet(setId) {
@@ -370,11 +407,14 @@ class WorkoutRepository @Inject constructor(
 
     private suspend fun recordPersonalRecords(sessionId: Long, achievedAt: Instant) {
         val session = dao.getSessionWithExercises(sessionId) ?: return
-        val records = session.exercises.groupBy { it.exercise.id }.flatMap { (exerciseId, entries) ->
+        val byExercise = session.exercises.groupBy { it.exercise.id }
+        // One query for every exercise's earlier working sets, instead of one per exercise.
+        val previousByExercise = dao.getWorkingSetsBeforeFor(byExercise.keys.toList(), session.session.startedAt).groupBy { it.exerciseId }
+        val records = byExercise.flatMap { (exerciseId, entries) ->
             val logged = entries.flatMap { it.sets }
-                .filter { it.completedAt != null && it.setType != SetType.WARMUP && it.reps != null }
-                .map { LoggedSet(it.weightKg, it.reps!!, it.rir) }
-            val previous = dao.getWorkingSetsBefore(exerciseId, session.session.startedAt)
+                .filter { it.completedAt != null && it.setType != SetType.WARMUP }
+                .mapNotNull { set -> set.reps?.let { reps -> LoggedSet(set.weightKg, reps, set.rir) } }
+            val previous = previousByExercise[exerciseId].orEmpty()
                 .groupBy { it.sessionId }.values
                 .map { sets -> sets.map { LoggedSet(it.set.weightKg, it.set.reps ?: 0, it.set.rir) } }
             PersonalRecords.detect(logged, PersonalRecords.bests(previous)).map {
@@ -417,8 +457,12 @@ class WorkoutRepository @Inject constructor(
     }
 
     private suspend fun renumberExercises(sessionId: Long) {
-        dao.updateSessionExercises(dao.getSessionExercises(sessionId).mapIndexed { i, e -> e.copy(position = i) })
+        dao.updateSessionExercises(dao.getSessionExercises(sessionId).renumbered())
     }
+
+    /** Dense positions in list order; only the rows whose position changes are returned. */
+    private fun List<SessionExerciseEntity>.renumbered(): List<SessionExerciseEntity> =
+        mapIndexedNotNull { i, e -> e.copy(position = i).takeIf { e.position != i } }
 
     private fun newSet(sessionExerciseId: Long, position: Int, weightKg: Double?, reps: Int?, setType: SetType) =
         SetEntryEntity(

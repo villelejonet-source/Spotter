@@ -16,7 +16,7 @@ import java.time.Instant
 @Entity(
     tableName = "workout_session",
     foreignKeys = [ForeignKey(PlanDayEntity::class, ["id"], ["planDayId"], onDelete = ForeignKey.SET_NULL)],
-    indices = [Index("syncId", unique = true), Index("planDayId"), Index("startedAt")],
+    indices = [Index("syncId", unique = true), Index("updatedAt"), Index("planDayId"), Index("startedAt"), Index("endedAt")],
 )
 data class WorkoutSessionEntity(
     @PrimaryKey(autoGenerate = true) val id: Long = 0,
@@ -44,7 +44,7 @@ data class WorkoutSessionEntity(
         ForeignKey(ExerciseEntity::class, ["id"], ["substitutedFromExerciseId"], onDelete = ForeignKey.SET_NULL),
         ForeignKey(PlanExerciseEntity::class, ["id"], ["planExerciseId"], onDelete = ForeignKey.SET_NULL),
     ],
-    indices = [Index("syncId", unique = true), Index("sessionId"), Index("exerciseId"), Index("substitutedFromExerciseId"), Index("planExerciseId")],
+    indices = [Index("syncId", unique = true), Index("updatedAt"), Index("sessionId"), Index("exerciseId"), Index("substitutedFromExerciseId"), Index("planExerciseId")],
 )
 data class SessionExerciseEntity(
     @PrimaryKey(autoGenerate = true) val id: Long = 0,
@@ -74,7 +74,7 @@ data class SessionExerciseEntity(
 @Entity(
     tableName = "set_entry",
     foreignKeys = [ForeignKey(SessionExerciseEntity::class, ["id"], ["sessionExerciseId"], onDelete = ForeignKey.CASCADE)],
-    indices = [Index("syncId", unique = true), Index("sessionExerciseId")],
+    indices = [Index("syncId", unique = true), Index("updatedAt"), Index("sessionExerciseId")],
 )
 data class SetEntryEntity(
     @PrimaryKey(autoGenerate = true) val id: Long = 0,
@@ -101,7 +101,7 @@ data class SetEntryEntity(
         ForeignKey(ExerciseEntity::class, ["id"], ["exerciseId"], onDelete = ForeignKey.CASCADE),
         ForeignKey(WorkoutSessionEntity::class, ["id"], ["sessionId"], onDelete = ForeignKey.SET_NULL),
     ],
-    indices = [Index("syncId", unique = true), Index("exerciseId", "type"), Index("sessionId")],
+    indices = [Index("syncId", unique = true), Index("updatedAt"), Index("exerciseId", "type"), Index("sessionId"), Index("achievedAt")],
 )
 data class PersonalRecordEntity(
     @PrimaryKey(autoGenerate = true) val id: Long = 0,
@@ -122,7 +122,7 @@ data class PersonalRecordEntity(
 @Entity(
     tableName = "recommendation",
     foreignKeys = [ForeignKey(ExerciseEntity::class, ["id"], ["exerciseId"], onDelete = ForeignKey.CASCADE)],
-    indices = [Index("syncId", unique = true), Index("exerciseId"), Index("status")],
+    indices = [Index("syncId", unique = true), Index("updatedAt"), Index("exerciseId"), Index("status")],
 )
 data class RecommendationEntity(
     @PrimaryKey(autoGenerate = true) val id: Long = 0,

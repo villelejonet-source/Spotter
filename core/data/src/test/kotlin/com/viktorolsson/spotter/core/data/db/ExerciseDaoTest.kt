@@ -5,6 +5,7 @@ import androidx.room.Room
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.viktorolsson.spotter.core.data.db.entity.UserProfileEntity
+import com.viktorolsson.spotter.core.data.repository.ExerciseRepository
 import com.viktorolsson.spotter.core.data.seed.SeedExercise
 import com.viktorolsson.spotter.core.data.seed.parseExerciseSeed
 import com.viktorolsson.spotter.core.model.BodyArea
@@ -62,21 +63,26 @@ class ExerciseDaoTest {
     @Test
     fun reseedingIsIdempotent() = runTest {
         seed()
-        val count = db.exerciseDao().observeCount().first()
+        val count = db.exerciseDao().observeAll().first().size
         seed()
-        assertEquals(count, db.exerciseDao().observeCount().first())
+        assertEquals(count, db.exerciseDao().observeAll().first().size)
     }
 
     @Test
-    fun queriesByPatternAndName() = runTest {
+    fun searchMatchesEveryWordInAnyOrder() = runTest {
         seed()
-        val hinges = db.exerciseDao().getByPattern(MovementPattern.HINGE)
-        assertTrue(hinges.any { it.id == "romanian-deadlift" })
-        assertTrue(hinges.all { it.movementPattern == MovementPattern.HINGE })
-
-        val curls = db.exerciseDao().search("curl").first()
+        val repo = ExerciseRepository(db.exerciseDao())
+        val curls = repo.search("curl").first()
         assertTrue(curls.isNotEmpty())
         assertTrue(curls.all { it.name.contains("curl", ignoreCase = true) })
+
+        val reversed = repo.search("press bench").first()
+        assertTrue(reversed.any { it.id == "barbell-bench-press" })
+        assertTrue(reversed.all { it.name.contains("bench", true) && it.name.contains("press", true) })
+
+        assertEquals(db.exerciseDao().observeAll().first().size, repo.search("  ").first().size) // blank: everything
+        assertTrue(repo.search("(unbalanced").first().isEmpty()) // query text is escaped, not a regex
+        assertEquals(listOf(MovementPattern.HINGE), repo.search("romanian deadlift").first().map { it.movementPattern }.distinct())
     }
 
     @Test

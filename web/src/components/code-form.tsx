@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Button, inputClass } from "./ui";
+import { Button, Field, InlineMessage, inputClass } from "./ui";
 
 /**
  * A one-time code from an email (Supabase sends 6–8 digits, depending on the project),
@@ -23,6 +23,7 @@ export function CodeForm({
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const [cooldown, setCooldown] = useState(60);
+  const digits = code.replace(/\D/g, "");
 
   useEffect(() => {
     if (cooldown <= 0) return;
@@ -34,7 +35,7 @@ export function CodeForm({
     e.preventDefault();
     setBusy(true);
     setError(null);
-    setError(await onVerify(code.replace(/\D/g, "")));
+    setError(await onVerify(digits));
     setBusy(false);
   }
 
@@ -51,28 +52,28 @@ export function CodeForm({
 
   return (
     <form onSubmit={submit} className="space-y-3">
-      <input
-        inputMode="numeric"
-        autoComplete="one-time-code"
-        autoFocus
-        required
-        pattern="[0-9 ]{6,10}"
-        placeholder="Code from the email"
-        aria-label="Code from the email"
-        value={code}
-        onChange={(e) => setCode(e.target.value)}
-        className={`${inputClass} text-center text-lg tracking-[0.3em]`}
-      />
-      <Button variant="primary" className="w-full" disabled={busy || code.replace(/\D/g, "").length < 6}>
+      <Field label="Code from the email">
+        <input
+          inputMode="numeric"
+          autoComplete="one-time-code"
+          autoFocus
+          required
+          pattern="[0-9 ]{6,10}"
+          value={code}
+          onChange={(e) => setCode(e.target.value)}
+          className={`${inputClass} text-center text-lg tracking-[0.3em]`}
+        />
+      </Field>
+      <Button type="submit" variant="primary" className="w-full" disabled={busy || digits.length < 6}>
         {busy ? "Checking…" : submitLabel}
       </Button>
       {onResend && (
-        <button type="button" onClick={resend} disabled={cooldown > 0} className="w-full text-sm text-muted hover:text-foreground disabled:opacity-60">
+        <Button variant="ghost" className="w-full" onClick={resend} disabled={cooldown > 0}>
           {cooldown > 0 ? `Resend email in ${cooldown}s` : "Resend email"}
-        </button>
+        </Button>
       )}
-      {notice && !error && <p role="status" className="text-sm text-muted">{notice}</p>}
-      {error && <p role="alert" className="text-sm text-error">{error}</p>}
+      {notice && !error && <InlineMessage tone="info">{notice}</InlineMessage>}
+      {error && <InlineMessage tone="error">{error}</InlineMessage>}
     </form>
   );
 }

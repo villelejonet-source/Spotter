@@ -2,7 +2,7 @@
 
 import { z } from "zod";
 import { getPlans, getScheduled, getSessions } from "@/lib/data";
-import { push } from "@/lib/push";
+import { push, saveErrorMessage } from "@/lib/push";
 import { localDate, nextPlanDay } from "@/lib/stats";
 import { requireUser } from "@/lib/supabase/server";
 import {
@@ -12,11 +12,13 @@ import {
   scheduledPayload,
   scheduleSchema,
   stamp,
+  syncIdSchema,
   type ScheduleDraft,
 } from "@/lib/sync-writer";
 import type { ActionResult } from "./plans";
 
 const DAY_MS = 86_400_000;
+const RELOAD = "Reload the page and try again.";
 
 /** Today as an epoch day, in the display time zone. */
 function today(): number {
@@ -27,7 +29,7 @@ function today(): number {
 export async function scheduleWorkout(input: ScheduleDraft): Promise<ActionResult> {
   await requireUser();
   const parsed = scheduleSchema.safeParse(input);
-  if (!parsed.success) return { ok: false, error: parsed.error.issues[0]?.message ?? "Invalid workout" };
+  if (!parsed.success) return { ok: false, error: parsed.error.issues[0]?.message ?? "Check the workout and try again." };
   const draft = parsed.data;
   if (draft.epoch_day < today() || draft.epoch_day > today() + MAX_SCHEDULE_DAYS_AHEAD) {
     return { ok: false, error: `Pick a date from today up to ${MAX_SCHEDULE_DAYS_AHEAD} days ahead.` };
@@ -39,20 +41,21 @@ export async function scheduleWorkout(input: ScheduleDraft): Promise<ActionResul
   try {
     await push([{ table_name: "scheduled_session", sync_id: newSyncId(), payload: scheduledPayload(draft), updated_at: Date.now(), deleted_at: null }]);
   } catch (e) {
-    return { ok: false, error: (e as Error).message };
+    return { ok: false, error: saveErrorMessage(e) };
   }
   return { ok: true };
 }
 
 export async function removeScheduled(syncId: string): Promise<ActionResult> {
   await requireUser();
+  if (!syncIdSchema.safeParse(syncId).success) return { ok: false, error: RELOAD };
   const entry = (await getScheduled()).find((s) => s.sync_id === syncId);
   if (!entry) return { ok: true };
   const at = stamp(Date.now(), entry.updated_at);
   try {
     await push([{ table_name: "scheduled_session", sync_id: syncId, payload: null, updated_at: at, deleted_at: at }]);
   } catch (e) {
-    return { ok: false, error: (e as Error).message };
+    return { ok: false, error: saveErrorMessage(e) };
   }
   return { ok: true };
 }
@@ -96,7 +99,7 @@ export async function planWeeks(input: z.infer<typeof planWeeksSchema>): Promise
       })),
     );
   } catch (e) {
-    return { ok: false, error: (e as Error).message };
+    return { ok: false, error: saveErrorMessage(e) };
   }
   return { ok: true, added: rows.length };
 }

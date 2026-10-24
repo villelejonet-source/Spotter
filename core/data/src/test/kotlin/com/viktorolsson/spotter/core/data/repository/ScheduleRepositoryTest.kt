@@ -31,7 +31,7 @@ class ScheduleRepositoryTest {
         db = Room.inMemoryDatabaseBuilder(ApplicationProvider.getApplicationContext<Context>(), SpotterDatabase::class.java)
             .allowMainThreadQueries()
             .build()
-        workouts = WorkoutRepository(db, db.workoutDao(), db.planDao(), db.exerciseDao(), testPreferences(), clock)
+        workouts = WorkoutRepository(db, db.workoutDao(), db.planDao(), db.exerciseDao(), testPreferences(db), clock)
         repo = ScheduleRepository(db.scheduleDao(), workouts, clock)
     }
 

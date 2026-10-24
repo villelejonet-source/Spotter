@@ -10,7 +10,7 @@ import com.viktorolsson.spotter.core.model.ProgressionRule
 import com.viktorolsson.spotter.core.model.SplitType
 import java.time.Instant
 
-@Entity(tableName = "plan", indices = [Index("syncId", unique = true), Index("isActive")])
+@Entity(tableName = "plan", indices = [Index("syncId", unique = true), Index("updatedAt"), Index("isActive")])
 data class PlanEntity(
     @PrimaryKey(autoGenerate = true) val id: Long = 0,
     val name: String,
@@ -28,7 +28,7 @@ data class PlanEntity(
 @Entity(
     tableName = "plan_day",
     foreignKeys = [ForeignKey(PlanEntity::class, ["id"], ["planId"], onDelete = ForeignKey.CASCADE)],
-    indices = [Index("syncId", unique = true), Index("planId")],
+    indices = [Index("syncId", unique = true), Index("updatedAt"), Index("planId")],
 )
 data class PlanDayEntity(
     @PrimaryKey(autoGenerate = true) val id: Long = 0,
@@ -48,7 +48,7 @@ data class PlanDayEntity(
         ForeignKey(PlanDayEntity::class, ["id"], ["planDayId"], onDelete = ForeignKey.CASCADE),
         ForeignKey(ExerciseEntity::class, ["id"], ["exerciseId"], onDelete = ForeignKey.RESTRICT),
     ],
-    indices = [Index("syncId", unique = true), Index("planDayId"), Index("exerciseId")],
+    indices = [Index("syncId", unique = true), Index("updatedAt"), Index("planDayId"), Index("exerciseId")],
 )
 data class PlanExerciseEntity(
     @PrimaryKey(autoGenerate = true) val id: Long = 0,

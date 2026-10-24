@@ -64,11 +64,19 @@ fun formatEffort(rir: Int, scale: EffortScale): String =
 /**
  * "82.5 kg × 6", or "12 reps" for bodyweight. A [timed] hold reads "45 s" or
  * "10 kg × 45 s". With [withUnit] off the unit is left out ("82.5 × 6"), for
- * columns whose header already names it.
+ * columns whose header already names it. A set with no reps logged shows just its
+ * weight, or "—" when it has neither.
  */
 @Composable
 fun formatSet(weightKg: Double?, reps: Int?, unit: WeightUnit, timed: Boolean = false, withUnit: Boolean = true): String {
-    val r = reps ?: 0
+    if (reps == null) {
+        return when {
+            weightKg != null && withUnit -> formatWeight(weightKg, unit)
+            weightKg != null -> unit.format(weightKg)
+            else -> stringResource(R.string.value_none)
+        }
+    }
+    val r = reps
     val amount = if (timed) stringResource(R.string.seconds_short, r) else r.toString()
     return when {
         weightKg != null -> stringResource(

@@ -83,7 +83,11 @@ fun SpotterApp(
 
     val syncChoice by syncChoiceViewModel.uiState.collectAsStateWithLifecycle()
     if (syncChoice.needsChoice) {
-        SyncChoiceDialog(email = syncChoice.email, onChoose = syncChoiceViewModel::choose)
+        if (syncChoice.fromLink) {
+            UploadChoiceDialog(email = syncChoice.email, onUpload = { syncChoiceViewModel.choose(FirstSyncChoice.MERGE) }, onSignOut = syncChoiceViewModel::signOut)
+        } else {
+            SyncChoiceDialog(email = syncChoice.email, onChoose = syncChoiceViewModel::choose)
+        }
     }
 
     val recoveringPassword by passwordRecoveryViewModel.recovering.collectAsStateWithLifecycle()
@@ -183,6 +187,22 @@ fun SpotterApp(
             summaryScreen(onDone = { navController.popBackStack() })
         }
     }
+}
+
+/**
+ * Signed in from an emailed link into an account that has no data yet: nothing is uploaded
+ * until the user says so (a crafted link must not pull this phone's data into a stranger's
+ * account). Declining signs out again.
+ */
+@Composable
+internal fun UploadChoiceDialog(email: String?, onUpload: () -> Unit, onSignOut: () -> Unit) {
+    AlertDialog(
+        onDismissRequest = {},
+        title = { Text(stringResource(R.string.sync_upload_title)) },
+        text = { Text(stringResource(R.string.sync_upload_body, email.orEmpty())) },
+        confirmButton = { Button(onClick = onUpload) { Text(stringResource(R.string.sync_upload_confirm)) } },
+        dismissButton = { TextButton(onClick = onSignOut) { Text(stringResource(R.string.sync_upload_decline)) } },
+    )
 }
 
 /**

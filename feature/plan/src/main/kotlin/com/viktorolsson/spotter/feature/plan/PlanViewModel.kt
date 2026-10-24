@@ -28,11 +28,11 @@ class PlanViewModel @Inject constructor(
     private val workoutRepository: WorkoutRepository,
     preferencesRepository: UserPreferencesRepository,
 ) : ViewModel() {
+    // One plan subscription: the next day is derived inside the repository.
     val uiState: StateFlow<PlanUiState> = combine(
-        planRepository.observeActivePlan(),
-        planRepository.observeNextDay(),
+        planRepository.observePlanAndNextDay(),
         preferencesRepository.preferences,
-    ) { plan, next, prefs -> PlanUiState(loading = false, plan = plan, nextDayId = next?.id, effortScale = prefs.effortScale) }
+    ) { (plan, next), prefs -> PlanUiState(loading = false, plan = plan, nextDayId = next?.id, effortScale = prefs.effortScale) }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), PlanUiState())
 
     fun startDay(planDayId: Long, onStarted: (Long) -> Unit) = viewModelScope.launch {

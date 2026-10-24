@@ -22,9 +22,14 @@ describe("formatSet", () => {
   it("reads like the app for loaded, bodyweight and timed sets", () => {
     expect(formatSet({ weight_kg: 82.5, reps: 6 }, "barbell-bench-press", "KG")).toBe("82.5 kg × 6");
     expect(formatSet({ weight_kg: null, reps: 12 }, "pull-up", "KG")).toBe("12 reps");
+    expect(formatSet({ weight_kg: null, reps: 1 }, "pull-up", "KG")).toBe("1 rep");
+    expect(formatSet({ weight_kg: null, reps: 0 }, "pull-up", "KG")).toBe("0 reps");
+    expect(formatRecord({ type: "REPS_AT_WEIGHT", value: 1, weight_kg: null, reps: 1, exercise_id: "pull-up" }, "KG")).toBe("1 rep");
     expect(formatSet({ weight_kg: null, reps: 45 }, "plank", "KG")).toBe("45 s");
     expect(formatSet({ weight_kg: 10, reps: 45 }, "plank", "KG")).toBe("10 kg × 45 s");
-    expect(formatSet({ weight_kg: 50, reps: null }, "squat", "KG")).toBe("50 kg × 0");
+    expect(formatSet({ weight_kg: 60, reps: null }, "squat", "KG")).toBe("60 kg");
+    expect(formatSet({ weight_kg: null, reps: null }, "squat", "KG")).toBe("—");
+    expect(formatSet({ weight_kg: null, reps: null }, "plank", "KG")).toBe("—");
   });
 });
 

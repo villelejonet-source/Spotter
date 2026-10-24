@@ -31,12 +31,17 @@ Every auth email (confirm, sign-in, reset) carries a **link** and a **code**
   its hash to Supabase; the link that comes back carries a one-time `code`, which the client
   exchanges for a session together with the secret it kept. A link opened anywhere else has no
   verifier to pair with and is useless. The website has used this since the start
-  (`@supabase/ssr`); the app switched to it in the 2026-10 audit (`flowType = FlowType.PKCE` in
-  `SupabaseSync.kt`). Before that the app used the implicit flow: the link itself carried the
-  session in the URL fragment (`spotter://login#access_token=…`), and the app imported whatever
-  session a link handed it, so a link crafted by someone else could sign a phone into their
-  account. The audit fix also stops the first sync after a link sign-in from uploading the phone's
-  data to an empty account without asking.
+  (`@supabase/ssr`); the app switched to it in the 2026-10 audit. As implemented in the app:
+  `SupabaseProvider` installs Auth with `flowType = FlowType.PKCE`; `SignInLinks.parse` accepts
+  only `spotter://login?code=…` and ignores everything else, so a link carrying a session in the
+  fragment (`#access_token=…`) is dropped; a password-reset link is recognised from the
+  exchanged token's `amr` claim containing `recovery`, with the old `type=recovery` query
+  parameter as a fallback. The session itself is stored in `EncryptedSharedPreferences` (file
+  `spotter_auth`), with a one-time migration from the previous plain store. Before the audit the
+  app used the implicit flow: the link itself carried the session in the URL fragment, and the
+  app imported whatever session a link handed it, so a link crafted by someone else could sign a
+  phone into their account. The audit fix also stops the first sync after a link sign-in from
+  uploading the phone's data to an empty account without asking: the app asks first.
 - The **code works anywhere.** It's the 6-digit `{{ .Token }}` for the same email, typed into
   the app or the website, and it is tied to the email address, not to a device.
 
@@ -120,19 +125,28 @@ Apply them in one of two ways, both of which record the version in the server's 
 
 **Never paste a migration into the SQL editor.** The SQL runs, but nothing is recorded, so the
 history no longer says what the database contains, and the next `db push` tries to apply the
-file again. That is the state of production today (2026-10-24): all four migrations
-(`20261004000000_sync`, `20261023000000_web_views`, `20261024000000_hardening_and_performance`,
-`20261025000000_scheduled_sessions`) are live, applied through the editor, and the history is
-empty (`list_migrations` returns `[]`). Because every file is re-runnable, `db push` would
-succeed anyway, but the history should say the truth. Repair it once, after linking:
+file again. That is the state of production today (2026-10-24). The files are:
+
+| Version | File | On production |
+|---|---|---|
+| `20261004000000` | `sync.sql` (sync_rows, RLS, first `push_rows`) | applied via the editor |
+| `20261023000000` | `web_views.sql` (typed views for the website) | applied via the editor |
+| `20261024000000` | `hardening_and_performance.sql` (`push_rows` limits, indexes, `v_set_history`) | applied via the editor |
+| `20261025000000` | `scheduled_sessions.sql` (`scheduled_session`, `v_scheduled_session`) | applied via the editor |
+| `20261026000000` | `audit_hardening.sql` (policies with `(select auth.uid())`, `push_rows` checks and row cap, revoked grants, `delete_my_account` cleanup, `v_exercise_usage` which `/library` needs) | **not yet applied**; goes live after the audit review |
+
+The history is empty (`list_migrations` returns `[]`). Because every file is re-runnable,
+`db push` would succeed anyway, but the history should say the truth. Repair it once, after
+linking, naming the four versions that are already live, then push the new one:
 
 ```bash
 supabase migration repair --status applied 20261004000000 20261023000000 20261024000000 20261025000000
-supabase migration list   # local and remote columns should now match
+supabase migration list   # remote should now show the four; 20261026000000 local only
+supabase db push          # applies 20261026000000_audit_hardening.sql and records it
 ```
 
-Then apply new migrations only via `db push` or `apply_migration`. Check `supabase migration
-list` before a push whenever in doubt.
+From then on apply new migrations only via `db push` or `apply_migration`. Check `supabase
+migration list` before a push whenever in doubt.
 
 ## Versioning: keeping app, website and database compatible
 
@@ -145,6 +159,14 @@ Rules that keep that safe:
 2. **Room migrations that add a synced column must give it a default** (`ALTER TABLE … ADD COLUMN
    … DEFAULT …`). Rows written by older apps or by the website won't have the field, and the
    phone inserts with `ContentValues`, so a NOT NULL column without a default would fail there.
+   **Every Room migration must also re-create the sync triggers** through
+   `SyncSchema.TriggerSpec` (the triggers that stamp `updatedAt` and write tombstones are created
+   once, in the database callback, not on every open, so a migration that rebuilds or alters a
+   synced table has to put them back). The schema is at version 8 (7 added scheduled sessions,
+   8 the audit's indexes); the exported JSON lives in `core/data/schemas/`.
+   **The seeded exercise catalog** (`core/data/src/main/assets/exercises.json`) is versioned by
+   `EXERCISE_CATALOG_VERSION` in `ExerciseSeeder`; bump it whenever the JSON changes, or
+   installed apps keep the old catalog.
 3. **The phone ignores payload fields it doesn't know, and skips rows it can't hold**
    (`LocalSyncStore.upsert`), such as a plan exercise using an exercise from a newer catalog,
    so a newer app or the website can't block an older app's sync. Such rows simply don't

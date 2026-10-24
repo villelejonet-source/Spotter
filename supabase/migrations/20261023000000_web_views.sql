@@ -1,3 +1,7 @@
+-- History: first web views. v_session_summary and v_body_weight are redefined in
+-- 20261024000000_hardening_and_performance.sql; the rest still apply. Don't edit: add a new
+-- migration.
+--
 -- Spotter web: typed read views over sync_rows.
 -- Run once in the Supabase dashboard (SQL Editor → New query → paste → Run), after
 -- the sync migration. Safe to re-run.

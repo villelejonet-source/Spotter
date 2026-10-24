@@ -1,3 +1,7 @@
+-- History: push_rows defined here (adds scheduled_session to the allow-list) is superseded by
+-- 20261026000000_audit_hardening.sql, which runs last and keeps the same list. Don't edit:
+-- add a new migration.
+--
 -- Scheduled workouts (app schema 7): workouts planned on dates, from the website's
 -- calendar, shown on the app's Today tab. Safe to re-run.
 --

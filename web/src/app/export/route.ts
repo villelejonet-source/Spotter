@@ -44,14 +44,14 @@ export async function GET(request: NextRequest) {
     getPersonalRecords(),
     getBodyWeight(),
   ]);
-  const setsBySession = Map.groupBy(sets, (s) => s.session_id);
+  const setsBySession = groupBy(sets, (s) => s.session_id);
   const body = {
     exportedAt: new Date().toISOString(),
     profile,
     plans,
     workouts: sessions.map((w) => {
       const own = setsBySession.get(w.sync_id) ?? [];
-      const exercises = Map.groupBy(own, (s) => s.session_exercise_id);
+      const exercises = groupBy(own, (s) => s.session_exercise_id);
       return {
         ...w,
         started_at_iso: iso(w.started_at),
@@ -73,6 +73,18 @@ export async function GET(request: NextRequest) {
   return new NextResponse(JSON.stringify(withoutUserId(body)), {
     headers: { ...NO_STORE, "Content-Type": "application/json", "Content-Disposition": `attachment; filename="spotter-export-${stamp}.json"` },
   });
+}
+
+/** Map.groupBy, which Node 20 (Vercel's default runtime) doesn't have; keeps insertion order. */
+function groupBy<T, K>(items: T[], key: (item: T) => K): Map<K, T[]> {
+  const groups = new Map<K, T[]>();
+  for (const item of items) {
+    const k = key(item);
+    const group = groups.get(k);
+    if (group) group.push(item);
+    else groups.set(k, [item]);
+  }
+  return groups;
 }
 
 /**

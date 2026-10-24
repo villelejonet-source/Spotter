@@ -27,7 +27,9 @@ describe("formatSet", () => {
     expect(formatRecord({ type: "REPS_AT_WEIGHT", value: 1, weight_kg: null, reps: 1, exercise_id: "pull-up" }, "KG")).toBe("1 rep");
     expect(formatSet({ weight_kg: null, reps: 45 }, "plank", "KG")).toBe("45 s");
     expect(formatSet({ weight_kg: 10, reps: 45 }, "plank", "KG")).toBe("10 kg × 45 s");
-    expect(formatSet({ weight_kg: 50, reps: null }, "squat", "KG")).toBe("50 kg × 0");
+    expect(formatSet({ weight_kg: 60, reps: null }, "squat", "KG")).toBe("60 kg");
+    expect(formatSet({ weight_kg: null, reps: null }, "squat", "KG")).toBe("—");
+    expect(formatSet({ weight_kg: null, reps: null }, "plank", "KG")).toBe("—");
   });
 });
 

@@ -2,7 +2,8 @@
 
 import { useState, useTransition } from "react";
 import { planWeeks, removeScheduled, scheduleWorkout } from "@/app/actions/schedule";
-import { Button, inputClass } from "@/components/ui";
+import { Button, Chip, ChipGroup, Field, IconButton, InlineMessage, inputClass } from "@/components/ui";
+import { FREE_WORKOUT } from "@/lib/labels";
 
 export interface PlanOption {
   name: string;
@@ -46,44 +47,50 @@ export function DayPlanner({ epochDay, planned, plans, defaultDayId }: { epochDa
       {planned.length > 0 && (
         <ul className="space-y-2">
           {planned.map((p) => (
-            <li key={p.syncId} className="flex items-start justify-between gap-2 rounded-lg border border-dashed border-outline px-3 py-2 text-sm">
+            <li key={p.syncId} className="flex items-center justify-between gap-2 rounded-lg border border-dashed border-outline-strong py-1 pr-1 pl-3 text-sm">
               <span className="min-w-0">
                 <span className="block font-medium">{p.title}</span>
                 {p.notes && <span className="block text-xs text-muted">{p.notes}</span>}
               </span>
-              <button className="text-muted hover:text-error" title="Remove" aria-label={`Remove ${p.title}`} disabled={pending} onClick={() => remove(p.syncId)}>
+              <IconButton label={`Remove ${p.title}`} className="hover:text-error" disabled={pending} onClick={() => remove(p.syncId)}>
                 ✕
-              </button>
+              </IconButton>
             </li>
           ))}
         </ul>
       )}
       <form onSubmit={add} className="space-y-2">
-        <select className={inputClass} value={dayId} onChange={(e) => setDayId(e.target.value)} aria-label="Workout">
-          {plans.map((plan) => (
-            <optgroup key={plan.name} label={plan.active ? `${plan.name} (active)` : plan.name}>
-              {plan.days.map((d) => (
-                <option key={d.id} value={d.id}>{d.name}</option>
-              ))}
-            </optgroup>
-          ))}
-          <option value="">Free workout</option>
-        </select>
-        <input className={inputClass} placeholder="Note (optional)" maxLength={200} value={notes} onChange={(e) => setNotes(e.target.value)} />
-        <Button variant="primary" className="w-full" disabled={pending}>{pending ? "Saving…" : "Plan this workout"}</Button>
-        {error && <p role="alert" className="text-sm text-error">{error}</p>}
+        <Field label="Workout">
+          <select className={inputClass} value={dayId} onChange={(e) => setDayId(e.target.value)}>
+            {plans.map((plan) => (
+              <optgroup key={plan.name} label={plan.active ? `${plan.name} (active)` : plan.name}>
+                {plan.days.map((d) => (
+                  <option key={d.id} value={d.id}>
+                    {d.name}
+                  </option>
+                ))}
+              </optgroup>
+            ))}
+            <option value="">{FREE_WORKOUT}</option>
+          </select>
+        </Field>
+        <Field label="Note (optional)">
+          <input className={inputClass} maxLength={200} value={notes} onChange={(e) => setNotes(e.target.value)} />
+        </Field>
+        <Button type="submit" variant="primary" className="w-full" disabled={pending}>
+          {pending ? "Saving…" : "Plan this workout"}
+        </Button>
+        {error && <InlineMessage tone="error">{error}</InlineMessage>}
       </form>
     </div>
   );
 }
 
-const WEEKDAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
-
-/** Fills chosen weekdays for 1–4 weeks with the active plan's days, in order. */
-export function PlanAhead({ defaultWeekdays }: { defaultWeekdays: number[] }) {
+/** Fills chosen weekdays for 1–4 weeks with the active plan's days, in order. [weekdays] are the labels, Monday first. */
+export function PlanAhead({ defaultWeekdays, weekdays: labels }: { defaultWeekdays: number[]; weekdays: string[] }) {
   const [weekdays, setWeekdays] = useState(defaultWeekdays);
   const [weeks, setWeeks] = useState(2);
-  const [message, setMessage] = useState<{ tone: "ok" | "error"; text: string } | null>(null);
+  const [message, setMessage] = useState<{ tone: "success" | "error"; text: string } | null>(null);
   const [pending, start] = useTransition();
 
   function submit(e: React.FormEvent) {
@@ -92,35 +99,35 @@ export function PlanAhead({ defaultWeekdays }: { defaultWeekdays: number[] }) {
     start(async () => {
       const result = await planWeeks({ weekdays, weeks });
       if (!result.ok) setMessage({ tone: "error", text: result.error });
-      else setMessage({ tone: "ok", text: result.added ? `Planned ${result.added} workouts.` : "Those days are already planned." });
+      else setMessage({ tone: "success", text: result.added ? `Planned ${result.added} workouts.` : "Those days are already planned." });
     });
   }
 
   return (
     <form onSubmit={submit} className="space-y-3">
-      <div className="flex flex-wrap gap-1">
-        {WEEKDAYS.map((label, i) => {
+      <ChipGroup label="Training days">
+        {labels.map((label, i) => {
           const on = weekdays.includes(i);
           return (
-            <button
-              key={label}
-              type="button"
-              aria-pressed={on}
-              onClick={() => setWeekdays(on ? weekdays.filter((d) => d !== i) : [...weekdays, i].sort())}
-              className={on ? "rounded-full bg-primary-container px-2.5 py-1 text-xs text-on-primary-container" : "rounded-full bg-surface-high px-2.5 py-1 text-xs text-muted"}
-            >
+            <Chip key={label} on={on} onClick={() => setWeekdays(on ? weekdays.filter((d) => d !== i) : [...weekdays, i].sort())}>
               {label}
-            </button>
+            </Chip>
           );
         })}
-      </div>
-      <select className={inputClass} value={weeks} onChange={(e) => setWeeks(Number(e.target.value))} aria-label="How many weeks">
-        {[1, 2, 3, 4].map((w) => (
-          <option key={w} value={w}>{w === 1 ? "Next 7 days" : `Next ${w} weeks`}</option>
-        ))}
-      </select>
-      <Button className="w-full" disabled={pending || !weekdays.length}>{pending ? "Planning…" : "Plan weeks ahead"}</Button>
-      {message && <p role={message.tone === "error" ? "alert" : "status"} className={message.tone === "error" ? "text-sm text-error" : "text-sm text-muted"}>{message.text}</p>}
+      </ChipGroup>
+      <Field label="How far ahead">
+        <select className={inputClass} value={weeks} onChange={(e) => setWeeks(Number(e.target.value))}>
+          {[1, 2, 3, 4].map((w) => (
+            <option key={w} value={w}>
+              {w === 1 ? "Next 7 days" : `Next ${w} weeks`}
+            </option>
+          ))}
+        </select>
+      </Field>
+      <Button type="submit" className="w-full" disabled={pending || !weekdays.length}>
+        {pending ? "Planning…" : "Plan weeks ahead"}
+      </Button>
+      {message && <InlineMessage tone={message.tone}>{message.text}</InlineMessage>}
     </form>
   );
 }

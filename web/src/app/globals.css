@@ -1,21 +1,41 @@
 @import "tailwindcss";
 
-/* The app's Material 3 colour scheme (core/ui theme/Color.kt). */
+/*
+ * The app's Material 3 colour scheme (core/ui theme/Color.kt), one token per role so a
+ * token means the same thing in light and dark:
+ *   --background        background / surface
+ *   --surface-lowest    surfaceContainerLowest   inputs
+ *   --surface-low       surfaceContainerLow      content cards (the app's card colour)
+ *   --surface           surfaceContainer         dialogs, hover
+ *   --surface-high      surfaceContainerHigh     stat tiles, chips, placeholders
+ *   --muted             onSurfaceVariant         secondary text
+ *   --outline           outlineVariant           dividers and card borders
+ *   --outline-strong    outline                  input borders
+ */
 :root {
+  color-scheme: light dark;
   --primary: #9a4521;
   --on-primary: #ffffff;
   --primary-container: #ffdbcd;
   --on-primary-container: #380d00;
   --tertiary: #6a5e2f;
+  --on-tertiary: #ffffff;
   --tertiary-container: #f3e2a7;
+  --on-tertiary-container: #221b00;
   --error: #ba1a1a;
+  --on-error: #ffffff;
+  --error-container: #ffdad6;
+  --on-error-container: #410002;
   --background: #fff8f6;
   --foreground: #231a16;
   --muted: #53433e;
   --outline: #d8c2ba;
-  --surface: #ffffff;
+  --outline-strong: #85736c;
+  --surface-lowest: #ffffff;
   --surface-low: #fff1ec;
+  --surface: #fceae4;
   --surface-high: #f6e5de;
+  --scrim: rgb(0 0 0 / 0.4);
 }
 
 @media (prefers-color-scheme: dark) {
@@ -25,15 +45,23 @@
     --primary-container: #7b2e0c;
     --on-primary-container: #ffdbcd;
     --tertiary: #d6c68d;
+    --on-tertiary: #393005;
     --tertiary-container: #51461a;
+    --on-tertiary-container: #f3e2a7;
     --error: #ffb4ab;
+    --on-error: #690005;
+    --error-container: #93000a;
+    --on-error-container: #ffdad6;
     --background: #1a110e;
     --foreground: #f1dfd9;
     --muted: #d8c2ba;
     --outline: #53433e;
-    --surface: #271e1a;
+    --outline-strong: #a08d86;
+    --surface-lowest: #140c09;
     --surface-low: #231a16;
+    --surface: #271e1a;
     --surface-high: #322824;
+    --scrim: rgb(0 0 0 / 0.6);
   }
 }
 
@@ -43,17 +71,24 @@
   --color-primary-container: var(--primary-container);
   --color-on-primary-container: var(--on-primary-container);
   --color-tertiary: var(--tertiary);
+  --color-on-tertiary: var(--on-tertiary);
   --color-tertiary-container: var(--tertiary-container);
+  --color-on-tertiary-container: var(--on-tertiary-container);
   --color-error: var(--error);
+  --color-on-error: var(--on-error);
+  --color-error-container: var(--error-container);
+  --color-on-error-container: var(--on-error-container);
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --color-muted: var(--muted);
   --color-outline: var(--outline);
-  --color-surface: var(--surface);
+  --color-outline-strong: var(--outline-strong);
+  --color-surface-lowest: var(--surface-lowest);
   --color-surface-low: var(--surface-low);
+  --color-surface: var(--surface);
   --color-surface-high: var(--surface-high);
+  --color-scrim: var(--scrim);
   --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
 }
 
 body {
@@ -64,6 +99,16 @@ body {
 input,
 select,
 textarea {
-  background: var(--surface);
+  background: var(--surface-lowest);
   color: var(--foreground);
+}
+
+/* Keyboard focus is visible on everything interactive; mouse clicks don't draw it. */
+:where(a, button, input, select, textarea, summary, [tabindex]):focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
+}
+
+dialog::backdrop {
+  background: var(--scrim);
 }

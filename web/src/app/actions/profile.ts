@@ -24,9 +24,9 @@ const RELOAD = "Reload the page and try again.";
 const versionSchema = z.number().int().nonnegative();
 
 /**
- * Saves the training profile. Only an existing profile is edited; onboarding stays in the
- * app. [baseUpdatedAt] is the version the form loaded, so a change made on the phone in
- * the meantime isn't overwritten.
+ * Saves the training profile. [baseUpdatedAt] is the version the form loaded, so a change
+ * made on the phone in the meantime isn't overwritten. A web-first account has no profile
+ * yet: the form then sends 0 and the row is created (the app adopts it on its next sync).
  */
 export async function updateProfile(input: ProfileDraft, baseUpdatedAt: number): Promise<ActionResult> {
   await requireUser();
@@ -35,19 +35,20 @@ export async function updateProfile(input: ProfileDraft, baseUpdatedAt: number):
   const base = versionSchema.safeParse(baseUpdatedAt);
   if (!base.success) return { ok: false, error: RELOAD };
   const current = await getProfile();
-  if (!current) return { ok: false, error: "Set up your profile in the app first." };
-  if (current.updated_at > base.data) {
+  if (current && current.updated_at > base.data) {
     return { ok: false, error: "Your profile changed on another device since you opened this page. Reload to get the latest version." };
   }
+  // The form loaded a profile that is gone now (deleted on the phone, or another account).
+  if (!current && base.data !== 0) return { ok: false, error: RELOAD };
   try {
-    await push([profileRow(parsed.data, current.updated_at)]);
+    await push([profileRow(parsed.data, current?.updated_at)]);
   } catch (e) {
     return { ok: false, error: saveErrorMessage(e) };
   }
   return { ok: true };
 }
 
-function profileRow(p: ProfileDraft, previous: number): SyncRowInput {
+function profileRow(p: ProfileDraft, previous?: number): SyncRowInput {
   return { table_name: "user_profile", sync_id: PROFILE_SYNC_ID, payload: profilePayload(p), updated_at: stamp(Date.now(), previous), deleted_at: null };
 }
 

@@ -207,16 +207,21 @@ export function formatDuration(ms: number): string {
   return `${Math.floor(minutes / 60)} h ${minutes % 60} min`;
 }
 
+/** "1 rep", "12 reps". */
+export function formatReps(reps: number): string {
+  return `${reps} ${reps === 1 ? "rep" : "reps"}`;
+}
+
 /**
- * A set as the app shows it: "82.5 kg × 6", "12 reps" for bodyweight, and for a hold
- * "45 s" or "10 kg × 45 s" (formatSet).
+ * A set as the app shows it: "82.5 kg × 6", "12 reps" (or "1 rep") for bodyweight, and
+ * for a hold "45 s" or "10 kg × 45 s" (formatSet).
  */
 export function formatSet(set: { weight_kg: number | null; reps: number | null }, exerciseId: string, unit: WeightUnit): string {
   const timed = isTimed(exerciseId);
   const r = set.reps ?? 0;
   const amount = timed ? `${r} s` : `${r}`;
   if (set.weight_kg != null) return `${formatWeight(set.weight_kg, unit)} × ${amount}`;
-  return timed ? amount : `${r} reps`;
+  return timed ? amount : formatReps(r);
 }
 
 /** The headline value of a record: "101 kg", "82.5 kg × 9" or "2,080 kg" (formatRecordValue). */

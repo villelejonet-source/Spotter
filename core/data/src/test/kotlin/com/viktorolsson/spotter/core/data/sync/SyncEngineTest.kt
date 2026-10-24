@@ -75,7 +75,7 @@ class SyncEngineTest {
             Room.inMemoryDatabaseBuilder(ApplicationProvider.getApplicationContext<Context>(), SpotterDatabase::class.java),
         ).allowMainThreadQueries().build()
         val clock = MutableClock(Instant.parse("2026-10-03T10:00:00Z"))
-        val prefs = testPreferences()
+        val prefs = testPreferences(db)
         val workouts = WorkoutRepository(db, db.workoutDao(), db.planDao(), db.exerciseDao(), prefs, clock)
         val plans = PlanRepository(db, db.planDao())
         val profiles = UserProfileRepository(db.userProfileDao())
@@ -87,7 +87,7 @@ class SyncEngineTest {
             parseExerciseSeed(File("src/main/assets/exercises.json").readText()).exercises.map(SeedExercise::toEntity),
         )
 
-        suspend fun sync(choice: FirstSyncChoice? = null) = engine.sync(USER, choice)
+        suspend fun sync(choice: FirstSyncChoice? = null, fromLink: Boolean = false) = engine.sync(USER, choice, fromLink)
 
         suspend fun sessions() = db.workoutDao().observeFinishedSessions().first().map { it.toModel() }
     }
@@ -208,11 +208,56 @@ class SyncEngineTest {
 
         val b = device()
         b.planFor(profile.copy(daysPerWeek = 3)) // b went through onboarding first
-        assertEquals(SyncOutcome.NeedsChoice, b.sync())
+        assertEquals(SyncOutcome.NeedsChoice(), b.sync())
 
         b.sync(FirstSyncChoice.USE_BACKUP)
         assertEquals(4, b.plans.observeActivePlan().first()!!.days.size) // A's plan, B's own is gone
         assertEquals(1, b.db.openHelper.readableDatabase.query("SELECT COUNT(*) FROM plan").use { it.moveToFirst(); it.getInt(0) })
+        assertEquals(1, b.sessions().size)
+    }
+
+    @Test
+    fun aLinkSignInAsksBeforeUploadingToAnEmptyAccount() = runTest {
+        val a = device()
+        a.planFor(profile)
+        a.logWorkout()
+        // Tapped a sign-in link: the account could be anyone's, so nothing is pushed unasked.
+        assertEquals(SyncOutcome.NeedsChoice(fromLink = true), a.sync(fromLink = true))
+        assertEquals(false, remote.hasRows())
+        // Any explicit choice means "go ahead"; a typed password or code never asks.
+        assertEquals(SyncOutcome.Done::class, a.engine.sync(USER, FirstSyncChoice.MERGE, fromLink = true)::class)
+        assertEquals(true, remote.hasRows())
+
+        val b = device()
+        b.logWorkout()
+        assertEquals(SyncOutcome.NeedsChoice(fromLink = false), b.sync(fromLink = true)) // backup exists: the usual question
+    }
+
+    @Test
+    fun unitsFollowTheProfileBothWays() = runTest {
+        val a = device()
+        a.profiles.save(profile)
+        a.prefs.setWeightUnit(WeightUnit.LB) // the preference change reaches the synced profile
+        assertEquals(WeightUnit.LB, a.profiles.get()!!.units)
+        a.sync()
+
+        val b = device()
+        b.sync()
+        assertEquals(WeightUnit.LB, b.profiles.get()!!.units) // SyncRepository mirrors this into the preference after a sync
+    }
+
+    @Test
+    fun aLargeBackupIsAppliedPageByPage() = runTest {
+        val a = device()
+        a.planFor(profile)
+        repeat(12) { a.bodyWeight.log(LocalDate.of(2026, 1, 1).plusDays(it.toLong()), 80.0 + it) }
+        a.logWorkout()
+        a.sync()
+        val b = device()
+        val outcome = b.sync() as SyncOutcome.Done
+        assertTrue(outcome.pulled > 0)
+        assertEquals(12, b.bodyWeight.observeTrend().first().size)
+        assertEquals(a.plans.observeActivePlan().first()!!.days.size, b.plans.observeActivePlan().first()!!.days.size)
         assertEquals(1, b.sessions().size)
     }
 

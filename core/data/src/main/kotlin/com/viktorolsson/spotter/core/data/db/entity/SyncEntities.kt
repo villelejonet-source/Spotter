@@ -2,10 +2,11 @@ package com.viktorolsson.spotter.core.data.db.entity
 
 import androidx.room.ColumnInfo
 import androidx.room.Entity
+import androidx.room.Index
 import androidx.room.PrimaryKey
 
 /** A deleted synced row, recorded by a trigger so the deletion reaches other devices. */
-@Entity(tableName = "sync_tombstone", primaryKeys = ["tableName", "syncId"])
+@Entity(tableName = "sync_tombstone", primaryKeys = ["tableName", "syncId"], indices = [Index("deletedAt")])
 data class SyncTombstoneEntity(
     val tableName: String,
     val syncId: String,

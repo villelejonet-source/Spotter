@@ -3,7 +3,7 @@ import Link from "next/link";
 import { Card, CardTitle, IconLink, LinkButton, OutlinePill, PageHeader } from "@/components/ui";
 import { exerciseName } from "@/lib/catalog";
 import { groupBy } from "@/lib/collections";
-import { getCatalog, getPlans, getProfile, getScheduled, getSessions } from "@/lib/data";
+import { getActivePlan, getCatalog, getPlanOutlines, getProfile, getScheduled, getSessions } from "@/lib/data";
 import { formatDateValue, formatDateValueMonth, formatTime, weekdayLabels } from "@/lib/dates";
 import { FREE_WORKOUT, WORKOUT } from "@/lib/labels";
 import { formatVolume } from "@/lib/model";
@@ -52,12 +52,15 @@ export default async function CalendarPage({ searchParams }: { searchParams: Pro
 
   // The grid's days as a started_at window, padded a day each side for the zone offset
   // and narrowed exactly below; the plan rotation looks back 12 weeks.
-  const [sessions, recent, scheduled, [nextPlanned], plans, profile, catalog] = await Promise.all([
+  // Plan and day names label the cells; only the active plan's exercises are loaded.
+  // A planned workout already started in the app shows as the workout itself, so only open ones are fetched.
+  const [sessions, recent, scheduled, [nextPlanned], plans, activePlan, profile, catalog] = await Promise.all([
     getSessions({ since: gridStart - DAY_MS, until: gridEnd + DAY_MS }),
     getSessions({ since: windowStart(12) }),
-    getScheduled({ fromDay: gridStart / DAY_MS, toDay: gridEnd / DAY_MS - 1 }),
+    getScheduled({ fromDay: gridStart / DAY_MS, toDay: gridEnd / DAY_MS - 1, open: true }),
     getScheduled({ fromDay: today / DAY_MS, open: true, limit: 1 }),
-    getPlans(),
+    getPlanOutlines(),
+    getActivePlan(),
     getProfile(),
     getCatalog(),
   ]);
@@ -67,11 +70,7 @@ export default async function CalendarPage({ searchParams }: { searchParams: Pro
     return d >= gridStart && d < gridEnd;
   });
   const byDay = groupBy(inGrid, (s) => dayKey(s.started_at));
-  // A planned workout that was started in the app shows as the workout itself, so only open ones are drawn.
-  const plannedByDay = groupBy(
-    scheduled.filter((s) => s.session_id == null),
-    (s) => dateValueKey(s.epoch_day * DAY_MS),
-  );
+  const plannedByDay = groupBy(scheduled, (s) => dateValueKey(s.epoch_day * DAY_MS));
 
   const days = new Map(plans.flatMap((p) => p.days.map((d) => [d.sync_id, d] as const)));
   const colourIndex = (planDayId: string | null) => (planDayId != null && days.has(planDayId) ? days.get(planDayId)!.position % DAY_COLOURS.length : null);
@@ -89,7 +88,6 @@ export default async function CalendarPage({ searchParams }: { searchParams: Pro
     const d = localDate(s.started_at);
     return d >= first && d < first + daysInMonth * DAY_MS && s.ended_at != null;
   });
-  const activePlan = plans.find((p) => p.is_active);
   const nextDay = activePlan ? nextPlanDay(activePlan.days, recent) : null;
   const planOptions: PlanOption[] = plans.map((p) => ({ name: p.name, active: p.is_active, days: p.days.map((d) => ({ id: d.sync_id, name: d.name })) }));
   const selectedKey = selected != null ? dateValueKey(selected) : null;

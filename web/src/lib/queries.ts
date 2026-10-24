@@ -32,6 +32,7 @@ interface QueryBuilder<T = Record<string, unknown>> extends PromiseLike<{ data: 
   in(column: string, values: readonly unknown[]): QueryBuilder<T>;
   is(column: string, value: null | boolean): QueryBuilder<T>;
   not(column: string, operator: string, value: unknown): QueryBuilder<T>;
+  or(filters: string): QueryBuilder<T>;
   order(column: string, options?: { ascending?: boolean }): QueryBuilder<T>;
   limit(count: number): QueryBuilder<T>;
   maybeSingle(): PromiseLike<{ data: T | null; error: QueryError | null }>;
@@ -51,26 +52,31 @@ function fail(view: string, error: QueryError): never {
 
 /**
  * Every matching row of a view, paging past PostgREST's row limit by key (each page
- * continues after the last key, so deep pages stay as cheap as the first). [key] must be
- * unique per row within the filter.
+ * continues after the last key, so deep pages stay as cheap as the first). When [key] can
+ * repeat (started_at), pass a unique [tiebreak] column: it joins the order and the cursor,
+ * so rows that tie across a page boundary aren't skipped. Both must be in [columns].
  */
 export async function selectAll<T>(
   client: QueryClient,
   view: string,
-  { filter, key = "sync_id", columns = "*" }: { filter?: Filter; key?: string; columns?: string } = {},
+  { filter, key = "sync_id", tiebreak, columns = "*" }: { filter?: Filter; key?: string; tiebreak?: string; columns?: string } = {},
 ): Promise<T[]> {
   const rows: T[] = [];
-  let after: unknown = null;
+  let after: Record<string, unknown> | null = null;
   for (;;) {
     let q = client.from(view).select(columns);
     if (filter) q = filter(q);
-    if (after != null) q = q.gt(key, after);
-    const { data, error } = await q.order(key).limit(PAGE);
+    if (after != null) {
+      q = tiebreak ? q.or(`${key}.gt.${after[key]},and(${key}.eq.${after[key]},${tiebreak}.gt.${after[tiebreak]})`) : q.gt(key, after[key]);
+    }
+    q = q.order(key);
+    if (tiebreak) q = q.order(tiebreak);
+    const { data, error } = await q.limit(PAGE);
     if (error) fail(view, error);
     const page = (data ?? []) as (T & Record<string, unknown>)[];
     rows.push(...page);
     if (page.length < PAGE) return rows;
-    after = page[page.length - 1][key];
+    after = page[page.length - 1];
   }
 }
 
@@ -140,13 +146,13 @@ export async function sessions(client: QueryClient, query: SessionsQuery = {}): 
   if (query.limit != null) {
     return selectPage<SessionSummaryRow>(client, "v_session_summary", { filter: sessionFilter(query), order: "started_at", descending: true, limit: query.limit });
   }
-  const rows = await selectAll<SessionSummaryRow>(client, "v_session_summary", { filter: sessionFilter(query), key: "started_at" });
+  const rows = await selectAll<SessionSummaryRow>(client, "v_session_summary", { filter: sessionFilter(query), key: "started_at", tiebreak: "sync_id" });
   return rows.reverse();
 }
 
 /** When each session happened (three columns), oldest first: for streaks, heatmaps and counts. */
 export async function sessionTimes(client: QueryClient, since?: number): Promise<SessionTimeRow[]> {
-  return selectAll<SessionTimeRow>(client, "v_session_summary", { filter: sessionFilter({ since }), key: "started_at", columns: "sync_id,started_at,ended_at" });
+  return selectAll<SessionTimeRow>(client, "v_session_summary", { filter: sessionFilter({ since }), key: "started_at", tiebreak: "sync_id", columns: "sync_id,started_at,ended_at" });
 }
 
 /** Finished workouts, all time. */
@@ -336,6 +342,26 @@ async function trees(client: QueryClient, rows: PlanRow[]): Promise<PlanTree[]> 
     ? await selectAll<PlanExerciseRow>(client, "v_plan_exercise", { filter: (q) => q.in("plan_day_id", days.map((d) => d.sync_id)) })
     : [];
   return assemble(rows, days, exercises);
+}
+
+export interface PlanOutline {
+  sync_id: string;
+  name: string;
+  is_active: boolean;
+  days: Pick<PlanDayRow, "sync_id" | "position" | "name">[];
+}
+
+/** Every plan's name and its days' names and order, without exercises (the calendar's labels and planner). Active first. */
+export async function planOutlines(client: QueryClient): Promise<PlanOutline[]> {
+  const [p, d] = await Promise.all([
+    selectAll<Pick<PlanRow, "sync_id" | "name" | "is_active" | "created_at">>(client, "v_plan", { columns: "sync_id,name,is_active,created_at" }),
+    selectAll<Pick<PlanDayRow, "sync_id" | "plan_id" | "position" | "name">>(client, "v_plan_day", { columns: "sync_id,plan_id,position,name" }),
+  ]);
+  const daysByPlan = new Map<string, PlanOutline["days"]>();
+  for (const day of d) daysByPlan.set(day.plan_id, [...(daysByPlan.get(day.plan_id) ?? []), { sync_id: day.sync_id, position: day.position, name: day.name }]);
+  return p
+    .sort((a, b) => Number(b.is_active) - Number(a.is_active) || b.created_at - a.created_at)
+    .map((plan) => ({ sync_id: plan.sync_id, name: plan.name, is_active: plan.is_active, days: (daysByPlan.get(plan.sync_id) ?? []).sort((a, b) => a.position - b.position) }));
 }
 
 /** One plan with its days and exercises, or null. */

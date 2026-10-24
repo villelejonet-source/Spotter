@@ -67,6 +67,9 @@ export const getPlanSyncIds = async () => q.planSyncIds(await client());
 /** All plans with their days and exercises, active plan first. */
 export const getPlans = cache(async () => q.plans(await client()));
 
+/** Plan and day names only, no exercises. */
+export const getPlanOutlines = cache(async () => q.planOutlines(await client()));
+
 export const getPlan = cache(async (syncId: string) => q.plan(await client(), syncId));
 
 export const getActivePlan = cache(async () => q.activePlan(await client()));

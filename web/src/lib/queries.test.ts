@@ -18,6 +18,7 @@ function mockClient(rows: Record<string, unknown[]> = {}, count = 0) {
         in: (...a: unknown[]) => record("in", a),
         is: (...a: unknown[]) => record("is", a),
         not: (...a: unknown[]) => record("not", a),
+        or: (...a: unknown[]) => record("or", a),
         order: (...a: unknown[]) => record("order", a),
         limit: (...a: unknown[]) => record("limit", a),
         maybeSingle: async () => ({ data: (rows[view]?.[0] as Record<string, unknown>) ?? null, error: null }),
@@ -50,7 +51,7 @@ describe("sessions", () => {
     const m = mockClient({ v_session_summary: [{ started_at: 1 }, { started_at: 2 }] });
     const rows = await q.sessions(m.client, { since: 50 });
     expect(rows.map((r) => r.started_at)).toEqual([2, 1]);
-    expect(m.chainOf("v_session_summary")).toEqual([["select", "*"], ["gte", "started_at", 50], ["order", "started_at"], ["limit", 1000]]);
+    expect(m.chainOf("v_session_summary")).toEqual([["select", "*"], ["gte", "started_at", 50], ["order", "started_at"], ["order", "sync_id"], ["limit", 1000]]);
   });
 
   it("loads only three columns for session times and counts finished ones without rows", async () => {
@@ -84,6 +85,33 @@ describe("selectAll", () => {
     const rows = await q.selectAll<{ sync_id: string }>(client, "v_plan");
     expect(rows).toHaveLength(1001);
     expect(served).toBe(2);
+  });
+
+  it("breaks ties on a repeating key with sync_id, so a tie across pages isn't skipped", async () => {
+    // A full page ending at started_at 5 / sync_id "m"; the next page must ask for (5, > "m") as well as > 5.
+    const page = Array.from({ length: 1000 }, (_, i) => ({ started_at: i < 999 ? i : 5, sync_id: i < 999 ? `a${i}` : "m" }));
+    const chains: unknown[][][] = [];
+    let served = 0;
+    const client: q.QueryClient = {
+      from: () => {
+        const chain: unknown[][] = [];
+        chains.push(chain);
+        const b = {
+          select: () => b,
+          gte: () => b,
+          or: (...a: unknown[]) => (chain.push(["or", ...a]), b),
+          gt: (...a: unknown[]) => (chain.push(["gt", ...a]), b),
+          order: (...a: unknown[]) => (chain.push(["order", ...a]), b),
+          limit: () => b,
+          then: (resolve: (v: unknown) => unknown) => Promise.resolve({ data: served++ === 0 ? page : [{ started_at: 5, sync_id: "z" }], error: null }).then(resolve),
+        };
+        return b as unknown as ReturnType<q.QueryClient["from"]>;
+      },
+    };
+    const rows = await q.sessions(client, { since: 0 });
+    expect(rows).toHaveLength(1001);
+    expect(chains[0]).toEqual([["order", "started_at"], ["order", "sync_id"]]);
+    expect(chains[1]).toEqual([["or", "started_at.gt.5,and(started_at.eq.5,sync_id.gt.m)"], ["order", "started_at"], ["order", "sync_id"]]);
   });
 
   it("throws with the view's name when the server answers with an error", async () => {

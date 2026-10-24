@@ -3,6 +3,8 @@ import { resolve } from "node:path";
 import { describe, expect, it } from "vitest";
 import {
   activatePlanRows,
+  planWeeksAhead,
+  scheduledPayload,
   CHANGED_ELSEWHERE,
   planConflict,
   planVersions,
@@ -83,6 +85,7 @@ describe("payloads match the Room entities", () => {
       }),
     ],
     ["body_weight_entry", bodyWeightPayload(20000, 70)],
+    ["scheduled_session", scheduledPayload({ epoch_day: 20750, plan_day_id: newSyncId(), notes: null })],
   ])("%s", (table, payload) => {
     // Custom exercises and the profile keep their own id column (LocalSyncStore.keepsLocalId).
     const columns = roomColumns(table, table === "exercise" || table === "user_profile");
@@ -268,5 +271,26 @@ describe("planConflict", () => {
 
   it("allows a brand-new plan", () => {
     expect(planConflict(null, draft(), {}, new Set())).toBeNull();
+  });
+});
+
+describe("planWeeksAhead", () => {
+  // 2026-10-26 is a Monday: epoch day 20752.
+  const monday = 20752;
+
+  it("puts the plan's days on the chosen weekdays, continuing the rotation", () => {
+    const out = planWeeksAhead({ fromDay: monday, weeks: 2, weekdays: [0, 2, 4], dayIds: ["a", "b"], nextDayIndex: 1, taken: new Set() });
+    expect(out.map((o) => [o.epoch_day - monday, o.plan_day_id])).toEqual([
+      [0, "b"], [2, "a"], [4, "b"], [7, "a"], [9, "b"], [11, "a"],
+    ]);
+  });
+
+  it("skips dates that already have a workout without using up a day", () => {
+    const out = planWeeksAhead({ fromDay: monday, weeks: 1, weekdays: [0, 2], dayIds: ["a", "b"], nextDayIndex: 0, taken: new Set([monday]) });
+    expect(out).toEqual([{ epoch_day: monday + 2, plan_day_id: "a" }]);
+  });
+
+  it("does nothing without days or weekdays", () => {
+    expect(planWeeksAhead({ fromDay: monday, weeks: 4, weekdays: [], dayIds: ["a"], nextDayIndex: 0, taken: new Set() })).toEqual([]);
   });
 });

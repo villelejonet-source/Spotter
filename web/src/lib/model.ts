@@ -173,6 +173,18 @@ export interface PersonalRecordRow {
   session_id: string | null;
 }
 
+/** Row of v_scheduled_session: a workout planned on a date (app schema 7). */
+export interface ScheduledRow {
+  sync_id: string;
+  epoch_day: number;
+  /** Null for a free workout; may point at a deleted plan day. */
+  plan_day_id: string | null;
+  notes: string | null;
+  /** Set once the workout was started in the app. */
+  session_id: string | null;
+  updated_at: number;
+}
+
 export interface BodyWeightRow {
   sync_id: string;
   epoch_day: number;

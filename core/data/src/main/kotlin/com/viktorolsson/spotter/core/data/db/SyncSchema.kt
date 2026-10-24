@@ -21,6 +21,11 @@ object SyncSchema {
         val newSyncId: String = RANDOM_ID,
         /** Only rows matching this (NEW.* / OLD.* style, with the prefix substituted) are synced. */
         val condition: String? = null,
+        /**
+         * Schema version the table was added in. Tables added after 6 are created with
+         * their sync columns, so MIGRATION_5_6 must leave them out.
+         */
+        val since: Int = 6,
     )
 
     /**
@@ -36,6 +41,7 @@ object SyncSchema {
         Table("plan_day"),
         Table("plan_exercise"),
         Table("workout_session"),
+        Table("scheduled_session", since = 7),
         Table("session_exercise"),
         Table("set_entry"),
         Table("personal_record"),
@@ -46,9 +52,10 @@ object SyncSchema {
     private const val RANDOM_ID = "lower(hex(randomblob(16)))"
     private const val ACTIVE = "(SELECT applying FROM sync_state WHERE id = 1) = 0"
 
-    fun createTriggers(db: SupportSQLiteDatabase) {
+    /** [upTo]: only tables that exist at that schema version (for migrations). */
+    fun createTriggers(db: SupportSQLiteDatabase, upTo: Int = Int.MAX_VALUE) {
         db.execSQL("INSERT OR IGNORE INTO sync_state (id, applying) VALUES (1, 0)")
-        tables.forEach { t ->
+        tables.filter { it.since <= upTo }.forEach { t ->
             val newCond = t.condition?.replace("%", "NEW")?.let { " AND $it" }.orEmpty()
             val oldCond = t.condition?.replace("%", "OLD")?.let { " AND $it" }.orEmpty()
             db.execSQL(
@@ -85,7 +92,7 @@ object SyncSchema {
     /** Schema 5 → 6: sync columns, ids for existing rows, tombstones, triggers. */
     val MIGRATION_5_6 = object : Migration(5, 6) {
         override fun migrate(db: SupportSQLiteDatabase) {
-            tables.forEach { t ->
+            tables.filter { it.since <= 6 }.forEach { t ->
                 db.execSQL("ALTER TABLE ${t.name} ADD COLUMN syncId TEXT")
                 db.execSQL("ALTER TABLE ${t.name} ADD COLUMN updatedAt INTEGER NOT NULL DEFAULT 0")
                 val id = t.newSyncId.replace("NEW.", "")
@@ -98,7 +105,7 @@ object SyncSchema {
                     "deletedAt INTEGER NOT NULL, PRIMARY KEY(tableName, syncId))",
             )
             db.execSQL("CREATE TABLE IF NOT EXISTS sync_state (id INTEGER NOT NULL, applying INTEGER NOT NULL DEFAULT 0, PRIMARY KEY(id))")
-            createTriggers(db)
+            createTriggers(db, upTo = 6)
         }
     }
 }

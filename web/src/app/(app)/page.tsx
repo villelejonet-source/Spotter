@@ -2,18 +2,19 @@ import Link from "next/link";
 import { BarChartView } from "@/components/charts";
 import { Badge, Card, CardTitle, EmptyState, LinkButton, PageHeader, Stat } from "@/components/ui";
 import { exerciseName } from "@/lib/catalog";
-import { getCatalog, getPersonalRecords, getPlans, getProfile, getSessions } from "@/lib/data";
+import { getCatalog, getPersonalRecords, getPlans, getProfile, getScheduled, getSessions } from "@/lib/data";
 import { formatDateValue, formatRelative } from "@/lib/dates";
 import { formatDuration, formatVolume, formatWeight, PR_LABELS, toUnit } from "@/lib/model";
-import { finished, nextPlanDay, weekStreak, weeklyTotals } from "@/lib/stats";
+import { finished, localDate, nextPlanDay, weekStreak, weeklyTotals } from "@/lib/stats";
 
 export default async function DashboardPage() {
-  const [profile, sessions, plans, records, catalog] = await Promise.all([
+  const [profile, sessions, plans, records, catalog, scheduled] = await Promise.all([
     getProfile(),
     getSessions(),
     getPlans(),
     getPersonalRecords(),
     getCatalog(),
+    getScheduled(),
   ]);
   const unit = profile?.units ?? "KG";
   const done = finished(sessions);
@@ -35,7 +36,12 @@ export default async function DashboardPage() {
   const target = profile?.days_per_week;
   const streak = weekStreak(sessions);
   const activePlan = plans.find((p) => p.is_active);
-  const nextDay = activePlan ? nextPlanDay(activePlan.days, sessions) : null;
+  // A workout planned on the calendar comes first; otherwise the plan's rotation.
+  const finishedIds = new Set(sessions.filter((s) => s.ended_at != null).map((s) => s.sync_id));
+  const todayDay = localDate(Date.now()) / 86_400_000;
+  const planned = scheduled.find((s) => s.epoch_day >= todayDay && !(s.session_id && finishedIds.has(s.session_id)));
+  const plannedDay = planned?.plan_day_id ? plans.flatMap((p) => p.days).find((d) => d.sync_id === planned.plan_day_id) : undefined;
+  const nextDay = planned ? (plannedDay ?? null) : activePlan ? nextPlanDay(activePlan.days, sessions) : null;
   const last = done[0];
   const fourWeekVolume = weeks.slice(-4).reduce((s, w) => s + w.volumeKg, 0);
 
@@ -67,9 +73,17 @@ export default async function DashboardPage() {
           <CardTitle action={activePlan && <Link className="text-sm text-primary" href={`/plans/${activePlan.sync_id}`}>Edit</Link>}>
             Up next
           </CardTitle>
-          {activePlan && nextDay ? (
+          {planned && !nextDay ? (
             <>
-              <div className="text-xs text-muted">{activePlan.name}</div>
+              <div className="text-xs text-muted">Planned for {planned.epoch_day === todayDay ? "today" : formatDateValue(planned.epoch_day * 86_400_000)}</div>
+              <div className="mt-1 text-xl font-semibold">Free workout</div>
+              {planned.notes && <p className="mt-2 text-sm text-muted">{planned.notes}</p>}
+            </>
+          ) : nextDay ? (
+            <>
+              <div className="text-xs text-muted">
+                {planned ? `Planned for ${planned.epoch_day === todayDay ? "today" : formatDateValue(planned.epoch_day * 86_400_000)}` : activePlan?.name}
+              </div>
               <div className="mt-1 text-xl font-semibold">{nextDay.name}</div>
               <ul className="mt-3 space-y-1.5 text-sm">
                 {nextDay.exercises.map((e) => (
@@ -81,6 +95,7 @@ export default async function DashboardPage() {
                   </li>
                 ))}
               </ul>
+              {planned?.notes && <p className="mt-3 text-sm text-muted">{planned.notes}</p>}
             </>
           ) : (
             <div className="text-sm text-muted">

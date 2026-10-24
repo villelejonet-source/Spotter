@@ -140,6 +140,21 @@ class MigrationTest {
         }
     }
 
+    @Test
+    fun migrate6To7AddsScheduledSessionsThatSync() {
+        helper.createDatabase(DB, 6).close()
+        helper.runMigrationsAndValidate(DB, 7, true).use { db ->
+            // The app installs sync triggers on every open; do the same here.
+            com.viktorolsson.spotter.core.data.db.SyncSchema.createTriggers(db)
+            db.execSQL("INSERT INTO scheduled_session (date, planDayId, notes, sessionId) VALUES (20000, NULL, 'Easy day', NULL)")
+            db.query("SELECT syncId, updatedAt FROM scheduled_session").use {
+                it.moveToFirst()
+                assertEquals(32, it.getString(0).length)
+                assertEquals(true, it.getLong(1) > 0)
+            }
+        }
+    }
+
     private companion object {
         const val DB = "migration-test"
     }

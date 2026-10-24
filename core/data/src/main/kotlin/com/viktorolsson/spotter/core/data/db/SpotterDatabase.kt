@@ -8,6 +8,7 @@ import androidx.sqlite.db.SupportSQLiteDatabase
 import com.viktorolsson.spotter.core.data.db.dao.ExerciseDao
 import com.viktorolsson.spotter.core.data.db.dao.PlanDao
 import com.viktorolsson.spotter.core.data.db.dao.RecommendationDao
+import com.viktorolsson.spotter.core.data.db.dao.ScheduleDao
 import com.viktorolsson.spotter.core.data.db.dao.UserProfileDao
 import com.viktorolsson.spotter.core.data.db.dao.WorkoutDao
 import com.viktorolsson.spotter.core.data.db.entity.BodyWeightEntryEntity
@@ -18,6 +19,7 @@ import com.viktorolsson.spotter.core.data.db.entity.PlanDayEntity
 import com.viktorolsson.spotter.core.data.db.entity.PlanEntity
 import com.viktorolsson.spotter.core.data.db.entity.PlanExerciseEntity
 import com.viktorolsson.spotter.core.data.db.entity.RecommendationEntity
+import com.viktorolsson.spotter.core.data.db.entity.ScheduledSessionEntity
 import com.viktorolsson.spotter.core.data.db.entity.SessionExerciseEntity
 import com.viktorolsson.spotter.core.data.db.entity.SetEntryEntity
 import com.viktorolsson.spotter.core.data.db.entity.SyncStateEntity
@@ -30,13 +32,14 @@ import com.viktorolsson.spotter.core.data.db.entity.WorkoutSessionEntity
  * exported JSON in `core/data/schemas` is what migration tests run against.
  */
 @Database(
-    version = 6,
+    version = 7,
     exportSchema = true,
     autoMigrations = [
         AutoMigration(from = 1, to = 2), // session_exercise.restSeconds
         AutoMigration(from = 2, to = 3), // plan_exercise.startingWeightKg, session_exercise.planExerciseId
         AutoMigration(from = 3, to = 4), // session_exercise.progressionReason
         AutoMigration(from = 4, to = 5), // workout_session.isDeload, recommendation.resolvedAt/dedupKey
+        AutoMigration(from = 6, to = 7), // scheduled_session (its sync triggers come from SyncSchema on open)
     ],
     entities = [
         UserProfileEntity::class,
@@ -51,6 +54,7 @@ import com.viktorolsson.spotter.core.data.db.entity.WorkoutSessionEntity
         SetEntryEntity::class,
         PersonalRecordEntity::class,
         RecommendationEntity::class,
+        ScheduledSessionEntity::class,
         SyncTombstoneEntity::class,
         SyncStateEntity::class,
     ],
@@ -62,6 +66,7 @@ abstract class SpotterDatabase : RoomDatabase() {
     abstract fun workoutDao(): WorkoutDao
     abstract fun planDao(): PlanDao
     abstract fun recommendationDao(): RecommendationDao
+    abstract fun scheduleDao(): ScheduleDao
 
     companion object {
         const val NAME = "spotter.db"

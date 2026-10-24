@@ -10,6 +10,11 @@
     <string name="today_start_workout">Start workout</string>
     <string name="today_empty_workout">Empty workout</string>
     <string name="today_resume_workout">Resume workout</string>
+    <string name="today_scheduled_label">Scheduled today</string>
+    <string name="today_free_workout">Free workout</string>
+    <string name="today_free_workout_body">Planned on your calendar. Add exercises as you go.</string>
+    <string name="today_scheduled_done">Today\'s scheduled workout is done. Nice work.</string>
+    <string name="today_coming_up">Coming up</string>
     <string name="today_deload_title">Lighter week</string>
     <string name="today_deload_body">Until %1$s, planned workouts use fewer sets and lighter weights.</string>
 </resources>

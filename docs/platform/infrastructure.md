@@ -101,10 +101,13 @@ need. The plan:
    one grouped join instead of a subquery per session, and a set-history view the website
    filters on the server (`supabase/migrations/20261024000000_hardening_and_performance.sql`).
    Pages load a user's data in a handful of requests.
-2. **When trainers arrive:** typed tables (`sessions`, `sets`, …) maintained by a trigger on
+2. **Scheduled workouts** (Room v7, `scheduled_session`) follow the same pattern: one more synced
+   table, one more view (`v_scheduled_session`), and `push_rows` allows the new table name. Older
+   apps skip the rows until they update.
+3. **When trainers arrive:** typed tables (`sessions`, `sets`, …) maintained by a trigger on
    `sync_rows`, with their own indexes and RLS (owner, or linked trainer). The website reads those;
    sync keeps writing `sync_rows`.
-3. **Past ~50 M rows:** hash-partition `sync_rows` by `user_id`, and pre-aggregate weekly stats.
+4. **Past ~50 M rows:** hash-partition `sync_rows` by `user_id`, and pre-aggregate weekly stats.
 
 ## Operations
 

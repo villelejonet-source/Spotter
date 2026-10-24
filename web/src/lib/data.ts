@@ -8,6 +8,7 @@ import type {
   PlanExerciseRow,
   PlanRow,
   ProfileRow,
+  ScheduledRow,
   SessionExerciseRow,
   SessionSummaryRow,
   SetEntryRow,
@@ -138,6 +139,13 @@ export const getPersonalRecords = cache(async (): Promise<PersonalRecordRow[]> =
 export const getBodyWeight = cache(async (): Promise<BodyWeightRow[]> => {
   const client = await createClient();
   const rows = await selectAll<BodyWeightRow>(client, "v_body_weight");
+  return rows.sort((a, b) => a.epoch_day - b.epoch_day);
+});
+
+/** Scheduled workouts, by date. */
+export const getScheduled = cache(async (): Promise<ScheduledRow[]> => {
+  const client = await createClient();
+  const rows = await selectAll<ScheduledRow>(client, "v_scheduled_session");
   return rows.sort((a, b) => a.epoch_day - b.epoch_day);
 });
 

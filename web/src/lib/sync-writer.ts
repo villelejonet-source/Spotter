@@ -29,7 +29,7 @@ import {
 } from "./model";
 
 export interface SyncRowInput {
-  table_name: "plan" | "plan_day" | "plan_exercise" | "exercise" | "user_profile" | "body_weight_entry";
+  table_name: "plan" | "plan_day" | "plan_exercise" | "exercise" | "user_profile" | "body_weight_entry" | "scheduled_session";
   sync_id: string;
   payload: Record<string, string | number | null> | null;
   updated_at: number;
@@ -266,7 +266,7 @@ export function copyPlan(plan: StoredPlan, name: string): PlanDraft {
 /** Plan rows go in parent-first order so a device pulling mid-batch can resolve parents. */
 export function orderForPush(rows: SyncRowInput[]): SyncRowInput[] {
   // Custom exercises come first: plan exercises may reference one created in the same batch.
-  const rank = { exercise: 0, user_profile: 0, body_weight_entry: 0, plan: 1, plan_day: 2, plan_exercise: 3 } as const;
+  const rank = { exercise: 0, user_profile: 0, body_weight_entry: 0, plan: 1, plan_day: 2, plan_exercise: 3, scheduled_session: 3 } as const;
   const live = rows.filter((r) => r.deleted_at == null).sort((a, b) => rank[a.table_name] - rank[b.table_name]);
   const dead = rows.filter((r) => r.deleted_at != null).sort((a, b) => rank[b.table_name] - rank[a.table_name]);
   return [...live, ...dead];
@@ -372,4 +372,46 @@ export const bodyWeightSchema = z.object({
 
 export function bodyWeightPayload(epochDay: number, weightKg: number) {
   return { date: epochDay, weightKg };
+}
+
+// ---- Scheduled workouts (Room `scheduled_session`, app schema 7) ----
+
+export const MAX_SCHEDULE_DAYS_AHEAD = 120;
+
+export const scheduleSchema = z.object({
+  epoch_day: z.number().int().min(0).max(40_000),
+  plan_day_id: syncId.nullable(),
+  notes: z.string().trim().max(200).nullable(),
+});
+export type ScheduleDraft = z.infer<typeof scheduleSchema>;
+
+/** sessionId stays null: the app links the workout when it's started there. */
+export function scheduledPayload(s: ScheduleDraft, sessionId: string | null = null) {
+  return { date: s.epoch_day, planDayId: s.plan_day_id, notes: s.notes || null, sessionId };
+}
+
+/**
+ * Fills [weekdays] (0 = Monday) for [weeks] weeks from [fromDay] (epoch day, inclusive) with
+ * the plan's days in order, continuing the rotation from [nextDayIndex]. Dates in [taken]
+ * already have a workout and are skipped without using up a plan day.
+ */
+export function planWeeksAhead(opts: {
+  fromDay: number;
+  weeks: number;
+  weekdays: number[];
+  dayIds: string[];
+  nextDayIndex: number;
+  taken: Set<number>;
+}): { epoch_day: number; plan_day_id: string }[] {
+  const { fromDay, weeks, weekdays, dayIds, taken } = opts;
+  if (!dayIds.length || !weekdays.length) return [];
+  const out: { epoch_day: number; plan_day_id: string }[] = [];
+  let index = opts.nextDayIndex % dayIds.length;
+  for (let day = fromDay; day < fromDay + weeks * 7; day++) {
+    // Epoch day 0 (1 Jan 1970) was a Thursday, so Monday-based weekday = (day + 3) % 7.
+    if (!weekdays.includes((day + 3) % 7) || taken.has(day)) continue;
+    out.push({ epoch_day: day, plan_day_id: dayIds[index] });
+    index = (index + 1) % dayIds.length;
+  }
+  return out;
 }

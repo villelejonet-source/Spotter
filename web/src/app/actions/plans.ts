@@ -37,7 +37,7 @@ const versionsSchema = z
  */
 export async function savePlan(input: PlanDraft, base: PlanVersions): Promise<ActionResult> {
   await requireUser();
-  const parsed = planDraftSchema.safeParse(input);
+  const parsed = planDraftSchema.safeParse(input, { error: () => RELOAD });
   const parsedBase = versionsSchema.safeParse(base);
   if (!parsed.success) return { ok: false, error: parsed.error.issues[0]?.message ?? RELOAD };
   if (!parsedBase.success) return { ok: false, error: RELOAD };

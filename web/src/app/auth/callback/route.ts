@@ -1,6 +1,6 @@
 import type { EmailOtpType } from "@supabase/supabase-js";
 import { NextResponse, type NextRequest } from "next/server";
-import { RECOVERY_COOKIE, RECOVERY_COOKIE_MAX_AGE, safeNext } from "@/lib/auth";
+import { RECOVERY_COOKIE, recoveryCookieOptions, safeNext } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 
 /** The email link kinds Spotter sends. Invites, email and phone changes aren't used, so they're refused. */
@@ -35,7 +35,7 @@ export async function GET(request: NextRequest) {
   const done = (recovery: boolean) => {
     const response = NextResponse.redirect(`${origin}${recovery ? "/reset-password" : next}`);
     if (recovery) {
-      response.cookies.set(RECOVERY_COOKIE, "1", { httpOnly: true, sameSite: "lax", secure, path: "/", maxAge: RECOVERY_COOKIE_MAX_AGE });
+      response.cookies.set(RECOVERY_COOKIE, "1", recoveryCookieOptions(secure));
     } else {
       response.cookies.delete(RECOVERY_COOKIE);
     }

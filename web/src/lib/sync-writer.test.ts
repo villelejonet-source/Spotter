@@ -259,6 +259,20 @@ describe("validation messages are in the user's words", () => {
     expect(firstIssue(customExerciseSchema.safeParse({ ...valid, primary: [] }))).toBe("Pick at least one primary muscle.");
   });
 
+  it("words numeric limits and wrong types plainly", () => {
+    expect(firstIssue(exerciseDraftSchema.safeParse({ ...exercise, sets: 0 }))).toBe("Use 1 to 20 sets.");
+    expect(firstIssue(exerciseDraftSchema.safeParse({ ...exercise, sets: 2.5 }))).toBe("Use 1 to 20 sets.");
+    expect(firstIssue(exerciseDraftSchema.safeParse({ ...exercise, sets: "3" }))).toBe("Use 1 to 20 sets.");
+    expect(firstIssue(exerciseDraftSchema.safeParse({ ...exercise, rest_seconds: 901 }))).toBe("Use a rest from 0 to 15 minutes.");
+    expect(firstIssue(exerciseDraftSchema.safeParse({ ...exercise, starting_weight_kg: -1 }))).toBe("Use a starting weight from 0 to 1000 kg.");
+    expect(firstIssue(bodyWeightSchema.safeParse({ epoch_day: -1, weight_kg: 70 }))).toBe("Pick a valid date.");
+    const profile = { sex: "FEMALE", height_cm: 170, birth_date_epoch_day: 11000, body_weight_kg: 60, units: "KG", experience: "NEW", goal: "STRENGTH", days_per_week: 3, session_length_minutes: 45, equipment: [], focus_areas: [], limitations: [] };
+    expect(firstIssue(profileSchema.safeParse({ ...profile, days_per_week: 9 }))).toBe("Pick how many days a week you train.");
+    expect(firstIssue(profileSchema.safeParse({ ...profile, session_length_minutes: 7 }))).toBe("Pick a session length.");
+    expect(firstIssue(profileSchema.safeParse({ ...profile, birth_date_epoch_day: 99_999 }))).toBe("Enter a valid birth date.");
+    expect(firstIssue(profileSchema.safeParse({ ...profile, height_cm: 90 }))).toBe("Enter a height between 100 and 250 cm.");
+  });
+
   it("never falls back to zod's default wording for a name", () => {
     for (const message of [firstIssue(planDraftSchema.safeParse({ ...draft(), name: "" })), firstIssue(customExerciseSchema.safeParse({ name: "" }))]) {
       expect(message).not.toMatch(/Too small|expected string|>=1/);

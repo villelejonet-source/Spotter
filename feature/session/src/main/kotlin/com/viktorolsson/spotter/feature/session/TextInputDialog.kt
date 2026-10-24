@@ -41,7 +41,7 @@ internal fun TextInputDialog(
                 modifier = Modifier.fillMaxWidth().focusRequester(focus),
             )
         },
-        confirmButton = { TextButton(onClick = { onSave(text) }) { Text(stringResource(R.string.note_save)) } },
-        dismissButton = { TextButton(onClick = onDismiss) { Text(stringResource(R.string.cancel)) } },
+        confirmButton = { TextButton(onClick = { onSave(text) }) { Text(stringResource(com.viktorolsson.spotter.core.ui.R.string.action_save)) } },
+        dismissButton = { TextButton(onClick = onDismiss) { Text(stringResource(com.viktorolsson.spotter.core.ui.R.string.action_cancel)) } },
     )
 }

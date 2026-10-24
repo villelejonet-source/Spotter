@@ -24,7 +24,9 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.unit.dp
+import androidx.compose.ui.platform.LocalConfiguration
+import com.viktorolsson.spotter.core.ui.theme.Dimens
+import com.viktorolsson.spotter.core.ui.theme.Spacing
 import com.viktorolsson.spotter.core.model.DeloadReason
 import com.viktorolsson.spotter.core.model.Recommendation
 import com.viktorolsson.spotter.core.model.RecommendationAction
@@ -52,15 +54,15 @@ fun RecommendationCard(
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.secondaryContainer),
         modifier = modifier.fillMaxWidth(),
     ) {
-        Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        Column(Modifier.padding(Dimens.CardPadding), verticalArrangement = Arrangement.spacedBy(Spacing.sm)) {
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(Spacing.sm)) {
                 Icon(icon, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
                 Text(title, style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.onSecondaryContainer)
             }
             Text(body, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSecondaryContainer)
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
                 TextButton(onClick = onDismiss) { Text(stringResource(R.string.rec_dismiss)) }
-                Button(onClick = onApply, modifier = Modifier.padding(start = 8.dp)) {
+                Button(onClick = onApply, modifier = Modifier.padding(start = Spacing.sm)) {
                     Text(stringResource(if (action is RecommendationAction.Deload) R.string.rec_apply_deload else R.string.rec_apply))
                 }
             }
@@ -105,7 +107,7 @@ private fun describe(
                         evidence.groupSets?.let { if (it % 1.0 == 0.0) "${it.toInt()}" else "%.1f".format(it) } ?: "0",
                         evidence.targetLow ?: 0,
                         evidence.targetHigh ?: 0,
-                        action.exerciseNames.joinToString(" and "),
+                        formatList(action.exerciseNames),
                     ),
                 ),
             )
@@ -144,6 +146,11 @@ private fun describe(
         }
     }
 }
+
+/** "Rows and curls": the locale's own list joiner. */
+@Composable
+private fun formatList(items: List<String>): String =
+    android.icu.text.ListFormatter.getInstance(LocalConfiguration.current.locales[0]).format(items)
 
 /** "Bench hasn't progressed in 4 sessions over 3 weeks (latest best 80 kg × 5)." */
 @Composable

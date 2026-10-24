@@ -9,7 +9,6 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -18,24 +17,18 @@ import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.rounded.ArrowBack
 import androidx.compose.material.icons.rounded.CheckCircle
 import androidx.compose.material.icons.rounded.MarkEmailRead
 import androidx.compose.material.icons.rounded.Visibility
 import androidx.compose.material.icons.rounded.VisibilityOff
-import androidx.compose.material3.Button
-import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
-import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -54,7 +47,6 @@ import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
-import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
@@ -68,6 +60,11 @@ import com.viktorolsson.spotter.core.data.sync.AuthProblem
 import com.viktorolsson.spotter.core.data.sync.CodePurpose
 import com.viktorolsson.spotter.core.data.sync.SignUpResult
 import com.viktorolsson.spotter.core.data.sync.SyncRepository
+import com.viktorolsson.spotter.core.ui.component.PrimaryButton
+import com.viktorolsson.spotter.core.ui.component.SecondaryButton
+import com.viktorolsson.spotter.core.ui.component.SpotterTopBar
+import com.viktorolsson.spotter.core.ui.theme.Dimens
+import com.viktorolsson.spotter.core.ui.theme.Spacing
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -295,7 +292,6 @@ internal class AccountActions(
     val savePassword: () -> Unit = {},
 )
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 internal fun AccountScreen(state: AccountUiState, onBack: () -> Unit, actions: AccountActions) {
     val title = when (state.step) {
@@ -310,18 +306,11 @@ internal fun AccountScreen(state: AccountUiState, onBack: () -> Unit, actions: A
         AccountStep.NEW_PASSWORD, AccountStep.PASSWORD_SAVED -> R.string.account_title_new_password
     }
     Scaffold(
-        topBar = {
-            TopAppBar(
-                title = { Text(stringResource(title)) },
-                navigationIcon = {
-                    IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Rounded.ArrowBack, stringResource(R.string.back)) }
-                },
-            )
-        },
+        topBar = { SpotterTopBar(title = stringResource(title), onBack = onBack) },
     ) { padding ->
         Column(
-            Modifier.padding(padding).imePadding().verticalScroll(rememberScrollState()).padding(24.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp),
+            Modifier.padding(padding).imePadding().verticalScroll(rememberScrollState()).padding(Dimens.FocusedScreenPadding),
+            verticalArrangement = Arrangement.spacedBy(Spacing.lg),
         ) {
             when (state.step) {
                 AccountStep.SIGN_IN -> SignInForm(state, actions)
@@ -361,14 +350,12 @@ private fun SignInForm(state: AccountUiState, actions: AccountActions) {
         TextButton(onClick = { actions.goTo(AccountStep.FORGOT) }) { Text(stringResource(R.string.account_forgot)) }
     }
     ActionButton(R.string.account_sign_in, enabled = state.emailValid && state.password.isNotEmpty(), busy = state.busy, onClick = actions.signIn)
-    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(Spacing.md)) {
         HorizontalDivider(Modifier.weight(1f))
         Text(stringResource(R.string.account_or), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
         HorizontalDivider(Modifier.weight(1f))
     }
-    OutlinedButton(onClick = actions.sendSignInCode, enabled = state.emailValid && !state.busy, modifier = Modifier.fillMaxWidth().height(52.dp)) {
-        Text(stringResource(R.string.account_email_code))
-    }
+    SecondaryButton(stringResource(R.string.account_email_code), actions.sendSignInCode, enabled = state.emailValid && !state.busy)
     Text(stringResource(R.string.account_email_code_hint), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
     TextButton(onClick = { actions.goTo(AccountStep.SIGN_UP) }) { Text(stringResource(R.string.account_switch_to_new)) }
 }
@@ -398,7 +385,7 @@ private fun ForgotForm(state: AccountUiState, actions: AccountActions) {
 
 @Composable
 private fun CodeStep(state: AccountUiState, actions: AccountActions) {
-    Icon(Icons.Rounded.MarkEmailRead, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(56.dp))
+    Icon(Icons.Rounded.MarkEmailRead, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(Dimens.IconLarge))
     Text(stringResource(R.string.account_check_email), style = MaterialTheme.typography.headlineSmall, modifier = Modifier.semantics { heading() })
     val intro = when {
         state.unconfirmed -> R.string.account_code_intro_unconfirmed
@@ -410,9 +397,7 @@ private fun CodeStep(state: AccountUiState, actions: AccountActions) {
     CodeField(state, actions, onDone = actions.verify)
     ActionButton(R.string.account_verify, enabled = state.code.length >= 6, busy = state.busy, onClick = actions.verify)
     val context = LocalContext.current
-    OutlinedButton(onClick = { openEmailApp(context) }, modifier = Modifier.fillMaxWidth().height(52.dp)) {
-        Text(stringResource(R.string.account_open_email))
-    }
+    SecondaryButton(stringResource(R.string.account_open_email), { openEmailApp(context) })
     TextButton(onClick = actions.resend, enabled = !state.busy) { Text(stringResource(R.string.account_resend)) }
     TextButton(
         onClick = { actions.goTo(if (state.codePurpose == CodePurpose.SIGN_UP && !state.unconfirmed) AccountStep.SIGN_UP else AccountStep.SIGN_IN) },
@@ -446,10 +431,10 @@ private fun NewPasswordForm(state: AccountUiState, actions: AccountActions) {
 
 @Composable
 private fun PasswordSaved(onDone: () -> Unit) {
-    Icon(Icons.Rounded.CheckCircle, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(56.dp))
+    Icon(Icons.Rounded.CheckCircle, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(Dimens.IconLarge))
     Text(stringResource(R.string.account_password_saved), style = MaterialTheme.typography.headlineSmall, modifier = Modifier.semantics { heading() })
     Text(stringResource(R.string.account_password_saved_body), style = MaterialTheme.typography.bodyLarge)
-    Button(onClick = onDone, modifier = Modifier.fillMaxWidth().height(52.dp)) { Text(stringResource(R.string.account_done)) }
+    PrimaryButton(stringResource(R.string.account_done), onDone)
 }
 
 @Composable
@@ -525,7 +510,5 @@ private fun openEmailApp(context: Context) {
 
 @Composable
 private fun ActionButton(@StringRes label: Int, enabled: Boolean, busy: Boolean, onClick: () -> Unit) {
-    Button(onClick = onClick, enabled = enabled && !busy, modifier = Modifier.fillMaxWidth().height(52.dp)) {
-        if (busy) CircularProgressIndicator(strokeWidth = 2.dp, modifier = Modifier.height(20.dp)) else Text(stringResource(label))
-    }
+    PrimaryButton(text = stringResource(label), onClick = onClick, enabled = enabled, busy = busy)
 }

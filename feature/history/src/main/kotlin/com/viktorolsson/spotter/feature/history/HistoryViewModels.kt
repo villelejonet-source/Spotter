@@ -1,6 +1,5 @@
 package com.viktorolsson.spotter.feature.history
 
-import com.viktorolsson.spotter.core.model.EffortScale
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -10,22 +9,28 @@ import com.viktorolsson.spotter.core.data.repository.HistoryRepository
 import com.viktorolsson.spotter.core.data.repository.RecommendationRepository
 import com.viktorolsson.spotter.core.data.repository.UserPreferencesRepository
 import com.viktorolsson.spotter.core.data.repository.WorkoutRepository
+import com.viktorolsson.spotter.core.model.EffortScale
 import com.viktorolsson.spotter.core.model.Exercise
 import com.viktorolsson.spotter.core.model.ExerciseSessionLog
 import com.viktorolsson.spotter.core.model.PersonalRecord
 import com.viktorolsson.spotter.core.model.Recommendation
+import com.viktorolsson.spotter.core.model.SetType
 import com.viktorolsson.spotter.core.model.WeightUnit
 import com.viktorolsson.spotter.core.model.WorkoutSession
+import com.viktorolsson.spotter.core.model.WorkoutSummary
 import com.viktorolsson.spotter.core.ui.localDate
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import java.time.LocalDate
 import java.time.YearMonth
 import javax.inject.Inject
 
@@ -34,10 +39,11 @@ data class HistoryUiState(
     val sessions: List<WorkoutSession> = emptyList(),
     val month: YearMonth = YearMonth.now(),
     val unit: WeightUnit = WeightUnit.KG,
-) {
-    val monthSessions: List<WorkoutSession>
-        get() = sessions.filter { YearMonth.from(it.startedAt.localDate()) == month }
-}
+    /** The sessions in [month], newest first. */
+    val monthSessions: List<WorkoutSession> = emptyList(),
+    /** Training days in [month] with the day's volume in kg, for the heat-map. */
+    val volumeByDay: Map<LocalDate, Double> = emptyMap(),
+)
 
 @HiltViewModel
 class HistoryViewModel @Inject constructor(
@@ -50,13 +56,27 @@ class HistoryViewModel @Inject constructor(
         historyRepository.observeFinishedSessions(),
         month,
         preferencesRepository.preferences,
-    ) { sessions, month, prefs -> HistoryUiState(false, sessions, month, prefs.weightUnit) }
+    ) { sessions, month, prefs ->
+        val inMonth = sessions.filter { YearMonth.from(it.startedAt.localDate()) == month }
+        HistoryUiState(
+            loading = false,
+            sessions = sessions,
+            month = month,
+            unit = prefs.weightUnit,
+            monthSessions = inMonth,
+            volumeByDay = inMonth.groupBy { it.startedAt.localDate() }
+                .mapValues { (_, list) -> list.sumOf { WorkoutSummary.of(it).volumeKg }.coerceAtLeast(1.0) },
+        )
+    }
+        .flowOn(Dispatchers.Default)
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), HistoryUiState())
 
     fun shiftMonth(by: Long) = month.update { it.plusMonths(by) }
 }
 
 data class WorkoutDetailUiState(
+    val loading: Boolean = true,
+    /** Null once loaded means the workout no longer exists. */
     val session: WorkoutSession? = null,
     val records: List<PersonalRecord> = emptyList(),
     val unit: WeightUnit = WeightUnit.KG,
@@ -76,7 +96,7 @@ class WorkoutDetailViewModel @Inject constructor(
         workoutRepository.observeSession(sessionId),
         historyRepository.observeSessionRecords(sessionId),
         preferencesRepository.preferences,
-    ) { session, records, prefs -> WorkoutDetailUiState(session, records, prefs.weightUnit, prefs.effortScale) }
+    ) { session, records, prefs -> WorkoutDetailUiState(false, session, records, prefs.weightUnit, prefs.effortScale) }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), WorkoutDetailUiState())
 
     fun repeat(onStarted: (Long) -> Unit) = viewModelScope.launch {
@@ -87,20 +107,19 @@ class WorkoutDetailViewModel @Inject constructor(
 enum class ExerciseMetric { ONE_REP_MAX, BEST_SET, VOLUME }
 
 data class ExerciseHistoryUiState(
+    val loading: Boolean = true,
     val exercise: Exercise? = null,
     val logs: List<ExerciseSessionLog> = emptyList(),
     val records: List<PersonalRecord> = emptyList(),
     val unit: WeightUnit = WeightUnit.KG,
     val metric: ExerciseMetric = ExerciseMetric.ONE_REP_MAX,
     val recommendations: List<Recommendation> = emptyList(),
-) {
     /** Most reps achieved at each weight, heaviest first. */
-    val repRecords: List<Pair<Double, Int>>
-        get() = logs.flatMap { it.sets }
-            .filter { it.weightKg != null && it.reps != null && it.setType != com.viktorolsson.spotter.core.model.SetType.WARMUP }
-            .groupBy { it.weightKg!! }
-            .map { (weight, sets) -> weight to sets.maxOf { it.reps!! } }
-            .sortedByDescending { it.first }
+    val repRecords: List<Pair<Double, Int>> = emptyList(),
+) {
+    val bestOneRepMaxKg: Double? get() = logs.mapNotNull { it.estimatedOneRepMax }.maxOrNull()
+    val heaviestKg: Double? get() = logs.mapNotNull { it.bestSet?.weightKg }.maxOrNull()
+    val bestVolumeKg: Double get() = logs.maxOfOrNull { it.volumeKg } ?: 0.0
 }
 
 @HiltViewModel
@@ -121,12 +140,26 @@ class ExerciseHistoryViewModel @Inject constructor(
         preferencesRepository.preferences,
         metric,
     ) { exercise, logs, records, prefs, metric ->
-        ExerciseHistoryUiState(exercise, logs, records, prefs.weightUnit, metric)
+        ExerciseHistoryUiState(
+            loading = false,
+            exercise = exercise,
+            logs = logs,
+            records = records,
+            unit = prefs.weightUnit,
+            metric = metric,
+            repRecords = logs.flatMap { it.sets }
+                .filter { it.weightKg != null && it.reps != null && it.setType != SetType.WARMUP }
+                .groupBy { it.weightKg ?: 0.0 }
+                .map { (weight, sets) -> weight to sets.maxOf { it.reps ?: 0 } }
+                .sortedByDescending { it.first },
+        )
     }
 
     val uiState: StateFlow<ExerciseHistoryUiState> = combine(base, recommendationRepository.observeActive()) { state, recs ->
         state.copy(recommendations = recs.filter { it.exerciseId == exerciseId })
-    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), ExerciseHistoryUiState())
+    }
+        .flowOn(Dispatchers.Default)
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), ExerciseHistoryUiState())
 
     fun apply(id: Long) = viewModelScope.launch { recommendationRepository.apply(id) }
 

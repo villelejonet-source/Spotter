@@ -7,17 +7,13 @@ import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.EmojiEvents
-import androidx.compose.material3.Button
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.ListItem
 import androidx.compose.material3.MaterialTheme
@@ -31,7 +27,6 @@ import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
-import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
@@ -45,11 +40,17 @@ import com.viktorolsson.spotter.core.model.PersonalRecord
 import com.viktorolsson.spotter.core.model.WeightUnit
 import com.viktorolsson.spotter.core.model.WorkoutSummary
 import com.viktorolsson.spotter.core.ui.component.Confetti
+import com.viktorolsson.spotter.core.ui.component.ErrorState
+import com.viktorolsson.spotter.core.ui.component.LoadingState
+import com.viktorolsson.spotter.core.ui.component.PrimaryButton
+import com.viktorolsson.spotter.core.ui.component.RecordsCard
+import com.viktorolsson.spotter.core.ui.component.StatTile
 import com.viktorolsson.spotter.core.ui.formatClock
-import com.viktorolsson.spotter.core.ui.formatRecordValue
 import com.viktorolsson.spotter.core.ui.formatSet
+import com.viktorolsson.spotter.core.ui.formatSetCount
 import com.viktorolsson.spotter.core.ui.formatTotal
-import com.viktorolsson.spotter.core.ui.labelRes
+import com.viktorolsson.spotter.core.ui.theme.Dimens
+import com.viktorolsson.spotter.core.ui.theme.Spacing
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
 import kotlinx.coroutines.flow.SharingStarted
@@ -58,6 +59,8 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
 
 data class SummaryUiState(
+    val loading: Boolean = true,
+    /** Null once loaded means the workout is gone. */
     val summary: WorkoutSummary? = null,
     val unit: WeightUnit = WeightUnit.KG,
     val records: List<PersonalRecord> = emptyList(),
@@ -77,17 +80,23 @@ class SummaryViewModel @Inject constructor(
         historyRepository.observeSessionRecords(sessionId),
         preferencesRepository.preferences,
     ) { session, records, prefs ->
-        SummaryUiState(session?.let { WorkoutSummary.of(it) }, prefs.weightUnit, records)
+        SummaryUiState(false, session?.let { WorkoutSummary.of(it) }, prefs.weightUnit, records)
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), SummaryUiState())
 }
 
 @Composable
 internal fun SummaryRoute(onDone: () -> Unit, viewModel: SummaryViewModel = hiltViewModel()) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
-    val summary = uiState.summary ?: return
-    Box {
-        SummaryScreen(summary, uiState.unit, uiState.records, onDone)
-        if (uiState.records.isNotEmpty()) Confetti(key = uiState.records.size)
+    val summary = uiState.summary
+    when {
+        uiState.loading -> Scaffold { padding -> LoadingState(Modifier.padding(padding).fillMaxSize()) }
+        summary == null -> Scaffold(
+            bottomBar = { PrimaryButton(stringResource(R.string.summary_done), onDone, Modifier.navigationBarsPadding().padding(Dimens.ScreenPadding)) },
+        ) { padding -> ErrorState(Modifier.padding(padding).fillMaxSize()) }
+        else -> Box {
+            SummaryScreen(summary, uiState.unit, uiState.records, onDone)
+            if (uiState.records.isNotEmpty()) Confetti(key = uiState.records.size)
+        }
     }
 }
 
@@ -95,27 +104,28 @@ internal fun SummaryRoute(onDone: () -> Unit, viewModel: SummaryViewModel = hilt
 internal fun SummaryScreen(summary: WorkoutSummary, unit: WeightUnit, records: List<PersonalRecord>, onDone: () -> Unit) {
     Scaffold(
         bottomBar = {
-            Button(
+            PrimaryButton(
+                text = stringResource(R.string.summary_done),
                 onClick = onDone,
-                modifier = Modifier.fillMaxWidth().navigationBarsPadding().padding(16.dp).height(56.dp),
-            ) { Text(stringResource(R.string.summary_done)) }
+                modifier = Modifier.navigationBarsPadding().padding(Dimens.ScreenPadding),
+            )
         },
     ) { padding ->
         LazyColumn(
             modifier = Modifier.padding(padding).fillMaxSize(),
-            contentPadding = PaddingValues(16.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp),
+            contentPadding = PaddingValues(Dimens.ScreenPadding),
+            verticalArrangement = Arrangement.spacedBy(Dimens.ListGap),
         ) {
-            item {
+            item(key = "title") {
                 Column(
-                    Modifier.fillMaxWidth().padding(vertical = 24.dp),
+                    Modifier.fillMaxWidth().padding(vertical = Spacing.xl),
                     horizontalAlignment = Alignment.CenterHorizontally,
                 ) {
                     Icon(
                         Icons.Rounded.EmojiEvents,
                         contentDescription = null,
                         tint = MaterialTheme.colorScheme.primary,
-                        modifier = Modifier.size(56.dp),
+                        modifier = Modifier.size(Dimens.IconLarge),
                     )
                     Text(
                         stringResource(R.string.summary_title),
@@ -124,72 +134,30 @@ internal fun SummaryScreen(summary: WorkoutSummary, unit: WeightUnit, records: L
                     )
                 }
             }
-            item {
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            item(key = "stats") {
+                Row(horizontalArrangement = Arrangement.spacedBy(Spacing.sm)) {
                     StatTile(stringResource(R.string.summary_duration), formatClock(summary.duration), Modifier.weight(1f))
-                    StatTile(
-                        stringResource(R.string.summary_volume),
-                        formatTotal(summary.volumeKg, unit),
-                        Modifier.weight(1f),
-                    )
-                    StatTile(stringResource(R.string.summary_sets), "${summary.completedSets}", Modifier.weight(1f))
+                    StatTile(stringResource(R.string.summary_volume), formatTotal(summary.volumeKg, unit), Modifier.weight(1f))
+                    StatTile(stringResource(R.string.summary_sets), summary.completedSets.toString(), Modifier.weight(1f))
                 }
             }
             if (records.isNotEmpty()) {
-                item {
-                    Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.tertiaryContainer)) {
-                        Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                            Text(
-                                pluralStringResource(R.plurals.summary_new_prs, records.size, records.size),
-                                style = MaterialTheme.typography.titleMedium,
-                                color = MaterialTheme.colorScheme.onTertiaryContainer,
-                            )
-                            records.forEach { record ->
-                                Row {
-                                    Text(
-                                        "${record.exerciseName} · ${stringResource(record.type.labelRes)}",
-                                        style = MaterialTheme.typography.bodyMedium,
-                                        color = MaterialTheme.colorScheme.onTertiaryContainer,
-                                        modifier = Modifier.weight(1f),
-                                    )
-                                    Text(
-                                        formatRecordValue(record, unit),
-                                        style = MaterialTheme.typography.bodyMedium,
-                                        color = MaterialTheme.colorScheme.onTertiaryContainer,
-                                    )
-                                }
-                            }
-                        }
-                    }
+                item(key = "records") {
+                    RecordsCard(pluralStringResource(R.plurals.summary_new_prs, records.size, records.size), records, unit)
                 }
             }
-            items(summary.exercises) { ex ->
-                val best = ex.bestSet?.let { set ->
-                    formatSet(set.weightKg, set.reps, unit, ex.timed)
-                }
+            itemsIndexed(summary.exercises, key = { i, ex -> "$i-${ex.exerciseName}" }) { _, ex ->
+                val best = ex.bestSet?.let { set -> formatSet(set.weightKg, set.reps, unit, ex.timed) }
                 ListItem(
                     headlineContent = { Text(ex.exerciseName) },
                     supportingContent = {
                         Text(
-                            if (best != null) stringResource(R.string.summary_exercise_line, ex.completedSets, best)
-                            else stringResource(R.string.summary_exercise_sets, ex.completedSets),
+                            if (best != null) stringResource(R.string.summary_exercise_line, formatSetCount(ex.completedSets), best)
+                            else formatSetCount(ex.completedSets),
                         )
                     },
                 )
             }
-        }
-    }
-}
-
-@Composable
-private fun StatTile(label: String, value: String, modifier: Modifier = Modifier) {
-    Card(
-        modifier = modifier,
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerHigh),
-    ) {
-        Column(Modifier.padding(12.dp)) {
-            Text(label, style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-            Text(value, style = MaterialTheme.typography.titleLarge)
         }
     }
 }

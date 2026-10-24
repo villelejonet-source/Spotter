@@ -36,7 +36,7 @@ Or open the folder in Android Studio and run the `app` configuration.
 | `feature/*` | One module per tab (`today`, `history`, `progress`, `settings` = Profile), plus `session` (workout logger, rest timer service, summary), `library` (exercise picker), `onboarding` (questionnaire + plan summary) and `plan` (plan overview) |
 | `build-logic` | Convention plugins (`spotter.android.feature`, `spotter.jvm.library`, …) |
 
-The exercise library lives in `core/data/src/main/assets/exercises.json`. Bump its `version` after editing so installed apps re-seed.
+The exercise library lives in `core/data/src/main/assets/exercises.json`. Bump `EXERCISE_CATALOG_VERSION` in `ExerciseSeeder` whenever it changes so installed apps re-seed. Room is at schema version 8; every Room migration must re-create the sync triggers via `SyncSchema.TriggerSpec`.
 
 ## Supabase (optional backup + sync, milestone 8)
 
@@ -48,9 +48,14 @@ deletions, and sync is last-write-wins per record.
 **Sign-in links use PKCE** (the 2026-10 audit, `docs/platform/audit-2026-10.md`). Every email
 carries both a link and a code: the **link** only works on the phone that asked for it, because
 the app keeps a secret (the PKCE verifier) that the link's one-time `code` is exchanged against;
-the **code** works anywhere you can type it. Before this, the link carried the session itself in
-the URL fragment and any app that opened a `spotter://login#…` link imported it, so a crafted
-link could sign a phone into someone else's account. Once the website has a public domain, the
+the **code** works anywhere you can type it. `SupabaseProvider` sets `flowType = FlowType.PKCE`
+and `SignInLinks.parse` accepts only `spotter://login?code=…`; a password-reset link is detected
+from the token's `amr` claim (`recovery`), falling back to the old `type=recovery` query. The
+session is kept in `EncryptedSharedPreferences` (`spotter_auth`). After a link sign-in into an
+account with no data, the first sync asks before uploading the phone's data. Before this, the
+link carried the session itself in the URL fragment and any app that opened a
+`spotter://login#…` link imported it, so a crafted link could sign a phone into someone else's
+account. Once the website has a public domain, the
 link will become an https App Link (`android:autoVerify` plus `/.well-known/assetlinks.json` on
 the site) so only this app can claim it; see `docs/platform/infrastructure.md`.
 

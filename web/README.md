@@ -21,7 +21,10 @@ The seeded exercise catalog isn't synced; `scripts/copy-catalog.mjs` copies
 
 ## Setup
 
-1. Apply every file in `supabase/migrations/` in order with `supabase db push` (linked CLI) or
+1. Apply every file in `supabase/migrations/` in order (currently `20261004000000_sync`,
+   `20261023000000_web_views`, `20261024000000_hardening_and_performance`,
+   `20261025000000_scheduled_sessions`, `20261026000000_audit_hardening`; the last adds
+   `v_exercise_usage`, which `/library` needs) with `supabase db push` (linked CLI) or
    the Supabase MCP's `apply_migration`, never by pasting into the SQL editor: pasting runs the
    SQL but leaves no entry in the migration history, so the next `db push` would try to run it
    again. They're all safe to re-run. See "Database migrations" in
@@ -48,6 +51,14 @@ npm audit --omit=dev --audit-level=high   # CI runs this too, visibly but withou
 
 Units (kg or lb) come from the synced profile (`user_profile.units`); the app writes it when the
 setting changes and both app and web read it from there, so the two can't disagree.
+
+## Wording, formats and locale
+
+The app is the source of truth for wording. `src/lib/labels.ts` mirrors the app's string
+resources (goal names, "Lighter week", equipment and movement labels, progression reasons, set
+and record formats): when wording changes, update the app's `strings.xml`/`labels.xml` **and**
+`labels.ts` together. Dates and numbers use one locale constant in `src/lib/tz.ts` (`en-GB`)
+next to the Europe/Stockholm time zone.
 
 ## Deploy (Vercel)
 

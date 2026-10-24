@@ -5,4 +5,6 @@ plugins {
 
 dependencies {
     implementation(project(":core:engine"))
+    // Icons outside the core set (see AndroidFeatureConventionPlugin).
+    implementation(libs.androidx.compose.material.icons.extended)
 }

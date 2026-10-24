@@ -3,18 +3,21 @@ import { exerciseName } from "@/lib/catalog";
 import { getBodyWeight, getCatalog, getPersonalRecords, getPlans, getProfile, getSessions, getSetHistory } from "@/lib/data";
 import { createClient } from "@/lib/supabase/server";
 
+/** Personal data on the wire: never cached by a browser or a proxy. */
+const NO_STORE = { "Cache-Control": "no-store, max-age=0", Vary: "Cookie" };
+
 /** Downloads all of the signed-in user's synced data: ?format=json (everything) or csv (one row per set). */
 export async function GET(request: NextRequest) {
   const supabase = await createClient();
   const { data: auth } = await supabase.auth.getClaims();
-  if (!auth) return new NextResponse("Not signed in", { status: 401 });
+  if (!auth) return new NextResponse("Not signed in", { status: 401, headers: NO_STORE });
 
   const format = request.nextUrl.searchParams.get("format") === "csv" ? "csv" : "json";
-  const [sessions, sets, catalog] = await Promise.all([getSessions(), getSetHistory(undefined, undefined, true), getCatalog()]);
   const stamp = new Date().toISOString().slice(0, 10);
   const iso = (ms: number | null) => (ms == null ? null : new Date(ms).toISOString());
 
   if (format === "csv") {
+    const [sessions, sets, catalog] = await Promise.all([getSessions(), getSetHistory(undefined, undefined, true), getCatalog()]);
     const byId = new Map(sessions.map((s) => [s.sync_id, s]));
     const rows = sets
       .filter((s) => byId.has(s.session_id))
@@ -27,11 +30,20 @@ export async function GET(request: NextRequest) {
         .join(",");
     });
     return new NextResponse([header.join(","), ...lines].join("\n"), {
-      headers: { "Content-Type": "text/csv; charset=utf-8", "Content-Disposition": `attachment; filename="spotter-sets-${stamp}.csv"` },
+      headers: { ...NO_STORE, "Content-Type": "text/csv; charset=utf-8", "Content-Disposition": `attachment; filename="spotter-sets-${stamp}.csv"` },
     });
   }
 
-  const [profile, plans, records, bodyWeight] = await Promise.all([getProfile(), getPlans(), getPersonalRecords(), getBodyWeight()]);
+  // One wave: every query is independent and runs under the same RLS.
+  const [sessions, sets, catalog, profile, plans, records, bodyWeight] = await Promise.all([
+    getSessions(),
+    getSetHistory(undefined, undefined, true),
+    getCatalog(),
+    getProfile(),
+    getPlans(),
+    getPersonalRecords(),
+    getBodyWeight(),
+  ]);
   const setsBySession = Map.groupBy(sets, (s) => s.session_id);
   const body = {
     exportedAt: new Date().toISOString(),
@@ -57,9 +69,26 @@ export async function GET(request: NextRequest) {
     bodyWeight: bodyWeight.map((b) => ({ ...b, date: new Date(b.epoch_day * 86_400_000).toISOString().slice(0, 10) })),
     customExercises: [...catalog.values()].filter((e) => e.isCustom),
   };
-  return new NextResponse(JSON.stringify(body, null, 2), {
-    headers: { "Content-Type": "application/json", "Content-Disposition": `attachment; filename="spotter-export-${stamp}.json"` },
+  // Compact JSON: the file is for importing elsewhere, and pretty-printing roughly doubles it.
+  return new NextResponse(JSON.stringify(withoutUserId(body)), {
+    headers: { ...NO_STORE, "Content-Type": "application/json", "Content-Disposition": `attachment; filename="spotter-export-${stamp}.json"` },
   });
+}
+
+/**
+ * Drops `user_id` wherever it appears. The views return it on every row, but it's the
+ * account's internal id and means nothing outside Spotter.
+ */
+function withoutUserId(value: unknown): unknown {
+  if (Array.isArray(value)) return value.map(withoutUserId);
+  if (value && typeof value === "object" && Object.getPrototypeOf(value) === Object.prototype) {
+    return Object.fromEntries(
+      Object.entries(value)
+        .filter(([key]) => key !== "user_id")
+        .map(([key, v]) => [key, withoutUserId(v)]),
+    );
+  }
+  return value;
 }
 
 function csvCell(value: unknown): string {

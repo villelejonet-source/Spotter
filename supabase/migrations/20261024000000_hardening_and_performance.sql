@@ -1,3 +1,7 @@
+-- History: first hardening pass. push_rows and delete_my_account defined here are superseded
+-- by 20261025000000_scheduled_sessions.sql and finally 20261026000000_audit_hardening.sql,
+-- which runs last. Don't edit: add a new migration.
+--
 -- Hardening and performance for sync_rows and the web views. Safe to re-run.
 --
 -- 1. Writes go only through push_rows, which now checks table names and sizes.

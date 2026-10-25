@@ -1,0 +1,3 @@
+<en-US>
+• Fixed typing in the exercise search: letters no longer go missing or jump around
+</en-US>

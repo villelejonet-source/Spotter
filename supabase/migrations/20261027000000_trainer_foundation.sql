@@ -6,8 +6,10 @@
 -- 1. profiles: a display name per account. Not the synced user_profile rows (v_profile),
 --    which hold the app's settings; any account can be a trainer, a client or both.
 -- 2. trainer_links: trainer, client, status (pending | active | ended), an unguessable
---    invite code and an optional label the trainer sees until the invite is accepted. A client has at most one trainer at a time; a trainer, any number of clients. Each side reads its own links; writes go only through
---    create_trainer_invite, accept_trainer_invite and end_trainer_link.
+--    invite code and an optional label the trainer sees until the invite is accepted. A
+--    client has at most one trainer at a time; a trainer, any number of clients. Each side
+--    reads its own links; writes go only through create_trainer_invite,
+--    accept_trainer_invite and end_trainer_link.
 -- 3. can_read_user(owner_id): the one access check for reading synced rows. Today it is
 --    owner-only; letting an active trainer read is a change to this function alone (see
 --    docs/platform/infrastructure.md, "Trainer foundation", for the steps before that).
@@ -20,8 +22,8 @@
 -- Kept on purpose (noted for the advisors):
 -- - can_read_user has no SET search_path and is SECURITY INVOKER: either would stop Postgres
 --   inlining it into the sync_rows policy, which would then call a function per row instead
---   of using user_id = auth.uid() as an index condition. Every name in it is schema-qualified, so the
---   "function search_path mutable" WARN for it is expected.
+--   of using user_id = auth.uid() as an index condition. Every name in it is
+--   schema-qualified, so the "function search_path mutable" WARN for it is expected.
 -- - create_trainer_invite, accept_trainer_invite, end_trainer_link and delete_my_account are
 --   SECURITY DEFINER with search_path = '': trainer_links is closed to direct writes, and each
 --   function only ever acts for auth.uid().

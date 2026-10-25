@@ -67,6 +67,7 @@ internal fun ExercisePickerRoute(
 
     ExercisePickerScreen(
         uiState = uiState,
+        query = viewModel.searchQuery,
         onBack = onDone,
         onQueryChange = viewModel::setQuery,
         onBodyAreaChange = viewModel::setBodyArea,
@@ -77,7 +78,7 @@ internal fun ExercisePickerRoute(
     )
     if (creating) {
         CreateExerciseDialog(
-            initialName = uiState.filters.query,
+            initialName = viewModel.searchQuery,
             onCreate = { name, muscle, pattern, equipment ->
                 viewModel.createCustom(name, muscle, pattern, equipment)
                 creating = false
@@ -90,6 +91,7 @@ internal fun ExercisePickerRoute(
 @Composable
 internal fun ExercisePickerScreen(
     uiState: ExercisePickerUiState,
+    query: String,
     onBack: () -> Unit,
     onQueryChange: (String) -> Unit,
     onBodyAreaChange: (BodyArea?) -> Unit,
@@ -123,7 +125,7 @@ internal fun ExercisePickerScreen(
     ) { padding ->
         Column(Modifier.padding(padding).fillMaxSize()) {
             OutlinedTextField(
-                value = uiState.filters.query,
+                value = query,
                 onValueChange = onQueryChange,
                 leadingIcon = { Icon(Icons.Rounded.Search, contentDescription = null) },
                 placeholder = { Text(stringResource(R.string.picker_search)) },

@@ -1,5 +1,8 @@
 package com.viktorolsson.spotter.feature.library
 
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -55,6 +58,14 @@ class ExercisePickerViewModel @Inject constructor(
     private val filters = MutableStateFlow(PickerFilters())
     private val selected = MutableStateFlow<List<String>>(emptyList())
 
+    /**
+     * The search field's text, held as Compose state so it updates synchronously. Feeding the field
+     * from [uiState] instead round-trips each keystroke through the async search, and a stale value
+     * landing after a newer keystroke drops characters and moves the cursor.
+     */
+    var searchQuery by mutableStateOf("")
+        private set
+
     // The repository matches the query and runs the filter off the main thread.
     private val results = filters.flatMapLatest { f ->
         exerciseRepository.search(f.query) { it.matches(f) }.map { f to it }
@@ -65,7 +76,10 @@ class ExercisePickerViewModel @Inject constructor(
             ExercisePickerUiState(loading = false, filters = f, exercises = exercises, selectedIds = sel)
         }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), ExercisePickerUiState())
 
-    fun setQuery(query: String) = filters.update { it.copy(query = query) }
+    fun setQuery(query: String) {
+        searchQuery = query
+        filters.update { it.copy(query = query) }
+    }
 
     fun setBodyArea(area: BodyArea?) = filters.update { it.copy(bodyArea = area) }
 
@@ -82,7 +96,7 @@ class ExercisePickerViewModel @Inject constructor(
         viewModelScope.launch {
             val id = exerciseRepository.createCustom(name, muscle, pattern, listOfNotNull(equipment))
             selected.update { it + id }
-            filters.update { it.copy(query = name.trim()) }
+            setQuery(name.trim())
         }
 }
 

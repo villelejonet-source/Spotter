@@ -44,8 +44,8 @@ class ExercisePickerScreenshotTest {
         ) {
             SpotterTheme(darkTheme = dark, dynamicColor = false) {
                 ExercisePickerScreen(
-                    uiState = state, onBack = {}, onQueryChange = {}, onBodyAreaChange = {}, onEquipmentChange = {},
-                    onToggle = {}, onAdd = {}, onCreate = {},
+                    uiState = state, query = state.filters.query, onBack = {}, onQueryChange = {},
+                    onBodyAreaChange = {}, onEquipmentChange = {}, onToggle = {}, onAdd = {}, onCreate = {},
                 )
             }
         }

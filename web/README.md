@@ -77,8 +77,10 @@ deployed 2026-10-25). Every push to `main` deploys production, and every pull re
 preview deployment, unless nothing the site is built from changed: `vercel.json`'s
 `ignoreCommand` skips the build when neither `web/` nor the files it copies (the exercise
 catalog `core/data/src/main/assets/exercises.json` and `docs/play-store/privacy-policy.md`)
-differs from the last deployed commit. If that
-commit isn't in Vercel's shallow clone, `git diff` fails and the build runs anyway.
+differs from the last deployed commit. Vercel builds on exit 1 and skips on exit 0, but
+fails the deployment on any other exit code. So when `git diff` itself fails (exit 128: the
+last deployed commit isn't in Vercel's shallow clone, or a force-push removed it),
+`|| exit 1` turns that into "build".
 
 How it's set up:
 

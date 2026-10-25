@@ -42,20 +42,26 @@ const SECTIONS: Section[] = [
   { label: "Profile", href: "/profile", icon: <ProfileIcon /> },
 ];
 
+/** Only for accounts tagged admin (app_metadata.admin): the usage overview. */
+const ADMIN_SECTION: Section = { label: "Admin", href: "/admin", icon: <AdminIcon /> };
+
+const sectionsFor = (admin: boolean) => (admin ? [...SECTIONS, ADMIN_SECTION] : SECTIONS);
+
 const matches = (path: string, href: string) => (href === "/" ? path === "/" : path === href || path.startsWith(`${href}/`));
 
-const sectionOf = (path: string) => SECTIONS.find((s) => [s.href, ...(s.tabs ?? []).map((t) => t.href)].some((h) => matches(path, h)));
+const sectionOf = (path: string, sections = SECTIONS) => sections.find((s) => [s.href, ...(s.tabs ?? []).map((t) => t.href)].some((h) => matches(path, h)));
 
 /** "page" on the section's own page; "true" on its other pages, where it is the current section. */
 const currentFor = (path: string, s: Section, active: boolean) => (path === s.href ? "page" : active ? "true" : undefined);
 
 /** The sections down the side, for wide screens. */
-export function SidebarNav() {
+export function SidebarNav({ admin = false }: { admin?: boolean }) {
   const path = usePathname();
-  const current = sectionOf(path);
+  const sections = sectionsFor(admin);
+  const current = sectionOf(path, sections);
   return (
     <nav aria-label="Main" className="flex flex-col gap-1">
-      {SECTIONS.map((s) => {
+      {sections.map((s) => {
         const active = s === current;
         return (
           <Link
@@ -77,17 +83,18 @@ export function SidebarNav() {
 }
 
 /** The sections along the bottom, for phones (the app's navigation bar). */
-export function MobileTabBar() {
+export function MobileTabBar({ admin = false }: { admin?: boolean }) {
   const path = usePathname();
-  const current = sectionOf(path);
+  const sections = sectionsFor(admin);
+  const current = sectionOf(path, sections);
   return (
     <nav
       aria-label="Main"
       className="fixed inset-x-0 bottom-0 z-40 border-t border-outline bg-background/95 backdrop-blur md:hidden"
       style={{ paddingBottom: "env(safe-area-inset-bottom)" }}
     >
-      <div className="mx-auto grid max-w-lg grid-cols-5">
-        {SECTIONS.map((s) => {
+      <div className={clsx("mx-auto grid max-w-lg", sections.length > 5 ? "grid-cols-6" : "grid-cols-5")}>
+        {sections.map((s) => {
           const active = s === current;
           return (
             <Link
@@ -165,6 +172,10 @@ function PlansIcon() {
   return (
     <Icon d="M200-80q-33 0-56.5-23.5T120-160v-560q0-33 23.5-56.5T200-800h40v-80h80v80h320v-80h80v80h40q33 0 56.5 23.5T840-720v560q0 33-23.5 56.5T760-80H200Zm0-80h560v-400H200v400Zm0-480h560v-80H200v80Zm0 0v-80 80Zm80 240v-80h400v80H280Zm0 160v-80h280v80H280Z" />
   );
+}
+
+function AdminIcon() {
+  return <Icon d="M640-160v-280h160v280H640Zm-240 0v-640h160v640H400Zm-240 0v-440h160v440H160Z" />;
 }
 
 function ProfileIcon() {

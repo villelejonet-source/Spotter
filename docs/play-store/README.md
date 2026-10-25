@@ -76,10 +76,10 @@ seen before, on any track. Then add the build to the table above.
 3. **App content**, everything Play asks before the first release:
    - **Privacy policy**: https://spotter.northstarsolutions.se/privacy. The website renders
      `privacy-policy.md` at build time, so a change to the file goes live with the next deploy
-     of `main`; edit only the file. **To do by hand once that page is live:** change the URL in
-     Play Console (App content → Privacy policy, and the account-deletion web link below), which
-     still points at the old Google Site (https://sites.google.com/view/spotter-app-gym/startsida,
-     on the personal Gmail account). Retire the Google Site after that.
+     of `main`; edit only the file. Set in Play Console (App content → Privacy policy and Data
+     safety → account deletion) on 2026-10-25, replacing the old Google Site
+     (https://sites.google.com/view/spotter-app-gym/startsida, on the personal Gmail account),
+     which can now be deleted.
    - **Data safety**: see below.
    - **Data deletion**: the same URL (section "Deleting your data" describes in-app and email deletion).
    - **Foreground service permissions**: declare `FOREGROUND_SERVICE_SPECIAL_USE` with the text below.
@@ -125,7 +125,7 @@ Keep a copy with the upload key.
 ### Account deletion (required because the app has accounts)
 
 - **In the app:** Profile → Backup & sync → "Delete account and backup".
-- **Web link** for the Play form: https://spotter.northstarsolutions.se/privacy (section "Deleting your data"; until it's changed by hand in Play Console, the old Google Site above).
+- **Web link** for the Play form: https://spotter.northstarsolutions.se/privacy (section "Deleting your data").
 
 ## Screenshots
 

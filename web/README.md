@@ -25,8 +25,8 @@ The seeded exercise catalog isn't synced; `scripts/copy-shared.mjs` copies
 signed out) and linked from the sign-in pages and Profile. The text lives only in
 `docs/play-store/privacy-policy.md`: `scripts/copy-shared.mjs` copies it into `src/data/` and
 the page renders the markdown (`src/components/privacy-policy.tsx`), so edit the file, not the
-page. It's the Play listing's privacy-policy and account-deletion URL; Play Console has to be
-pointed at it by hand (`docs/play-store/README.md`, "App content").
+page. It's the Play listing's privacy-policy and account-deletion URL (`docs/play-store/README.md`,
+"App content").
 
 ## Setup
 

@@ -98,6 +98,15 @@ jobs:
               ;;
           esac
           ./gradlew "${tasks[@]}"
+      # TEMPORARY (measurement): per-test timings, removed before merge.
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: test-results-${{ matrix.shard }}
+          path: "**/build/test-results/**/*.xml"
+          if-no-files-found: ignore
+          retention-days: 3
       # On failure, keep the screenshot comparisons (actual, expected and diff images) so
       # they can be inspected without re-running locally.
       - name: Upload screenshot diffs

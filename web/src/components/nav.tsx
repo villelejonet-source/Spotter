@@ -3,94 +3,172 @@
 import clsx from "clsx";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import type { ReactNode } from "react";
 
 interface NavLink {
   href: string;
   label: string;
 }
 
-/** The app's four tabs (Today, History, Progress, Profile), each with the web pages that belong under it. */
-const GROUPS: { label: string; links: NavLink[] }[] = [
-  { label: "Today", links: [{ href: "/", label: "Dashboard" }] },
-  // The app's History tab holds the calendar too.
-  { label: "History", links: [{ href: "/history", label: "History" }, { href: "/calendar", label: "Calendar" }] },
-  { label: "Progress", links: [{ href: "/progress", label: "Progress" }, { href: "/insights", label: "Insights" }, { href: "/library", label: "Exercises" }] },
-  { label: "Profile", links: [{ href: "/profile", label: "Profile" }, { href: "/plans", label: "Plans" }] },
+interface Section {
+  label: string;
+  href: string;
+  icon: ReactNode;
+  /** Sibling pages shown as tabs at the top of the section; the first is the section itself. */
+  tabs?: NavLink[];
+}
+
+/**
+ * The five sections, the same on every screen size: the sidebar on wide screens, the bottom
+ * bar on phones. Today, History, Progress and Profile are the app's tabs; Plans gets its own
+ * section here because the web is where plans are edited.
+ */
+const SECTIONS: Section[] = [
+  { label: "Today", href: "/", icon: <HomeIcon /> },
+  {
+    label: "History",
+    href: "/history",
+    icon: <HistoryIcon />,
+    // The app's History tab holds the calendar too.
+    tabs: [{ href: "/history", label: "History" }, { href: "/calendar", label: "Calendar" }],
+  },
+  {
+    label: "Progress",
+    href: "/progress",
+    icon: <ProgressIcon />,
+    tabs: [{ href: "/progress", label: "Progress" }, { href: "/insights", label: "Insights" }, { href: "/library", label: "Exercises" }],
+  },
+  { label: "Plans", href: "/plans", icon: <PlansIcon /> },
+  { label: "Profile", href: "/profile", icon: <ProfileIcon /> },
 ];
 
-const isActive = (path: string, href: string) => (href === "/" ? path === "/" : path === href || path.startsWith(`${href}/`));
+const matches = (path: string, href: string) => (href === "/" ? path === "/" : path === href || path.startsWith(`${href}/`));
 
-function NavItem({ link, active, className }: { link: NavLink; active: boolean; className?: string }) {
-  return (
-    <Link
-      href={link.href}
-      aria-current={active ? "page" : undefined}
-      className={clsx(
-        "whitespace-nowrap rounded-full px-4 py-2 text-sm font-medium transition",
-        active ? "bg-primary-container text-on-primary-container" : "text-muted hover:bg-surface",
-        className,
-      )}
-    >
-      {link.label}
-    </Link>
-  );
-}
+const sectionOf = (path: string) => SECTIONS.find((s) => [s.href, ...(s.tabs ?? []).map((t) => t.href)].some((h) => matches(path, h)));
 
-/** Every page, grouped like the app's tabs, for the desktop sidebar. */
+/** "page" on the section's own page; "true" on its other pages, where it is the current section. */
+const currentFor = (path: string, s: Section, active: boolean) => (path === s.href ? "page" : active ? "true" : undefined);
+
+/** The sections down the side, for wide screens. */
 export function SidebarNav() {
   const path = usePathname();
+  const current = sectionOf(path);
   return (
-    <nav aria-label="Pages" className="space-y-4">
-      {GROUPS.map((g) => (
-        <div key={g.label}>
-          <div className="mb-1 px-4 text-xs font-medium uppercase tracking-wide text-muted">{g.label}</div>
-          <div className="flex flex-col gap-0.5">
-            {g.links.map((l) => (
-              <NavItem key={l.href} link={l} active={isActive(path, l.href)} />
-            ))}
-          </div>
-        </div>
-      ))}
+    <nav aria-label="Main" className="flex flex-col gap-1">
+      {SECTIONS.map((s) => {
+        const active = s === current;
+        return (
+          <Link
+            key={s.href}
+            href={s.href}
+            aria-current={currentFor(path, s, active)}
+            className={clsx(
+              "flex items-center gap-3 rounded-full px-4 py-2.5 text-sm font-medium transition",
+              active ? "bg-primary-container text-on-primary-container" : "text-muted hover:bg-surface hover:text-foreground",
+            )}
+          >
+            {s.icon}
+            {s.label}
+          </Link>
+        );
+      })}
     </nav>
   );
 }
 
-/** The pages of the current group, shown under the mobile header when the group has more than one. */
-export function MobileSubNav() {
-  const path = usePathname();
-  const group = GROUPS.find((g) => g.links.some((l) => isActive(path, l.href)));
-  if (!group || group.links.length < 2) return null;
-  return (
-    <nav aria-label={`${group.label} pages`} className="flex gap-1 overflow-x-auto px-4 pb-3">
-      {group.links.map((l) => (
-        <NavItem key={l.href} link={l} active={isActive(path, l.href)} className="px-3 py-1.5 text-xs" />
-      ))}
-    </nav>
-  );
-}
-
-/** A bottom bar with the app's four tabs, for phones. */
+/** The sections along the bottom, for phones (the app's navigation bar). */
 export function MobileTabBar() {
   const path = usePathname();
+  const current = sectionOf(path);
   return (
-    <nav aria-label="Main" className="fixed inset-x-0 bottom-0 z-40 border-t border-outline bg-background/95 backdrop-blur md:hidden" style={{ paddingBottom: "env(safe-area-inset-bottom)" }}>
-      <div className="mx-auto grid max-w-lg grid-cols-4">
-        {GROUPS.map((g) => {
-          const active = g.links.some((l) => isActive(path, l.href));
-          // "page" only when this tab's own page is open; on a sub-page the tab is just the current section.
-          const current = isActive(path, g.links[0].href) ? "page" : active ? "true" : undefined;
+    <nav
+      aria-label="Main"
+      className="fixed inset-x-0 bottom-0 z-40 border-t border-outline bg-background/95 backdrop-blur md:hidden"
+      style={{ paddingBottom: "env(safe-area-inset-bottom)" }}
+    >
+      <div className="mx-auto grid max-w-lg grid-cols-5">
+        {SECTIONS.map((s) => {
+          const active = s === current;
           return (
             <Link
-              key={g.label}
-              href={g.links[0].href}
-              aria-current={current}
-              className={clsx("flex min-h-14 flex-col items-center justify-center gap-0.5 text-xs font-medium", active ? "text-primary" : "text-muted")}
+              key={s.href}
+              href={s.href}
+              aria-current={currentFor(path, s, active)}
+              className={clsx("flex min-h-16 flex-col items-center justify-center gap-1 text-xs font-medium", active ? "text-foreground" : "text-muted")}
             >
-              <span className={clsx("rounded-full px-4 py-0.5", active && "bg-primary-container text-on-primary-container")}>{g.label}</span>
+              <span className={clsx("flex h-8 w-14 items-center justify-center rounded-full transition", active && "bg-primary-container text-on-primary-container")}>{s.icon}</span>
+              {s.label}
             </Link>
           );
         })}
       </div>
     </nav>
+  );
+}
+
+/**
+ * Tabs between the pages of a section (History and Calendar under History), on every screen
+ * size. Only on those pages themselves: a detail page has its back link instead.
+ */
+export function SectionTabs() {
+  const path = usePathname();
+  const tabs = sectionOf(path)?.tabs;
+  if (!tabs?.some((t) => t.href === path)) return null;
+  return (
+    <nav aria-label="Section" className="-mx-4 mb-6 overflow-x-auto px-4 md:mx-0 md:px-0">
+      <div className="flex w-max gap-1 rounded-full bg-surface-high p-1">
+        {tabs.map((t) => {
+          const active = t.href === path;
+          return (
+            <Link
+              key={t.href}
+              href={t.href}
+              aria-current={active ? "page" : undefined}
+              className={clsx(
+                "whitespace-nowrap rounded-full px-4 py-1.5 text-sm font-medium transition",
+                active ? "bg-background text-foreground shadow-sm" : "text-muted hover:text-foreground",
+              )}
+            >
+              {t.label}
+            </Link>
+          );
+        })}
+      </div>
+    </nav>
+  );
+}
+
+// Material Symbols (outlined), drawn at 24 dp like the app's navigation bar.
+function Icon({ d }: { d: string }) {
+  return (
+    <svg aria-hidden="true" viewBox="0 -960 960 960" className="h-6 w-6 shrink-0 fill-current">
+      <path d={d} />
+    </svg>
+  );
+}
+
+function HomeIcon() {
+  return <Icon d="M240-200h120v-240h240v240h120v-360L480-740 240-560v360Zm-80 80v-480l320-240 320 240v480H520v-240h-80v240H160Zm320-350Z" />;
+}
+
+function HistoryIcon() {
+  return (
+    <Icon d="M480-120q-138 0-240.5-91.5T122-440h82q14 104 92.5 172T480-200q117 0 198.5-81.5T760-480q0-117-81.5-198.5T480-760q-69 0-129 32t-101 88h110v80H120v-240h80v94q51-64 124.5-99T480-840q75 0 140.5 28.5t114 77q48.5 48.5 77 114T840-480q0 75-28.5 140.5t-77 114q-48.5 48.5-114 77T480-120Zm112-192L440-464v-216h80v184l128 128-56 56Z" />
+  );
+}
+
+function ProgressIcon() {
+  return <Icon d="m136-240-56-56 296-298 160 160 208-206H640v-80h240v240h-80v-104L536-320 376-480 136-240Z" />;
+}
+
+function PlansIcon() {
+  return (
+    <Icon d="M200-80q-33 0-56.5-23.5T120-160v-560q0-33 23.5-56.5T200-800h40v-80h80v80h320v-80h80v80h40q33 0 56.5 23.5T840-720v560q0 33-23.5 56.5T760-80H200Zm0-80h560v-400H200v400Zm0-480h560v-80H200v80Zm0 0v-80 80Zm80 240v-80h400v80H280Zm0 160v-80h280v80H280Z" />
+  );
+}
+
+function ProfileIcon() {
+  return (
+    <Icon d="M480-480q-66 0-113-47t-47-113q0-66 47-113t113-47q66 0 113 47t47 113q0 66-47 113t-113 47ZM160-160v-112q0-34 17.5-62.5T224-378q62-31 126-46.5T480-440q66 0 130 15.5T736-378q29 15 46.5 43.5T800-272v112H160Zm80-80h480v-32q0-11-5.5-20T700-306q-54-27-109-40.5T480-360q-56 0-111 13.5T260-306q-9 5-14.5 14t-5.5 20v32Zm240-320q33 0 56.5-23.5T560-640q0-33-23.5-56.5T480-720q-33 0-56.5 23.5T400-640q0 33 23.5 56.5T480-560Zm0 320Zm0-400Z" />
   );
 }

@@ -1,9 +1,11 @@
+import { ConfirmButton } from "@/components/confirm-button";
 import { DeleteAccount } from "@/components/delete-account";
 import { buttonClass, Card, CardTitle, PageHeader } from "@/components/ui";
 import { getBodyWeight, getProfile } from "@/lib/data";
 import { APP_BACKUP_PATH } from "@/lib/labels";
 import { requireUser } from "@/lib/supabase/server";
 import { profileDraftFrom } from "@/lib/sync-writer";
+import { signOut } from "@/app/actions/account";
 import { ChangePassword } from "./change-password";
 import { ProfileForm } from "./profile-form";
 import { WeightLog } from "./weight-log";
@@ -64,6 +66,15 @@ export default async function ProfilePage() {
                 <dd className="truncate text-right">{user.email}</dd>
               </div>
             </dl>
+            <ConfirmButton
+              action={signOut}
+              title="Sign out?"
+              body="You can sign in again any time. Your backup stays in the cloud and keeps syncing from your phone."
+              confirmLabel="Sign out"
+              className="mt-1"
+            >
+              Sign out
+            </ConfirmButton>
             <div className="mt-2 border-t border-outline pt-4">
               <ChangePassword />
             </div>

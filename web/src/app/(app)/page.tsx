@@ -4,23 +4,26 @@ import { BarChartView } from "@/components/charts";
 import { Badge, Card, CardTitle, EmptyState, LinkButton, PageHeader, Stat } from "@/components/ui";
 import { exerciseName } from "@/lib/catalog";
 import { getActivePlan, getCatalog, getFinishedSessionCount, getPersonalRecords, getPlanDay, getProfile, getScheduled, getSessions, getUnit } from "@/lib/data";
-import { formatDateValue, formatRelative } from "@/lib/dates";
+import { formatDateValue, formatFullDate, formatRelative } from "@/lib/dates";
 import { APP_BACKUP_PATH, FREE_WORKOUT, PR_LABELS, WORKOUT } from "@/lib/labels";
 import { formatDuration, formatRecord, formatTarget, formatVolume, toUnit } from "@/lib/model";
 import { DAY_MS, finished, localDate, nextPlanDay, weekStreak, weeklyTotals, windowStart } from "@/lib/stats";
 
-export const metadata = { title: "Dashboard" };
+export const metadata = { title: "Today" };
 
 const WEEKS = 12;
 
-/** The dashboard: this week against the goal, volume, what's next and what's new. Each card loads on its own. */
-export default async function DashboardPage() {
+/**
+ * The home page (the app's Today tab): what's next first, then this week against the goal,
+ * volume and what's new. Each card loads on its own.
+ */
+export default async function TodayPage() {
   const [count, activePlan] = await Promise.all([getFinishedSessionCount(), getActivePlan()]);
 
   if (count === 0 && !activePlan) {
     return (
       <>
-        <PageHeader title="Dashboard" />
+        <PageHeader title="Today" subtitle={formatFullDate(Date.now())} />
         <EmptyState title="Nothing synced yet" action={<LinkButton href="/plans/new" variant="primary">Create a plan</LinkButton>}>
           Turn on cloud backup in the Spotter app ({APP_BACKUP_PATH}) with this email, then finish a workout. Your training shows up here after the next sync.
           You can also start by making a plan here.
@@ -31,22 +34,24 @@ export default async function DashboardPage() {
 
   return (
     <>
-      <PageHeader title="Dashboard" />
-      <Suspense fallback={<StatsFallback />}>
-        <WeekStats total={count} />
-      </Suspense>
-      <div className="mt-4 grid gap-4 lg:grid-cols-3">
-        <Card className="lg:col-span-2">
-          <Suspense fallback={<ChartFallback />}>
-            <WeeklyVolume />
-          </Suspense>
-        </Card>
+      <PageHeader title="Today" subtitle={formatFullDate(Date.now())} />
+      <div className="grid gap-4 lg:grid-cols-3">
         <Card>
           <Suspense fallback={<ListFallback rows={4} />}>
             <NextWorkout />
           </Suspense>
         </Card>
+        <div className="lg:col-span-2">
+          <Suspense fallback={<StatsFallback />}>
+            <WeekStats total={count} />
+          </Suspense>
+        </div>
       </div>
+      <Card className="mt-4">
+        <Suspense fallback={<ChartFallback />}>
+          <WeeklyVolume />
+        </Suspense>
+      </Card>
       <div className="mt-4 grid gap-4 lg:grid-cols-2">
         <Card>
           <Suspense fallback={<ListFallback rows={5} />}>
@@ -74,7 +79,7 @@ async function WeekStats({ total }: { total: number }) {
   const streak = weekStreak(sessions);
   const fourWeekVolume = weeks.slice(-4).reduce((s, w) => s + w.volumeKg, 0);
   return (
-    <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
+    <div className="grid h-full grid-cols-2 gap-4">
       <Stat label="This week" value={target ? `${thisWeek.sessions} / ${target}` : thisWeek.sessions} hint={target ? "workouts of your weekly goal" : "workouts"} />
       <Stat label="Week streak" value={streak >= WEEKS ? `${WEEKS}+` : streak} hint={streak === 1 ? "week in a row" : "weeks in a row"} />
       <Stat label="Volume, 4 weeks" value={formatVolume(fourWeekVolume, unit)} hint="working sets, weight × reps" />
@@ -228,7 +233,7 @@ async function RecentRecords() {
 
 function StatsFallback() {
   return (
-    <div className="grid animate-pulse grid-cols-2 gap-4 lg:grid-cols-4" aria-hidden="true">
+    <div className="grid animate-pulse grid-cols-2 gap-4" aria-hidden="true">
       {Array.from({ length: 4 }, (_, i) => (
         <div key={i} className="h-28 rounded-2xl bg-surface-high" />
       ))}

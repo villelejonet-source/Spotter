@@ -1,7 +1,7 @@
 # Spotter Web
 
 The Spotter website: sign in with the same account as the app's cloud backup to see your
-training (dashboard, history, calendar, progress) and edit plans. Next.js App Router on
+training (today, history, calendar, progress) and edit plans. Next.js App Router on
 Vercel, Supabase for auth and data.
 
 ## How it gets data

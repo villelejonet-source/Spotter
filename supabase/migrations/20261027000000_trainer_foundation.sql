@@ -5,8 +5,8 @@
 --
 -- 1. profiles: a display name per account. Not the synced user_profile rows (v_profile),
 --    which hold the app's settings; any account can be a trainer, a client or both.
--- 2. trainer_links: trainer, client, status (pending | active | ended) and an unguessable
---    invite code. A client has at most one trainer at a time; a trainer, any number of clients. Each side reads its own links; writes go only through
+-- 2. trainer_links: trainer, client, status (pending | active | ended), an unguessable
+--    invite code and an optional label the trainer sees until the invite is accepted. A client has at most one trainer at a time; a trainer, any number of clients. Each side reads its own links; writes go only through
 --    create_trainer_invite, accept_trainer_invite and end_trainer_link.
 -- 3. can_read_user(owner_id): the one access check for reading synced rows. Today it is
 --    owner-only; letting an active trainer read is a change to this function alone (see
@@ -82,6 +82,9 @@ create table if not exists public.trainer_links (
     status      text        not null default 'pending',
     -- 32 hex characters from a random UUID: about 122 random bits.
     invite_code text        not null default replace(gen_random_uuid()::text, '-', ''),
+    -- The trainer's own note on a pending invite ("Anna", "Tuesday group"), so several open
+    -- invites can be told apart. Cleared when the invite is accepted.
+    label       text        check (char_length(label) between 1 and 60),
     created_at  timestamptz not null default now(),
     accepted_at timestamptz,
     ended_at    timestamptz,
@@ -114,9 +117,9 @@ create policy "trainer_links: read own" on public.trainer_links
 revoke all on table public.trainer_links from public, anon, authenticated;
 grant select on table public.trainer_links to authenticated;
 
--- A new pending link with the caller as trainer. Errors: 42501 not signed in, 54000 too many
--- open invites.
-create or replace function public.create_trainer_invite()
+-- A new pending link with the caller as trainer and an optional [label] (1-60 characters).
+-- Errors: 42501 not signed in, 54000 too many open invites, 23514 label too long or empty.
+create or replace function public.create_trainer_invite(label text default null)
 returns public.trainer_links
 language plpgsql
 security definer
@@ -134,7 +137,7 @@ begin
         where t.trainer_id = uid and t.status = 'pending' and t.created_at > now() - interval '14 days') >= open_cap then
         raise exception 'create_trainer_invite: at most % open invites', open_cap using errcode = '54000';
     end if;
-    insert into public.trainer_links (trainer_id) values (uid) returning * into link;
+    insert into public.trainer_links (trainer_id, label) values (uid, create_trainer_invite.label) returning * into link;
     return link;
 end;
 $$;
@@ -169,7 +172,7 @@ begin
         raise exception 'accept_trainer_invite: you already have a trainer' using errcode = '23505';
     end if;
     update public.trainer_links t
-    set client_id = uid, status = 'active', accepted_at = now()
+    set client_id = uid, status = 'active', accepted_at = now(), label = null
     where t.id = link.id
     returning * into link;
     return link;
@@ -203,10 +206,10 @@ begin
 end;
 $$;
 
-revoke all on function public.create_trainer_invite() from public, anon;
+revoke all on function public.create_trainer_invite(text) from public, anon;
 revoke all on function public.accept_trainer_invite(text) from public, anon;
 revoke all on function public.end_trainer_link(uuid) from public, anon;
-grant execute on function public.create_trainer_invite() to authenticated;
+grant execute on function public.create_trainer_invite(text) to authenticated;
 grant execute on function public.accept_trainer_invite(text) to authenticated;
 grant execute on function public.end_trainer_link(uuid) to authenticated;
 

@@ -90,7 +90,10 @@ reset role;
 -- ---- Invites ----
 
 select pg_temp.act_as('00000000-0000-4000-8000-00000000000c');
-insert into ids select 'link1', id::text from public.create_trainer_invite();
+insert into ids select 'link1', id::text from public.create_trainer_invite('Client C');
+select pg_temp.expect('invite keeps its label', (select label from public.trainer_links where id = (select value from ids where name = 'link1')::uuid), 'Client C');
+select pg_temp.expect_error('label too long', format('select public.create_trainer_invite(%L)', repeat('x', 61)), '23514');
+select pg_temp.expect_error('empty label', $$select public.create_trainer_invite('')$$, '23514');
 insert into ids select 'code1', invite_code from public.trainer_links where id = (select value from ids where name = 'link1')::uuid;
 select pg_temp.expect('invite is pending', (select status from public.trainer_links where id = (select value from ids where name = 'link1')::uuid), 'pending');
 select pg_temp.expect('invite code is 32 hex characters', (select value ~ '^[0-9a-f]{32}$' from ids where name = 'code1'), true);
@@ -103,6 +106,8 @@ select pg_temp.expect('client accepts',
     (select status from public.accept_trainer_invite((select value from ids where name = 'code1'))), 'active');
 select pg_temp.expect('client is the caller',
     (select client_id from public.trainer_links where id = (select value from ids where name = 'link1')::uuid), '00000000-0000-4000-8000-00000000000d'::uuid);
+select pg_temp.expect('label is cleared on accept',
+    (select label from public.trainer_links where id = (select value from ids where name = 'link1')::uuid), null::text);
 select pg_temp.expect_error('a used code cannot be accepted again',
     format('select public.accept_trainer_invite(%L)', (select value from ids where name = 'code1')), 'P0002');
 

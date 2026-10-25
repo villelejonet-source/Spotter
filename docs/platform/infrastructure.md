@@ -231,7 +231,9 @@ another account's rows.
 - **`trainer_links`**: trainer, client, status (`pending` → `active` → `ended`), a 32-character
   random invite code, and when it was created, accepted and ended. Trainer ≠ client. A client
   has at most one trainer at a time; a trainer can have any number of clients. Each side reads its own links. There are no direct writes, only:
-  - `create_trainer_invite()`: a pending link with the caller as trainer (at most 20 open invites);
+  - `create_trainer_invite(label)`: a pending link with the caller as trainer (at most 20 open
+    invites). The optional label ("Anna", "Tuesday group") tells open invites apart and is
+    cleared when the invite is accepted;
   - `accept_trainer_invite(code)`: the caller becomes the client of a pending invite less than 14
     days old; nobody can activate a link for anyone else;
   - `end_trainer_link(id)`: either side ends it at any time.

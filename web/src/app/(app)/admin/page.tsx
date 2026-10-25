@@ -11,8 +11,9 @@ export const metadata = { robots: { index: false, follow: false } };
 const WEEKS = 12;
 
 /**
- * The owner's usage overview. Not linked from the navigation: admin_stats() answers only for
- * accounts listed in public.admins, and everyone else gets the ordinary "not found" page.
+ * The owner's usage overview. In the navigation only for accounts tagged admin. admin_stats()
+ * checks the tag in the database, so the page follows it at once (the menu follows when the
+ * session token refreshes), and everyone else gets the ordinary "not found" page.
  */
 export default async function AdminPage() {
   const { supabase } = await requireUser();

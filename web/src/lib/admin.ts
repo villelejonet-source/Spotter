@@ -1,7 +1,7 @@
 // The owner's usage overview (/admin). The numbers come from the admin_stats() database
-// function (supabase/migrations/20261028000000_devices_and_admin.sql), which answers only for
-// accounts listed in public.admins: there is no allow-list or secret key on the website.
-// Dates and counts only, never workout contents.
+// function (supabase/migrations/20261029000000_admin_tag.sql), which answers only for accounts
+// tagged admin ("admin": true in their auth app_metadata): there is no allow-list or secret
+// key on the website. Dates and counts only, never workout contents.
 
 export interface AdminTotals {
   accounts: number;
@@ -105,5 +105,15 @@ export function parseAdminStats(raw: unknown): AdminStats {
   };
 }
 
-/** Postgres "insufficient privilege": admin_stats says no to anyone not in public.admins. */
+/**
+ * Whether the session token's claims carry the admin tag: app_metadata.admin true (or "true").
+ * Only shows the Admin menu; admin_stats checks the tag in the database again. app_metadata,
+ * unlike user_metadata, can't be changed by the user.
+ */
+export function isAdminClaims(claims: unknown): boolean {
+  const admin = obj(obj(claims).app_metadata).admin;
+  return admin === true || admin === "true";
+}
+
+/** Postgres "insufficient privilege": admin_stats says no to anyone not tagged admin. */
 export const NOT_ADMIN = "42501";

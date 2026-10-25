@@ -149,9 +149,11 @@ file again. That was the state of production on 2026-10-24; since the audit the 
 | `20261024000000` | `hardening_and_performance.sql` (`push_rows` limits, indexes, `v_set_history`) | applied via the editor, now recorded |
 | `20261025000000` | `scheduled_sessions.sql` (`scheduled_session`, `v_scheduled_session`) | applied via the editor, now recorded |
 | `20261026000000` | `audit_hardening.sql` (policies with `(select auth.uid())`, `push_rows` checks and row cap, revoked grants, `delete_my_account` cleanup, `v_exercise_usage` which `/library` needs) | applied with the audit, recorded |
+| `20261027000000` | `trainer_foundation.sql` (`profiles`, `trainer_links` and their functions, `can_read_user` in the `sync_rows` read policy, `delete_my_account` removes profile and links) | applied 2026-10-25 with `supabase db push --linked`, recorded |
+| `20261028000000` | `devices_and_admin.sql` (`devices` and `check_in_device`, `admins` and `admin_stats` for `/admin`, `delete_my_account` removes devices) | applied 2026-10-25 with `supabase db push --linked`, recorded |
 
 On 2026-10-24 the history was empty (`list_migrations` returned `[]`); on 2026-10-25 it lists
-all five versions. If it ever drifts again, repair it the same way: after linking, name the
+all five versions (six since 2026-10-25). If it ever drifts again, repair it the same way: after linking, name the
 versions that are already live, then push the rest:
 
 ```bash
@@ -162,6 +164,21 @@ supabase db push          # applies 20261026000000_audit_hardening.sql and recor
 
 From then on apply new migrations only via `db push` or `apply_migration`. Check `supabase
 migration list` before a push whenever in doubt.
+
+**Test a migration locally before applying it.** There's no staging project, so new migrations
+are checked on a local stack first (needs Docker; OrbStack on this Mac). `supabase/config.toml`
+holds the local settings, not production's:
+
+```bash
+supabase start -x studio,imgproxy,mailpit,realtime,storage-api,edge-runtime,logflare,vector,supavisor,postgres-meta
+supabase db reset   # rebuilds the local database from every file in supabase/migrations/
+for f in supabase/tests/*.sql; do docker exec -i supabase_db_spotter psql -U postgres -d postgres -v ON_ERROR_STOP=1 -q -t < "$f"; done
+supabase stop
+```
+
+Each test file prints "… all checks passed" or stops at the first failing check. For a policy
+change, also `explain` the app's pull as `authenticated` and check it still uses
+`sync_rows_pull_idx` (an unfiltered pull, as older apps send, included).
 
 ## Versioning: keeping app, website and database compatible
 
@@ -192,10 +209,16 @@ Rules that keep that safe:
 5. **Minimum supported app version** (to build): a public `app_config` row with
    `min_version_code`. The app checks it on sync and asks for an update instead of syncing; this
    is the emergency brake for an incompatible change.
-6. **Record what each phone runs** (to build): on sync the phone upserts a `device` row with its
-   `versionCode` and Room schema version. The website can then warn ("your phone needs an update
-   before this plan syncs") and support can see which versions are still in use before
-   contracting the schema.
+6. **Record what each phone runs** (built, from versionCode 7): at the end of every successful
+   sync the app calls `check_in_device(device_id, version_code, schema_version)`
+   (`SyncEngine`, `DeviceIdentity`), which upserts the caller's row in `devices`: a random
+   per-install UUID (kept in plain SharedPreferences, so it isn't copied to a new phone), the
+   `versionCode`, the Room schema version and `last_synced_at`. Each account keeps its 20 most
+   recently synced installs; `delete_my_account` removes them. A failed check-in never fails
+   the sync. The versionCode spread is on the usage overview (`/admin`, see "Operations").
+   An account that syncs but never checks in runs versionCode 6 or older (or uses only the
+   website). Still to build on top of it: the website warning ("your phone needs an update
+   before this plan syncs").
 
 ## Scaling the data model
 
@@ -212,16 +235,83 @@ need. The plan:
    apps skip the rows until they update.
 3. **When trainers arrive:** typed tables (`sessions`, `sets`, …) maintained by a trigger on
    `sync_rows`, with their own indexes and RLS (owner, or linked trainer). The website reads those;
-   sync keeps writing `sync_rows`.
+   sync keeps writing `sync_rows`. The groundwork is in place, see "Trainer foundation" below.
 4. **Past ~50 M rows:** hash-partition `sync_rows` by `user_id`, and pre-aggregate weekly stats.
+
+### Trainer foundation
+
+Built (`supabase/migrations/20261027000000_trainer_foundation.sql`, tests in
+`supabase/tests/trainer_links.sql`). Trainers are **still switched off**: no account can read
+another account's rows.
+
+- **Owner filters everywhere.** The app's pull and `hasRows` filter `sync_rows` on
+  `user_id = signed-in user` (`SupabaseSyncRemote`, from versionCode 7). Every website read goes
+  through `ownedBy()` in `web/src/lib/queries.ts`, which adds `user_id = signed-in user`, and the
+  query functions only accept that client. RLS stays as the second wall. Without these filters a
+  trainer's phone would pull client rows into its own database and push them back as its own.
+- **`profiles`**: user id, display name, timestamps; each user reads and writes only their own
+  row. There is no fixed trainer or client role: any account can be either, or both.
+- **`trainer_links`**: trainer, client, status (`pending` → `active` → `ended`), a 32-character
+  random invite code, and when it was created, accepted and ended. Trainer ≠ client. A client
+  has at most one trainer at a time; a trainer can have any number of clients. Each side reads its own links. There are no direct writes, only:
+  - `create_trainer_invite(label)`: a pending link with the caller as trainer (at most 20 open
+    invites). The optional label ("Anna", "Tuesday group") tells open invites apart and is
+    cleared when the invite is accepted;
+  - `accept_trainer_invite(code)`: the caller becomes the client of a pending invite less than 14
+    days old; nobody can activate a link for anyone else;
+  - `end_trainer_link(id)`: either side ends it at any time.
+- **`can_read_user(owner_id)`**: the one access check in the `sync_rows` read policy. Today it is
+  `owner_id = auth.uid()`. It's plain SQL without `SET search_path` so Postgres inlines it into
+  the policy (the advisor's search_path WARN on it is expected).
+- **`delete_my_account()`** also deletes the account's profile and every link it's part of.
+
+Applied to production on 2026-10-25. Advisors afterwards, all expected: security WARNs for
+the SECURITY DEFINER functions callable by signed-in users (`push_rows`, `delete_my_account`
+and the three link functions) and for `can_read_user`'s search_path (needed for inlining),
+plus the existing leaked-password-protection WARN; performance INFOs for unused indexes (the
+two `trainer_links` indexes, on an empty table, and `sync_rows_set_entry_exercise_idx`).
+`explain` on production confirms an unfiltered pull still uses `sync_rows_pull_idx`.
+
+**Left to do before trainers can read a client's data, in order:**
+
+1. **Release versionCode 7** (`/release`) with the owner-filtered pull. Apps on versionCode 6
+   or older pull `sync_rows` unfiltered, so a trainer still on one of those would pull client
+   rows. Before step 3, make sure no trainer runs an old app. Each install now reports its
+   `versionCode` on sync ("Versioning", step 6), but an old app never reports anything, so
+   the gate is the absence of old apps, not the presence of new ones: wait until `/admin`
+   shows (close to) no active accounts without a check-in, and have `create_trainer_invite`
+   refuse an account that synced rows in the last 30 days without a versionCode ≥ 7 check-in
+   after them.
+2. **Build the read path for trainers:** typed tables or views for what a trainer sees (step 3
+   above), plus a `profiles` read policy so a linked trainer sees the client's display name.
+3. **Switch reads on:** change only `can_read_user` to also allow an active link (the `exists`
+   query in the function's comment), and add SQL tests that a trainer reads an active client,
+   loses access the moment the link ends, and still never sees pending or ended clients' rows.
+4. **UI:** invites, accepting a code, the client list and ending a link, on the web and in the
+   app. Then plan suggestions and, if wanted, a paid trainer tier (PLAN.md step 4).
 
 ## Operations
 
 - **Backups:** daily on Supabase Pro; add point-in-time recovery once paying users exist.
   Users can also export their data from the website (JSON/CSV).
+- **Usage overview:** `/admin` on the website (not in the navigation) shows accounts and
+  sign-ups per week, last sign-in, last active (the newer of the account's newest synced row
+  and its newest device check-in; the app stays signed in for months, so last sign-in says
+  little), workouts and weekly active users per week, and the versionCode spread. It reads
+  `admin_stats()`, a SECURITY DEFINER function that answers only for accounts in
+  `public.admins`; everyone else gets "not found". No allow-list or secret key on the website.
+  Dates and counts only, never workout contents. Add or remove an admin in the SQL editor
+  (the repository is public, so never in a migration):
+  `insert into public.admins (user_id) select id from auth.users where email = '…';`
+  Applied to production on 2026-10-25. Advisors afterwards, all expected: the security
+  WARN for SECURITY DEFINER functions callable by signed-in users now also lists
+  `check_in_device` and `admin_stats`; a new INFO says `admins` has RLS without policies (on
+  purpose: no API role may read it); and a performance INFO says `devices_last_synced_idx` is
+  unused (the table is empty until versionCode 7).
 - **Errors and logs:** Vercel function logs and Supabase logs to start with. The privacy policy
-  promises no analytics; if error reporting (e.g. Sentry) is added, configure it without
-  personal data and update the policy first.
+  promises no analytics or tracking services and describes exactly what the app reports on sync
+  and what the usage overview shows; if error reporting (e.g. Sentry) is added, or the overview
+  shows anything new, configure it without personal data and update the policy first.
 - **Abuse limits:** Supabase Auth rate limits on sign-in emails (dashboard). `push_rows` is the
   only way to write: it accepts known table names only, at most 1000 rows per call and 16 KB
   per row, and always writes as the caller.

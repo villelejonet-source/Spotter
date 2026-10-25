@@ -72,8 +72,9 @@ class SyncRepository @Inject constructor(
     private val scheduler: SyncScheduler,
     @param:ApplicationScope private val scope: CoroutineScope,
     private val clock: Clock,
+    device: DeviceIdentity,
 ) {
-    private val engine = SyncEngine(store, remote, cursors, clock)
+    private val engine = SyncEngine(store, remote, cursors, clock, device::checkIn)
     private val mutex = Mutex()
     private val running = MutableStateFlow(false)
     private val error = MutableStateFlow<SyncError?>(null)

@@ -405,20 +405,32 @@ internal fun UserSession.isRecovery(): Boolean = type == "recovery" || runCatchi
     claims["amr"]?.jsonArray?.any { (it as? JsonObject)?.get("method")?.jsonPrimitive?.content == "recovery" } == true
 }.getOrDefault(false)
 
-/** [SyncRemote] over the `sync_rows` table and `push_rows` function (see supabase/migrations/20261004000000_sync.sql). */
+/**
+ * [SyncRemote] over the `sync_rows` table and the `push_rows` and `check_in_device` functions
+ * (see supabase/migrations/).
+ * Reads filter on `user_id` explicitly (see [SyncRemote.pull]).
+ */
 @Singleton
-class SupabaseSyncRemote @Inject constructor(private val provider: SupabaseProvider) : SyncRemote {
-    private suspend fun client() = provider.client() ?: error("Cloud sync isn't configured in this build")
+class SupabaseSyncRemote internal constructor(private val clientOrNull: suspend () -> SupabaseClient?) : SyncRemote {
+    @Inject constructor(provider: SupabaseProvider) : this(provider::client)
+
+    private suspend fun client() = clientOrNull() ?: error("Cloud sync isn't configured in this build")
 
     @Serializable
     private data class IdOnly(@SerialName("sync_id") val syncId: String)
 
-    override suspend fun hasRows(): Boolean =
-        client().from(TABLE).select(Columns.list("sync_id")) { limit(1) }.decodeList<IdOnly>().isNotEmpty()
+    override suspend fun hasRows(userId: String): Boolean =
+        client().from(TABLE).select(Columns.list("sync_id")) {
+            filter { eq("user_id", userId) }
+            limit(1)
+        }.decodeList<IdOnly>().isNotEmpty()
 
-    override suspend fun pull(since: String?, offset: Int, limit: Int): List<RemoteRow> =
+    override suspend fun pull(userId: String, since: String?, offset: Int, limit: Int): List<RemoteRow> =
         client().from(TABLE).select {
-            if (since != null) filter { gt("server_updated_at", since) }
+            filter {
+                eq("user_id", userId)
+                if (since != null) gt("server_updated_at", since)
+            }
             order("server_updated_at", Order.ASCENDING)
             order("sync_id", Order.ASCENDING)
             range(offset.toLong(), (offset + limit - 1).toLong())
@@ -426,6 +438,10 @@ class SupabaseSyncRemote @Inject constructor(private val provider: SupabaseProvi
 
     override suspend fun push(rows: List<SyncRow>) {
         client().postgrest.rpc("push_rows", buildJsonObject { put("rows", json.encodeToJsonElement(rows)) })
+    }
+
+    override suspend fun checkIn(device: DeviceCheckIn) {
+        client().postgrest.rpc("check_in_device", json.encodeToJsonElement(device).jsonObject)
     }
 
     private val json = Json { encodeDefaults = true }

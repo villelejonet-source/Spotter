@@ -48,6 +48,3 @@ class StartupMaintenance @Inject constructor(
         val REFRESH_INTERVAL: Duration = Duration.ofDays(1)
     }
 }
-
-// TEMPORARY: changes core:data bytecode to measure CI; removed before merge.
-const val CI_MEASUREMENT_MARKER = 1

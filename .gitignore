@@ -16,3 +16,6 @@ docs/play-store/*.mp4
 
 # Supabase CLI link state (local only)
 supabase/.temp/
+
+# Local-only notes with credentials (never committed)
+.private/

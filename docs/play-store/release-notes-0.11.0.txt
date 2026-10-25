@@ -1,0 +1,8 @@
+<en-US>
+• Time planks and other holds in seconds
+• Sign in to backup with a password as well as an emailed code
+• Safer sign-in: links only work on the phone that asked
+• Undo when you delete a set
+• Faster start-up and smoother logging
+• Clearer screens, loading states and messages throughout
+</en-US>

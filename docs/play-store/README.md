@@ -12,9 +12,9 @@ personal accounts.
 | versionCode | versionName | Status |
 |---|---|---|
 | 2 | 0.9.1 | Internal and closed test (alpha) |
-| 3 | 0.10.0 | Closed test (alpha); first production release, in review since 2026-10-23 (Sweden only). Lacks timed holds from 0.9.1. |
-| 4 | 0.10.1 | Built from tag `v0.10.1`, not uploaded yet: ship it as the first update once 0.10.0 is approved. |
-| 5 | 0.11.0 | Audit release (`docs/platform/audit-2026-10.md`): PKCE sign-in links, sync and database hardening, one design system on app and web. Upload after 0.10.0 is approved; replaces 0.10.1 unless 0.10.1 has already shipped. Not tagged until review passes. |
+| 3 | 0.10.0 | Closed test (alpha); first production release, live since 2026-10-25 (Sweden only). Lacks timed holds from 0.9.1. |
+| 4 | 0.10.1 | Built from tag `v0.10.1`; never uploaded (superseded by 0.11.0). |
+| 5 | 0.11.0 | Audit release (`docs/platform/audit-2026-10.md`): PKCE sign-in links, sync and database hardening, one design system on app and web. Built from tag `v0.11.0`; uploaded to production 2026-10-25. Release notes: `release-notes-0.11.0.txt`. |
 
 Tag each uploaded build (`git tag v0.10.1 <commit>`) so it can be rebuilt exactly.
 

@@ -19,3 +19,7 @@ supabase/.temp/
 
 # Local-only notes with credentials (never committed)
 .private/
+
+# Claude Code: per-task worktrees and personal settings (settings.json is shared)
+.claude/worktrees/
+.claude/settings.local.json

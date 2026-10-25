@@ -17,7 +17,9 @@ personal accounts.
 | 5 | 0.11.0 | Audit release (`docs/platform/audit-2026-10.md`): PKCE sign-in links, sync and database hardening, one design system on app and web. Built from tag `v0.11.0`; live in production 2026-10-25 (submission 6, full rollout, published 17:07), replaced by 1.0.0 the same day. Release notes: `release-notes-0.11.0.txt`. |
 | 6 | 1.0.0 | First 1.x release, marking the production launch. Fixes typing in the exercise picker's search (letters dropped, cursor jumping). Built from tag `v1.0.0`; live in production since 2026-10-25 (full rollout). Release notes: `release-notes-1.0.0.txt`. |
 
-Tag each uploaded build (`git tag v0.10.1 <commit>`) so it can be rebuilt exactly.
+Tag each uploaded build so it can be rebuilt exactly: `git tag android-v1.0.1 <commit>` from
+1.0.1 on (room for `ios-v…` tags later); earlier builds use `vX.Y.Z`. The `/release` Claude
+Code skill (`.claude/skills/release/`) walks through bumping, notes, checks and the bundle.
 
 ## 1. Create the upload key (once)
 

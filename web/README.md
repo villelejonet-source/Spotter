@@ -64,7 +64,11 @@ next to the Europe/Stockholm time zone.
 ## Deploy (Vercel)
 
 Live at **https://spotter.northstarsolutions.se** (Vercel project "Spotter", Hobby plan,
-deployed 2026-10-25). Every push to `main` deploys production.
+deployed 2026-10-25). Every push to `main` deploys production, and every pull request gets a
+preview deployment, unless nothing the site is built from changed: `vercel.json`'s
+`ignoreCommand` skips the build when neither `web/` nor the exercise catalog it copies
+(`core/data/src/main/assets/exercises.json`) differs from the last deployed commit. If that
+commit isn't in Vercel's shallow clone, `git diff` fails and the build runs anyway.
 
 How it's set up:
 

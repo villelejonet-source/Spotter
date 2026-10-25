@@ -5,7 +5,7 @@ import { useMemo, useState, type ReactNode } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { Card } from "./ui";
 
-/** The centred card every sign-in, sign-up and password page sits in. */
+/** The centred card every sign-in, sign-up and password page sits in, with the privacy policy below. */
 export function AuthCard({ title, subtitle, children, footer }: { title: string; subtitle?: ReactNode; children: ReactNode; footer?: ReactNode }) {
   return (
     <main className="flex min-h-screen items-center justify-center px-4 py-10">
@@ -21,6 +21,11 @@ export function AuthCard({ title, subtitle, children, footer }: { title: string;
           {children}
         </Card>
         {footer && <div className="mt-4 text-center text-sm text-muted">{footer}</div>}
+        <div className="mt-6 text-center text-xs text-muted">
+          <Link href="/privacy" className="rounded-md hover:text-foreground">
+            Privacy policy
+          </Link>
+        </div>
       </div>
     </main>
   );

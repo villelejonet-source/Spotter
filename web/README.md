@@ -16,8 +16,17 @@ last-write-wins timestamps, and explicit tombstones for removed days and exercis
 pulls them the next time it opens. `src/lib/sync-writer.test.ts` checks the payloads against
 the app's exported Room schema, so a Room change that the web doesn't follow fails the tests.
 
-The seeded exercise catalog isn't synced; `scripts/copy-catalog.mjs` copies
+The seeded exercise catalog isn't synced; `scripts/copy-shared.mjs` copies
 `core/data/src/main/assets/exercises.json` into `src/data/` before dev, build and test.
+
+## Privacy policy
+
+**https://spotter.northstarsolutions.se/privacy**, public (the middleware lets it through
+signed out) and linked from the sign-in pages and Profile. The text lives only in
+`docs/play-store/privacy-policy.md`: `scripts/copy-shared.mjs` copies it into `src/data/` and
+the page renders the markdown (`src/components/privacy-policy.tsx`), so edit the file, not the
+page. It's the Play listing's privacy-policy and account-deletion URL; Play Console has to be
+pointed at it by hand (`docs/play-store/README.md`, "App content").
 
 ## Setup
 
@@ -66,15 +75,16 @@ next to the Europe/Stockholm time zone.
 Live at **https://spotter.northstarsolutions.se** (Vercel project "Spotter", Hobby plan,
 deployed 2026-10-25). Every push to `main` deploys production, and every pull request gets a
 preview deployment, unless nothing the site is built from changed: `vercel.json`'s
-`ignoreCommand` skips the build when neither `web/` nor the exercise catalog it copies
-(`core/data/src/main/assets/exercises.json`) differs from the last deployed commit. If that
+`ignoreCommand` skips the build when neither `web/` nor the files it copies (the exercise
+catalog `core/data/src/main/assets/exercises.json` and `docs/play-store/privacy-policy.md`)
+differs from the last deployed commit. If that
 commit isn't in Vercel's shallow clone, `git diff` fails and the build runs anyway.
 
 How it's set up:
 
 - **Project:** imported from `villelejonet-source/Spotter`, **Root Directory** `web`,
   framework Next.js, default build settings. The build copies the exercise catalog from the
-  Android module, so the whole repository must be checked out (Vercel's default).
+  Android module and the privacy policy from `docs/`, so the whole repository must be checked out (Vercel's default).
 - **Environment variables:** `NEXT_PUBLIC_SUPABASE_URL` and
   `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`, the same values as `.env.local`. Never a secret key.
 - **Function region:** London (`lhr1`), Settings → Functions. The Supabase project is in

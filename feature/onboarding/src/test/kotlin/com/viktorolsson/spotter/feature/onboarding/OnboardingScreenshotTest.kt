@@ -2,6 +2,7 @@ package com.viktorolsson.spotter.feature.onboarding
 
 import androidx.compose.runtime.Composable
 import androidx.test.ext.junit.runners.AndroidJUnit4
+import androidx.compose.ui.test.junit4.createComposeRule
 import com.github.takahirom.roborazzi.ExperimentalRoborazziApi
 import com.github.takahirom.roborazzi.RobolectricDeviceQualifiers
 import com.github.takahirom.roborazzi.RoborazziComposeOptions
@@ -15,6 +16,7 @@ import com.viktorolsson.spotter.core.model.MovementPattern
 import com.viktorolsson.spotter.core.model.Sex
 import com.viktorolsson.spotter.core.ui.PreviewData
 import com.viktorolsson.spotter.core.ui.theme.SpotterTheme
+import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.annotation.Config
@@ -25,6 +27,11 @@ import org.robolectric.annotation.GraphicsMode
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
 @Config(qualifiers = RobolectricDeviceQualifiers.Pixel7)
 class OnboardingScreenshotTest {
+    // Unused directly, but with it captureRoboImage doesn't wait for infinite animations
+    // (loading spinners) to settle, which otherwise takes minutes per test.
+    @get:Rule
+    val compose = createComposeRule()
+
     private val answers = Answers(
         sex = Sex.FEMALE, age = "34", heightCm = "168", weight = "64", goal = Goal.HYPERTROPHY,
         experience = ExperienceLevel.INTERMEDIATE, days = 4, minutes = 60,

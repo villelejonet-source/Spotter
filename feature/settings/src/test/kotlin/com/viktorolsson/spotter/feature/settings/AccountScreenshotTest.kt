@@ -1,10 +1,12 @@
 package com.viktorolsson.spotter.feature.settings
 
 import androidx.test.ext.junit.runners.AndroidJUnit4
+import androidx.compose.ui.test.junit4.createComposeRule
 import com.github.takahirom.roborazzi.RobolectricDeviceQualifiers
 import com.github.takahirom.roborazzi.captureRoboImage
 import com.viktorolsson.spotter.core.data.sync.CodePurpose
 import com.viktorolsson.spotter.core.ui.theme.SpotterTheme
+import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.annotation.Config
@@ -14,6 +16,11 @@ import org.robolectric.annotation.GraphicsMode
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
 @Config(qualifiers = RobolectricDeviceQualifiers.Pixel7)
 class AccountScreenshotTest {
+    // Unused directly, but with it captureRoboImage doesn't wait for infinite animations
+    // (loading spinners) to settle, which otherwise takes minutes per test.
+    @get:Rule
+    val compose = createComposeRule()
+
     private fun capture(name: String, state: AccountUiState, dark: Boolean = false) = captureRoboImage("src/test/screenshots/$name.png") {
         SpotterTheme(darkTheme = dark, dynamicColor = false) {
             AccountScreen(state = state, onBack = {}, actions = AccountActions())

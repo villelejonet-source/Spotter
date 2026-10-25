@@ -1,6 +1,7 @@
 package com.viktorolsson.spotter.feature.today
 
 import androidx.test.ext.junit.runners.AndroidJUnit4
+import androidx.compose.ui.test.junit4.createComposeRule
 import com.github.takahirom.roborazzi.ExperimentalRoborazziApi
 import com.github.takahirom.roborazzi.RobolectricDeviceQualifiers
 import com.github.takahirom.roborazzi.RoborazziComposeOptions
@@ -9,6 +10,7 @@ import com.github.takahirom.roborazzi.fontScale
 import com.viktorolsson.spotter.core.model.ScheduledWorkout
 import com.viktorolsson.spotter.core.ui.PreviewData
 import com.viktorolsson.spotter.core.ui.theme.SpotterTheme
+import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.annotation.Config
@@ -20,6 +22,11 @@ import java.time.LocalDate
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
 @Config(qualifiers = RobolectricDeviceQualifiers.Pixel7)
 class TodayScreenshotTest {
+    // Unused directly, but with it captureRoboImage doesn't wait for infinite animations
+    // (loading spinners) to settle, which otherwise takes minutes per test.
+    @get:Rule
+    val compose = createComposeRule()
+
     private val lowerA = PreviewData.lowerA
 
     private fun capture(name: String, dark: Boolean, state: TodayUiState, dynamic: Boolean = false, fontScale: Float = 1f) =

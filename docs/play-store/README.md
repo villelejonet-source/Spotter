@@ -115,11 +115,16 @@ Keep a copy with the upload key.
     date of birth from the profile)
   - Health and fitness → *Health info* (injuries/limitations to work around, body weight)
     and *Fitness info* (plans, workouts, sets, records)
+  - Device or other IDs → *Device or other IDs* (the random per-install id the app sends on
+    sync, from versionCode 7; see `DeviceIdentity`)
   - For each: **optional** (backup is opt-in), purpose **App functionality** (plus
-    **Account management** for email and user ID), not processed ephemerally.
+    **Account management** for email and user ID), not processed ephemerally. From
+    versionCode 7 also **Analytics** for *User IDs*, *Fitness info* and *Device or other IDs*:
+    the owner's usage overview (`/admin`) counts accounts, workouts per week and app versions.
 - **Encrypted in transit:** Yes (HTTPS). **Users can request deletion:** Yes, in the app
   (Profile → Backup & sync → Delete account and backup) and by email.
-- No analytics, no ads, no data sold or shared. Training data isn't in Google cloud backup
+- No analytics or tracking services, no ads, no data sold or shared (the usage overview reads
+  the backup database directly). Training data isn't in Google cloud backup
   (`data_extraction_rules.xml`).
 
 ### Account deletion (required because the app has accounts)

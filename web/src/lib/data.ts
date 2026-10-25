@@ -1,4 +1,5 @@
-// The server's view of the user's data: queries.ts run with the signed-in client, each
+// The server's view of the user's data: queries.ts run with the signed-in client (filtered
+// on the signed-in user's id, see ownedBy), each
 // memoised per request with React's cache() so sections of a page that need the same rows
 // share one fetch. Every function takes only what its page shows (a window, a limit, an
 // id); the no-argument forms return everything and exist for the export.
@@ -7,11 +8,15 @@ import { cache } from "react";
 import { buildCatalog } from "./catalog";
 import type { WeightUnit } from "./model";
 import * as q from "./queries";
-import { createClient } from "./supabase/server";
+import { requireUser } from "./supabase/server";
 
 export type { PlanTree, ProgressSetRow, SessionDetail, SetWithExercise } from "./queries";
 
-const client = cache(async () => (await createClient()) as unknown as q.QueryClient);
+/** Signed out: redirects to /login (requireUser). */
+const client = cache(async () => {
+  const { supabase, user } = await requireUser();
+  return q.ownedBy(supabase as unknown as q.QueryClient, user.id);
+});
 
 export const getProfile = cache(async () => q.profile(await client()));
 

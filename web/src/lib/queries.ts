@@ -1,7 +1,11 @@
 // Reads from the Supabase views, written against a minimal client interface so the
 // filters each page sends can be unit-tested with a mock (queries.test.ts). data.ts wraps
-// these with the real client and React's per-request cache. RLS limits every view to the
-// signed-in user, so no query filters on user_id.
+// these with the real client and React's per-request cache.
+//
+// Every query filters on the signed-in user's id, even though RLS already limits the rows:
+// once a trainer may read a linked client's rows, RLS alone would mix the client's data into
+// the trainer's own pages. The filter is applied by ownedBy(), and every query takes the
+// OwnClient it returns, so a query can't be run with an unfiltered client.
 import type { CustomExerciseRow } from "./catalog";
 import type {
   BodyWeightRow,
@@ -42,6 +46,22 @@ export interface QueryClient {
   from(view: string): { select(columns?: string, options?: { count?: "exact"; head?: boolean }): QueryBuilder };
 }
 
+/** A client whose every select starts with user_id = [owner]. Only ownedBy() makes one. */
+export interface OwnClient extends QueryClient {
+  readonly owner: string;
+}
+
+export function ownedBy(client: QueryClient, userId: string): OwnClient {
+  if (!userId) throw new Error("ownedBy: no user id");
+  return {
+    owner: userId,
+    from(view) {
+      const table = client.from(view);
+      return { select: (...args) => table.select(...args).eq("user_id", userId) };
+    },
+  };
+}
+
 type Filter = (q: QueryBuilder) => QueryBuilder;
 
 const PAGE = 1000;
@@ -57,7 +77,7 @@ function fail(view: string, error: QueryError): never {
  * so rows that tie across a page boundary aren't skipped. Both must be in [columns].
  */
 export async function selectAll<T>(
-  client: QueryClient,
+  client: OwnClient,
   view: string,
   { filter, key = "sync_id", tiebreak, columns = "*" }: { filter?: Filter; key?: string; tiebreak?: string; columns?: string } = {},
 ): Promise<T[]> {
@@ -82,7 +102,7 @@ export async function selectAll<T>(
 
 /** One page of a view, ordered on the server. */
 async function selectPage<T>(
-  client: QueryClient,
+  client: OwnClient,
   view: string,
   { filter, order, descending = false, limit, columns = "*" }: { filter?: Filter; order: string; descending?: boolean; limit: number; columns?: string },
 ): Promise<T[]> {
@@ -94,7 +114,7 @@ async function selectPage<T>(
 }
 
 /** How many rows match, without fetching them. */
-async function count(client: QueryClient, view: string, filter?: Filter): Promise<number> {
+async function count(client: OwnClient, view: string, filter?: Filter): Promise<number> {
   let q = client.from(view).select("sync_id", { count: "exact", head: true });
   if (filter) q = filter(q);
   const { count: n, error } = await q;
@@ -102,7 +122,7 @@ async function count(client: QueryClient, view: string, filter?: Filter): Promis
   return n ?? 0;
 }
 
-async function single<T>(client: QueryClient, view: string, column: string, value: unknown): Promise<T | null> {
+async function single<T>(client: OwnClient, view: string, column: string, value: unknown): Promise<T | null> {
   const { data, error } = await client.from(view).select("*").eq(column, value).maybeSingle();
   if (error) fail(view, error);
   return data as T | null;
@@ -110,14 +130,14 @@ async function single<T>(client: QueryClient, view: string, column: string, valu
 
 // ---- Profile and catalog ----
 
-export async function profile(client: QueryClient): Promise<ProfileRow | null> {
+export async function profile(client: OwnClient): Promise<ProfileRow | null> {
   const { data, error } = await client.from("v_profile").select("*").maybeSingle();
   if (error) fail("v_profile", error);
   return data as ProfileRow | null;
 }
 
 /** The user's own exercises; data.ts merges them into the seeded catalog. */
-export function customExercises(client: QueryClient): Promise<CustomExerciseRow[]> {
+export function customExercises(client: OwnClient): Promise<CustomExerciseRow[]> {
   return selectAll<CustomExerciseRow>(client, "v_custom_exercise", { key: "id" });
 }
 
@@ -142,7 +162,7 @@ const sessionFilter =
   };
 
 /** Sessions newest first. Pass [limit] for a list, [since]/[until] for a window. */
-export async function sessions(client: QueryClient, query: SessionsQuery = {}): Promise<SessionSummaryRow[]> {
+export async function sessions(client: OwnClient, query: SessionsQuery = {}): Promise<SessionSummaryRow[]> {
   if (query.limit != null) {
     return selectPage<SessionSummaryRow>(client, "v_session_summary", { filter: sessionFilter(query), order: "started_at", descending: true, limit: query.limit });
   }
@@ -151,12 +171,12 @@ export async function sessions(client: QueryClient, query: SessionsQuery = {}): 
 }
 
 /** When each session happened (three columns), oldest first: for streaks, heatmaps and counts. */
-export async function sessionTimes(client: QueryClient, since?: number): Promise<SessionTimeRow[]> {
+export async function sessionTimes(client: OwnClient, since?: number): Promise<SessionTimeRow[]> {
   return selectAll<SessionTimeRow>(client, "v_session_summary", { filter: sessionFilter({ since }), key: "started_at", tiebreak: "sync_id", columns: "sync_id,started_at,ended_at" });
 }
 
 /** Finished workouts, all time. */
-export function finishedSessionCount(client: QueryClient): Promise<number> {
+export function finishedSessionCount(client: OwnClient): Promise<number> {
   return count(client, "v_session_summary", (q) => q.not("ended_at", "is", null));
 }
 
@@ -165,7 +185,7 @@ export interface SessionDetail {
   exercises: (SessionExerciseRow & { sets: SetEntryRow[] })[];
 }
 
-export async function sessionDetail(client: QueryClient, syncId: string): Promise<SessionDetail | null> {
+export async function sessionDetail(client: OwnClient, syncId: string): Promise<SessionDetail | null> {
   const [session, exercises, sets] = await Promise.all([
     single<SessionSummaryRow>(client, "v_session_summary", "sync_id", syncId),
     selectAll<SessionExerciseRow>(client, "v_session_exercise", { filter: (q) => q.eq("session_id", syncId) }),
@@ -208,7 +228,7 @@ interface SetHistoryQuery {
 }
 
 /** Logged sets from finished workouts, filtered on the server. With no filter it's every set, which only the export needs. */
-export async function setHistory<T = SetWithExercise>(client: QueryClient, { exerciseId, since, includeRunning = false, columns = "*" }: SetHistoryQuery = {}): Promise<T[]> {
+export async function setHistory<T = SetWithExercise>(client: OwnClient, { exerciseId, since, includeRunning = false, columns = "*" }: SetHistoryQuery = {}): Promise<T[]> {
   return selectAll<T>(client, "v_set_history", {
     columns,
     filter: (q) => {
@@ -221,7 +241,7 @@ export async function setHistory<T = SetWithExercise>(client: QueryClient, { exe
 }
 
 /** Distinct workouts each exercise was done in (v_exercise_usage, grouped on the server). */
-export async function exerciseUsage(client: QueryClient): Promise<Map<string, number>> {
+export async function exerciseUsage(client: OwnClient): Promise<Map<string, number>> {
   const rows = await selectAll<{ exercise_id: string; session_count: number }>(client, "v_exercise_usage", { key: "exercise_id", columns: "exercise_id,session_count" });
   return new Map(rows.map((r) => [r.exercise_id, Number(r.session_count)]));
 }
@@ -246,7 +266,7 @@ const recordFilter =
   };
 
 /** Personal records, newest first. */
-export async function personalRecords(client: QueryClient, query: RecordsQuery = {}): Promise<PersonalRecordRow[]> {
+export async function personalRecords(client: OwnClient, query: RecordsQuery = {}): Promise<PersonalRecordRow[]> {
   if (query.limit != null) {
     return selectPage<PersonalRecordRow>(client, "v_personal_record", { filter: recordFilter(query), order: "achieved_at", descending: true, limit: query.limit });
   }
@@ -255,14 +275,14 @@ export async function personalRecords(client: QueryClient, query: RecordsQuery =
   return rows.sort((a, b) => b.achieved_at - a.achieved_at);
 }
 
-export function recordCount(client: QueryClient): Promise<number> {
+export function recordCount(client: OwnClient): Promise<number> {
   return count(client, "v_personal_record");
 }
 
 // ---- Body weight and schedule ----
 
 /** Body weight entries, oldest first (one per day). */
-export function bodyWeight(client: QueryClient): Promise<BodyWeightRow[]> {
+export function bodyWeight(client: OwnClient): Promise<BodyWeightRow[]> {
   return selectAll<BodyWeightRow>(client, "v_body_weight", { key: "epoch_day" });
 }
 
@@ -278,7 +298,7 @@ export interface ScheduledQuery {
 }
 
 /** Scheduled workouts by date, soonest first. */
-export async function scheduled(client: QueryClient, { fromDay, toDay, open, limit }: ScheduledQuery = {}): Promise<ScheduledRow[]> {
+export async function scheduled(client: OwnClient, { fromDay, toDay, open, limit }: ScheduledQuery = {}): Promise<ScheduledRow[]> {
   const filter: Filter = (q) => {
     let f = q;
     if (fromDay != null) f = f.gte("epoch_day", fromDay);
@@ -301,7 +321,7 @@ export interface PlanTree extends PlanRow {
  * Every plan-related sync id the user has ever had, deleted ones included, so the editor
  * can't reuse an id that belongs to another plan or a deleted row.
  */
-export async function planSyncIds(client: QueryClient): Promise<Set<string>> {
+export async function planSyncIds(client: OwnClient): Promise<Set<string>> {
   const rows = await selectAll<{ sync_id: string }>(client, "sync_rows", {
     columns: "sync_id",
     filter: (q) => q.in("table_name", ["plan", "plan_day", "plan_exercise"]),
@@ -325,7 +345,7 @@ function assemble(plans: PlanRow[], days: PlanDayRow[], exercises: PlanExerciseR
 }
 
 /** All plans with their days and exercises, active plan first. */
-export async function plans(client: QueryClient): Promise<PlanTree[]> {
+export async function plans(client: OwnClient): Promise<PlanTree[]> {
   const [p, d, e] = await Promise.all([
     selectAll<PlanRow>(client, "v_plan"),
     selectAll<PlanDayRow>(client, "v_plan_day"),
@@ -335,7 +355,7 @@ export async function plans(client: QueryClient): Promise<PlanTree[]> {
 }
 
 /** The days and exercises of the given plans only. */
-async function trees(client: QueryClient, rows: PlanRow[]): Promise<PlanTree[]> {
+async function trees(client: OwnClient, rows: PlanRow[]): Promise<PlanTree[]> {
   if (!rows.length) return [];
   const days = await selectAll<PlanDayRow>(client, "v_plan_day", { filter: (q) => q.in("plan_id", rows.map((p) => p.sync_id)) });
   const exercises = days.length
@@ -352,7 +372,7 @@ export interface PlanOutline {
 }
 
 /** Every plan's name and its days' names and order, without exercises (the calendar's labels and planner). Active first. */
-export async function planOutlines(client: QueryClient): Promise<PlanOutline[]> {
+export async function planOutlines(client: OwnClient): Promise<PlanOutline[]> {
   const [p, d] = await Promise.all([
     selectAll<Pick<PlanRow, "sync_id" | "name" | "is_active" | "created_at">>(client, "v_plan", { columns: "sync_id,name,is_active,created_at" }),
     selectAll<Pick<PlanDayRow, "sync_id" | "plan_id" | "position" | "name">>(client, "v_plan_day", { columns: "sync_id,plan_id,position,name" }),
@@ -365,19 +385,19 @@ export async function planOutlines(client: QueryClient): Promise<PlanOutline[]> 
 }
 
 /** One plan with its days and exercises, or null. */
-export async function plan(client: QueryClient, syncId: string): Promise<PlanTree | null> {
+export async function plan(client: OwnClient, syncId: string): Promise<PlanTree | null> {
   const row = await single<PlanRow>(client, "v_plan", "sync_id", syncId);
   return row ? (await trees(client, [row]))[0] : null;
 }
 
 /** The active plan with its days and exercises, or null. */
-export async function activePlan(client: QueryClient): Promise<PlanTree | null> {
+export async function activePlan(client: OwnClient): Promise<PlanTree | null> {
   const rows = await selectPage<PlanRow>(client, "v_plan", { filter: (q) => q.eq("is_active", true), order: "created_at", descending: true, limit: 1 });
   return rows.length ? (await trees(client, rows))[0] : null;
 }
 
 /** One plan day with its exercises (for a scheduled workout from any plan), or null. */
-export async function planDay(client: QueryClient, syncId: string): Promise<(PlanDayRow & { exercises: PlanExerciseRow[] }) | null> {
+export async function planDay(client: OwnClient, syncId: string): Promise<(PlanDayRow & { exercises: PlanExerciseRow[] }) | null> {
   const day = await single<PlanDayRow>(client, "v_plan_day", "sync_id", syncId);
   if (!day) return null;
   const exercises = await selectAll<PlanExerciseRow>(client, "v_plan_exercise", { filter: (q) => q.eq("plan_day_id", syncId) });

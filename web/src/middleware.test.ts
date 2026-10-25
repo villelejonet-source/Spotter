@@ -50,6 +50,13 @@ describe("middleware", () => {
     expect(redirectTarget(await middleware(request("/auth/callback?code=x")))).toBeNull();
   });
 
+  it("serves the privacy policy signed in and signed out", async () => {
+    expect(redirectTarget(await middleware(request("/privacy")))).toBeNull();
+    session.signedIn = false;
+    expect(redirectTarget(await middleware(request("/privacy")))).toBeNull();
+    expect(redirectTarget(await middleware(request("/privacy-not")))).toBe("/login");
+  });
+
   it("guards paths that merely look like static files", async () => {
     session.signedIn = false;
     expect(redirectTarget(await middleware(request("/export.png")))).toBe("/login");

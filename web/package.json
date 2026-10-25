@@ -3,14 +3,14 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "predev": "node scripts/copy-catalog.mjs",
+    "predev": "node scripts/copy-shared.mjs",
     "dev": "next dev --turbopack",
-    "prebuild": "node scripts/copy-catalog.mjs",
+    "prebuild": "node scripts/copy-shared.mjs",
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "typecheck": "node scripts/copy-catalog.mjs && tsc --noEmit",
-    "pretest": "node scripts/copy-catalog.mjs",
+    "typecheck": "node scripts/copy-shared.mjs && tsc --noEmit",
+    "pretest": "node scripts/copy-shared.mjs",
     "test": "vitest run"
   },
   "dependencies": {
@@ -20,6 +20,7 @@
     "next": "15.5.28",
     "react": "19.1.0",
     "react-dom": "19.1.0",
+    "react-markdown": "^10.1.0",
     "recharts": "^3.10.1",
     "server-only": "^0.0.1",
     "zod": "^4.6.7"

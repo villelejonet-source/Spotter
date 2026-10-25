@@ -3,8 +3,11 @@ import { NextResponse, type NextRequest } from "next/server";
 // Relative, not "@/lib/auth": vitest has no path aliases configured (see middleware.test.ts).
 import { RECOVERY_COOKIE } from "./lib/auth";
 
-/** Reachable signed out. /reset-password is not: the reset email's link or code signs in first. */
-const PUBLIC_PATHS = ["/login", "/signup", "/forgot-password", "/auth"];
+/**
+ * Reachable signed out. /reset-password is not: the reset email's link or code signs in first.
+ * /privacy is the Play listing's privacy policy, so it's open to everyone.
+ */
+const PUBLIC_PATHS = ["/login", "/signup", "/forgot-password", "/auth", "/privacy"];
 /** Pointless when signed in, so they forward to the dashboard. */
 const SIGNED_OUT_ONLY = ["/login", "/signup"];
 

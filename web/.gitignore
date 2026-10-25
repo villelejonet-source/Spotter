@@ -41,5 +41,6 @@ yarn-error.log*
 next-env.d.ts
 !.env.example
 
-# copied from the Android app at build time (scripts/copy-catalog.mjs)
+# copied from the rest of the repository at build time (scripts/copy-shared.mjs)
 /src/data/exercises.json
+/src/data/privacy-policy.json

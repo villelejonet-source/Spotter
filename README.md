@@ -55,9 +55,9 @@ session is kept in `EncryptedSharedPreferences` (`spotter_auth`). After a link s
 account with no data, the first sync asks before uploading the phone's data. Before this, the
 link carried the session itself in the URL fragment and any app that opened a
 `spotter://login#…` link imported it, so a crafted link could sign a phone into someone else's
-account. Once the website has a public domain, the
-link will become an https App Link (`android:autoVerify` plus `/.well-known/assetlinks.json` on
-the site) so only this app can claim it; see `docs/platform/infrastructure.md`.
+account. Now that the website has a public domain, the next step is to make the link an https
+App Link (`android:autoVerify` plus `/.well-known/assetlinks.json` on the site) so only this app
+can claim it; see `docs/platform/infrastructure.md`.
 
 **Units** (kg or lb) have one source of truth: the synced `user_profile.units` field. Changing
 the setting in the app writes it there; the website reads the same field.
@@ -68,14 +68,15 @@ One-time setup in the Supabase dashboard:
    MCP's `apply_migration`, never by pasting SQL into the editor, so the migration history on the
    server matches the repository. How to repair the history when it doesn't:
    `docs/platform/infrastructure.md`, "Database migrations".
-2. **Authentication → URL Configuration → Redirect URLs:** add `spotter://login` (the
-   emailed link opens the app there).
-3. **Authentication → Emails → SMTP Settings:** custom SMTP (currently Gmail:
-   `smtp.gmail.com`, port 465, an app password). Supabase's built-in sender only reaches
-   the organization's team members and sends 2 emails/hour.
-4. **Authentication → Emails → Templates** (optional, needs custom SMTP): in both
-   **Confirm signup** and **Magic link**, add the code to the email body, e.g.
-   `<p>Your Spotter code: <strong>{{ .Token }}</strong></p>`.
+2. **Authentication → URL Configuration:** Site URL `https://spotter.northstarsolutions.se`;
+   Redirect URLs `spotter://login` (the emailed link opens the app there),
+   `https://spotter.northstarsolutions.se/auth/callback` and `http://localhost:3000/auth/callback`.
+3. **Authentication → Emails → SMTP Settings:** custom SMTP through Google Workspace, sending as
+   `noreply@northstarsolutions.se` (an alias on the Workspace user). Supabase's built-in sender
+   only reaches the organization's team members and sends 2 emails/hour. Details:
+   `docs/platform/auth-emails.md`, "SMTP sender".
+4. **Authentication → Emails → Templates:** every email carries a link and a code; the
+   templates are in `docs/platform/auth-emails.md`.
 
 Build config: add the project's **publishable** key to `local.properties` (untracked). Never
 use the secret/service_role key in the app.
@@ -95,7 +96,8 @@ project access like production access.
 
 ## Website
 
-`web/` is the Next.js site that shows the same account's training and edits plans; see
+`web/` is the Next.js site that shows the same account's training and edits plans, live at
+https://spotter.northstarsolutions.se; see
 [web/README.md](web/README.md). Platform setup, environments and versioning rules:
 [docs/platform/infrastructure.md](docs/platform/infrastructure.md). The 2026-10 audit and its
 dashboard checklist: [docs/platform/audit-2026-10.md](docs/platform/audit-2026-10.md).

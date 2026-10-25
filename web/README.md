@@ -30,7 +30,8 @@ The seeded exercise catalog isn't synced; `scripts/copy-catalog.mjs` copies
    again. They're all safe to re-run. See "Database migrations" in
    `docs/platform/infrastructure.md`, including how to repair the history on the current project.
 2. In Supabase → Authentication → URL Configuration, add `http://localhost:3000/auth/callback`
-   and the deployed URL's `/auth/callback` to the redirect URLs.
+   and the deployed URL's `/auth/callback` to the redirect URLs (production has
+   `https://spotter.northstarsolutions.se/auth/callback`, and it's also the Site URL).
 3. Set up the sign-in emails and auth settings in `docs/platform/auth-emails.md` (email
    templates with both a link and a code, password rules, redirect URLs).
 4. `cp .env.example .env.local` and fill in the publishable key (same as `supabase.publishableKey`
@@ -62,9 +63,32 @@ next to the Europe/Stockholm time zone.
 
 ## Deploy (Vercel)
 
-Import the repository, set **Root Directory** to `web`, and add the two
-`NEXT_PUBLIC_SUPABASE_*` variables. The build copies the exercise catalog from the Android
-module, so the whole repository must be checked out (Vercel's default).
+Live at **https://spotter.northstarsolutions.se** (Vercel project "Spotter", Hobby plan,
+deployed 2026-10-25). Every push to `main` deploys production.
+
+How it's set up:
+
+- **Project:** imported from `villelejonet-source/Spotter`, **Root Directory** `web`,
+  framework Next.js, default build settings. The build copies the exercise catalog from the
+  Android module, so the whole repository must be checked out (Vercel's default).
+- **Environment variables:** `NEXT_PUBLIC_SUPABASE_URL` and
+  `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`, the same values as `.env.local`. Never a secret key.
+- **Function region:** London (`lhr1`), Settings → Functions. The Supabase project is in
+  London (`eu-west-2`) and every page makes several database calls, so the functions sit
+  next to it. A region change needs a redeploy; Vercel's `x-vercel-id` response header shows
+  it (`…::lhr1::…` on a dynamic route such as `/auth/callback`).
+- **Domain:** `spotter.northstarsolutions.se` added under Settings → Domains; DNS for
+  `northstarsolutions.se` is at Inleed, with a CNAME `spotter` →
+  `102e40b717f6c9d8.vercel-dns-017.com`. Vercel issues the HTTPS certificate itself.
+- **Supabase:** Site URL and redirect URLs as in `docs/platform/auth-emails.md`.
+
+Checked on the live site on 2026-10-25: sign-up confirmed by link and by code, forgot password
+by code with a new password saved, auth emails from `noreply@northstarsolutions.se` with SPF and
+DKIM passing at an outside Gmail. Not re-checked live: sign-in with a password, reset by link,
+"Email me a sign-in code".
+
+Vercel Hobby is for non-commercial use only; move to Pro before Spotter earns money
+(`docs/platform/infrastructure.md`, "Hosting").
 
 Days and weeks are counted in Europe/Stockholm (`src/lib/tz.ts`) until profiles carry a
 time zone.

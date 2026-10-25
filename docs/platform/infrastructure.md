@@ -1,7 +1,7 @@
 # Spotter platform: hosting, environments and versioning
 
-_Written 2026-10-24; updated the same day with the audit (`audit-2026-10.md`). Covers the Android
-app, the website (`web/`) and the Supabase backend._
+_Written 2026-10-24; updated the same day with the audit (`audit-2026-10.md`) and on 2026-10-25
+when the website went live. Covers the Android app, the website (`web/`) and the Supabase backend._
 
 ## How it fits together today
 
@@ -10,6 +10,11 @@ Android app (Room, offline-first) ──push_rows / select──▶ Supabase (Au
                                                               ▲
 Website (Next.js on Vercel) ── server components, RLS ────────┘
 ```
+
+Production addresses: website **https://spotter.northstarsolutions.se** (Vercel, functions in
+London `lhr1`; setup in `web/README.md`, "Deploy"), Supabase project `gaherwthntdonrsuowbh`
+(London, `eu-west-2`). Auth emails are sent as `noreply@northstarsolutions.se` through Google
+Workspace (`auth-emails.md`, "SMTP sender").
 
 - **Single source of truth per user** is `sync_rows`: one JSON row per Room row, last-write-wins on
   the client's `updated_at`. The phone owns the schema; the website writes the same shapes.
@@ -45,15 +50,15 @@ Every auth email (confirm, sign-in, reset) carries a **link** and a **code**
 - The **code works anywhere.** It's the 6-digit `{{ .Token }}` for the same email, typed into
   the app or the website, and it is tied to the email address, not to a device.
 
-**Follow-up once the website has a public domain: https App Links.** `spotter://login` is a
+**Follow-up, now unblocked (the website has had its domain since 2026-10-25): https App Links.** `spotter://login` is a
 custom scheme, and Android lets any installed app register for a custom scheme, so another app
 could in principle receive our links (with PKCE it can't use them, but it could swallow them).
-The fix is to make the link an https URL on our domain, e.g. `https://<domain>/auth/app`, with
+The fix is to make the link an https URL on our domain, e.g. `https://spotter.northstarsolutions.se/auth/app`, with
 `android:autoVerify="true"` on the intent filter and the website serving
 `/.well-known/assetlinks.json` listing the app's package name and signing-certificate
 fingerprint (the Play App Signing key, from Play Console → App integrity). Android verifies the
 file at install time and routes the link to this app only. The page at that URL also gives
-desktop users somewhere sensible to land. Deferred until the domain exists (listed in
+desktop users somewhere sensible to land. Was deferred until the domain existed (listed in
 `audit-2026-10.md`).
 
 ## Environments
@@ -61,7 +66,7 @@ desktop users somewhere sensible to land. Deferred until the domain exists (list
 | | Local | Staging | Production |
 |---|---|---|---|
 | Supabase | `supabase start` (Docker) | separate project, EU region | `gaherwthntdonrsuowbh` |
-| Website | `npm run dev` | Vercel preview deploy per pull request | Vercel production (`main`) |
+| Website | `npm run dev` | Vercel preview deploy per pull request | Vercel production (`main`), spotter.northstarsolutions.se |
 | App | debug build → local or staging | debug / internal test track | Play production |
 | Data | seed script | test accounts only | real users |
 
@@ -71,10 +76,20 @@ Deferred on 2026-10-24 (revisit before public launch or paid features). In the d
    pull-request previews never touch real data.
 2. **Point debug builds at staging**: add `supabase.staging.url` / `supabase.staging.publishableKey`
    to `local.properties` and pick them per build type in `app/build.gradle.kts`.
-3. **Check the production region** (Supabase → Project Settings → General). For Swedish users and
-   GDPR it should be in the EU (Stockholm `eu-north-1` or Frankfurt `eu-central-1`). Set the Vercel
-   function region to the same place (`arn1` or `fra1`); every page makes several database calls,
-   so a cross-continent hop multiplies.
+3. **Production region: checked 2026-10-25, staying in London (`eu-west-2`).** Supabase can't
+   move a project; moving means a new project, a new URL and key in a new app release (old
+   installs keep syncing to the old project until they update), and copying accounts with their
+   password hashes. London is close to Sweden (~30 ms), only the website waits on the database,
+   and the UK has an EU adequacy decision, so GDPR allows it. If an EU region is ever wanted,
+   move once, before public launch, together with creating the staging project. The Vercel
+   function region is London (`lhr1`) to match; every page makes several database calls, so a
+   cross-region hop would multiply.
+4. **Send auth email through a send-only provider** (Resend, Postmark, Brevo or Amazon SES).
+   Today Supabase logs in to Google Workspace with an app password on a Workspace user
+   (`auth-emails.md`, "SMTP sender"); that password can also read the mailbox. A provider
+   verified for `northstarsolutions.se` (DNS records at Inleed) gives Supabase a key that can
+   only send, with higher limits and delivery logs. Switch before public launch, and update the
+   privacy policy's "sent … through Google Workspace" line when it happens.
 
 ## Hosting and what it costs as it grows
 
@@ -125,19 +140,19 @@ Apply them in one of two ways, both of which record the version in the server's 
 
 **Never paste a migration into the SQL editor.** The SQL runs, but nothing is recorded, so the
 history no longer says what the database contains, and the next `db push` tries to apply the
-file again. That is the state of production today (2026-10-24). The files are:
+file again. That was the state of production on 2026-10-24; since the audit the history matches. The files are:
 
 | Version | File | On production |
 |---|---|---|
-| `20261004000000` | `sync.sql` (sync_rows, RLS, first `push_rows`) | applied via the editor |
-| `20261023000000` | `web_views.sql` (typed views for the website) | applied via the editor |
-| `20261024000000` | `hardening_and_performance.sql` (`push_rows` limits, indexes, `v_set_history`) | applied via the editor |
-| `20261025000000` | `scheduled_sessions.sql` (`scheduled_session`, `v_scheduled_session`) | applied via the editor |
-| `20261026000000` | `audit_hardening.sql` (policies with `(select auth.uid())`, `push_rows` checks and row cap, revoked grants, `delete_my_account` cleanup, `v_exercise_usage` which `/library` needs) | **not yet applied**; goes live after the audit review |
+| `20261004000000` | `sync.sql` (sync_rows, RLS, first `push_rows`) | applied via the editor, now recorded |
+| `20261023000000` | `web_views.sql` (typed views for the website) | applied via the editor, now recorded |
+| `20261024000000` | `hardening_and_performance.sql` (`push_rows` limits, indexes, `v_set_history`) | applied via the editor, now recorded |
+| `20261025000000` | `scheduled_sessions.sql` (`scheduled_session`, `v_scheduled_session`) | applied via the editor, now recorded |
+| `20261026000000` | `audit_hardening.sql` (policies with `(select auth.uid())`, `push_rows` checks and row cap, revoked grants, `delete_my_account` cleanup, `v_exercise_usage` which `/library` needs) | applied with the audit, recorded |
 
-The history is empty (`list_migrations` returns `[]`). Because every file is re-runnable,
-`db push` would succeed anyway, but the history should say the truth. Repair it once, after
-linking, naming the four versions that are already live, then push the new one:
+On 2026-10-24 the history was empty (`list_migrations` returned `[]`); on 2026-10-25 it lists
+all five versions. If it ever drifts again, repair it the same way: after linking, name the
+versions that are already live, then push the rest:
 
 ```bash
 supabase migration repair --status applied 20261004000000 20261023000000 20261024000000 20261025000000

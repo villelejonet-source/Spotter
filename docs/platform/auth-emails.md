@@ -83,15 +83,41 @@ Subject: `Confirm your Spotter password change`
 - Email OTP length: 6. Email OTP expiration: 3600 seconds.
 
 **Authentication → URL Configuration**
-- **Site URL:** the website's address. Use `http://localhost:3000` until it's deployed, then
-  the production address.
-- **Redirect URLs:** keep `spotter://login` (the app), and have
-  `http://localhost:3000/auth/callback` plus `https://<production domain>/auth/callback`.
+- **Site URL:** `https://spotter.northstarsolutions.se`. Supabase falls back to it when a
+  request names no redirect, so it must be the live website.
+- **Redirect URLs:** `spotter://login` (the app), `https://spotter.northstarsolutions.se/auth/callback`
+  (the website) and `http://localhost:3000/auth/callback` (local development).
   The reset link uses `/auth/callback?next=/reset-password`; a redirect URL matches with or
   without a query string.
 
-**Authentication → Rate Limits**: defaults are fine. With the custom (Gmail) SMTP sender,
-emails are limited per hour; raise it only if real users hit it.
+**Authentication → Rate Limits**: defaults are fine. With custom SMTP, emails are limited per
+hour; raise it only if real users hit it. Google Workspace itself allows about 2 000 sent
+emails a day per user.
+
+## 3. SMTP sender
+
+Auth emails come from **`Spotter <noreply@northstarsolutions.se>`**, sent through the
+company's Google Workspace, so they pass SPF (`include:_spf.google.com`) and are DKIM-signed
+by `northstarsolutions.se` (`google._domainkey`); DMARC is `p=none` for now. (Until
+2026-10-25 they were sent through a personal Gmail account.)
+
+`noreply@` is an alias on the Workspace user, not a separate mailbox: replies still land in
+that user's inbox. Set up once:
+
+1. **Google Admin → Directory → Users →** the user **→ User information → Alternate email
+   addresses:** add `noreply`.
+2. **Gmail** (as that user) **→ Settings → See all settings → Accounts → Send mail as → Add
+   another email address:** name `Spotter`, the alias, "Treat as an alias" ticked. Without
+   this, Gmail rewrites the sender to the login address.
+3. **myaccount.google.com/apppasswords** (needs 2-Step Verification): create an app password
+   named `Supabase Spotter`.
+4. **Supabase → Authentication → Emails → SMTP Settings:** host `smtp.gmail.com`, port
+   `465`, username = the Workspace login, password = the app password, sender email
+   `noreply@northstarsolutions.se`, sender name `Spotter`.
+
+To rotate: create a new app password, paste it into Supabase, send a test email, then revoke
+the old one. In a received email, Gmail's **⋮ → Show original** should show SPF and DKIM
+**PASS** and "signed-by: northstarsolutions.se".
 
 ## How each flow works
 

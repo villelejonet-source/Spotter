@@ -1,6 +1,6 @@
 # Spotter privacy policy
 
-_Last updated: 24 October 2026_
+_Last updated: 25 October 2026_
 
 Spotter is a workout logging app. This policy explains what happens to your data.
 
@@ -16,10 +16,11 @@ password, confirmed with an emailed link or one-time code), Spotter backs up the
 syncs it between your phones. It's sent encrypted
 (HTTPS), and database rules ensure only your account can read or change your backup. Your
 email address is used only for your account and its emails (confirmation, sign-in codes,
-password resets), sent through Gmail. Passwords are stored only as secure hashes. If you
+password resets), sent from noreply@northstarsolutions.se through Google Workspace. Passwords are stored only as secure hashes. If you
 never sign in, nothing leaves your phone.
 
-**Spotter on the web.** With the same account you can sign in on the Spotter website to see
+**Spotter on the web.** With the same account you can sign in on the Spotter website
+(spotter.northstarsolutions.se) to see
 your backed-up training and edit your plans; plan changes sync back to your phone. The
 website is hosted by Vercel, which passes your backup between Supabase and your browser
 but doesn't store it. The website sets only the cookie that keeps you signed in.
@@ -47,4 +48,4 @@ you uninstall the app or clear its storage in Android settings.
 
 **Changes.** Changes to this policy are published on this page with a new date.
 
-**Contact.** v.olsson950@gmail.com
+**Contact.** spotter@northstarsolutions.se

@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { ConfirmButton } from "@/components/confirm-button";
 import { DeleteAccount } from "@/components/delete-account";
 import { buttonClass, Card, CardTitle, PageHeader } from "@/components/ui";
@@ -48,7 +49,13 @@ export default async function ProfilePage() {
           </Card>
           <Card>
             <CardTitle>Your data</CardTitle>
-            <p className="mb-3 text-sm text-muted">Download everything Spotter has backed up for you.</p>
+            <p className="mb-3 text-sm text-muted">
+              Download everything Spotter has backed up for you. The{" "}
+              <Link href="/privacy" className="rounded-md font-medium text-primary">
+                privacy policy
+              </Link>{" "}
+              says what&apos;s stored and where.
+            </p>
             <div className="flex flex-wrap gap-2">
               <a href="/export?format=json" className={buttonClass()}>
                 Everything (JSON)

@@ -149,10 +149,10 @@ file again. That was the state of production on 2026-10-24; since the audit the 
 | `20261024000000` | `hardening_and_performance.sql` (`push_rows` limits, indexes, `v_set_history`) | applied via the editor, now recorded |
 | `20261025000000` | `scheduled_sessions.sql` (`scheduled_session`, `v_scheduled_session`) | applied via the editor, now recorded |
 | `20261026000000` | `audit_hardening.sql` (policies with `(select auth.uid())`, `push_rows` checks and row cap, revoked grants, `delete_my_account` cleanup, `v_exercise_usage` which `/library` needs) | applied with the audit, recorded |
-| `20261027000000` | `trainer_foundation.sql` (`profiles`, `trainer_links` and their functions, `can_read_user` in the `sync_rows` read policy, `delete_my_account` removes profile and links) | not yet applied |
+| `20261027000000` | `trainer_foundation.sql` (`profiles`, `trainer_links` and their functions, `can_read_user` in the `sync_rows` read policy, `delete_my_account` removes profile and links) | applied 2026-10-25 with `supabase db push --linked`, recorded |
 
 On 2026-10-24 the history was empty (`list_migrations` returned `[]`); on 2026-10-25 it lists
-all five versions. If it ever drifts again, repair it the same way: after linking, name the
+all five versions (six since 2026-10-25). If it ever drifts again, repair it the same way: after linking, name the
 versions that are already live, then push the rest:
 
 ```bash
@@ -257,6 +257,13 @@ another account's rows.
   `owner_id = auth.uid()`. It's plain SQL without `SET search_path` so Postgres inlines it into
   the policy (the advisor's search_path WARN on it is expected).
 - **`delete_my_account()`** also deletes the account's profile and every link it's part of.
+
+Applied to production on 2026-10-25. Advisors afterwards, all expected: security WARNs for
+the SECURITY DEFINER functions callable by signed-in users (`push_rows`, `delete_my_account`
+and the three link functions) and for `can_read_user`'s search_path (needed for inlining),
+plus the existing leaked-password-protection WARN; performance INFOs for unused indexes (the
+two `trainer_links` indexes, on an empty table, and `sync_rows_set_entry_exercise_idx`).
+`explain` on production confirms an unfiltered pull still uses `sync_rows_pull_idx`.
 
 **Left to do before trainers can read a client's data, in order:**
 

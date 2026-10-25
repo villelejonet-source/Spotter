@@ -83,7 +83,7 @@ class SyncEngine(
         val firstSync = cursor.lastSyncedAt == 0L
 
         if (firstSync) {
-            val backupExists = remote.hasRows()
+            val backupExists = remote.hasRows(userId)
             val phoneHasData = store.hasLocalData()
             when {
                 backupExists && phoneHasData && choice == null -> return SyncOutcome.NeedsChoice(fromLink = false)
@@ -104,7 +104,7 @@ class SyncEngine(
         var newPulledUpTo = cursor.pulledUpTo
         val deferred = mutableListOf<SyncRow>()
         while (true) {
-            val page = remote.pull(since, offset, PAGE)
+            val page = remote.pull(userId, since, offset, PAGE)
             pulled += page.size
             page.forEach { row ->
                 val at = parse(row.serverUpdatedAt)

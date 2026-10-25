@@ -1,10 +1,16 @@
 import { describe, expect, it } from "vitest";
 import * as q from "./queries";
 
-/** A fake PostgREST client that records the chain each query builds and answers with canned rows. */
+const UID = "00000000-0000-4000-8000-00000000000a";
+
+/**
+ * A fake PostgREST client, wrapped in ownedBy(), that records the chain each query builds
+ * and answers with canned rows. chainOf() checks the owner filter follows the select and
+ * leaves it out, so the expectations below show only each query's own filters.
+ */
 function mockClient(rows: Record<string, unknown[]> = {}, count = 0) {
   const calls: { view: string; chain: [string, ...unknown[]][] }[] = [];
-  const client: q.QueryClient = {
+  const raw: q.QueryClient = {
     from(view) {
       const chain: [string, ...unknown[]][] = [];
       calls.push({ view, chain });
@@ -31,7 +37,12 @@ function mockClient(rows: Record<string, unknown[]> = {}, count = 0) {
       return builder as unknown as ReturnType<q.QueryClient["from"]>;
     },
   };
-  return { client, calls, chainOf: (view: string) => calls.find((c) => c.view === view)?.chain ?? [] };
+  const chainOf = (view: string) => {
+    const chain = calls.find((c) => c.view === view)?.chain ?? [];
+    expect(chain[1], `${view} filters on the owner`).toEqual(["eq", "user_id", UID]);
+    return [chain[0], ...chain.slice(2)];
+  };
+  return { client: q.ownedBy(raw, UID), calls, chainOf };
 }
 
 describe("sessions", () => {
@@ -68,11 +79,12 @@ describe("selectAll", () => {
   it("continues after the last key of a full page", async () => {
     const page = Array.from({ length: 1000 }, (_, i) => ({ sync_id: `id${i}` }));
     let served = 0;
-    const client: q.QueryClient = {
+    const raw: q.QueryClient = {
       from: () => {
         const chain: unknown[][] = [];
         const b = {
           select: () => b,
+          eq: () => b,
           gt: (...a: unknown[]) => (chain.push(["gt", ...a]), b),
           order: () => b,
           limit: () => b,
@@ -82,7 +94,7 @@ describe("selectAll", () => {
         return b as unknown as ReturnType<q.QueryClient["from"]>;
       },
     };
-    const rows = await q.selectAll<{ sync_id: string }>(client, "v_plan");
+    const rows = await q.selectAll<{ sync_id: string }>(q.ownedBy(raw, UID), "v_plan");
     expect(rows).toHaveLength(1001);
     expect(served).toBe(2);
   });
@@ -92,12 +104,13 @@ describe("selectAll", () => {
     const page = Array.from({ length: 1000 }, (_, i) => ({ started_at: i < 999 ? i : 5, sync_id: i < 999 ? `a${i}` : "m" }));
     const chains: unknown[][][] = [];
     let served = 0;
-    const client: q.QueryClient = {
+    const raw: q.QueryClient = {
       from: () => {
         const chain: unknown[][] = [];
         chains.push(chain);
         const b = {
           select: () => b,
+          eq: () => b,
           gte: () => b,
           or: (...a: unknown[]) => (chain.push(["or", ...a]), b),
           gt: (...a: unknown[]) => (chain.push(["gt", ...a]), b),
@@ -108,20 +121,20 @@ describe("selectAll", () => {
         return b as unknown as ReturnType<q.QueryClient["from"]>;
       },
     };
-    const rows = await q.sessions(client, { since: 0 });
+    const rows = await q.sessions(q.ownedBy(raw, UID), { since: 0 });
     expect(rows).toHaveLength(1001);
     expect(chains[0]).toEqual([["order", "started_at"], ["order", "sync_id"]]);
     expect(chains[1]).toEqual([["or", "started_at.gt.5,and(started_at.eq.5,sync_id.gt.m)"], ["order", "started_at"], ["order", "sync_id"]]);
   });
 
   it("throws with the view's name when the server answers with an error", async () => {
-    const client: q.QueryClient = {
+    const raw: q.QueryClient = {
       from: () => {
-        const b = { select: () => b, order: () => b, limit: () => b, then: (r: (v: unknown) => unknown) => Promise.resolve({ data: null, error: { message: "boom" } }).then(r) };
+        const b = { select: () => b, eq: () => b, order: () => b, limit: () => b, then: (r: (v: unknown) => unknown) => Promise.resolve({ data: null, error: { message: "boom" } }).then(r) };
         return b as unknown as ReturnType<q.QueryClient["from"]>;
       },
     };
-    await expect(q.selectAll(client, "v_plan")).rejects.toThrow("v_plan: boom");
+    await expect(q.selectAll(q.ownedBy(raw, UID), "v_plan")).rejects.toThrow("v_plan: boom");
   });
 });
 
@@ -200,5 +213,58 @@ describe("schedule and plans", () => {
     const m = mockClient({ v_plan: [{ sync_id: "p1", is_active: true, created_at: 1 }] });
     expect((await q.activePlan(m.client))?.sync_id).toBe("p1");
     expect(m.chainOf("v_plan")).toEqual([["select", "*"], ["eq", "is_active", true], ["order", "created_at", { ascending: false }], ["limit", 1]]);
+  });
+});
+
+describe("owner filter", () => {
+  it("puts user_id = the signed-in user right after the select", async () => {
+    const m = mockClient();
+    await q.recordCount(m.client);
+    expect(m.calls[0].chain.slice(0, 2)).toEqual([["select", "sync_id", { count: "exact", head: true }], ["eq", "user_id", UID]]);
+  });
+
+  it("is on every request of every query", async () => {
+    // Rows that make the multi-step queries go on to their follow-up requests.
+    const rows = {
+      v_plan: [{ sync_id: "p1", is_active: true, created_at: 1 }],
+      v_plan_day: [{ sync_id: "d1", plan_id: "p1", position: 0 }],
+      v_session_summary: [{ sync_id: "s1", started_at: 1 }],
+    };
+    const runs: [string, (c: q.OwnClient) => Promise<unknown>][] = [
+      ["profile", q.profile],
+      ["customExercises", q.customExercises],
+      ["sessions", (c) => q.sessions(c)],
+      ["sessions with a limit", (c) => q.sessions(c, { limit: 3 })],
+      ["sessionTimes", (c) => q.sessionTimes(c)],
+      ["finishedSessionCount", q.finishedSessionCount],
+      ["sessionDetail", (c) => q.sessionDetail(c, "s1")],
+      ["setHistory", (c) => q.setHistory(c)],
+      ["exerciseUsage", q.exerciseUsage],
+      ["personalRecords", (c) => q.personalRecords(c)],
+      ["personalRecords with a limit", (c) => q.personalRecords(c, { limit: 3 })],
+      ["recordCount", q.recordCount],
+      ["bodyWeight", q.bodyWeight],
+      ["scheduled", (c) => q.scheduled(c)],
+      ["scheduled with a limit", (c) => q.scheduled(c, { limit: 3 })],
+      ["planSyncIds", q.planSyncIds],
+      ["plans", q.plans],
+      ["planOutlines", q.planOutlines],
+      ["plan", (c) => q.plan(c, "p1")],
+      ["activePlan", q.activePlan],
+      ["planDay", (c) => q.planDay(c, "d1")],
+    ];
+    for (const [name, run] of runs) {
+      const m = mockClient(rows);
+      await run(m.client);
+      expect(m.calls.length, name).toBeGreaterThan(0);
+      for (const call of m.calls) expect(call.chain[1], `${name}: ${call.view}`).toEqual(["eq", "user_id", UID]);
+    }
+  });
+
+  it("can't be skipped: queries only take an owned client, and need a user id", () => {
+    const raw = { from: () => ({ select: () => ({}) }) } as unknown as q.QueryClient;
+    // @ts-expect-error a plain client has no owner
+    void (() => q.plans(raw));
+    expect(() => q.ownedBy(raw, "")).toThrow("no user id");
   });
 });

@@ -212,8 +212,48 @@ need. The plan:
    apps skip the rows until they update.
 3. **When trainers arrive:** typed tables (`sessions`, `sets`, …) maintained by a trigger on
    `sync_rows`, with their own indexes and RLS (owner, or linked trainer). The website reads those;
-   sync keeps writing `sync_rows`.
+   sync keeps writing `sync_rows`. The groundwork is in place, see "Trainer foundation" below.
 4. **Past ~50 M rows:** hash-partition `sync_rows` by `user_id`, and pre-aggregate weekly stats.
+
+### Trainer foundation
+
+Built (`supabase/migrations/20261027000000_trainer_foundation.sql`, tests in
+`supabase/tests/trainer_links.sql`). Trainers are **still switched off**: no account can read
+another account's rows.
+
+- **Owner filters everywhere.** The app's pull and `hasRows` filter `sync_rows` on
+  `user_id = signed-in user` (`SupabaseSyncRemote`, from versionCode 7). Every website read goes
+  through `ownedBy()` in `web/src/lib/queries.ts`, which adds `user_id = signed-in user`, and the
+  query functions only accept that client. RLS stays as the second wall. Without these filters a
+  trainer's phone would pull client rows into its own database and push them back as its own.
+- **`profiles`**: user id, display name, timestamps; each user reads and writes only their own
+  row. There is no fixed trainer or client role: any account can be either, or both.
+- **`trainer_links`**: trainer, client, status (`pending` → `active` → `ended`), a 32-character
+  random invite code, and when it was created, accepted and ended. Trainer ≠ client, and only one
+  live (not ended) link per pair. Each side reads its own links. There are no direct writes, only:
+  - `create_trainer_invite()`: a pending link with the caller as trainer (at most 20 open invites);
+  - `accept_trainer_invite(code)`: the caller becomes the client of a pending invite less than 14
+    days old; nobody can activate a link for anyone else;
+  - `end_trainer_link(id)`: either side ends it at any time.
+- **`can_read_user(owner_id)`**: the one access check in the `sync_rows` read policy. Today it is
+  `owner_id = auth.uid()`. It's plain SQL without `SET search_path` so Postgres inlines it into
+  the policy (the advisor's search_path WARN on it is expected).
+- **`delete_my_account()`** also deletes the account's profile and every link it's part of.
+
+**Left to do before trainers can read a client's data, in order:**
+
+1. **Release versionCode 7** (`/release`) with the owner-filtered pull. Apps on versionCode 6
+   or older pull `sync_rows` unfiltered, so a trainer still on one of those would pull client
+   rows. Before step 3, make sure no trainer runs an old app: record each phone's
+   `versionCode` on sync ("Versioning", step 6) and have the link functions refuse
+   trainers on older versions, or require an update to use trainer features.
+2. **Build the read path for trainers:** typed tables or views for what a trainer sees (step 3
+   above), plus a `profiles` read policy so a linked trainer sees the client's display name.
+3. **Switch reads on:** change only `can_read_user` to also allow an active link (the `exists`
+   query in the function's comment), and add SQL tests that a trainer reads an active client,
+   loses access the moment the link ends, and still never sees pending or ended clients' rows.
+4. **UI:** invites, accepting a code, the client list and ending a link, on the web and in the
+   app. Then plan suggestions and, if wanted, a paid trainer tier (PLAN.md step 4).
 
 ## Operations
 

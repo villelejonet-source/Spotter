@@ -30,11 +30,15 @@ data class RemoteRow(
 
 /** The server side of sync. Implemented with Supabase; faked in tests. */
 interface SyncRemote {
-    /** Whether the signed-in user has anything backed up. */
-    suspend fun hasRows(): Boolean
+    /** Whether [userId] (the signed-in user) has anything backed up. */
+    suspend fun hasRows(userId: String): Boolean
 
-    /** Rows changed after [since] (null: everything), oldest first, one page at a time. */
-    suspend fun pull(since: String?, offset: Int, limit: Int): List<RemoteRow>
+    /**
+     * [userId]'s rows changed after [since] (null: everything), oldest first, one page at a
+     * time. Always filtered on the owner, never left to row-level security: once a trainer
+     * can read a client's rows, an unfiltered pull would copy them into the trainer's phone.
+     */
+    suspend fun pull(userId: String, since: String?, offset: Int, limit: Int): List<RemoteRow>
 
     /** Uploads changes; the server keeps whichever version is newer. */
     suspend fun push(rows: List<SyncRow>)

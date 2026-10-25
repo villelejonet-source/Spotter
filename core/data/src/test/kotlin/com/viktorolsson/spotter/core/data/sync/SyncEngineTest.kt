@@ -37,16 +37,21 @@ import java.io.File
 import java.time.Instant
 import java.time.LocalDate
 
-/** An in-memory Supabase: last-write-wins on strictly newer rows, increasing server time. */
+/**
+ * An in-memory Supabase: last-write-wins on strictly newer rows, increasing server time.
+ * Rows belong to whoever was [signedIn] when they were pushed; reads return the rows of the
+ * owner they ask for, as a server that lets a trainer read client rows would.
+ */
 class FakeRemote : SyncRemote {
-    private val rows = linkedMapOf<Pair<String, String>, RemoteRow>()
+    private val rows = linkedMapOf<Triple<String, String, String>, RemoteRow>()
     private var serverTime = Instant.parse("2026-10-03T10:00:00Z")
     var pushes = 0
+    var signedIn = "user-1"
 
-    override suspend fun hasRows() = rows.isNotEmpty()
+    override suspend fun hasRows(userId: String) = rows.keys.any { it.first == userId }
 
-    override suspend fun pull(since: String?, offset: Int, limit: Int): List<RemoteRow> =
-        rows.values
+    override suspend fun pull(userId: String, since: String?, offset: Int, limit: Int): List<RemoteRow> =
+        rows.filterKeys { it.first == userId }.values
             .filter { since == null || Instant.parse(it.serverUpdatedAt) > Instant.parse(since) }
             .sortedBy { Instant.parse(it.serverUpdatedAt) }
             .drop(offset).take(limit)
@@ -54,7 +59,7 @@ class FakeRemote : SyncRemote {
     override suspend fun push(rows: List<SyncRow>) {
         pushes++
         rows.forEach { row ->
-            val key = row.tableName to row.syncId
+            val key = Triple(signedIn, row.tableName, row.syncId)
             val existing = this.rows[key]
             if (existing == null || row.updatedAt > existing.updatedAt) {
                 serverTime = serverTime.plusMillis(1)
@@ -70,7 +75,7 @@ class SyncEngineTest {
     private val devices = mutableListOf<Device>()
 
     /** One phone: its own database, repositories and sync engine. */
-    inner class Device {
+    inner class Device(private val userId: String = USER) {
         val db: SpotterDatabase = SpotterDatabase.configure(
             Room.inMemoryDatabaseBuilder(ApplicationProvider.getApplicationContext<Context>(), SpotterDatabase::class.java),
         ).allowMainThreadQueries().build()
@@ -87,7 +92,10 @@ class SyncEngineTest {
             parseExerciseSeed(File("src/main/assets/exercises.json").readText()).exercises.map(SeedExercise::toEntity),
         )
 
-        suspend fun sync(choice: FirstSyncChoice? = null, fromLink: Boolean = false) = engine.sync(USER, choice, fromLink)
+        suspend fun sync(choice: FirstSyncChoice? = null, fromLink: Boolean = false) = run {
+            remote.signedIn = userId
+            engine.sync(userId, choice, fromLink)
+        }
 
         suspend fun sessions() = db.workoutDao().observeFinishedSessions().first().map { it.toModel() }
     }
@@ -96,7 +104,7 @@ class SyncEngineTest {
         File.createTempFile("sync", ".preferences_pb").apply { delete(); deleteOnExit() }
     }
 
-    private suspend fun device() = Device().also { it.seed(); devices += it }
+    private suspend fun device(userId: String = USER) = Device(userId).also { it.seed(); devices += it }
 
     @After
     fun tearDown() = devices.forEach { it.db.close() }
@@ -223,10 +231,10 @@ class SyncEngineTest {
         a.logWorkout()
         // Tapped a sign-in link: the account could be anyone's, so nothing is pushed unasked.
         assertEquals(SyncOutcome.NeedsChoice(fromLink = true), a.sync(fromLink = true))
-        assertEquals(false, remote.hasRows())
+        assertEquals(false, remote.hasRows(USER))
         // Any explicit choice means "go ahead"; a typed password or code never asks.
         assertEquals(SyncOutcome.Done::class, a.engine.sync(USER, FirstSyncChoice.MERGE, fromLink = true)::class)
-        assertEquals(true, remote.hasRows())
+        assertEquals(true, remote.hasRows(USER))
 
         val b = device()
         b.logWorkout()
@@ -296,7 +304,22 @@ class SyncEngineTest {
         assertEquals(before, b.sessions())
     }
 
+    @Test
+    fun anotherAccountsRowsAreNeverPulled() = runTest {
+        // Another account (say, a trainer's client) backs up a workout on the same server.
+        val client = device(OTHER_USER)
+        client.logWorkout()
+        client.sync()
+
+        val mine = device()
+        val outcome = mine.sync() as SyncOutcome.Done
+        assertEquals(0, outcome.pulled)
+        assertTrue(mine.sessions().isEmpty())
+        assertEquals(1, client.sessions().size)
+    }
+
     private companion object {
         const val USER = "user-1"
+        const val OTHER_USER = "user-2"
     }
 }

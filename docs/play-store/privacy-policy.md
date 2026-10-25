@@ -19,14 +19,30 @@ email address is used only for your account and its emails (confirmation, sign-i
 password resets), sent from noreply@northstarsolutions.se through Google Workspace. Passwords are stored only as secure hashes. If you
 never sign in, nothing leaves your phone.
 
+**What the app reports when it syncs.** Each time the app syncs your backup, it also sends
+a random ID made for this installation of the app (not your phone's hardware or advertising
+ID), the app's version number and the version of its database. It's stored with your
+account, only for the 20 installations that synced most recently, and is deleted with your
+account. It tells us which app versions are still in use, so a change doesn't break the
+app on phones that haven't updated yet.
+
+**How Spotter's developer sees usage.** To see how many people use Spotter and plan
+changes, the developer can see, per account and in total: when the account was created,
+when it last signed in and last synced, how many workouts it has logged per week, and which
+app version it runs. Only these dates and counts, never what's in your workouts, plans or
+profile. They're read straight from the backup database; nothing is sent to an analytics
+service, and they're never shared or used for advertising. If you never sign in, none of
+this exists: nothing leaves your phone.
+
 **Spotter on the web.** With the same account you can sign in on the Spotter website
 (spotter.northstarsolutions.se) to see
 your backed-up training and edit your plans; plan changes sync back to your phone. The
 website is hosted by Vercel, which passes your backup between Supabase and your browser
 but doesn't store it. The website sets only the cookie that keeps you signed in.
 
-**What Spotter doesn't do.** No analytics, no advertising, no tracking, no selling or
-sharing of data with anyone. Spotter doesn't access your location, contacts, photos or sensors.
+**What Spotter doesn't do.** No analytics or tracking services, no advertising, no tracking
+across apps or websites, no selling or sharing of data with anyone. Spotter doesn't access
+your location, contacts, photos or sensors.
 
 **Permissions.** Notifications (to show the rest timer and tell you when rest is over),
 a foreground service (to keep the timer running with the screen off), vibration and a

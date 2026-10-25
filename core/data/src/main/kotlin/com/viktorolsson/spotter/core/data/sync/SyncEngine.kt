@@ -5,6 +5,7 @@ import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.longPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
@@ -72,6 +73,8 @@ class SyncEngine(
     private val remote: SyncRemote,
     private val cursors: SyncCursorStore,
     private val clock: Clock,
+    /** What this install reports after each sync; null reports nothing. */
+    private val device: suspend () -> DeviceCheckIn? = { null },
 ) {
     /**
      * [fromLink]: the session came from a tapped email link rather than typed
@@ -126,7 +129,23 @@ class SyncEngine(
         changes.chunked(PAGE).forEach { remote.push(it) }
 
         cursors.save(SyncCursor(userId, newPulledUpTo, pushStartedAt, clock.millis()))
+        checkIn()
         return SyncOutcome.Done(pulled = pulled, pushed = changes.size)
+    }
+
+    /**
+     * Tells the server which versions this install runs. Best effort: the sync already
+     * succeeded, so a failure here (offline, a server without `check_in_device`) is dropped
+     * and the next sync tries again.
+     */
+    private suspend fun checkIn() {
+        try {
+            device()?.let { remote.checkIn(it) }
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            // Dropped on purpose, see above.
+        }
     }
 
     /** Re-reads a couple of minutes back, so rows committed slightly out of order aren't missed. */

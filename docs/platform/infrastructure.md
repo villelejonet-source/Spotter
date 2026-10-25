@@ -150,6 +150,7 @@ file again. That was the state of production on 2026-10-24; since the audit the 
 | `20261025000000` | `scheduled_sessions.sql` (`scheduled_session`, `v_scheduled_session`) | applied via the editor, now recorded |
 | `20261026000000` | `audit_hardening.sql` (policies with `(select auth.uid())`, `push_rows` checks and row cap, revoked grants, `delete_my_account` cleanup, `v_exercise_usage` which `/library` needs) | applied with the audit, recorded |
 | `20261027000000` | `trainer_foundation.sql` (`profiles`, `trainer_links` and their functions, `can_read_user` in the `sync_rows` read policy, `delete_my_account` removes profile and links) | applied 2026-10-25 with `supabase db push --linked`, recorded |
+| `20261028000000` | `devices_and_admin.sql` (`devices` and `check_in_device`, `admins` and `admin_stats` for `/admin`, `delete_my_account` removes devices) | applied 2026-10-25 with `supabase db push --linked`, recorded |
 
 On 2026-10-24 the history was empty (`list_migrations` returned `[]`); on 2026-10-25 it lists
 all five versions (six since 2026-10-25). If it ever drifts again, repair it the same way: after linking, name the
@@ -208,10 +209,16 @@ Rules that keep that safe:
 5. **Minimum supported app version** (to build): a public `app_config` row with
    `min_version_code`. The app checks it on sync and asks for an update instead of syncing; this
    is the emergency brake for an incompatible change.
-6. **Record what each phone runs** (to build): on sync the phone upserts a `device` row with its
-   `versionCode` and Room schema version. The website can then warn ("your phone needs an update
-   before this plan syncs") and support can see which versions are still in use before
-   contracting the schema.
+6. **Record what each phone runs** (built, from versionCode 7): at the end of every successful
+   sync the app calls `check_in_device(device_id, version_code, schema_version)`
+   (`SyncEngine`, `DeviceIdentity`), which upserts the caller's row in `devices`: a random
+   per-install UUID (kept in plain SharedPreferences, so it isn't copied to a new phone), the
+   `versionCode`, the Room schema version and `last_synced_at`. Each account keeps its 20 most
+   recently synced installs; `delete_my_account` removes them. A failed check-in never fails
+   the sync. The versionCode spread is on the usage overview (`/admin`, see "Operations").
+   An account that syncs but never checks in runs versionCode 6 or older (or uses only the
+   website). Still to build on top of it: the website warning ("your phone needs an update
+   before this plan syncs").
 
 ## Scaling the data model
 
@@ -269,9 +276,12 @@ two `trainer_links` indexes, on an empty table, and `sync_rows_set_entry_exercis
 
 1. **Release versionCode 7** (`/release`) with the owner-filtered pull. Apps on versionCode 6
    or older pull `sync_rows` unfiltered, so a trainer still on one of those would pull client
-   rows. Before step 3, make sure no trainer runs an old app: record each phone's
-   `versionCode` on sync ("Versioning", step 6) and have the link functions refuse
-   trainers on older versions, or require an update to use trainer features.
+   rows. Before step 3, make sure no trainer runs an old app. Each install now reports its
+   `versionCode` on sync ("Versioning", step 6), but an old app never reports anything, so
+   the gate is the absence of old apps, not the presence of new ones: wait until `/admin`
+   shows (close to) no active accounts without a check-in, and have `create_trainer_invite`
+   refuse an account that synced rows in the last 30 days without a versionCode ≥ 7 check-in
+   after them.
 2. **Build the read path for trainers:** typed tables or views for what a trainer sees (step 3
    above), plus a `profiles` read policy so a linked trainer sees the client's display name.
 3. **Switch reads on:** change only `can_read_user` to also allow an active link (the `exists`
@@ -284,9 +294,24 @@ two `trainer_links` indexes, on an empty table, and `sync_rows_set_entry_exercis
 
 - **Backups:** daily on Supabase Pro; add point-in-time recovery once paying users exist.
   Users can also export their data from the website (JSON/CSV).
+- **Usage overview:** `/admin` on the website (not in the navigation) shows accounts and
+  sign-ups per week, last sign-in, last active (the newer of the account's newest synced row
+  and its newest device check-in; the app stays signed in for months, so last sign-in says
+  little), workouts and weekly active users per week, and the versionCode spread. It reads
+  `admin_stats()`, a SECURITY DEFINER function that answers only for accounts in
+  `public.admins`; everyone else gets "not found". No allow-list or secret key on the website.
+  Dates and counts only, never workout contents. Add or remove an admin in the SQL editor
+  (the repository is public, so never in a migration):
+  `insert into public.admins (user_id) select id from auth.users where email = '…';`
+  Applied to production on 2026-10-25. Advisors afterwards, all expected: the security
+  WARN for SECURITY DEFINER functions callable by signed-in users now also lists
+  `check_in_device` and `admin_stats`; a new INFO says `admins` has RLS without policies (on
+  purpose: no API role may read it); and a performance INFO says `devices_last_synced_idx` is
+  unused (the table is empty until versionCode 7).
 - **Errors and logs:** Vercel function logs and Supabase logs to start with. The privacy policy
-  promises no analytics; if error reporting (e.g. Sentry) is added, configure it without
-  personal data and update the policy first.
+  promises no analytics or tracking services and describes exactly what the app reports on sync
+  and what the usage overview shows; if error reporting (e.g. Sentry) is added, or the overview
+  shows anything new, configure it without personal data and update the policy first.
 - **Abuse limits:** Supabase Auth rate limits on sign-in emails (dashboard). `push_rows` is the
   only way to write: it accepts known table names only, at most 1000 rows per call and 16 KB
   per row, and always writes as the caller.

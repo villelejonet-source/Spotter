@@ -47,6 +47,8 @@ class FakeRemote : SyncRemote {
     private var serverTime = Instant.parse("2026-10-03T10:00:00Z")
     var pushes = 0
     var signedIn = "user-1"
+    val checkIns = mutableListOf<Pair<String, DeviceCheckIn>>()
+    var checkInFails = false
 
     override suspend fun hasRows(userId: String) = rows.keys.any { it.first == userId }
 
@@ -67,6 +69,11 @@ class FakeRemote : SyncRemote {
             }
         }
     }
+
+    override suspend fun checkIn(device: DeviceCheckIn) {
+        if (checkInFails) throw java.io.IOException("check_in_device unavailable")
+        checkIns += signedIn to device
+    }
 }
 
 @RunWith(AndroidJUnit4::class)
@@ -86,7 +93,8 @@ class SyncEngineTest {
         val profiles = UserProfileRepository(db.userProfileDao())
         val exercises = ExerciseRepository(db.exerciseDao())
         val bodyWeight = BodyWeightRepository(db, db.userProfileDao())
-        val engine = SyncEngine(LocalSyncStore(db), remote, SyncCursorStore(prefsStore()), java.time.Clock.systemUTC())
+        val checkIn = DeviceCheckIn("install-$userId", versionCode = 7, schemaVersion = 8)
+        val engine = SyncEngine(LocalSyncStore(db), remote, SyncCursorStore(prefsStore()), java.time.Clock.systemUTC()) { checkIn }
 
         suspend fun seed() = db.exerciseDao().upsertAll(
             parseExerciseSeed(File("src/main/assets/exercises.json").readText()).exercises.map(SeedExercise::toEntity),
@@ -316,6 +324,43 @@ class SyncEngineTest {
         assertEquals(0, outcome.pulled)
         assertTrue(mine.sessions().isEmpty())
         assertEquals(1, client.sessions().size)
+    }
+
+    @Test
+    fun aSuccessfulSyncChecksInThisInstall() = runTest {
+        val a = device()
+        a.logWorkout()
+        a.sync()
+        a.sync()
+        assertEquals(listOf(USER to a.checkIn, USER to a.checkIn), remote.checkIns)
+    }
+
+    @Test
+    fun aSyncThatStopsToAskDoesNotCheckIn() = runTest {
+        val a = device()
+        a.logWorkout()
+        a.sync()
+        remote.checkIns.clear()
+
+        val b = device()
+        b.planFor(profile.copy(daysPerWeek = 3))
+        assertEquals(SyncOutcome.NeedsChoice(), b.sync())
+        assertTrue(remote.checkIns.isEmpty())
+    }
+
+    @Test
+    fun aFailedCheckInDoesNotFailTheSync() = runTest {
+        remote.checkInFails = true
+        val a = device()
+        a.logWorkout()
+        val outcome = a.sync() as SyncOutcome.Done
+        assertTrue(outcome.pushed > 0)
+        assertTrue(remote.checkIns.isEmpty())
+
+        // The backup went through and the next sync is an ordinary one.
+        remote.checkInFails = false
+        assertEquals(0, (a.sync() as SyncOutcome.Done).pushed)
+        assertEquals(1, remote.checkIns.size)
     }
 
     private companion object {

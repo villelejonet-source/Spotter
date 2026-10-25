@@ -1,6 +1,7 @@
 package com.viktorolsson.spotter.di
 
 import com.viktorolsson.spotter.BuildConfig
+import com.viktorolsson.spotter.core.data.sync.AppBuild
 import com.viktorolsson.spotter.core.data.sync.SupabaseConfig
 import dagger.Module
 import dagger.Provides
@@ -13,4 +14,8 @@ object AppModule {
     /** From local.properties at build time; blank values turn cloud sync off. */
     @Provides
     fun provideSupabaseConfig() = SupabaseConfig(BuildConfig.SUPABASE_URL, BuildConfig.SUPABASE_PUBLISHABLE_KEY)
+
+    /** Reported on sync, so it's known which app versions are still in use. */
+    @Provides
+    fun provideAppBuild() = AppBuild(BuildConfig.VERSION_CODE)
 }

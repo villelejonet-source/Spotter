@@ -151,7 +151,7 @@ file again. That was the state of production on 2026-10-24; since the audit the 
 | `20261026000000` | `audit_hardening.sql` (policies with `(select auth.uid())`, `push_rows` checks and row cap, revoked grants, `delete_my_account` cleanup, `v_exercise_usage` which `/library` needs) | applied with the audit, recorded |
 | `20261027000000` | `trainer_foundation.sql` (`profiles`, `trainer_links` and their functions, `can_read_user` in the `sync_rows` read policy, `delete_my_account` removes profile and links) | applied 2026-10-25 with `supabase db push --linked`, recorded |
 | `20261028000000` | `devices_and_admin.sql` (`devices` and `check_in_device`, `admins` and `admin_stats` for `/admin`, `delete_my_account` removes devices) | applied 2026-10-25 with `supabase db push --linked`, recorded |
-| `20261029000000` | `admin_tag.sql` (admin is the `app_metadata.admin` tag; `admins` rows become tags and the table is dropped; `admin_stats` checks the tag) | not yet |
+| `20261029000000` | `admin_tag.sql` (admin is the `app_metadata.admin` tag; `admins` rows become tags and the table is dropped; `admin_stats` checks the tag) | applied 2026-10-25 with `supabase db push --linked`, recorded |
 
 On 2026-10-24 the history was empty (`list_migrations` returned `[]`); on 2026-10-25 it lists
 all five versions (six since 2026-10-25). If it ever drifts again, repair it the same way: after linking, name the
@@ -314,7 +314,9 @@ two `trainer_links` indexes, on an empty table, and `sync_rows_set_entry_exercis
   WARN for SECURITY DEFINER functions callable by signed-in users now also lists
   `check_in_device` and `admin_stats`; a new INFO says `admins` has RLS without policies (on
   purpose: no API role may read it; the table goes in `20261029000000`); and a performance INFO says `devices_last_synced_idx` is
-  unused (the table is empty until versionCode 7).
+  unused (the table is empty until versionCode 7). After `20261029000000` (also applied
+  2026-10-25, which turned the one `admins` row into the tag) the `admins` INFO is gone with
+  the table; everything else is unchanged.
 - **Errors and logs:** Vercel function logs and Supabase logs to start with. The privacy policy
   promises no analytics or tracking services and describes exactly what the app reports on sync
   and what the usage overview shows; if error reporting (e.g. Sentry) is added, or the overview

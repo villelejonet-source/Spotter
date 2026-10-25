@@ -28,6 +28,17 @@ data class RemoteRow(
     fun toSyncRow() = SyncRow(tableName, syncId, payload, updatedAt, deletedAt)
 }
 
+/**
+ * What a phone reports after each successful sync (`check_in_device`), and nothing more: a
+ * random id made once per install, this build's versionCode and the Room schema version.
+ */
+@Serializable
+data class DeviceCheckIn(
+    @SerialName("device_id") val deviceId: String,
+    @SerialName("version_code") val versionCode: Int,
+    @SerialName("schema_version") val schemaVersion: Int,
+)
+
 /** The server side of sync. Implemented with Supabase; faked in tests. */
 interface SyncRemote {
     /** Whether [userId] (the signed-in user) has anything backed up. */
@@ -42,6 +53,9 @@ interface SyncRemote {
 
     /** Uploads changes; the server keeps whichever version is newer. */
     suspend fun push(rows: List<SyncRow>)
+
+    /** Records that this install just synced, with its versions (see [DeviceCheckIn]). */
+    suspend fun checkIn(device: DeviceCheckIn)
 }
 
 /** What to do the first time a phone with its own data meets a non-empty backup. */

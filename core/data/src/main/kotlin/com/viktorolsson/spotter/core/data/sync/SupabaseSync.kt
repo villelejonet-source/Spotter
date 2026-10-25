@@ -406,7 +406,8 @@ internal fun UserSession.isRecovery(): Boolean = type == "recovery" || runCatchi
 }.getOrDefault(false)
 
 /**
- * [SyncRemote] over the `sync_rows` table and `push_rows` function (see supabase/migrations/).
+ * [SyncRemote] over the `sync_rows` table and the `push_rows` and `check_in_device` functions
+ * (see supabase/migrations/).
  * Reads filter on `user_id` explicitly (see [SyncRemote.pull]).
  */
 @Singleton
@@ -437,6 +438,10 @@ class SupabaseSyncRemote internal constructor(private val clientOrNull: suspend 
 
     override suspend fun push(rows: List<SyncRow>) {
         client().postgrest.rpc("push_rows", buildJsonObject { put("rows", json.encodeToJsonElement(rows)) })
+    }
+
+    override suspend fun checkIn(device: DeviceCheckIn) {
+        client().postgrest.rpc("check_in_device", json.encodeToJsonElement(device).jsonObject)
     }
 
     private val json = Json { encodeDefaults = true }

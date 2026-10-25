@@ -49,3 +49,5 @@ class StartupMaintenance @Inject constructor(
     }
 }
 
+// TEMPORARY: changes core:data bytecode to measure CI; removed before merge.
+const val CI_MEASUREMENT_MARKER = 1

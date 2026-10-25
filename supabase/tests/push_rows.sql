@@ -4,7 +4,7 @@
 --
 -- Run against a local stack or a throwaway project, never production:
 --   supabase start
---   psql "$(supabase status -o env | sed -n 's/^DB_URL=//p' | tr -d '"')" -v ON_ERROR_STOP=1 -f supabase/tests/push_rows.sql
+--   docker exec -i supabase_db_spotter psql -U postgres -d postgres -v ON_ERROR_STOP=1 -q -t < supabase/tests/push_rows.sql
 -- or paste the whole file into the SQL editor of a non-production project. A failing check
 -- raises an exception naming the case; success prints "push_rows: all checks passed".
 --

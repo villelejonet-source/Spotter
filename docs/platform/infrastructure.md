@@ -149,6 +149,7 @@ file again. That was the state of production on 2026-10-24; since the audit the 
 | `20261024000000` | `hardening_and_performance.sql` (`push_rows` limits, indexes, `v_set_history`) | applied via the editor, now recorded |
 | `20261025000000` | `scheduled_sessions.sql` (`scheduled_session`, `v_scheduled_session`) | applied via the editor, now recorded |
 | `20261026000000` | `audit_hardening.sql` (policies with `(select auth.uid())`, `push_rows` checks and row cap, revoked grants, `delete_my_account` cleanup, `v_exercise_usage` which `/library` needs) | applied with the audit, recorded |
+| `20261027000000` | `trainer_foundation.sql` (`profiles`, `trainer_links` and their functions, `can_read_user` in the `sync_rows` read policy, `delete_my_account` removes profile and links) | not yet applied |
 
 On 2026-10-24 the history was empty (`list_migrations` returned `[]`); on 2026-10-25 it lists
 all five versions. If it ever drifts again, repair it the same way: after linking, name the
@@ -162,6 +163,21 @@ supabase db push          # applies 20261026000000_audit_hardening.sql and recor
 
 From then on apply new migrations only via `db push` or `apply_migration`. Check `supabase
 migration list` before a push whenever in doubt.
+
+**Test a migration locally before applying it.** There's no staging project, so new migrations
+are checked on a local stack first (needs Docker; OrbStack on this Mac). `supabase/config.toml`
+holds the local settings, not production's:
+
+```bash
+supabase start -x studio,imgproxy,mailpit,realtime,storage-api,edge-runtime,logflare,vector,supavisor,postgres-meta
+supabase db reset   # rebuilds the local database from every file in supabase/migrations/
+for f in supabase/tests/*.sql; do docker exec -i supabase_db_spotter psql -U postgres -d postgres -v ON_ERROR_STOP=1 -q -t < "$f"; done
+supabase stop
+```
+
+Each test file prints "… all checks passed" or stops at the first failing check. For a policy
+change, also `explain` the app's pull as `authenticated` and check it still uses
+`sync_rows_pull_idx` (an unfiltered pull, as older apps send, included).
 
 ## Versioning: keeping app, website and database compatible
 

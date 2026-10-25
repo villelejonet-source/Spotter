@@ -2,7 +2,8 @@
 -- after every migration in supabase/migrations/ has been applied. Like push_rows.sql it runs
 -- in one transaction that is rolled back, and CI does not run it. Run it the same way,
 -- against a local stack or a throwaway project, never production:
---   psql "$(supabase status -o env | sed -n 's/^DB_URL=//p' | tr -d '"')" -v ON_ERROR_STOP=1 -f supabase/tests/trainer_links.sql
+--   docker exec -i supabase_db_spotter psql -U postgres -d postgres -v ON_ERROR_STOP=1 -q -t < supabase/tests/trainer_links.sql
+-- (docs/platform/infrastructure.md, "Database migrations", has the full local steps).
 -- A failing check raises an exception naming the case; success prints
 -- "trainer_links: all checks passed".
 
@@ -52,7 +53,7 @@ select set_config('request.jwt.claims', '', true);
 select pg_temp.expect_error('signed out invite', $$select public.create_trainer_invite()$$, '42501');
 select pg_temp.expect_error('signed out accept', $$select public.accept_trainer_invite('x')$$, '42501');
 select pg_temp.expect_error('signed out end', $$select public.end_trainer_link(gen_random_uuid())$$, '42501');
-select pg_temp.expect('signed out can read no one', public.can_read_user('00000000-0000-4000-8000-00000000000c'), false);
+select pg_temp.expect('signed out can read no one', public.can_read_user('00000000-0000-4000-8000-00000000000c') is true, false);
 
 -- ---- Profiles, as the API role ----
 
@@ -195,7 +196,7 @@ select pg_temp.expect('trainer withdrew the invite',
 -- ---- Invite cap ----
 
 select pg_temp.act_as('00000000-0000-4000-8000-00000000000e');
-select public.create_trainer_invite() from generate_series(1, 20);
+select count(*) from (select public.create_trainer_invite() from generate_series(1, 20)) invites;
 select pg_temp.expect_error('at most 20 open invites', $$select public.create_trainer_invite()$$, '54000');
 
 -- ---- Account deletion (client C) ----

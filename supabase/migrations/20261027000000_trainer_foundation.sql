@@ -20,7 +20,7 @@
 -- Kept on purpose (noted for the advisors):
 -- - can_read_user has no SET search_path and is SECURITY INVOKER: either would stop Postgres
 --   inlining it into the sync_rows policy, which would then call a function per row instead
---   of comparing user_id with an InitPlan. Every name in it is schema-qualified, so the
+--   of using user_id = auth.uid() as an index condition. Every name in it is schema-qualified, so the
 --   "function search_path mutable" WARN for it is expected.
 -- - create_trainer_invite, accept_trainer_invite, end_trainer_link and delete_my_account are
 --   SECURITY DEFINER with search_path = '': trainer_links is closed to direct writes, and each
@@ -215,19 +215,23 @@ grant execute on function public.end_trainer_link(uuid) to authenticated;
 
 -- ---- 3. One access check for synced rows ----
 
--- Whether the signed-in user may read [owner_id]'s synced rows: today only their own. Kept
--- inlinable (plain SQL, invoker, no SET clause), so the policy below plans as
--- user_id = (select auth.uid()). The trainer version adds
---   or exists (select 1 from public.trainer_links t where t.trainer_id = (select auth.uid())
+-- Whether the signed-in user may read [owner_id]'s synced rows: today only their own (null when
+-- signed out, which a policy treats as no). Postgres inlines it into the policy below, which
+-- then plans as user_id = auth.uid(): an index condition, so even apps that pull without an
+-- owner filter (versionCode 6 and older) still use sync_rows_pull_idx. Inlining needs plain
+-- SQL, SECURITY INVOKER, no SET clause and no subquery in the body, so auth.uid() is called
+-- directly rather than as (select auth.uid()). The trainer version adds
+--   or exists (select 1 from public.trainer_links t where t.trainer_id = auth.uid()
 --              and t.client_id = owner_id and t.status = 'active')
--- which stays inlinable: a trainer can already read their own links.
+-- which stops inlining (a subquery) and the index condition for unfiltered pulls; that's
+-- fine once no old apps remain (see docs/platform/infrastructure.md, "Trainer foundation").
 create or replace function public.can_read_user(owner_id uuid)
 returns boolean
 language sql
 stable
 security invoker
 as $$
-    select coalesce(owner_id = (select auth.uid()), false)
+    select owner_id = auth.uid()
 $$;
 
 revoke all on function public.can_read_user(uuid) from public, anon;

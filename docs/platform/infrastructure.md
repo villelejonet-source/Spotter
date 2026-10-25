@@ -229,8 +229,8 @@ another account's rows.
 - **`profiles`**: user id, display name, timestamps; each user reads and writes only their own
   row. There is no fixed trainer or client role: any account can be either, or both.
 - **`trainer_links`**: trainer, client, status (`pending` → `active` → `ended`), a 32-character
-  random invite code, and when it was created, accepted and ended. Trainer ≠ client, and only one
-  live (not ended) link per pair. Each side reads its own links. There are no direct writes, only:
+  random invite code, and when it was created, accepted and ended. Trainer ≠ client. A client
+  has at most one trainer at a time; a trainer can have any number of clients. Each side reads its own links. There are no direct writes, only:
   - `create_trainer_invite()`: a pending link with the caller as trainer (at most 20 open invites);
   - `accept_trainer_invite(code)`: the caller becomes the client of a pending invite less than 14
     days old; nobody can activate a link for anyone else;

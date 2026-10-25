@@ -169,8 +169,17 @@ insert into ids select 'code3', invite_code from public.create_trainer_invite();
 select pg_temp.act_as('00000000-0000-4000-8000-00000000000d');
 select pg_temp.expect('the pair can link again after ending',
     (select status from public.accept_trainer_invite((select value from ids where name = 'code2'))), 'active');
-select pg_temp.expect_error('one live link per pair',
+select pg_temp.expect_error('one link per pair',
     format('select public.accept_trainer_invite(%L)', (select value from ids where name = 'code3')), '23505');
+
+-- A client has one trainer at a time: S's invite fails while C is linked to T.
+select pg_temp.act_as('00000000-0000-4000-8000-00000000000e');
+insert into ids select 'link_s', id::text from public.create_trainer_invite();
+select pg_temp.act_as('00000000-0000-4000-8000-00000000000d');
+select pg_temp.expect_error('one trainer at a time',
+    format('select public.accept_trainer_invite(%L)', (select invite_code from public.trainer_links where id = (select value from ids where name = 'link_s')::uuid)), '23505');
+select pg_temp.act_as('00000000-0000-4000-8000-00000000000e');
+select public.end_trainer_link((select value from ids where name = 'link_s')::uuid);
 
 -- The trainer can withdraw a pending invite.
 select pg_temp.act_as('00000000-0000-4000-8000-00000000000c');

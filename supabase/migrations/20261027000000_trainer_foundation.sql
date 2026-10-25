@@ -6,7 +6,7 @@
 -- 1. profiles: a display name per account. Not the synced user_profile rows (v_profile),
 --    which hold the app's settings; any account can be a trainer, a client or both.
 -- 2. trainer_links: trainer, client, status (pending | active | ended) and an unguessable
---    invite code. Each side reads its own links; writes go only through
+--    invite code. A client has at most one trainer at a time; a trainer, any number of clients. Each side reads its own links; writes go only through
 --    create_trainer_invite, accept_trainer_invite and end_trainer_link.
 -- 3. can_read_user(owner_id): the one access check for reading synced rows. Today it is
 --    owner-only; letting an active trainer read is a change to this function alone (see
@@ -95,10 +95,11 @@ create table if not exists public.trainer_links (
     constraint trainer_links_invite_code_key unique (invite_code)
 );
 
--- One live link per pair; after it ends, the two can link again.
-create unique index if not exists trainer_links_pair_key
-    on public.trainer_links (trainer_id, client_id)
-    where status <> 'ended';
+-- A client has at most one trainer at a time (a trainer can have any number of clients).
+-- After a link ends, the client can link again, with the same trainer or another.
+create unique index if not exists trainer_links_one_trainer_key
+    on public.trainer_links (client_id)
+    where status = 'active';
 
 create index if not exists trainer_links_trainer_idx on public.trainer_links (trainer_id);
 create index if not exists trainer_links_client_idx on public.trainer_links (client_id);
@@ -141,7 +142,7 @@ $$;
 -- Makes the caller the client of a pending invite less than 14 days old. A caller can only
 -- ever make themselves the client, never activate a link for someone else. Errors: 42501 not
 -- signed in; P0002 for an unknown, expired, used or own code (one message, so a code can't be
--- probed); 23505 when the two are already linked.
+-- probed); 23505 when the caller already has a trainer (they end that link first).
 create or replace function public.accept_trainer_invite(code text)
 returns public.trainer_links
 language plpgsql
@@ -164,11 +165,8 @@ begin
     if not found then
         raise exception 'accept_trainer_invite: this invite code is not valid' using errcode = 'P0002';
     end if;
-    if exists (
-        select 1 from public.trainer_links t
-        where t.trainer_id = link.trainer_id and t.client_id = uid and t.status <> 'ended'
-    ) then
-        raise exception 'accept_trainer_invite: already linked to this trainer' using errcode = '23505';
+    if exists (select 1 from public.trainer_links t where t.client_id = uid and t.status = 'active') then
+        raise exception 'accept_trainer_invite: you already have a trainer' using errcode = '23505';
     end if;
     update public.trainer_links t
     set client_id = uid, status = 'active', accepted_at = now()

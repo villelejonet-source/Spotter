@@ -11,7 +11,7 @@ export default function ResetPasswordPage() {
   if (done) {
     return (
       <AuthCard title="Password saved" subtitle="Use it next time you sign in, here or in the app's cloud backup.">
-        <LinkButton href="/" variant="primary" className="w-full">Go to your dashboard</LinkButton>
+        <LinkButton href="/" variant="primary" className="w-full">Continue to Spotter</LinkButton>
       </AuthCard>
     );
   }

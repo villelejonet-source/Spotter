@@ -1,48 +1,38 @@
-import { ConfirmButton } from "@/components/confirm-button";
-import { MobileSubNav, MobileTabBar, SidebarNav } from "@/components/nav";
+import Link from "next/link";
+import { MobileTabBar, SectionTabs, SidebarNav } from "@/components/nav";
 import { requireUser } from "@/lib/supabase/server";
-import { signOut } from "../actions/account";
 
 /**
- * The signed-in shell: a sidebar on wide screens; on phones a header, the current tab's
- * pages under it and the app's four tabs along the bottom.
+ * The signed-in shell. The same five sections everywhere: a sidebar on wide screens, a
+ * bottom bar on phones. A section with more than one page shows its pages as tabs above the
+ * content. Signing out lives on the Profile page, with the rest of the account.
  */
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
   const { user } = await requireUser();
-  const signOutButton = (
-    <ConfirmButton
-      action={signOut}
-      variant="ghost"
-      className="text-muted"
-      title="Sign out?"
-      body="You can sign in again any time. Your backup stays in the cloud and keeps syncing from your phone."
-      confirmLabel="Sign out"
-    >
-      Sign out
-    </ConfirmButton>
+  const brand = (
+    <Link href="/" className="rounded-md text-lg font-semibold tracking-tight text-primary">
+      Spotter
+    </Link>
   );
 
   return (
     <div className="mx-auto flex min-h-screen max-w-7xl flex-col md:flex-row">
-      <header className="border-b border-outline md:sticky md:top-0 md:flex md:h-screen md:w-60 md:shrink-0 md:flex-col md:border-r md:border-b-0 md:px-4 md:py-8">
-        <div className="flex items-center justify-between px-4 py-3 md:mb-8 md:block md:px-0 md:py-0">
-          <div className="text-lg font-semibold text-primary md:px-4">Spotter</div>
-          <div className="md:hidden">{signOutButton}</div>
-        </div>
-        <div className="hidden md:block">
-          <SidebarNav />
-        </div>
-        <div className="md:hidden">
-          <MobileSubNav />
-        </div>
-        <div className="mt-auto hidden px-4 md:block">
-          <div className="truncate text-xs text-muted" title={user.email}>
-            {user.email}
-          </div>
-          <div className="-ml-4 mt-1">{signOutButton}</div>
-        </div>
-      </header>
-      <main className="min-w-0 flex-1 px-4 py-6 pb-24 md:px-10 md:py-10">{children}</main>
+      <header className="sticky top-0 z-30 flex h-14 items-center border-b border-outline bg-background/95 px-4 backdrop-blur md:hidden">{brand}</header>
+      <aside className="hidden md:sticky md:top-0 md:flex md:h-screen md:w-60 md:shrink-0 md:flex-col md:border-r md:border-outline md:px-3 md:py-8">
+        <div className="mb-8 px-4">{brand}</div>
+        <SidebarNav />
+        <Link
+          href="/profile"
+          className="mt-auto truncate rounded-full px-4 py-2 text-xs text-muted hover:bg-surface hover:text-foreground"
+          title={user.email}
+        >
+          {user.email}
+        </Link>
+      </aside>
+      <main className="min-w-0 flex-1 px-4 pt-6 pb-28 md:px-10 md:py-10">
+        <SectionTabs />
+        {children}
+      </main>
       <MobileTabBar />
     </div>
   );

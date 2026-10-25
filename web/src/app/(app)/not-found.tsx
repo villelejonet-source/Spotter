@@ -5,7 +5,7 @@ export default function AppNotFound() {
   return (
     <>
       <PageHeader title="Not found" />
-      <EmptyState title="There's nothing here" action={<LinkButton href="/" variant="primary">Go to the dashboard</LinkButton>}>
+      <EmptyState title="There's nothing here" action={<LinkButton href="/" variant="primary">Go to Today</LinkButton>}>
         This workout, exercise or plan doesn&apos;t exist, or it was deleted on your phone.
       </EmptyState>
     </>

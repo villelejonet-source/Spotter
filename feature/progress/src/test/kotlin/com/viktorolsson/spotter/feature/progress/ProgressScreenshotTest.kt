@@ -5,6 +5,8 @@ import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.github.takahirom.roborazzi.ExperimentalRoborazziApi
 import com.github.takahirom.roborazzi.RobolectricDeviceQualifiers
 import com.github.takahirom.roborazzi.RoborazziComposeOptions
+import com.github.takahirom.roborazzi.RoborazziOptions
+import com.github.takahirom.roborazzi.ThresholdValidator
 import com.github.takahirom.roborazzi.captureRoboImage
 import com.github.takahirom.roborazzi.fontScale
 import com.viktorolsson.spotter.core.data.repository.LoggedExerciseSummary
@@ -82,7 +84,14 @@ class ProgressScreenshotTest {
 
     @Test
     fun logWeightDialog_light() {
-        captureRoboImage("src/test/screenshots/progress_log_weight_light.png") {
+        // The dialog's rounded window corners anti-alias slightly differently on macOS and
+        // Linux; allow a sliver of changed pixels (0.1 %, far less than any text change).
+        captureRoboImage(
+            "src/test/screenshots/progress_log_weight_light.png",
+            roborazziOptions = RoborazziOptions(
+                compareOptions = RoborazziOptions.CompareOptions(resultValidator = ThresholdValidator(0.001f)),
+            ),
+        ) {
             SpotterTheme(darkTheme = false, dynamicColor = false) { weightDialog() }
         }
     }

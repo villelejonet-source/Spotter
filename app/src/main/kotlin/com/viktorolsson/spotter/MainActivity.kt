@@ -13,6 +13,9 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.viktorolsson.spotter.core.data.sync.SyncRepository
 import com.viktorolsson.spotter.core.ui.theme.SpotterTheme
 import com.viktorolsson.spotter.core.ui.theme.isDark
+import com.viktorolsson.spotter.shell.MainUiState
+import com.viktorolsson.spotter.shell.MainViewModel
+import com.viktorolsson.spotter.shell.SpotterApp
 import org.koin.android.ext.android.inject
 import org.koin.androidx.viewmodel.ext.android.viewModel
 

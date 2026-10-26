@@ -1,19 +1,20 @@
 import Shared
 import SwiftUI
+import UIKit
 
-/// The iOS app shell. The screens come from Compose Multiplatform in phase 4
-/// (docs/platform/ios-port.md); for now it starts the shared data layer and shows that it runs.
+/// The iOS app shell around the shared Compose UI (docs/platform/ios-port.md): it starts the
+/// shared code, shows its screens full-window, and passes on opened links and foreground events.
 @main
 struct SpotterApp: App {
     @Environment(\.scenePhase) private var scenePhase
-    @State private var exerciseCount: Int?
 
     var body: some Scene {
         WindowGroup {
-            StatusView(exerciseCount: exerciseCount, cloudSync: Spotter.shared.cloudSyncAvailable)
-                .task {
-                    Spotter.shared.start { count in exerciseCount = count.intValue }
-                }
+            // The shared screens lay themselves out around the status bar, home indicator and
+            // keyboard, as on Android.
+            ComposeView()
+                .ignoresSafeArea()
+                .task { Spotter.shared.start() }
                 .onOpenURL { url in Spotter.shared.openUrl(url: url.absoluteString) }
         }
         .onChange(of: scenePhase) { _, phase in
@@ -34,22 +35,11 @@ enum Spotter {
     }()
 }
 
-private struct StatusView: View {
-    let exerciseCount: Int?
-    let cloudSync: Bool
-
-    var body: some View {
-        VStack(spacing: 12) {
-            Text("Spotter").font(.largeTitle.bold())
-            if let exerciseCount {
-                Text("\(exerciseCount) exercises in the library")
-            } else {
-                ProgressView()
-            }
-            Text(cloudSync ? "Cloud sync configured" : "Offline build (no Supabase config)")
-                .font(.footnote)
-                .foregroundStyle(.secondary)
-        }
-        .padding()
+/// The shared Compose UI as a SwiftUI view.
+private struct ComposeView: UIViewControllerRepresentable {
+    func makeUIViewController(context: Context) -> UIViewController {
+        Spotter.shared.mainViewController()
     }
+
+    func updateUIViewController(_ uiViewController: UIViewController, context: Context) {}
 }

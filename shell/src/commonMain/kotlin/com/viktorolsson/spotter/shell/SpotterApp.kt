@@ -1,4 +1,4 @@
-package com.viktorolsson.spotter
+package com.viktorolsson.spotter.shell
 
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.WindowInsets
@@ -21,13 +21,9 @@ import androidx.compose.runtime.produceState
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.res.stringResource
+import org.jetbrains.compose.resources.stringResource
 import org.koin.compose.viewmodel.koinViewModel
-import androidx.lifecycle.Lifecycle
-import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import androidx.lifecycle.repeatOnLifecycle
 import androidx.navigation.NavDestination
 import androidx.navigation.NavDestination.Companion.hasRoute
 import androidx.navigation.NavDestination.Companion.hierarchy
@@ -55,19 +51,30 @@ import com.viktorolsson.spotter.feature.session.SessionRoute
 import com.viktorolsson.spotter.feature.session.SummaryRoute
 import com.viktorolsson.spotter.feature.session.sessionScreen
 import com.viktorolsson.spotter.feature.session.summaryScreen
-import com.viktorolsson.spotter.feature.session.timer.WorkoutService
 import com.viktorolsson.spotter.feature.settings.AccountRoute
 import com.viktorolsson.spotter.feature.settings.accountScreen
 import com.viktorolsson.spotter.feature.settings.profileScreen
 import com.viktorolsson.spotter.feature.today.TodayRoute
 import com.viktorolsson.spotter.feature.today.todayScreen
-import com.viktorolsson.spotter.navigation.TopLevelDestination
 import kotlinx.coroutines.delay
 import kotlin.time.Clock
 import kotlin.time.Duration
 import kotlin.time.Instant
+import com.viktorolsson.spotter.shell.resources.Res
+import com.viktorolsson.spotter.shell.resources.sync_choice_backup
+import com.viktorolsson.spotter.shell.resources.sync_choice_body
+import com.viktorolsson.spotter.shell.resources.sync_choice_body_account
+import com.viktorolsson.spotter.shell.resources.sync_choice_merge
+import com.viktorolsson.spotter.shell.resources.sync_choice_note
+import com.viktorolsson.spotter.shell.resources.sync_choice_title
+import com.viktorolsson.spotter.shell.resources.sync_upload_body
+import com.viktorolsson.spotter.shell.resources.sync_upload_body_no_email
+import com.viktorolsson.spotter.shell.resources.sync_upload_confirm
+import com.viktorolsson.spotter.shell.resources.sync_upload_decline
+import com.viktorolsson.spotter.shell.resources.sync_upload_title
 
 @Composable
+/** The app below the window: bottom bar, every screen's route, and the app-wide sync dialogs. */
 fun SpotterApp(
     needsOnboarding: Boolean,
     navController: NavHostController = rememberNavController(),
@@ -80,7 +87,7 @@ fun SpotterApp(
     val onTab = TopLevelDestination.entries.any { currentDestination.isOnTab(it) }
     val activeSession by activeWorkoutViewModel.activeSession.collectAsStateWithLifecycle()
 
-    KeepWorkoutServiceRunning(activeSession != null)
+    WhileWorkoutActive(activeSession != null)
 
     val syncChoice by syncChoiceViewModel.uiState.collectAsStateWithLifecycle()
     if (syncChoice.needsChoice) {
@@ -115,7 +122,7 @@ fun SpotterApp(
                         val elapsed by produceState(Duration.ZERO, session.startedAt) {
                             while (true) {
                                 value = (Clock.System.now() - session.startedAt)
-                                delay(1000L - System.currentTimeMillis() % 1000L)
+                                delay(1000L - Clock.System.now().toEpochMilliseconds() % 1000L)
                             }
                         }
                         WorkoutMiniBar(elapsed, onClick = { navController.navigate(SessionRoute(session.id)) })
@@ -199,10 +206,10 @@ fun SpotterApp(
 internal fun UploadChoiceDialog(email: String?, onUpload: () -> Unit, onSignOut: () -> Unit) {
     AlertDialog(
         onDismissRequest = {},
-        title = { Text(stringResource(R.string.sync_upload_title)) },
-        text = { Text(if (email != null) stringResource(R.string.sync_upload_body, email) else stringResource(R.string.sync_upload_body_no_email)) },
-        confirmButton = { Button(onClick = onUpload) { Text(stringResource(R.string.sync_upload_confirm)) } },
-        dismissButton = { TextButton(onClick = onSignOut) { Text(stringResource(R.string.sync_upload_decline)) } },
+        title = { Text(stringResource(Res.string.sync_upload_title)) },
+        text = { Text(if (email != null) stringResource(Res.string.sync_upload_body, email) else stringResource(Res.string.sync_upload_body_no_email)) },
+        confirmButton = { Button(onClick = onUpload) { Text(stringResource(Res.string.sync_upload_confirm)) } },
+        dismissButton = { TextButton(onClick = onSignOut) { Text(stringResource(Res.string.sync_upload_decline)) } },
     )
 }
 
@@ -214,38 +221,24 @@ internal fun UploadChoiceDialog(email: String?, onUpload: () -> Unit, onSignOut:
 internal fun SyncChoiceDialog(email: String?, onChoose: (FirstSyncChoice) -> Unit) {
     AlertDialog(
         onDismissRequest = {},
-        title = { Text(stringResource(R.string.sync_choice_title)) },
+        title = { Text(stringResource(Res.string.sync_choice_title)) },
         text = {
             Column(verticalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(Spacing.sm)) {
-                Text(if (email != null) stringResource(R.string.sync_choice_body_account, email) else stringResource(R.string.sync_choice_body))
+                Text(if (email != null) stringResource(Res.string.sync_choice_body_account, email) else stringResource(Res.string.sync_choice_body))
                 Text(
-                    stringResource(R.string.sync_choice_note),
+                    stringResource(Res.string.sync_choice_note),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
         },
         confirmButton = {
-            Button(onClick = { onChoose(FirstSyncChoice.USE_BACKUP) }) { Text(stringResource(R.string.sync_choice_backup)) }
+            Button(onClick = { onChoose(FirstSyncChoice.USE_BACKUP) }) { Text(stringResource(Res.string.sync_choice_backup)) }
         },
         dismissButton = {
-            TextButton(onClick = { onChoose(FirstSyncChoice.MERGE) }) { Text(stringResource(R.string.sync_choice_merge)) }
+            TextButton(onClick = { onChoose(FirstSyncChoice.MERGE) }) { Text(stringResource(Res.string.sync_choice_merge)) }
         },
     )
-}
-
-/**
- * Starts the workout service whenever the app is in the foreground with a workout
- * active, which also restores the rest timer after the process was killed.
- */
-@Composable
-private fun KeepWorkoutServiceRunning(active: Boolean) {
-    val context = LocalContext.current
-    val lifecycle = LocalLifecycleOwner.current.lifecycle
-    LaunchedEffect(active) {
-        if (!active) return@LaunchedEffect
-        lifecycle.repeatOnLifecycle(Lifecycle.State.STARTED) { WorkoutService.start(context) }
-    }
 }
 
 private fun NavDestination?.isOnTab(destination: TopLevelDestination): Boolean =

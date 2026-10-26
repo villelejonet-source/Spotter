@@ -15,11 +15,16 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.res.stringResource
+import org.jetbrains.compose.resources.stringResource
 import com.viktorolsson.spotter.core.ui.theme.Spacing
 import com.viktorolsson.spotter.core.model.RestTimer
 import com.viktorolsson.spotter.core.ui.formatClock
 import kotlin.time.Instant
+import com.viktorolsson.spotter.feature.session.resources.Res
+import com.viktorolsson.spotter.feature.session.resources.rest_minus
+import com.viktorolsson.spotter.feature.session.resources.rest_plus
+import com.viktorolsson.spotter.feature.session.resources.rest_skip
+import com.viktorolsson.spotter.feature.session.resources.rest_title
 
 @Composable
 internal fun RestTimerBar(
@@ -45,7 +50,7 @@ internal fun RestTimerBar(
             ) {
                 Column(Modifier.weight(1f)) {
                     Text(
-                        stringResource(R.string.rest_title),
+                        stringResource(Res.string.rest_title),
                         style = MaterialTheme.typography.labelMedium,
                         color = MaterialTheme.colorScheme.onSecondaryContainer,
                     )
@@ -56,9 +61,9 @@ internal fun RestTimerBar(
                         color = MaterialTheme.colorScheme.onSecondaryContainer,
                     )
                 }
-                OutlinedButton(onClick = { onAdjust(-15) }) { Text(stringResource(R.string.rest_minus)) }
-                OutlinedButton(onClick = { onAdjust(15) }) { Text(stringResource(R.string.rest_plus)) }
-                Button(onClick = onSkip) { Text(stringResource(R.string.rest_skip)) }
+                OutlinedButton(onClick = { onAdjust(-15) }) { Text(stringResource(Res.string.rest_minus)) }
+                OutlinedButton(onClick = { onAdjust(15) }) { Text(stringResource(Res.string.rest_plus)) }
+                Button(onClick = onSkip) { Text(stringResource(Res.string.rest_skip)) }
             }
         }
     }

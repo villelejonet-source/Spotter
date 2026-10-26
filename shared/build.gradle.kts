@@ -24,6 +24,7 @@ kotlin {
             implementation(project(":feature:plan"))
             implementation(project(":feature:onboarding"))
             implementation(project(":feature:settings"))
+            implementation(project(":feature:session"))
         }
     }
 }

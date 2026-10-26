@@ -37,3 +37,9 @@ expect fun firstDayOfWeek(): DayOfWeek
 /** "M", "T", "W": the locale's narrow name for [day], for calendar headers. */
 @Composable
 expect fun narrowDayName(day: DayOfWeek): String
+
+/** "2.5", "20": [value] without trailing zeros, always with a point, never in exponent form. */
+expect fun plainNumber(value: Double): String
+
+/** [plainNumber] after rounding half up to [decimals] places: "82.25", "80". */
+expect fun plainNumberRounded(value: Double, decimals: Int): String

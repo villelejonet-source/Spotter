@@ -17,7 +17,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.res.stringResource
+import org.jetbrains.compose.resources.stringResource
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.heading
@@ -30,10 +30,16 @@ import com.viktorolsson.spotter.core.engine.Plates
 import com.viktorolsson.spotter.core.model.Exercise
 import com.viktorolsson.spotter.core.model.WeightUnit
 import com.viktorolsson.spotter.core.model.label
-import java.math.BigDecimal
 import com.viktorolsson.spotter.core.ui.resources.Res as CoreRes
 import com.viktorolsson.spotter.core.ui.resources.weight_with_unit
 import org.jetbrains.compose.resources.stringResource
+import com.viktorolsson.spotter.feature.session.resources.Res
+import com.viktorolsson.spotter.feature.session.resources.plates_none
+import com.viktorolsson.spotter.feature.session.resources.plates_not_bar
+import com.viktorolsson.spotter.feature.session.resources.plates_not_exact
+import com.viktorolsson.spotter.feature.session.resources.plates_summary
+import com.viktorolsson.spotter.feature.session.resources.plates_title
+import com.viktorolsson.spotter.core.ui.plainNumber
 
 /** Plates per side for the weight in the focused field. */
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
@@ -48,19 +54,19 @@ internal fun PlateSheet(exercise: Exercise, weightKg: Double, unit: WeightUnit, 
 internal fun PlateSheetContent(exercise: Exercise, weightKg: Double, unit: WeightUnit) {
     val loading = Plates.load(weightKg, exercise, unit)
     @Composable
-    fun fmt(value: Double) = stringResource(CoreRes.string.weight_with_unit, BigDecimal(value).stripTrailingZeros().toPlainString(), unit.label)
+    fun fmt(value: Double) = stringResource(CoreRes.string.weight_with_unit, plainNumber(value), unit.label)
     Column(
         Modifier.fillMaxWidth().padding(horizontal = Dimens.SheetPadding).padding(bottom = Dimens.SheetPadding),
         verticalArrangement = Arrangement.spacedBy(Spacing.md),
     ) {
-            Text(stringResource(R.string.plates_title), style = MaterialTheme.typography.titleLarge, modifier = Modifier.semantics { heading() })
+            Text(stringResource(Res.string.plates_title), style = MaterialTheme.typography.titleLarge, modifier = Modifier.semantics { heading() })
             if (loading == null) {
-                Text(stringResource(R.string.plates_not_bar), style = MaterialTheme.typography.bodyMedium)
+                Text(stringResource(Res.string.plates_not_bar), style = MaterialTheme.typography.bodyMedium)
                 return@Column
             }
-            Text(stringResource(R.string.plates_summary, formatWeight(weightKg, unit), fmt(loading.bar)))
+            Text(stringResource(Res.string.plates_summary, formatWeight(weightKg, unit), fmt(loading.bar)))
             if (loading.perSide.isEmpty()) {
-                Text(stringResource(R.string.plates_none), style = MaterialTheme.typography.bodyMedium)
+                Text(stringResource(Res.string.plates_none), style = MaterialTheme.typography.bodyMedium)
             } else {
                 val heaviest = loading.perSide.max()
                 val description = loading.perSide.map { fmt(it) }.joinToString(", ")
@@ -79,7 +85,7 @@ internal fun PlateSheetContent(exercise: Exercise, weightKg: Double, unit: Weigh
                         ) {
                             Box(contentAlignment = Alignment.Center) {
                                 Text(
-                                    BigDecimal(plate).stripTrailingZeros().toPlainString(),
+                                    plainNumber(plate),
                                     style = MaterialTheme.typography.labelLarge,
                                     color = MaterialTheme.colorScheme.onPrimary,
                                 )
@@ -90,7 +96,7 @@ internal fun PlateSheetContent(exercise: Exercise, weightKg: Double, unit: Weigh
             }
             if (!loading.exact) {
                 Text(
-                    stringResource(R.string.plates_not_exact, formatWeight(weightKg, unit), fmt(loading.total)),
+                    stringResource(Res.string.plates_not_exact, formatWeight(weightKg, unit), fmt(loading.total)),
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.tertiary,
                 )

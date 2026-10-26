@@ -23,8 +23,8 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.res.pluralStringResource
-import androidx.compose.ui.res.stringResource
+import org.jetbrains.compose.resources.pluralStringResource
+import org.jetbrains.compose.resources.stringResource
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
 import org.koin.compose.viewmodel.koinViewModel
@@ -55,6 +55,14 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
+import com.viktorolsson.spotter.feature.session.resources.Res
+import com.viktorolsson.spotter.feature.session.resources.summary_done
+import com.viktorolsson.spotter.feature.session.resources.summary_duration
+import com.viktorolsson.spotter.feature.session.resources.summary_exercise_line
+import com.viktorolsson.spotter.feature.session.resources.summary_new_prs
+import com.viktorolsson.spotter.feature.session.resources.summary_sets
+import com.viktorolsson.spotter.feature.session.resources.summary_title
+import com.viktorolsson.spotter.feature.session.resources.summary_volume
 
 data class SummaryUiState(
     val loading: Boolean = true,
@@ -88,7 +96,7 @@ internal fun SummaryRoute(onDone: () -> Unit, viewModel: SummaryViewModel = koin
     when {
         uiState.loading -> Scaffold { padding -> LoadingState(Modifier.padding(padding).fillMaxSize()) }
         summary == null -> Scaffold(
-            bottomBar = { PrimaryButton(stringResource(R.string.summary_done), onDone, Modifier.navigationBarsPadding().padding(Dimens.ScreenPadding)) },
+            bottomBar = { PrimaryButton(stringResource(Res.string.summary_done), onDone, Modifier.navigationBarsPadding().padding(Dimens.ScreenPadding)) },
         ) { padding -> ErrorState(Modifier.padding(padding).fillMaxSize()) }
         else -> Box {
             SummaryScreen(summary, uiState.unit, uiState.records, onDone)
@@ -102,7 +110,7 @@ internal fun SummaryScreen(summary: WorkoutSummary, unit: WeightUnit, records: L
     Scaffold(
         bottomBar = {
             PrimaryButton(
-                text = stringResource(R.string.summary_done),
+                text = stringResource(Res.string.summary_done),
                 onClick = onDone,
                 modifier = Modifier.navigationBarsPadding().padding(Dimens.ScreenPadding),
             )
@@ -125,7 +133,7 @@ internal fun SummaryScreen(summary: WorkoutSummary, unit: WeightUnit, records: L
                         modifier = Modifier.size(Dimens.IconLarge),
                     )
                     Text(
-                        stringResource(R.string.summary_title),
+                        stringResource(Res.string.summary_title),
                         style = MaterialTheme.typography.headlineMedium,
                         modifier = Modifier.semantics { heading() },
                     )
@@ -133,14 +141,14 @@ internal fun SummaryScreen(summary: WorkoutSummary, unit: WeightUnit, records: L
             }
             item(key = "stats") {
                 Row(horizontalArrangement = Arrangement.spacedBy(Spacing.sm)) {
-                    StatTile(stringResource(R.string.summary_duration), formatClock(summary.duration), Modifier.weight(1f))
-                    StatTile(stringResource(R.string.summary_volume), formatTotal(summary.volumeKg, unit), Modifier.weight(1f))
-                    StatTile(stringResource(R.string.summary_sets), summary.completedSets.toString(), Modifier.weight(1f))
+                    StatTile(stringResource(Res.string.summary_duration), formatClock(summary.duration), Modifier.weight(1f))
+                    StatTile(stringResource(Res.string.summary_volume), formatTotal(summary.volumeKg, unit), Modifier.weight(1f))
+                    StatTile(stringResource(Res.string.summary_sets), summary.completedSets.toString(), Modifier.weight(1f))
                 }
             }
             if (records.isNotEmpty()) {
                 item(key = "records") {
-                    RecordsCard(pluralStringResource(R.plurals.summary_new_prs, records.size, records.size), records, unit)
+                    RecordsCard(pluralStringResource(Res.plurals.summary_new_prs, records.size, records.size), records, unit)
                 }
             }
             itemsIndexed(summary.exercises, key = { i, ex -> "$i-${ex.exerciseName}" }) { _, ex ->
@@ -149,7 +157,7 @@ internal fun SummaryScreen(summary: WorkoutSummary, unit: WeightUnit, records: L
                     headlineContent = { Text(ex.exerciseName) },
                     supportingContent = {
                         Text(
-                            if (best != null) stringResource(R.string.summary_exercise_line, formatSetCount(ex.completedSets), best)
+                            if (best != null) stringResource(Res.string.summary_exercise_line, formatSetCount(ex.completedSets), best)
                             else formatSetCount(ex.completedSets),
                         )
                     },

@@ -62,7 +62,8 @@ data class PrEvent(
     val records: List<DetectedRecord>,
     /** A hold: [reps] are seconds. */
     val timed: Boolean = false,
-    val id: Long = System.nanoTime(),
+    /** Tells two banners for the same lift apart; the time it was made, in nanoseconds. */
+    val id: Long = Clock.System.now().let { it.epochSeconds * 1_000_000_000 + it.nanosecondsOfSecond },
 )
 
 enum class SwapFilter { ALL, SAME_EQUIPMENT, DUMBBELL, MACHINE, BODYWEIGHT }

@@ -11,6 +11,7 @@ import platform.Foundation.NSDateFormatterNoStyle
 import platform.Foundation.NSDateFormatterShortStyle
 import platform.Foundation.NSListFormatter
 import platform.Foundation.NSLocale
+import platform.Foundation.localeWithLocaleIdentifier
 import platform.Foundation.NSNumber
 import platform.Foundation.NSNumberFormatter
 import platform.Foundation.NSNumberFormatterDecimalStyle
@@ -102,3 +103,16 @@ actual fun narrowDayName(day: DayOfWeek): String {
     val symbols = NSDateFormatter().apply { locale = NSLocale.currentLocale }.veryShortWeekdaySymbols
     return symbols[day.isoDayNumber % 7] as String
 }
+
+private fun plain(value: Double, decimals: Int): String = NSNumberFormatter().apply {
+    locale = NSLocale.localeWithLocaleIdentifier("en_US_POSIX")
+    usesGroupingSeparator = false
+    roundingMode = NSNumberFormatterRoundHalfUp
+    minimumFractionDigits = 0u
+    maximumFractionDigits = decimals.toULong()
+}.stringFromNumber(NSNumber(double = value)) ?: value.toString()
+
+// Weights and plate sizes have at most a few decimals; 10 keeps every one of them exact.
+actual fun plainNumber(value: Double): String = plain(value, 10)
+
+actual fun plainNumberRounded(value: Double, decimals: Int): String = plain(value, decimals)

@@ -36,7 +36,7 @@ Or open the folder in Android Studio and run the `app` configuration.
 | `core/data-android` | Android wiring for `core/data`: `androidDataGraph` and its Koin module, WorkManager sync, the encrypted session store (`AuthStorage`) |
 | `core/engine` | Training logic, Kotlin Multiplatform (JVM + iOS), unit-tested on both: plan generator, progression, swap ranking and weight conversion, PR detection, muscle balance, body-weight trend |
 | `core/ui` | Compose Multiplatform (Android + iOS): theme (branded light/dark palette + dynamic color on Android), shared components, labels and formatting; strings are Compose resources in `src/commonMain/composeResources` |
-| `feature/*` | Shared code (`spotter.kmp.feature`) except `session`, which is still Android-only. One module per tab (`today`, `history`, `progress`, `settings` = Profile), plus `session` (workout logger, rest timer service, summary), `library` (exercise picker), `onboarding` (questionnaire + plan summary) and `plan` (plan overview) |
+| `feature/*` | Shared code (`spotter.kmp.feature`); `session`'s rest-timer service and notifications are Android-only (`androidMain`). One module per tab (`today`, `history`, `progress`, `settings` = Profile), plus `session` (workout logger, rest timer service, summary), `library` (exercise picker), `onboarding` (questionnaire + plan summary) and `plan` (plan overview) |
 | `shared` | The iOS framework (`Shared`): the shared modules plus `SpotterIos`, what the Swift app calls |
 | `iosApp` | The iOS app (Xcode project, Swift shell); see [iosApp/README.md](iosApp/README.md) |
 | `build-logic` | Convention plugins (`spotter.android.feature`, `spotter.kmp.library`, …) |

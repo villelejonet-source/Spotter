@@ -23,11 +23,18 @@ import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.res.stringResource
+import org.jetbrains.compose.resources.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import com.viktorolsson.spotter.core.ui.theme.Dimens
 import com.viktorolsson.spotter.core.ui.theme.Spacing
+import com.viktorolsson.spotter.feature.session.resources.Res
+import com.viktorolsson.spotter.feature.session.resources.keypad_backspace
+import com.viktorolsson.spotter.feature.session.resources.keypad_decrease
+import com.viktorolsson.spotter.feature.session.resources.keypad_done
+import com.viktorolsson.spotter.feature.session.resources.keypad_increase
+import com.viktorolsson.spotter.feature.session.resources.keypad_next
+import com.viktorolsson.spotter.feature.session.resources.keypad_plates
 
 /**
  * In-app numeric keypad for set logging: digits, ± steppers (2.5 kg / 5 lb for
@@ -55,22 +62,22 @@ internal fun Keypad(
                 Text(title, style = MaterialTheme.typography.labelLarge, modifier = Modifier.weight(1f).padding(start = Spacing.sm))
                 TextButton(onClick = onDone) {
                     Icon(Icons.Rounded.KeyboardHide, contentDescription = null)
-                    Text(stringResource(R.string.keypad_done), modifier = Modifier.padding(start = Spacing.xs))
+                    Text(stringResource(Res.string.keypad_done), modifier = Modifier.padding(start = Spacing.xs))
                 }
             }
             KeyRow {
                 Digit('1', onDigit); Digit('2', onDigit); Digit('3', onDigit)
-                StepKey("−$stepLabel", stringResource(R.string.keypad_decrease, stepLabel)) { onStep(-1) }
+                StepKey("−$stepLabel", stringResource(Res.string.keypad_decrease, stepLabel)) { onStep(-1) }
             }
             KeyRow {
                 Digit('4', onDigit); Digit('5', onDigit); Digit('6', onDigit)
-                StepKey("+$stepLabel", stringResource(R.string.keypad_increase, stepLabel)) { onStep(1) }
+                StepKey("+$stepLabel", stringResource(Res.string.keypad_increase, stepLabel)) { onStep(1) }
             }
             KeyRow {
                 Digit('7', onDigit); Digit('8', onDigit); Digit('9', onDigit)
                 if (showPlates) {
                     OutlinedButton(onClick = onPlates, modifier = Modifier.weight(1f).height(KEY_HEIGHT)) {
-                        Text(stringResource(R.string.keypad_plates))
+                        Text(stringResource(Res.string.keypad_plates))
                     }
                 } else {
                     Spacer(Modifier.weight(1f))
@@ -79,13 +86,13 @@ internal fun Keypad(
             KeyRow {
                 if (field == SetField.WEIGHT) Digit('.', onDigit) else Spacer(Modifier.weight(1f))
                 Digit('0', onDigit)
-                val backspace = stringResource(R.string.keypad_backspace)
+                val backspace = stringResource(Res.string.keypad_backspace)
                 FilledTonalButton(
                     onClick = onBackspace,
                     modifier = Modifier.weight(1f).height(KEY_HEIGHT).semantics { contentDescription = backspace },
                 ) { Icon(Icons.AutoMirrored.Rounded.Backspace, contentDescription = null) }
                 Button(onClick = onNext, modifier = Modifier.weight(1f).height(KEY_HEIGHT)) {
-                    Text(stringResource(R.string.keypad_next))
+                    Text(stringResource(Res.string.keypad_next))
                 }
             }
         }

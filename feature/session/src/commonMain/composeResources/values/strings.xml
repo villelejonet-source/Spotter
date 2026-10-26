@@ -50,8 +50,8 @@
     <string name="progress_add_time">Hold each set 5 seconds longer than last time.</string>
     <string name="progress_hold_hard">Holding the weight: last time was harder than planned.</string>
     <string name="progress_repeat">Same weight again: aim for the target reps.</string>
-    <string name="progress_reset" formatted="false">10% lighter after two tough sessions. Build back up.</string>
-    <string name="progress_deload" formatted="false">Lighter week: fewer sets, about 10% less weight. Recover and come back stronger.</string>
+    <string name="progress_reset">10% lighter after two tough sessions. Build back up.</string>
+    <string name="progress_deload">Lighter week: fewer sets, about 10% less weight. Recover and come back stronger.</string>
     <string name="progress_bodyweight_top">Top of the range: add weight or try a harder variation.</string>
 
     <string name="exercise_note">Exercise note</string>
@@ -84,7 +84,7 @@
         <item quantity="other">%1$d unticked sets will be removed.</item>
     </plurals>
     <string name="finish_body_ok">Nice work. Ready to wrap up?</string>
-    <string name="finish_body_nothing">You haven\'t completed any sets yet. Discard the workout instead?</string>
+    <string name="finish_body_nothing">You haven't completed any sets yet. Discard the workout instead?</string>
     <string name="discard_title">Discard workout?</string>
     <string name="discard_body">Everything logged in this workout will be deleted.</string>
 
@@ -94,14 +94,6 @@
     <string name="summary_sets">Sets</string>
     <string name="summary_exercise_line">%1$s · best %2$s</string>
     <string name="summary_done">Done</string>
-
-    <string name="notif_channel_workout">Workout in progress</string>
-    <string name="notif_channel_rest_done">Rest finished</string>
-    <string name="notif_workout_title">Workout in progress</string>
-    <string name="notif_rest_title">Resting</string>
-    <string name="notif_rest_done_title">Rest over</string>
-    <string name="notif_rest_done_text">Time for your next set.</string>
-    <string name="notif_add_30">+30 s</string>
     <plurals name="summary_new_prs">
         <item quantity="one">%1$d new personal record</item>
         <item quantity="other">%1$d new personal records</item>
@@ -127,12 +119,12 @@
     <string name="a11y_change_type">Change set type</string>
     <string name="a11y_complete_set">Complete set %1$s</string>
     <string name="a11y_previous">Last time %1$s</string>
-    <string name="a11y_copy_previous">Copy last time\'s values</string>
+    <string name="a11y_copy_previous">Copy last time's values</string>
     <string name="a11y_no_previous">No previous set</string>
     <string name="plates_title">Plates per side</string>
     <string name="plates_summary">%1$s · %2$s bar</string>
     <string name="plates_none">Just the bar.</string>
-    <string name="plates_not_exact">%1$s can\'t be loaded exactly; the closest is %2$s.</string>
+    <string name="plates_not_exact">%1$s can't be loaded exactly; the closest is %2$s.</string>
     <string name="plates_not_bar">The plate calculator is for barbell exercises.</string>
     <string name="warmup_add">Add warm-up sets</string>
     <string name="pr_banner_title">New PR!</string>

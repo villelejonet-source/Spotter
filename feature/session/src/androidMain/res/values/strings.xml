@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- The rest-timer notification (Android only; iOS gets its own in phase 5). -->
+<resources>
+    <string name="notif_add_30">+30 s</string>
+    <string name="notif_channel_rest_done">Rest finished</string>
+    <string name="notif_channel_workout">Workout in progress</string>
+    <string name="notif_rest_done_text">Time for your next set.</string>
+    <string name="notif_rest_done_title">Rest over</string>
+    <string name="notif_rest_title">Resting</string>
+    <string name="notif_workout_title">Workout in progress</string>
+    <!-- Also in composeResources, for the rest bar on screen; keep the two in step. -->
+    <string name="rest_skip">Skip</string>
+</resources>

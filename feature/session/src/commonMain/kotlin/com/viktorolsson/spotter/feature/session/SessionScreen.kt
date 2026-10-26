@@ -1,10 +1,5 @@
 package com.viktorolsson.spotter.feature.session
 
-import android.Manifest
-import android.content.pm.PackageManager
-import android.os.Build
-import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -41,7 +36,6 @@ import androidx.compose.material3.SnackbarResult
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -55,14 +49,12 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalHapticFeedback
-import androidx.compose.ui.platform.LocalView
-import androidx.compose.ui.res.stringResource
+import org.jetbrains.compose.resources.StringResource
+import org.jetbrains.compose.resources.stringResource
 import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.semantics
-import androidx.core.content.ContextCompat
 import org.koin.compose.viewmodel.koinViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.viktorolsson.spotter.core.engine.Plates
@@ -88,8 +80,6 @@ import com.viktorolsson.spotter.core.ui.theme.Dimens
 import com.viktorolsson.spotter.core.ui.theme.Spacing
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
-import java.math.BigDecimal
-import java.math.RoundingMode
 import kotlin.time.Clock
 import kotlin.time.Duration
 import kotlin.time.Instant
@@ -97,6 +87,34 @@ import com.viktorolsson.spotter.core.ui.resources.Res as CoreRes
 import com.viktorolsson.spotter.core.ui.resources.action_cancel
 import com.viktorolsson.spotter.core.ui.resources.action_undo
 import org.jetbrains.compose.resources.stringResource
+import com.viktorolsson.spotter.feature.session.resources.Res
+import com.viktorolsson.spotter.feature.session.resources.discard_body
+import com.viktorolsson.spotter.feature.session.resources.discard_title
+import com.viktorolsson.spotter.feature.session.resources.finish_body_incomplete
+import com.viktorolsson.spotter.feature.session.resources.finish_body_nothing
+import com.viktorolsson.spotter.feature.session.resources.finish_body_ok
+import com.viktorolsson.spotter.feature.session.resources.finish_title
+import com.viktorolsson.spotter.feature.session.resources.keypad_editing_effort
+import com.viktorolsson.spotter.feature.session.resources.keypad_editing_reps
+import com.viktorolsson.spotter.feature.session.resources.keypad_editing_seconds
+import com.viktorolsson.spotter.feature.session.resources.keypad_editing_weight
+import com.viktorolsson.spotter.feature.session.resources.pr_1rm
+import com.viktorolsson.spotter.feature.session.resources.pr_banner_body
+import com.viktorolsson.spotter.feature.session.resources.pr_banner_title
+import com.viktorolsson.spotter.feature.session.resources.pr_reps
+import com.viktorolsson.spotter.feature.session.resources.session_add_exercises
+import com.viktorolsson.spotter.feature.session.resources.session_discard
+import com.viktorolsson.spotter.feature.session.resources.session_empty_body
+import com.viktorolsson.spotter.feature.session.resources.session_empty_title
+import com.viktorolsson.spotter.feature.session.resources.session_finish
+import com.viktorolsson.spotter.feature.session.resources.session_minimize
+import com.viktorolsson.spotter.feature.session.resources.session_more
+import com.viktorolsson.spotter.feature.session.resources.session_stopwatch
+import com.viktorolsson.spotter.feature.session.resources.session_workout_note
+import com.viktorolsson.spotter.feature.session.resources.set_deleted
+import org.jetbrains.compose.resources.pluralStringResource
+import com.viktorolsson.spotter.core.ui.plainNumber
+import com.viktorolsson.spotter.core.ui.plainNumberRounded
 
 @Composable
 internal fun SessionRoute(
@@ -125,8 +143,8 @@ internal fun SessionRoute(
     val keypad = rememberKeypadState()
     val snackbar = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
-    val context = LocalContext.current
     val undoLabel = stringResource(CoreRes.string.action_undo)
+    val setDeletedMessage = stringResource(Res.string.set_deleted)
     val currentSession by rememberUpdatedState(session)
     val currentPreferences by rememberUpdatedState(uiState.preferences)
 
@@ -154,7 +172,7 @@ internal fun SessionRoute(
                     var undone = false
                     try {
                         undone = snackbar.showSnackbar(
-                            message = context.getString(R.string.set_deleted),
+                            message = setDeletedMessage,
                             actionLabel = undoLabel,
                             duration = SnackbarDuration.Short,
                         ) == SnackbarResult.ActionPerformed
@@ -304,15 +322,15 @@ internal fun SessionScreen(
                     val step = if (isWeight) (if (unit == WeightUnit.KG) 2.5 else 5.0) else 1.0
                     Keypad(
                         title = when (target.field) {
-                            SetField.WEIGHT -> stringResource(R.string.keypad_editing_weight, number)
+                            SetField.WEIGHT -> stringResource(Res.string.keypad_editing_weight, number)
                             SetField.REPS -> stringResource(
-                                if (exercise?.exercise?.isTimed == true) R.string.keypad_editing_seconds else R.string.keypad_editing_reps,
+                                if (exercise?.exercise?.isTimed == true) Res.string.keypad_editing_seconds else Res.string.keypad_editing_reps,
                                 number,
                             )
-                            SetField.EFFORT -> stringResource(R.string.keypad_editing_effort, state.preferences.effortScale.label(), number)
+                            SetField.EFFORT -> stringResource(Res.string.keypad_editing_effort, state.preferences.effortScale.label(), number)
                         },
                         field = target.field,
-                        stepLabel = if (isWeight) BigDecimal(step).stripTrailingZeros().toPlainString() else "1",
+                        stepLabel = if (isWeight) plainNumber(step) else "1",
                         showPlates = isWeight && exercise != null && Plates.bar(exercise.exercise, unit) != null,
                         onDigit = { c ->
                             val base = if (keypad.fresh) "" else keypad.buffer
@@ -328,7 +346,7 @@ internal fun SessionScreen(
                         onStep = { sign ->
                             val value = (keypad.buffer.replace(',', '.').toDoubleOrNull() ?: 0.0) + sign * step
                             keypad.fresh = true
-                            write(BigDecimal(value.coerceAtLeast(0.0)).setScale(2, RoundingMode.HALF_UP).stripTrailingZeros().toPlainString())
+                            write(plainNumberRounded(value.coerceAtLeast(0.0), 2))
                         },
                         onPlates = {
                             val kg = set?.weightKg ?: return@Keypad
@@ -373,8 +391,8 @@ internal fun SessionScreen(
                 item(key = "empty") {
                     EmptyState(
                         icon = Icons.Rounded.FitnessCenter,
-                        title = stringResource(R.string.session_empty_title),
-                        body = stringResource(R.string.session_empty_body),
+                        title = stringResource(Res.string.session_empty_title),
+                        body = stringResource(Res.string.session_empty_body),
                     )
                 }
             }
@@ -394,7 +412,7 @@ internal fun SessionScreen(
                 )
             }
             item(key = "add") {
-                SecondaryButton(stringResource(R.string.session_add_exercises), actions.onAddExercises, icon = Icons.Rounded.Add)
+                SecondaryButton(stringResource(Res.string.session_add_exercises), actions.onAddExercises, icon = Icons.Rounded.Add)
             }
         }
     }
@@ -418,7 +436,7 @@ internal fun SessionScreen(
     }
     if (editingNote) {
         TextInputDialog(
-            title = stringResource(R.string.session_workout_note),
+            title = stringResource(Res.string.session_workout_note),
             initial = session.notes.orEmpty(),
             onSave = { actions.onSessionNote(it); editingNote = false },
             onDismiss = { editingNote = false },
@@ -454,21 +472,21 @@ internal fun SessionScreen(
 internal fun FinishWorkoutDialog(completed: Int, incomplete: Int, onFinish: () -> Unit, onDiscard: () -> Unit, onDismiss: () -> Unit) {
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text(stringResource(R.string.finish_title)) },
+        title = { Text(stringResource(Res.string.finish_title)) },
         text = {
             Text(
                 when {
-                    completed == 0 -> stringResource(R.string.finish_body_nothing)
-                    incomplete > 0 -> androidx.compose.ui.res.pluralStringResource(R.plurals.finish_body_incomplete, incomplete, incomplete)
-                    else -> stringResource(R.string.finish_body_ok)
+                    completed == 0 -> stringResource(Res.string.finish_body_nothing)
+                    incomplete > 0 -> org.jetbrains.compose.resources.pluralStringResource(Res.plurals.finish_body_incomplete, incomplete, incomplete)
+                    else -> stringResource(Res.string.finish_body_ok)
                 },
             )
         },
         confirmButton = {
             if (completed == 0) {
-                TextButton(onClick = onDiscard) { Text(stringResource(R.string.session_discard), color = MaterialTheme.colorScheme.error) }
+                TextButton(onClick = onDiscard) { Text(stringResource(Res.string.session_discard), color = MaterialTheme.colorScheme.error) }
             } else {
-                Button(onClick = onFinish) { Text(stringResource(R.string.session_finish)) }
+                Button(onClick = onFinish) { Text(stringResource(Res.string.session_finish)) }
             }
         },
         dismissButton = { TextButton(onClick = onDismiss) { Text(stringResource(CoreRes.string.action_cancel)) } },
@@ -478,9 +496,9 @@ internal fun FinishWorkoutDialog(completed: Int, incomplete: Int, onFinish: () -
 @Composable
 internal fun DiscardWorkoutDialog(onConfirm: () -> Unit, onDismiss: () -> Unit) {
     com.viktorolsson.spotter.core.ui.component.ConfirmDialog(
-        title = stringResource(R.string.discard_title),
-        text = stringResource(R.string.discard_body),
-        confirmText = stringResource(R.string.session_discard),
+        title = stringResource(Res.string.discard_title),
+        text = stringResource(Res.string.discard_body),
+        confirmText = stringResource(Res.string.session_discard),
         onConfirm = onConfirm,
         onDismiss = onDismiss,
         destructive = true,
@@ -502,7 +520,7 @@ private fun SessionTopBar(
     SpotterTopBar(
         navigationIcon = {
             IconButton(onClick = onMinimize) {
-                Icon(Icons.Rounded.KeyboardArrowDown, stringResource(R.string.session_minimize))
+                Icon(Icons.Rounded.KeyboardArrowDown, stringResource(Res.string.session_minimize))
             }
         },
         title = {
@@ -519,25 +537,25 @@ private fun SessionTopBar(
         actions = {
             Box {
                 IconButton(onClick = { onMenuOpenChange(true) }) {
-                    Icon(Icons.Rounded.MoreVert, stringResource(R.string.session_more))
+                    Icon(Icons.Rounded.MoreVert, stringResource(Res.string.session_more))
                 }
                 DropdownMenu(expanded = menuOpen, onDismissRequest = { onMenuOpenChange(false) }) {
                     DropdownMenuItem(
-                        text = { Text(stringResource(R.string.session_workout_note)) },
+                        text = { Text(stringResource(Res.string.session_workout_note)) },
                         onClick = { onMenuOpenChange(false); onNote() },
                     )
                     DropdownMenuItem(
-                        text = { Text(stringResource(R.string.session_stopwatch)) },
+                        text = { Text(stringResource(Res.string.session_stopwatch)) },
                         onClick = { onMenuOpenChange(false); onStopwatch() },
                     )
                     DropdownMenuItem(
-                        text = { Text(stringResource(R.string.session_discard), color = MaterialTheme.colorScheme.error) },
+                        text = { Text(stringResource(Res.string.session_discard), color = MaterialTheme.colorScheme.error) },
                         onClick = { onMenuOpenChange(false); onDiscard() },
                     )
                 }
             }
             FilledTonalButton(onClick = onFinish, modifier = Modifier.padding(end = Spacing.sm)) {
-                Text(stringResource(R.string.session_finish))
+                Text(stringResource(Res.string.session_finish))
             }
         },
     )
@@ -548,33 +566,7 @@ private fun SessionTopBar(
 internal fun rememberTicker() = produceState(Clock.System.now()) {
     while (true) {
         value = Clock.System.now()
-        delay(1000L - System.currentTimeMillis() % 1000L)
-    }
-}
-
-@Composable
-private fun KeepScreenOn() {
-    val view = LocalView.current
-    DisposableEffect(view) {
-        view.keepScreenOn = true
-        onDispose { view.keepScreenOn = false }
-    }
-}
-
-/** Android 13+: the rest notification needs permission; ask once when a workout opens. */
-@Composable
-private fun RequestNotificationPermission() {
-    if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) return
-    val context = LocalContext.current
-    val launcher = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) {}
-    var asked by rememberSaveable { mutableStateOf(false) }
-    LaunchedEffect(Unit) {
-        val granted = ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) ==
-            PackageManager.PERMISSION_GRANTED
-        if (!granted && !asked) {
-            asked = true
-            launcher.launch(Manifest.permission.POST_NOTIFICATIONS)
-        }
+        delay(1000L - Clock.System.now().toEpochMilliseconds() % 1000L)
     }
 }
 
@@ -612,11 +604,11 @@ private fun fieldText(session: WorkoutSession, preferences: UserPreferences, tar
 internal fun PrBanner(event: PrEvent, unit: WeightUnit, modifier: Modifier = Modifier) {
     val oneRepMax = event.records.firstOrNull { it.type == PersonalRecordType.ESTIMATED_1RM }
     val parts = listOfNotNull(
-        oneRepMax?.let { stringResource(R.string.pr_1rm, formatOneRepMax(it.value, unit)) },
-        stringResource(R.string.pr_reps).takeIf { event.records.any { it.type == PersonalRecordType.REPS_AT_WEIGHT } },
+        oneRepMax?.let { stringResource(Res.string.pr_1rm, formatOneRepMax(it.value, unit)) },
+        stringResource(Res.string.pr_reps).takeIf { event.records.any { it.type == PersonalRecordType.REPS_AT_WEIGHT } },
     )
     val body = stringResource(
-        R.string.pr_banner_body,
+        Res.string.pr_banner_body,
         event.exerciseName,
         formatSet(event.weightKg, event.reps, unit, event.timed),
         parts.joinToString(" · "),
@@ -629,7 +621,7 @@ internal fun PrBanner(event: PrEvent, unit: WeightUnit, modifier: Modifier = Mod
         Row(Modifier.padding(Dimens.CardPadding), verticalAlignment = Alignment.CenterVertically) {
             Icon(Icons.Rounded.EmojiEvents, contentDescription = null, tint = MaterialTheme.colorScheme.onTertiaryContainer, modifier = Modifier.size(Dimens.IconBanner))
             Column(Modifier.padding(start = Spacing.md)) {
-                Text(stringResource(R.string.pr_banner_title), style = MaterialTheme.typography.titleLarge, color = MaterialTheme.colorScheme.onTertiaryContainer)
+                Text(stringResource(Res.string.pr_banner_title), style = MaterialTheme.typography.titleLarge, color = MaterialTheme.colorScheme.onTertiaryContainer)
                 Text(body, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onTertiaryContainer)
             }
         }

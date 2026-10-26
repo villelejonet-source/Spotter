@@ -31,6 +31,8 @@ class KmpFeatureConventionPlugin : Plugin<Project> {
             implementation(libs.lib("koin-core"))
             implementation(libs.lib("koin-compose-viewmodel"))
             implementation(libs.lib("compose-mp-material-icons-core"))
+            // System back (BackHandler); on Android it uses the activity's OnBackPressedDispatcher.
+            implementation(libs.lib("compose-mp-ui-backhandler"))
             implementation(libs.lib("kotlinx-serialization-json"))
         }
     }

@@ -17,7 +17,7 @@ The port lands as a series of pull requests; Android keeps working and shipping 
 | 1 | `core/model` and `core/engine` multiplatform (JVM + iOS). `java.time` → `kotlinx.datetime` / `kotlin.time` everywhere; tests on `kotlin.test`, run on JVM and the iOS simulator in CI | Done |
 | 2 | `core/data` multiplatform: Room KMP (connection API; `AndroidSQLiteDriver` on Android so the existing database file is untouched, `BundledSQLiteDriver` on iOS), DataStore KMP, supabase-kt with the Darwin engine, one plain-Kotlin object graph that Hilt wraps on Android | Done |
 | 3 | `iosApp/` Xcode project around a shared framework; builds and runs in the simulator; CI builds it | Done: seeds the catalog, opens `spotter://` links, syncs while open |
-| 4 | `core/ui` and `feature/*` on Compose Multiplatform: `R.string`/`plurals` → Compose resources, Hilt → Koin (or the phase 2 graph), Navigation Compose and lifecycle ViewModels (both multiplatform), charts (Vico has a multiplatform build) | 4a done: `core/ui`; 4b done: Koin; 4c: today, history, progress |
+| 4 | `core/ui` and `feature/*` on Compose Multiplatform: `R.string`/`plurals` → Compose resources, Hilt → Koin (or the phase 2 graph), Navigation Compose and lifecycle ViewModels (both multiplatform), charts (Vico has a multiplatform build) | 4a done: `core/ui`; 4b done: Koin; 4c: today, history, progress, library, plan, onboarding, settings |
 | 5 | iOS-only pieces, below | |
 | 6 | App Store release, below | |
 
@@ -71,7 +71,9 @@ The port lands as a series of pull requests; Android keeps working and shipping 
   wired to `core:data` rather than `core:data-android`): code in `commonMain`, strings in
   `composeResources`, screenshot tests as Android host tests. Resource ids passed around as `Int`
   become `StringResource`. Locale calendar facts (first day of the week, narrow weekday names)
-  come from `core/ui`'s `PlatformFormat`. `:shared` links each ported feature, so the iOS build
+  come from `core/ui`'s `PlatformFormat`. System back is Compose Multiplatform's `BackHandler`
+  (on Android, the activity's back dispatcher, as before). The account form's email check is
+  Android's `Patterns.EMAIL_ADDRESS` regex in shared code; `EmailAddressTest` keeps them equal. `:shared` links each ported feature, so the iOS build
   proves it links before 4d shows it.
 - **Charts.** Vico 3.3.1's `compose` and `compose-m3` artifacts are multiplatform (iOS arm64 and
   simulator), and `TrendChart` uses only their common API, so it moved as is.

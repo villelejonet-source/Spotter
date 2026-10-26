@@ -14,7 +14,7 @@ export JAVA_HOME="/Applications/Android Studio.app/Contents/jbr/Contents/Home"
 ./gradlew verifyRoborazziDebug     # screenshot tests (recordRoborazziDebug updates the goldens)
 ./gradlew :app:lintRelease
 ./gradlew :app:assembleRelease     # debug-signed R8 build; CI runs it to prove shrinking works
-./gradlew :core:model:iosSimulatorArm64Test :core:engine:iosSimulatorArm64Test :core:data:iosSimulatorArm64Test   # shared code on iOS (needs Xcode)
+./gradlew :core:model:iosSimulatorArm64Test :core:engine:iosSimulatorArm64Test :core:data:iosSimulatorArm64Test :core:ui:iosSimulatorArm64Test   # shared code on iOS (needs Xcode)
 ```
 
 CI (`.github/workflows/ci.yml`) runs all of the above plus the website's lint, type check,
@@ -35,7 +35,7 @@ Or open the folder in Android Studio and run the `app` configuration.
 | `core/data` | Kotlin Multiplatform (Android + iOS): Room schema (exported to `core/data/schemas`), DAOs, repositories, DataStore preferences, exercise seeder, cloud sync and accounts, and `DataGraph`, which builds them |
 | `core/data-android` | Android wiring for `core/data`: the Hilt module (exposes `DataGraph`), WorkManager sync, the encrypted session store (`AuthStorage`) |
 | `core/engine` | Training logic, Kotlin Multiplatform (JVM + iOS), unit-tested on both: plan generator, progression, swap ranking and weight conversion, PR detection, muscle balance, body-weight trend |
-| `core/ui` | Theme (branded light/dark palette + dynamic color), shared components |
+| `core/ui` | Compose Multiplatform (Android + iOS): theme (branded light/dark palette + dynamic color on Android), shared components, labels and formatting; strings are Compose resources in `src/commonMain/composeResources` |
 | `feature/*` | One module per tab (`today`, `history`, `progress`, `settings` = Profile), plus `session` (workout logger, rest timer service, summary), `library` (exercise picker), `onboarding` (questionnaire + plan summary) and `plan` (plan overview) |
 | `shared` | The iOS framework (`Shared`): the shared modules plus `SpotterIos`, what the Swift app calls |
 | `iosApp` | The iOS app (Xcode project, Swift shell); see [iosApp/README.md](iosApp/README.md) |

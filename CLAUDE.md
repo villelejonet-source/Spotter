@@ -43,7 +43,9 @@ The web dev server is the `web` entry in `.claude/launch.json` (port 3000). CI
 ## Conventions that bite
 
 - **Strings:** wording shared with the website changes in the app's `strings.xml`/`labels.xml`
-  **and** `web/src/lib/labels.ts` together.
+  **and** `web/src/lib/labels.ts` together. core/ui's are Compose resources
+  (`core/ui/src/commonMain/composeResources/values/`): write `'` unescaped there, since `\'` shows
+  the backslash.
 - **Exercise catalog** (`core/data/catalog/exercises.json`, also copied into the web
   build): bump `EXERCISE_CATALOG_VERSION` (`core/data/.../seed/SeedExercise.kt`) whenever
   it changes so installed apps re-seed.

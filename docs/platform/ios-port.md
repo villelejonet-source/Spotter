@@ -17,7 +17,7 @@ The port lands as a series of pull requests; Android keeps working and shipping 
 | 1 | `core/model` and `core/engine` multiplatform (JVM + iOS). `java.time` → `kotlinx.datetime` / `kotlin.time` everywhere; tests on `kotlin.test`, run on JVM and the iOS simulator in CI | Done |
 | 2 | `core/data` multiplatform: Room KMP (connection API; `AndroidSQLiteDriver` on Android so the existing database file is untouched, `BundledSQLiteDriver` on iOS), DataStore KMP, supabase-kt with the Darwin engine, one plain-Kotlin object graph that Hilt wraps on Android | Done |
 | 3 | `iosApp/` Xcode project around a shared framework; builds and runs in the simulator; CI builds it | Done: seeds the catalog, opens `spotter://` links, syncs while open |
-| 4 | `core/ui` and `feature/*` on Compose Multiplatform: `R.string`/`plurals` → Compose resources, Hilt → Koin (or the phase 2 graph), Navigation Compose and lifecycle ViewModels (both multiplatform), charts (Vico has a multiplatform build) | |
+| 4 | `core/ui` and `feature/*` on Compose Multiplatform: `R.string`/`plurals` → Compose resources, Hilt → Koin (or the phase 2 graph), Navigation Compose and lifecycle ViewModels (both multiplatform), charts (Vico has a multiplatform build) | 4a done: `core/ui` |
 | 5 | iOS-only pieces, below | |
 | 6 | App Store release, below | |
 
@@ -42,6 +42,25 @@ The port lands as a series of pull requests; Android keeps working and shipping 
   the URL from `onOpenURL`. Same `spotter://login?code=…` PKCE flow.
 - **Background sync.** Android keeps WorkManager. iOS syncs on launch and on foreground first;
   `BGAppRefreshTask` comes in phase 5.
+
+### Phase 4 details
+
+- **Modules.** `spotter.kmp.compose` makes a Compose Multiplatform module (Android + iOS):
+  code in `commonMain`, strings and plurals in `src/commonMain/composeResources`, read with
+  `org.jetbrains.compose.resources.stringResource`; the public `Res` class is in
+  `<namespace>.resources`. On Android the Compose Multiplatform artifacts resolve to the androidx
+  ones from the Compose BOM, so keep `composeMultiplatform` on the BOM's Compose release.
+- **Locale formatting** goes through `core/ui`'s `PlatformFormat`: Android keeps
+  `String.format`, `java.time` with `DateFormat.getBestDateTimePattern`, `NumberFormat` and ICU's
+  `ListFormatter`; iOS uses `NSDateFormatter.dateFormatFromTemplate`, `NSNumberFormatter` and
+  `NSListFormatter`. Shared code uses `localFormat` instead of `String.format`.
+- **Compose resources differ from Android's:** `\'` isn't unescaped (write `'`), and there's no
+  `formatted="false"`. Positional `%1$s` / `%1$d` work as before.
+- **Screenshot tests** of a multiplatform module are Android host tests
+  (`src/androidHostTest`); the goldens stay in `src/test/screenshots`, and the module also answers
+  to `testDebugUnitTest` / `verifyRoborazziDebug` / `recordRoborazziDebug`.
+- **Charts.** Vico 3.3.1's `compose` and `compose-m3` artifacts are multiplatform (iOS arm64 and
+  simulator), and `TrendChart` uses only their common API, so it moved as is.
 
 ### Phase 5: iOS-only pieces
 

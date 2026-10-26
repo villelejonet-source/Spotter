@@ -93,7 +93,10 @@ import java.math.RoundingMode
 import kotlin.time.Clock
 import kotlin.time.Duration
 import kotlin.time.Instant
-import com.viktorolsson.spotter.core.ui.R as CoreR
+import com.viktorolsson.spotter.core.ui.resources.Res as CoreRes
+import com.viktorolsson.spotter.core.ui.resources.action_cancel
+import com.viktorolsson.spotter.core.ui.resources.action_undo
+import org.jetbrains.compose.resources.stringResource
 
 @Composable
 internal fun SessionRoute(
@@ -123,6 +126,7 @@ internal fun SessionRoute(
     val snackbar = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
     val context = LocalContext.current
+    val undoLabel = stringResource(CoreRes.string.action_undo)
     val currentSession by rememberUpdatedState(session)
     val currentPreferences by rememberUpdatedState(uiState.preferences)
 
@@ -151,7 +155,7 @@ internal fun SessionRoute(
                     try {
                         undone = snackbar.showSnackbar(
                             message = context.getString(R.string.set_deleted),
-                            actionLabel = context.getString(CoreR.string.action_undo),
+                            actionLabel = undoLabel,
                             duration = SnackbarDuration.Short,
                         ) == SnackbarResult.ActionPerformed
                     } finally {
@@ -467,7 +471,7 @@ internal fun FinishWorkoutDialog(completed: Int, incomplete: Int, onFinish: () -
                 Button(onClick = onFinish) { Text(stringResource(R.string.session_finish)) }
             }
         },
-        dismissButton = { TextButton(onClick = onDismiss) { Text(stringResource(CoreR.string.action_cancel)) } },
+        dismissButton = { TextButton(onClick = onDismiss) { Text(stringResource(CoreRes.string.action_cancel)) } },
     )
 }
 

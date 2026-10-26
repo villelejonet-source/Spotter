@@ -21,6 +21,7 @@ import com.viktorolsson.spotter.core.ui.theme.Dimens
 import com.viktorolsson.spotter.core.ui.theme.Spacing
 import com.viktorolsson.spotter.core.model.Exercise
 import com.viktorolsson.spotter.core.ui.labelRes
+import org.jetbrains.compose.resources.stringResource
 
 /** What an exercise works and how to do it: muscles, equipment and numbered coaching cues. */
 @OptIn(ExperimentalMaterial3Api::class)

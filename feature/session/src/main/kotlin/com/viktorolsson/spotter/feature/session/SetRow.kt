@@ -55,10 +55,12 @@ import com.viktorolsson.spotter.core.model.SetType
 import com.viktorolsson.spotter.core.model.WeightUnit
 import com.viktorolsson.spotter.core.model.WorkoutSet
 import com.viktorolsson.spotter.core.model.format
-import com.viktorolsson.spotter.core.ui.R as CoreR
 import com.viktorolsson.spotter.core.ui.formatSet
 import com.viktorolsson.spotter.core.ui.theme.Dimens
 import com.viktorolsson.spotter.core.ui.theme.Spacing
+import com.viktorolsson.spotter.core.ui.resources.Res as CoreRes
+import com.viktorolsson.spotter.core.ui.resources.action_delete
+import org.jetbrains.compose.resources.stringResource
 
 /**
  * One set: label (tap for type/note/delete), previous (tap to copy), weight, reps,
@@ -96,7 +98,7 @@ internal fun SetRow(
                 Modifier.fillMaxSize().background(MaterialTheme.colorScheme.errorContainer).padding(end = Spacing.xl),
                 contentAlignment = Alignment.CenterEnd,
             ) {
-                Icon(Icons.Rounded.Delete, stringResource(CoreR.string.action_delete), tint = MaterialTheme.colorScheme.onErrorContainer)
+                Icon(Icons.Rounded.Delete, stringResource(CoreRes.string.action_delete), tint = MaterialTheme.colorScheme.onErrorContainer)
             }
         },
     ) {
@@ -279,7 +281,7 @@ private fun SetLabel(
             }
             DropdownMenuItem(text = { Text(stringResource(R.string.set_note)) }, onClick = { open = false; onNote() })
             DropdownMenuItem(
-                text = { Text(stringResource(CoreR.string.action_delete), color = MaterialTheme.colorScheme.error) },
+                text = { Text(stringResource(CoreRes.string.action_delete), color = MaterialTheme.colorScheme.error) },
                 onClick = { open = false; onDelete() },
             )
         }

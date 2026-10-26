@@ -145,9 +145,9 @@ internal fun SettingsScreen(
             Text(stringResource(R.string.settings_theme), style = MaterialTheme.typography.bodyLarge)
             SegmentedChoice(
                 options = listOf(
-                    ThemeMode.SYSTEM to R.string.settings_theme_system,
-                    ThemeMode.LIGHT to R.string.settings_theme_light,
-                    ThemeMode.DARK to R.string.settings_theme_dark,
+                    ThemeMode.SYSTEM to stringResource(R.string.settings_theme_system),
+                    ThemeMode.LIGHT to stringResource(R.string.settings_theme_light),
+                    ThemeMode.DARK to stringResource(R.string.settings_theme_dark),
                 ),
                 selected = preferences.themeMode,
                 onSelect = onThemeModeChange,
@@ -170,8 +170,8 @@ internal fun SettingsScreen(
             Text(stringResource(R.string.settings_weight_unit), style = MaterialTheme.typography.bodyLarge)
             SegmentedChoice(
                 options = listOf(
-                    WeightUnit.KG to R.string.settings_unit_kg,
-                    WeightUnit.LB to R.string.settings_unit_lb,
+                    WeightUnit.KG to stringResource(R.string.settings_unit_kg),
+                    WeightUnit.LB to stringResource(R.string.settings_unit_lb),
                 ),
                 selected = preferences.weightUnit,
                 onSelect = onWeightUnitChange,
@@ -199,9 +199,9 @@ internal fun SettingsScreen(
             )
             SegmentedChoice(
                 options = listOf(
-                    EffortScale.OFF to R.string.settings_effort_off,
-                    EffortScale.RIR to R.string.settings_effort_rir,
-                    EffortScale.RPE to R.string.settings_effort_rpe,
+                    EffortScale.OFF to stringResource(R.string.settings_effort_off),
+                    EffortScale.RIR to stringResource(R.string.settings_effort_rir),
+                    EffortScale.RPE to stringResource(R.string.settings_effort_rpe),
                 ),
                 selected = preferences.effortScale,
                 onSelect = onEffortScaleChange,

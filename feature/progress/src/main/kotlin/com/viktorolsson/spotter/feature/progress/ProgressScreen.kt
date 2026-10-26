@@ -62,6 +62,10 @@ import com.viktorolsson.spotter.core.ui.labelRes
 import com.viktorolsson.spotter.core.ui.localDate
 import com.viktorolsson.spotter.core.ui.theme.Dimens
 import com.viktorolsson.spotter.core.ui.theme.Spacing
+import com.viktorolsson.spotter.core.ui.resources.Res as CoreRes
+import com.viktorolsson.spotter.core.ui.resources.action_cancel
+import com.viktorolsson.spotter.core.ui.resources.action_save
+import org.jetbrains.compose.resources.stringResource
 
 @Composable
 internal fun ProgressRoute(onOpenExercise: (String) -> Unit, viewModel: ProgressViewModel = hiltViewModel()) {
@@ -256,9 +260,9 @@ internal fun LogWeightDialog(unit: WeightUnit, initial: String, onSave: (String)
             )
         },
         confirmButton = {
-            TextButton(onClick = { invalid = !onSave(text) }) { Text(stringResource(com.viktorolsson.spotter.core.ui.R.string.action_save)) }
+            TextButton(onClick = { invalid = !onSave(text) }) { Text(stringResource(CoreRes.string.action_save)) }
         },
-        dismissButton = { TextButton(onClick = onDismiss) { Text(stringResource(com.viktorolsson.spotter.core.ui.R.string.action_cancel)) } },
+        dismissButton = { TextButton(onClick = onDismiss) { Text(stringResource(CoreRes.string.action_cancel)) } },
     )
 }
 

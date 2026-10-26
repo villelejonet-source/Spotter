@@ -26,6 +26,7 @@ import com.viktorolsson.spotter.core.ui.formatTarget
 import com.viktorolsson.spotter.core.ui.labelRes
 import com.viktorolsson.spotter.core.ui.theme.Dimens
 import com.viktorolsson.spotter.core.ui.theme.Spacing
+import org.jetbrains.compose.resources.stringResource
 
 @Composable
 internal fun SummaryStep(state: OnboardingUiState, onSplit: (SplitType?) -> Unit) {

@@ -48,6 +48,7 @@ import com.viktorolsson.spotter.core.ui.component.SpotterTopBar
 import com.viktorolsson.spotter.core.ui.labelRes
 import com.viktorolsson.spotter.core.ui.theme.Dimens
 import com.viktorolsson.spotter.core.ui.theme.Spacing
+import org.jetbrains.compose.resources.stringResource
 
 @Composable
 internal fun OnboardingRoute(
@@ -224,12 +225,12 @@ private fun BodyStep(answers: Answers, onUpdate: ((Answers) -> Answers) -> Unit,
     Title(R.string.onb_body_title, R.string.onb_body_subtitle)
     Text(stringResource(R.string.onb_sex), style = MaterialTheme.typography.titleSmall, modifier = Modifier.padding(top = Spacing.sm))
     SegmentedChoice(
-        options = listOf(Sex.FEMALE to R.string.onb_sex_female, Sex.MALE to R.string.onb_sex_male),
+        options = listOf(Sex.FEMALE to stringResource(R.string.onb_sex_female), Sex.MALE to stringResource(R.string.onb_sex_male)),
         selected = answers.sex,
         onSelect = { sex -> onUpdate { it.copy(sex = sex) } },
     )
     SegmentedChoice(
-        options = listOf(false to R.string.onb_units_metric, true to R.string.onb_units_imperial),
+        options = listOf(false to stringResource(R.string.onb_units_metric), true to stringResource(R.string.onb_units_imperial)),
         selected = answers.imperial,
         onSelect = onImperial,
     )

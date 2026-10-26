@@ -16,7 +16,7 @@ The port lands as a series of pull requests; Android keeps working and shipping 
 |---|---|---|
 | 1 | `core/model` and `core/engine` multiplatform (JVM + iOS). `java.time` → `kotlinx.datetime` / `kotlin.time` everywhere; tests on `kotlin.test`, run on JVM and the iOS simulator in CI | Done |
 | 2 | `core/data` multiplatform: Room KMP (connection API; `AndroidSQLiteDriver` on Android so the existing database file is untouched, `BundledSQLiteDriver` on iOS), DataStore KMP, supabase-kt with the Darwin engine, one plain-Kotlin object graph that Hilt wraps on Android | Done |
-| 3 | `iosApp/` Xcode project around a shared framework; builds and runs in the simulator; CI builds it | |
+| 3 | `iosApp/` Xcode project around a shared framework; builds and runs in the simulator; CI builds it | Done: seeds the catalog, opens `spotter://` links, syncs while open |
 | 4 | `core/ui` and `feature/*` on Compose Multiplatform: `R.string`/`plurals` → Compose resources, Hilt → Koin (or the phase 2 graph), Navigation Compose and lifecycle ViewModels (both multiplatform), charts (Vico has a multiplatform build) | |
 | 5 | iOS-only pieces, below | |
 | 6 | App Store release, below | |

@@ -37,6 +37,8 @@ Or open the folder in Android Studio and run the `app` configuration.
 | `core/engine` | Training logic, Kotlin Multiplatform (JVM + iOS), unit-tested on both: plan generator, progression, swap ranking and weight conversion, PR detection, muscle balance, body-weight trend |
 | `core/ui` | Theme (branded light/dark palette + dynamic color), shared components |
 | `feature/*` | One module per tab (`today`, `history`, `progress`, `settings` = Profile), plus `session` (workout logger, rest timer service, summary), `library` (exercise picker), `onboarding` (questionnaire + plan summary) and `plan` (plan overview) |
+| `shared` | The iOS framework (`Shared`): the shared modules plus `SpotterIos`, what the Swift app calls |
+| `iosApp` | The iOS app (Xcode project, Swift shell); see [iosApp/README.md](iosApp/README.md) |
 | `build-logic` | Convention plugins (`spotter.android.feature`, `spotter.kmp.library`, …) |
 
 The exercise library lives in `core/data/catalog/exercises.json` (an asset on Android, a bundle resource on iOS). Bump `EXERCISE_CATALOG_VERSION` in `ExerciseSeeder` whenever it changes so installed apps re-seed. Room is at schema version 8; every Room migration must re-create the sync triggers via `SyncSchema.TriggerSpec`.

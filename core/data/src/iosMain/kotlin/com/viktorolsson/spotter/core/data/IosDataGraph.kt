@@ -15,6 +15,7 @@ import kotlinx.cinterop.ExperimentalForeignApi
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.launch
 import okio.Path.Companion.toPath
 import platform.Foundation.CFBridgingRetain
 import platform.Foundation.NSBundle
@@ -33,8 +34,9 @@ import kotlin.time.Clock
 /**
  * The data graph for the iOS app: the database and preferences in the app's Documents
  * directory, the session in the Keychain, and the catalog from the app bundle
- * (`exercises.json`, copied from `core/data/catalog` by the Xcode build). Background sync
- * isn't scheduled yet; the app syncs on launch and when it comes to the foreground.
+ * (`exercises.json`, copied from `core/data/catalog` by the Xcode build). Syncs run in the
+ * app's process when asked for (on opening, after a workout); scheduled background sync
+ * (BGAppRefreshTask) comes later, see docs/platform/ios-port.md.
  */
 @OptIn(ExperimentalForeignApi::class, ExperimentalSettingsImplementation::class)
 fun iosDataGraph(supabaseConfig: SupabaseConfig, versionCode: Int): DataGraph {
@@ -45,7 +47,15 @@ fun iosDataGraph(supabaseConfig: SupabaseConfig, versionCode: Int): DataGraph {
         BundledSQLiteDriver(),
     ).build()
     val dataStore = PreferenceDataStoreFactory.createWithPath(produceFile = { "$documents/user_preferences.preferences_pb".toPath() })
-    return DataGraph(
+    lateinit var graph: DataGraph
+    val scheduler = object : SyncScheduler {
+        override fun schedulePeriodic() = Unit
+
+        override fun syncSoon() {
+            graph.scope.launch { graph.sync.syncNow() }
+        }
+    }
+    graph = DataGraph(
         database = database,
         dataStore = dataStore,
         clock = Clock.System,
@@ -65,12 +75,7 @@ fun iosDataGraph(supabaseConfig: SupabaseConfig, versionCode: Int): DataGraph {
             val path = NSBundle.mainBundle.pathForResource("exercises", "json") ?: error("exercises.json missing from the app bundle")
             NSString.stringWithContentsOfFile(path, NSUTF8StringEncoding, null) ?: error("Can't read exercises.json")
         },
-        syncScheduler = ForegroundSyncScheduler,
+        syncScheduler = scheduler,
     )
-}
-
-/** Until BGAppRefreshTask lands (docs/platform/ios-port.md, phase 5) the app syncs when opened. */
-private object ForegroundSyncScheduler : SyncScheduler {
-    override fun schedulePeriodic() = Unit
-    override fun syncSoon() = Unit
+    return graph
 }

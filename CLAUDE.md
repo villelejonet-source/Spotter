@@ -7,6 +7,7 @@ Offline-first gym app. One repository holds every part:
 | `app/`, `core/`, `feature/`, `build-logic/` | Android app (Kotlin, Compose), Gradle root | Signed bundle uploaded to Google Play by hand (`/release`) |
 | `web/` | Website and dashboard (Next.js) | Vercel deploys production on every push to `main` that touches it |
 | `supabase/` | Database migrations and SQL tests, shared by app and web | Applied to the one (production) Supabase project by hand |
+| `iosApp/`, `shared/` | iOS app (Swift shell, Xcode) and the Kotlin framework it links | Not shipped yet (`docs/platform/ios-port.md`) |
 | `docs/` | Play Store, platform and audit notes | — |
 
 `README.md` has the module layout; `web/README.md` the website and Vercel setup;

@@ -129,7 +129,8 @@ jobs:
       - run: ./gradlew ${{ matrix.tasks }}
 
   # The multiplatform modules' tests again, compiled for iOS and run in the iOS simulator, so
-  # code that only works on the JVM can't land in shared code. Needs a macOS runner (Xcode).
+  # code that only works on the JVM can't land in shared code; then the iOS app itself, for the
+  # simulator and unsigned (its build phase compiles the Kotlin framework). Needs a macOS runner.
   shared-ios:
     name: Shared code on iOS
     runs-on: macos-latest
@@ -141,6 +142,8 @@ jobs:
           java-version: 21
       - uses: gradle/actions/setup-gradle@ed408507eac070d1f99cc633dbcf757c94c7933a # v4.4.3
       - run: ./gradlew :core:model:iosSimulatorArm64Test :core:engine:iosSimulatorArm64Test :core:data:iosSimulatorArm64Test
+      - name: Build the iOS app
+        run: xcodebuild -project iosApp/Spotter.xcodeproj -scheme Spotter -configuration Debug -destination 'generic/platform=iOS Simulator' CODE_SIGNING_ALLOWED=NO build
 
   # The required check. `always()` makes it run (and fail) when a job above failed or was
   # cancelled; without it this job would be skipped, and a skipped check counts as passing.

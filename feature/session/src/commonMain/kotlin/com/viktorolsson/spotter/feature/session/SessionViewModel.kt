@@ -29,8 +29,6 @@ import com.viktorolsson.spotter.core.model.isTimed
 import com.viktorolsson.spotter.core.model.parseToKg
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.ExperimentalCoroutinesApi
-import kotlinx.coroutines.Job
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharedFlow
@@ -201,29 +199,15 @@ class SessionViewModel(
     // Keypad edits: the screen shows what's typed at once; Room gets it a moment later
     // (or straight away when focus moves, a set is ticked or the workout ends).
     private data class FieldEdit(val setId: Long, val field: SetField, val text: String)
-    private var pendingEdit: FieldEdit? = null
-    private var editJob: Job? = null
+    private val keypadEdit = DebouncedEdit<FieldEdit>(viewModelScope, EDIT_DEBOUNCE_MS, ::writeField)
 
     /** Queues one field from keypad text; written after a short pause in typing. */
-    fun updateSetField(setId: Long, field: SetField, text: String) {
-        pendingEdit = FieldEdit(setId, field, text)
-        editJob?.cancel()
-        editJob = viewModelScope.launch {
-            delay(EDIT_DEBOUNCE_MS)
-            commitEdit()
-        }
-    }
+    fun updateSetField(setId: Long, field: SetField, text: String) = keypadEdit.submit(FieldEdit(setId, field, text))
 
     /** Writes the queued edit now (focus moved, keypad closed). */
     fun flushEdit() = launch { commitEdit() }
 
-    private suspend fun commitEdit() {
-        editJob?.cancel()
-        editJob = null
-        val edit = pendingEdit ?: return
-        pendingEdit = null
-        writeField(edit)
-    }
+    private suspend fun commitEdit() = keypadEdit.commit()
 
     private suspend fun writeField(edit: FieldEdit) {
         val set = findSet(edit.setId) ?: return
@@ -276,10 +260,7 @@ class SessionViewModel(
 
     /** Hides the set; it's deleted by [confirmDeleteSet] (or finishing the workout) unless [undoDeleteSet] comes first. */
     fun deleteSet(setId: Long) {
-        if (pendingEdit?.setId == setId) {
-            pendingEdit = null
-            editJob?.cancel()
-        }
+        if (keypadEdit.pending?.setId == setId) keypadEdit.take()
         pendingDeletes.update { it + setId }
     }
 
@@ -322,8 +303,7 @@ class SessionViewModel(
     }
 
     fun discard(onDiscarded: () -> Unit) = launch {
-        editJob?.cancel()
-        pendingEdit = null
+        keypadEdit.take()
         pendingDeletes.value = emptySet()
         restTimerRepository.stop()
         workoutRepository.discardWorkout(sessionId)
@@ -337,9 +317,8 @@ class SessionViewModel(
 
     override fun onCleared() {
         // Nothing typed or swiped away is lost when the screen goes: write it now, off this scope.
-        val edit = pendingEdit
+        val edit = keypadEdit.take()
         val deletes = pendingDeletes.value
-        pendingEdit = null
         if (edit != null || deletes.isNotEmpty()) {
             applicationScope.launch {
                 edit?.let { writeField(it) }

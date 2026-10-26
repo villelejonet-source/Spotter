@@ -20,6 +20,10 @@ kotlin {
             implementation(project(":feature:today"))
             implementation(project(":feature:history"))
             implementation(project(":feature:progress"))
+            implementation(project(":feature:library"))
+            implementation(project(":feature:plan"))
+            implementation(project(":feature:onboarding"))
+            implementation(project(":feature:settings"))
         }
     }
 }

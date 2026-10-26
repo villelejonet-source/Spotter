@@ -6,4 +6,4 @@ package com.viktorolsson.spotter.core.data
 /** Only written when debug logging is on for [tag] (`adb shell setprop log.tag.<tag> DEBUG`). */
 internal expect fun logDebug(tag: String, message: String)
 
-internal expect fun logWarn(tag: String, message: String)
+expect fun logWarn(tag: String, message: String)

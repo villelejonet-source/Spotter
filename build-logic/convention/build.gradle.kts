@@ -38,6 +38,10 @@ gradlePlugin {
             id = "spotter.android.screenshots"
             implementationClass = "AndroidScreenshotsConventionPlugin"
         }
+        register("kmpLibrary") {
+            id = "spotter.kmp.library"
+            implementationClass = "KmpLibraryConventionPlugin"
+        }
         register("jvmLibrary") {
             id = "spotter.jvm.library"
             implementationClass = "JvmLibraryConventionPlugin"

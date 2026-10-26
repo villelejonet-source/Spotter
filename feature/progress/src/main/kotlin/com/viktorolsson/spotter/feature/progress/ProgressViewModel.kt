@@ -22,8 +22,11 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
-import java.time.LocalDate
+import kotlinx.datetime.LocalDate
+import kotlinx.datetime.TimeZone
+import kotlinx.datetime.todayIn
 import javax.inject.Inject
+import kotlin.time.Clock
 
 data class ProgressUiState(
     val loading: Boolean = true,
@@ -67,7 +70,7 @@ class ProgressViewModel @Inject constructor(
     /** Saves today's body weight; returns false (and saves nothing) for text outside the accepted range. */
     fun logWeight(text: String): Boolean {
         val kg = uiState.value.unit.parseToKg(text)?.takeIf { it in MIN_WEIGHT_KG..MAX_WEIGHT_KG } ?: return false
-        viewModelScope.launch { bodyWeightRepository.log(LocalDate.now(), kg) }
+        viewModelScope.launch { bodyWeightRepository.log(Clock.System.todayIn(TimeZone.currentSystemDefault()), kg) }
         return true
     }
 

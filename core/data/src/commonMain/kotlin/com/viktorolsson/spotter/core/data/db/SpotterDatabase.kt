@@ -1,0 +1,110 @@
+package com.viktorolsson.spotter.core.data.db
+
+import androidx.room.AutoMigration
+import androidx.room.ConstructedBy
+import androidx.room.Database
+import androidx.room.RoomDatabase
+import androidx.room.RoomDatabaseConstructor
+import androidx.room.TypeConverters
+import androidx.sqlite.SQLiteConnection
+import androidx.sqlite.SQLiteDriver
+import com.viktorolsson.spotter.core.data.db.dao.ExerciseDao
+import com.viktorolsson.spotter.core.data.db.dao.PlanDao
+import com.viktorolsson.spotter.core.data.db.dao.RecommendationDao
+import com.viktorolsson.spotter.core.data.db.dao.ScheduleDao
+import com.viktorolsson.spotter.core.data.db.dao.UserProfileDao
+import com.viktorolsson.spotter.core.data.db.dao.WorkoutDao
+import com.viktorolsson.spotter.core.data.db.entity.BodyWeightEntryEntity
+import com.viktorolsson.spotter.core.data.db.entity.ExerciseEntity
+import com.viktorolsson.spotter.core.data.db.entity.ExerciseSimilarityEntity
+import com.viktorolsson.spotter.core.data.db.entity.PersonalRecordEntity
+import com.viktorolsson.spotter.core.data.db.entity.PlanDayEntity
+import com.viktorolsson.spotter.core.data.db.entity.PlanEntity
+import com.viktorolsson.spotter.core.data.db.entity.PlanExerciseEntity
+import com.viktorolsson.spotter.core.data.db.entity.RecommendationEntity
+import com.viktorolsson.spotter.core.data.db.entity.ScheduledSessionEntity
+import com.viktorolsson.spotter.core.data.db.entity.SessionExerciseEntity
+import com.viktorolsson.spotter.core.data.db.entity.SetEntryEntity
+import com.viktorolsson.spotter.core.data.db.entity.SyncStateEntity
+import com.viktorolsson.spotter.core.data.db.entity.SyncTombstoneEntity
+import com.viktorolsson.spotter.core.data.db.entity.UserProfileEntity
+import com.viktorolsson.spotter.core.data.db.entity.WorkoutSessionEntity
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.IO
+
+/**
+ * Schema changes must bump [version] and add a migration (auto or manual); the
+ * exported JSON in `core/data/schemas` is what migration tests run against.
+ */
+@Database(
+    version = 8,
+    exportSchema = true,
+    autoMigrations = [
+        AutoMigration(from = 1, to = 2), // session_exercise.restSeconds
+        AutoMigration(from = 2, to = 3), // plan_exercise.startingWeightKg, session_exercise.planExerciseId
+        AutoMigration(from = 3, to = 4), // session_exercise.progressionReason
+        AutoMigration(from = 4, to = 5), // workout_session.isDeload, recommendation.resolvedAt/dedupKey
+        AutoMigration(from = 6, to = 7, spec = SyncSchema.TriggerSpec::class), // scheduled_session (+ its sync triggers)
+        AutoMigration(from = 7, to = 8, spec = SyncSchema.TriggerSpec::class), // updatedAt/deletedAt/achievedAt/endedAt indices
+    ],
+    entities = [
+        UserProfileEntity::class,
+        BodyWeightEntryEntity::class,
+        ExerciseEntity::class,
+        ExerciseSimilarityEntity::class,
+        PlanEntity::class,
+        PlanDayEntity::class,
+        PlanExerciseEntity::class,
+        WorkoutSessionEntity::class,
+        SessionExerciseEntity::class,
+        SetEntryEntity::class,
+        PersonalRecordEntity::class,
+        RecommendationEntity::class,
+        ScheduledSessionEntity::class,
+        SyncTombstoneEntity::class,
+        SyncStateEntity::class,
+    ],
+)
+@TypeConverters(Converters::class)
+@ConstructedBy(SpotterDatabaseConstructor::class)
+abstract class SpotterDatabase : RoomDatabase() {
+    abstract fun exerciseDao(): ExerciseDao
+    abstract fun userProfileDao(): UserProfileDao
+    abstract fun workoutDao(): WorkoutDao
+    abstract fun planDao(): PlanDao
+    abstract fun recommendationDao(): RecommendationDao
+    abstract fun scheduleDao(): ScheduleDao
+
+    companion object {
+        const val NAME = "spotter.db"
+
+        /**
+         * Migrations, sync triggers and the SQLite driver; used for the app database and in tests.
+         * Android passes `AndroidSQLiteDriver` (the system SQLite, same file as before), iOS
+         * `BundledSQLiteDriver`.
+         */
+        fun <T : SpotterDatabase> configure(builder: Builder<T>, driver: SQLiteDriver): Builder<T> = builder
+            .setDriver(driver)
+            .setQueryCoroutineContext(Dispatchers.IO)
+            .addMigrations(SyncSchema.MIGRATION_5_6)
+            .addCallback(
+                object : Callback() {
+                    // Triggers are installed when the database is created and after every
+                    // migration (see TriggerSpec), not on every open.
+                    override fun onCreate(connection: SQLiteConnection) = SyncSchema.createTriggers(connection)
+
+                    // Safety net: one cheap sqlite_master count; the 36 CREATE TRIGGER
+                    // statements only run if some trigger has gone missing.
+                    override fun onOpen(connection: SQLiteConnection) {
+                        if (!SyncSchema.triggersInstalled(connection)) SyncSchema.createTriggers(connection)
+                    }
+                },
+            )
+    }
+}
+
+/** Room generates the actual implementation for each platform. */
+@Suppress("KotlinNoActualForExpect")
+expect object SpotterDatabaseConstructor : RoomDatabaseConstructor<SpotterDatabase> {
+    override fun initialize(): SpotterDatabase
+}

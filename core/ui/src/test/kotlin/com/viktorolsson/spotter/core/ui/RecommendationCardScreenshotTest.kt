@@ -23,14 +23,14 @@ import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.annotation.Config
 import org.robolectric.annotation.GraphicsMode
-import java.time.Instant
+import kotlin.time.Instant
 
 @RunWith(AndroidJUnit4::class)
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
 @Config(qualifiers = RobolectricDeviceQualifiers.Pixel7)
 class RecommendationCardScreenshotTest {
     private fun rec(type: RecommendationType, action: RecommendationAction, evidence: RecommendationEvidence) =
-        Recommendation(1, type, "barbell-bench-press", RecommendationPayload(action, evidence), Instant.EPOCH, RecommendationStatus.ACTIVE)
+        Recommendation(1, type, "barbell-bench-press", RecommendationPayload(action, evidence), Instant.fromEpochMilliseconds(0), RecommendationStatus.ACTIVE)
 
     private val accessory = rec(
         RecommendationType.ADD_ACCESSORY,

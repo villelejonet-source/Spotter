@@ -1,9 +1,13 @@
 plugins {
-    alias(libs.plugins.spotter.jvm.library)
+    alias(libs.plugins.spotter.kmp.library)
     alias(libs.plugins.kotlin.serialization)
 }
 
-dependencies {
-    implementation(libs.kotlinx.serialization.json)
-    testImplementation(libs.junit4)
+kotlin {
+    sourceSets {
+        commonMain.dependencies {
+            api(libs.kotlinx.datetime)
+            implementation(libs.kotlinx.serialization.json)
+        }
+    }
 }

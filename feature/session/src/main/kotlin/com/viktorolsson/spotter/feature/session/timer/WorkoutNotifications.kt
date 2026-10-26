@@ -54,14 +54,14 @@ internal object WorkoutNotifications {
 
     fun inProgress(context: Context, session: ActiveSession): Notification = base(context)
         .setContentTitle(context.getString(R.string.notif_workout_title))
-        .setWhen(session.startedAt.toEpochMilli())
+        .setWhen(session.startedAt.toEpochMilliseconds())
         .setShowWhen(true)
         .setUsesChronometer(true)
         .build()
 
     fun resting(context: Context, rest: RestTimer): Notification = base(context)
         .setContentTitle(context.getString(R.string.notif_rest_title))
-        .setWhen(rest.endsAt.toEpochMilli())
+        .setWhen(rest.endsAt.toEpochMilliseconds())
         .setShowWhen(true)
         .setUsesChronometer(true)
         .setChronometerCountDown(true)

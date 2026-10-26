@@ -54,7 +54,7 @@ this upload key only proves uploads come from you.
 
 ```bash
 export JAVA_HOME="/Applications/Android Studio.app/Contents/jbr/Contents/Home"
-./gradlew testDebugUnitTest :core:engine:test :core:model:test verifyRoborazziDebug :app:lintRelease
+./gradlew testDebugUnitTest :core:data:testAndroidHostTest :core:engine:jvmTest :core:model:jvmTest verifyRoborazziDebug :app:lintRelease
 ./gradlew bundleRelease
 ```
 

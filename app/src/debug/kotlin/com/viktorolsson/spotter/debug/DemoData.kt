@@ -36,18 +36,26 @@ import com.viktorolsson.spotter.core.model.UserProfile
 import com.viktorolsson.spotter.core.model.WeightUnit
 import com.viktorolsson.spotter.core.model.isTimed
 import dagger.hilt.android.AndroidEntryPoint
-import java.time.Clock
-import java.time.Duration
-import java.time.Instant
-import java.time.LocalDate
-import java.time.LocalTime
-import java.time.ZoneId
-import javax.inject.Inject
-import kotlin.math.roundToInt
-import kotlin.random.Random
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
+import kotlinx.datetime.DateTimeUnit
+import kotlinx.datetime.LocalDate
+import kotlinx.datetime.TimeZone
+import kotlinx.datetime.atTime
+import kotlinx.datetime.isoDayNumber
+import kotlinx.datetime.minus
+import kotlinx.datetime.plus
+import kotlinx.datetime.toInstant
+import kotlinx.datetime.todayIn
+import javax.inject.Inject
+import kotlin.math.roundToInt
+import kotlin.random.Random
+import kotlin.time.Clock
+import kotlin.time.Duration
+import kotlin.time.Duration.Companion.minutes
+import kotlin.time.Duration.Companion.seconds
+import kotlin.time.Instant
 
 /**
  * Debug builds only: fills the app with about five weeks of realistic training, for
@@ -92,20 +100,20 @@ class DemoDataSeeder @Inject constructor(
     private val recommendations: RecommendationRepository,
     private val clock: Clock,
 ) {
-    private val zone = ZoneId.systemDefault()
+    private val zone = TimeZone.currentSystemDefault()
     private val random = Random(42)
 
     suspend fun seed(): String {
         if (workoutDao.getTrainingStarts().isNotEmpty()) return "Workouts already logged; nothing seeded."
-        val today = LocalDate.now(clock)
+        val today = clock.todayIn(zone)
         if (profiles.get() == null) createProfileAndPlan(today)
         val plan = planDao.getActivePlan() ?: return "No active plan."
         val days = plan.days.sortedBy { it.day.position }
 
         // Monday, Tuesday, Thursday and Friday for the five weeks before this one.
-        val firstMonday = today.minusDays(today.dayOfWeek.value - 1L).minusWeeks(WEEKS.toLong())
-        val dates = (0 until WEEKS).flatMap { week -> listOf(0L, 1L, 3L, 4L).map { firstMonday.plusWeeks(week.toLong()).plusDays(it) } }
-            .filter { it.isBefore(today) }
+        val firstMonday = today.minus(today.dayOfWeek.isoDayNumber - 1L, DateTimeUnit.DAY).minus(WEEKS.toLong(), DateTimeUnit.WEEK)
+        val dates = (0 until WEEKS).flatMap { week -> listOf(0L, 1L, 3L, 4L).map { firstMonday.plus(week.toLong(), DateTimeUnit.WEEK).plus(it, DateTimeUnit.DAY) } }
+            .filter { it < today }
 
         // The first lift of the first day stalls after its second session (three weeks
         // before the last one), so Progress shows a plateau fix.
@@ -113,11 +121,11 @@ class DemoDataSeeder @Inject constructor(
         val state = mutableMapOf<String, LiftState>()
         dates.forEachIndexed { i, date ->
             val day = days[i % days.size]
-            logSession(date, day.day.id, day.exercises.sortedBy { it.planExercise.position }, state, stalledExerciseId, date.isBefore(firstMonday.plusWeeks(1)))
+            logSession(date, day.day.id, day.exercises.sortedBy { it.planExercise.position }, state, stalledExerciseId, date < firstMonday.plus(1, DateTimeUnit.WEEK))
         }
 
         var weight = START_BODY_WEIGHT
-        generateSequence(today.minusWeeks(WEEKS.toLong())) { it.plusDays(3) }.takeWhile { !it.isAfter(today) }.forEach { date ->
+        generateSequence(today.minus(WEEKS.toLong(), DateTimeUnit.WEEK)) { it.plus(3, DateTimeUnit.DAY) }.takeWhile { it <= today }.forEach { date ->
             weight -= 0.12
             bodyWeight.log(date, ((weight + random.nextDouble(-0.3, 0.3)) * 10).roundToInt() / 10.0)
         }
@@ -130,7 +138,7 @@ class DemoDataSeeder @Inject constructor(
         val profile = UserProfile(
             sex = Sex.MALE,
             heightCm = 181.0,
-            birthDate = today.minusYears(31),
+            birthDate = today.minus(31, DateTimeUnit.YEAR),
             bodyWeightKg = START_BODY_WEIGHT,
             units = WeightUnit.KG,
             experience = ExperienceLevel.INTERMEDIATE,
@@ -143,7 +151,7 @@ class DemoDataSeeder @Inject constructor(
         )
         val library = exercises.observeAll().first { it.isNotEmpty() }
         val generated = PlanGenerator().generate(
-            PlanInput(profile = profile, library = library, today = today.minusWeeks(WEEKS.toLong()), now = clock.instant()),
+            PlanInput(profile = profile, library = library, today = today.minus(WEEKS.toLong(), DateTimeUnit.WEEK), now = clock.now()),
         )
         profiles.save(profile)
         plans.saveAsActive(generated.plan)
@@ -159,11 +167,11 @@ class DemoDataSeeder @Inject constructor(
         stalledExerciseId: String,
         earlyWeeks: Boolean,
     ) {
-        val start = date.atTime(LocalTime.of(17, 20).plusMinutes(random.nextLong(0, 40))).atZone(zone).toInstant()
+        val start = date.atTime(17, 20).toInstant(zone) + random.nextLong(0, 40).minutes
         val sessionId = workoutDao.insertSession(
             WorkoutSessionEntity(startedAt = start, endedAt = null, planDayId = planDayId, notes = null, perceivedDifficulty = null),
         )
-        var time = start.plus(Duration.ofMinutes(4))
+        var time = start.plus(4.minutes)
         planned.forEachIndexed { position, (pe, exercise) ->
             val compound = exercise.mechanics == Mechanics.COMPOUND
             val lift = state.getOrPut(exercise.id) {
@@ -182,7 +190,7 @@ class DemoDataSeeder @Inject constructor(
                 ),
             )
             val sets = (0 until pe.sets).map { i ->
-                time = time.plusSeconds(pe.restSeconds + 40L)
+                time = time + (pe.restSeconds + 40L).seconds
                 // The last set sometimes falls a rep short, as real sets do.
                 val reps = if (i == pe.sets - 1 && lift.reps > pe.repMin && random.nextBoolean()) lift.reps - 1 else lift.reps
                 SetEntryEntity(
@@ -209,7 +217,7 @@ class DemoDataSeeder @Inject constructor(
                 }
             }
         }
-        workoutDao.endSession(sessionId, time.plus(Duration.ofMinutes(3)))
+        workoutDao.endSession(sessionId, time.plus(3.minutes))
     }
 
     private suspend fun recordPersonalRecords(

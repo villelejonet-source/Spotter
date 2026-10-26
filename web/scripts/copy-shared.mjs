@@ -11,7 +11,7 @@ const here = dirname(fileURLToPath(import.meta.url));
 const data = resolve(here, "../src/data");
 mkdirSync(data, { recursive: true });
 
-copyFileSync(resolve(here, "../../core/data/src/main/assets/exercises.json"), resolve(data, "exercises.json"));
+copyFileSync(resolve(here, "../../core/data/catalog/exercises.json"), resolve(data, "exercises.json"));
 console.log("Copied exercise catalog");
 
 // Wrapped in JSON so pages and tests import it like the catalog, with no file reads at runtime.

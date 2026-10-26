@@ -1,0 +1,13 @@
+// Shared build settings for the Spotter app target.
+//
+// Cloud sync needs the Supabase project's URL and *publishable* key (never the secret or
+// service_role key). Put them in Config/Secrets.xcconfig, which is git-ignored; copy
+// Secrets.xcconfig.example. Without it the app builds and works offline.
+
+// The Kotlin framework is built for Apple silicon simulators and devices only.
+EXCLUDED_ARCHS[sdk=iphonesimulator*] = x86_64
+
+SUPABASE_URL =
+SUPABASE_PUBLISHABLE_KEY =
+
+#include? "Secrets.xcconfig"

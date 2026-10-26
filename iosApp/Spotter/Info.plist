@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<!-- Sign-in links in emails open the app at spotter://login (as on Android). -->
+	<key>CFBundleURLTypes</key>
+	<array>
+		<dict>
+			<key>CFBundleURLName</key>
+			<string>com.viktorolsson.spotter.login</string>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>spotter</string>
+			</array>
+		</dict>
+	</array>
+	<!-- From Config/Secrets.xcconfig (git-ignored); blank means an offline build. -->
+	<key>SupabaseURL</key>
+	<string>$(SUPABASE_URL)</string>
+	<key>SupabasePublishableKey</key>
+	<string>$(SUPABASE_PUBLISHABLE_KEY)</string>
+</dict>
+</plist>

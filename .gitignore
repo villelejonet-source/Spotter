@@ -23,3 +23,8 @@ supabase/.temp/
 # Claude Code: per-task worktrees and personal settings (settings.json is shared)
 .claude/worktrees/
 .claude/settings.local.json
+
+# iOS app: local secrets and Xcode user state
+iosApp/Config/Secrets.xcconfig
+xcuserdata/
+*.xcuserstate

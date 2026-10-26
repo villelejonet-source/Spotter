@@ -7,19 +7,19 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Icon
-import androidx.compose.material3.TextButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.produceState
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
-import androidx.compose.runtime.produceState
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
@@ -63,8 +63,9 @@ import com.viktorolsson.spotter.feature.today.TodayRoute
 import com.viktorolsson.spotter.feature.today.todayScreen
 import com.viktorolsson.spotter.navigation.TopLevelDestination
 import kotlinx.coroutines.delay
-import java.time.Duration
-import java.time.Instant
+import kotlin.time.Clock
+import kotlin.time.Duration
+import kotlin.time.Instant
 
 @Composable
 fun SpotterApp(
@@ -113,7 +114,7 @@ fun SpotterApp(
                     activeSession?.let { session ->
                         val elapsed by produceState(Duration.ZERO, session.startedAt) {
                             while (true) {
-                                value = Duration.between(session.startedAt, Instant.now())
+                                value = (Clock.System.now() - session.startedAt)
                                 delay(1000L - System.currentTimeMillis() % 1000L)
                             }
                         }

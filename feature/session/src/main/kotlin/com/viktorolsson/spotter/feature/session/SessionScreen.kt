@@ -75,7 +75,6 @@ import com.viktorolsson.spotter.core.model.WeightUnit
 import com.viktorolsson.spotter.core.model.WorkoutSession
 import com.viktorolsson.spotter.core.model.format
 import com.viktorolsson.spotter.core.model.isTimed
-import com.viktorolsson.spotter.core.ui.R as CoreR
 import com.viktorolsson.spotter.core.ui.component.Confetti
 import com.viktorolsson.spotter.core.ui.component.EmptyState
 import com.viktorolsson.spotter.core.ui.component.LoadingState
@@ -87,12 +86,14 @@ import com.viktorolsson.spotter.core.ui.formatSet
 import com.viktorolsson.spotter.core.ui.label
 import com.viktorolsson.spotter.core.ui.theme.Dimens
 import com.viktorolsson.spotter.core.ui.theme.Spacing
-import java.math.BigDecimal
-import java.math.RoundingMode
-import java.time.Duration
-import java.time.Instant
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import java.math.BigDecimal
+import java.math.RoundingMode
+import kotlin.time.Clock
+import kotlin.time.Duration
+import kotlin.time.Instant
+import com.viktorolsson.spotter.core.ui.R as CoreR
 
 @Composable
 internal fun SessionRoute(
@@ -269,7 +270,7 @@ internal fun SessionScreen(
         topBar = {
             SessionTopBar(
                 dayName = session.planDayName,
-                elapsed = Duration.between(session.startedAt, now),
+                elapsed = (now - session.startedAt),
                 menuOpen = menuOpen,
                 onMenuOpenChange = { menuOpen = it },
                 onMinimize = actions.onMinimize,
@@ -540,9 +541,9 @@ private fun SessionTopBar(
 
 /** Wall-clock "now", updated every second; durations derive from stored timestamps. */
 @Composable
-internal fun rememberTicker() = produceState(Instant.now()) {
+internal fun rememberTicker() = produceState(Clock.System.now()) {
     while (true) {
-        value = Instant.now()
+        value = Clock.System.now()
         delay(1000L - System.currentTimeMillis() % 1000L)
     }
 }

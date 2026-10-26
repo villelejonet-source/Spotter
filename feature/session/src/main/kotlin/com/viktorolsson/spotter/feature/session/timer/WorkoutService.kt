@@ -26,9 +26,10 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.launch
-import java.time.Duration
-import java.time.Instant
 import javax.inject.Inject
+import kotlin.time.Clock
+import kotlin.time.Duration
+import kotlin.time.Instant
 
 /**
  * Runs while a workout is in progress. Shows the workout stopwatch in an ongoing
@@ -77,11 +78,11 @@ class WorkoutService : Service() {
                     stopSelf()
                     return@collectLatest
                 }
-                val remaining = rest?.let { Duration.between(Instant.now(), it.endsAt) }
-                if (rest != null && remaining != null && !remaining.isNegative && !remaining.isZero) {
+                val remaining = rest?.let { (it.endsAt - Clock.System.now()) }
+                if (rest != null && remaining != null && remaining.isPositive()) {
                     WorkoutNotifications.update(this, WorkoutNotifications.resting(this, rest))
                     acquireWakeLock(remaining)
-                    delay(remaining.toMillis())
+                    delay(remaining.inWholeMilliseconds)
                     // Alert before clearing: clearing re-emits and cancels this block.
                     WorkoutNotifications.postRestFinished(this)
                     if (!NotificationManagerCompat.from(this).areNotificationsEnabled()) vibrate()
@@ -100,7 +101,7 @@ class WorkoutService : Service() {
         releaseWakeLock()
         wakeLock = getSystemService(PowerManager::class.java)
             .newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "spotter:rest")
-            .apply { acquire(duration.toMillis() + 10_000) }
+            .apply { acquire(duration.inWholeMilliseconds + 10_000) }
     }
 
     private fun releaseWakeLock() {

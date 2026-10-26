@@ -32,10 +32,11 @@ import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import java.time.LocalDate
+import kotlinx.datetime.LocalDate
 import java.time.YearMonth
 import java.time.ZoneId
 import javax.inject.Inject
+import kotlin.time.toKotlinInstant
 
 data class HistoryUiState(
     val loading: Boolean = true,
@@ -61,8 +62,8 @@ class HistoryViewModel @Inject constructor(
     private val monthSessions = month.flatMapLatest { m ->
         val zone = ZoneId.systemDefault()
         historyRepository.observeFinishedSessionsBetween(
-            start = m.atDay(1).atStartOfDay(zone).toInstant(),
-            end = m.plusMonths(1).atDay(1).atStartOfDay(zone).toInstant(),
+            start = m.atDay(1).atStartOfDay(zone).toInstant().toKotlinInstant(),
+            end = m.plusMonths(1).atDay(1).atStartOfDay(zone).toInstant().toKotlinInstant(),
         )
     }
 

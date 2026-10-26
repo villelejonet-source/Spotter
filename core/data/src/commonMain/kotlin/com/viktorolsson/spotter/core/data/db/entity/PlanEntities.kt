@@ -1,0 +1,74 @@
+package com.viktorolsson.spotter.core.data.db.entity
+
+import androidx.room.ColumnInfo
+import androidx.room.Entity
+import androidx.room.ForeignKey
+import androidx.room.Index
+import androidx.room.PrimaryKey
+import com.viktorolsson.spotter.core.model.Goal
+import com.viktorolsson.spotter.core.model.ProgressionRule
+import com.viktorolsson.spotter.core.model.SplitType
+import kotlin.time.Instant
+
+@Entity(tableName = "plan", indices = [Index("syncId", unique = true), Index("updatedAt"), Index("isActive")])
+data class PlanEntity(
+    @PrimaryKey(autoGenerate = true) val id: Long = 0,
+    val name: String,
+    val splitType: SplitType,
+    val goal: Goal,
+    val createdAt: Instant,
+    val isActive: Boolean,
+    /** Global id for cloud sync; assigned by a database trigger (see SyncSchema). */
+    val syncId: String? = null,
+    /** Time of the last local change (ms), maintained by a database trigger. */
+    @ColumnInfo(defaultValue = "0")
+    val updatedAt: Long = 0,
+)
+
+@Entity(
+    tableName = "plan_day",
+    foreignKeys = [ForeignKey(PlanEntity::class, ["id"], ["planId"], onDelete = ForeignKey.CASCADE)],
+    indices = [Index("syncId", unique = true), Index("updatedAt"), Index("planId")],
+)
+data class PlanDayEntity(
+    @PrimaryKey(autoGenerate = true) val id: Long = 0,
+    val planId: Long,
+    val position: Int,
+    val name: String,
+    /** Global id for cloud sync; assigned by a database trigger (see SyncSchema). */
+    val syncId: String? = null,
+    /** Time of the last local change (ms), maintained by a database trigger. */
+    @ColumnInfo(defaultValue = "0")
+    val updatedAt: Long = 0,
+)
+
+@Entity(
+    tableName = "plan_exercise",
+    foreignKeys = [
+        ForeignKey(PlanDayEntity::class, ["id"], ["planDayId"], onDelete = ForeignKey.CASCADE),
+        ForeignKey(ExerciseEntity::class, ["id"], ["exerciseId"], onDelete = ForeignKey.RESTRICT),
+    ],
+    indices = [Index("syncId", unique = true), Index("updatedAt"), Index("planDayId"), Index("exerciseId")],
+)
+data class PlanExerciseEntity(
+    @PrimaryKey(autoGenerate = true) val id: Long = 0,
+    val planDayId: Long,
+    val exerciseId: String,
+    val position: Int,
+    val sets: Int,
+    val repMin: Int,
+    val repMax: Int,
+    val targetRir: Int?,
+    val restSeconds: Int,
+    val progressionRule: ProgressionRule,
+    /** Exercises sharing a group number in the same day form a superset. */
+    val supersetGroup: Int?,
+    /** First-session estimate from the plan generator. */
+    @ColumnInfo(defaultValue = "NULL")
+    val startingWeightKg: Double? = null,
+    /** Global id for cloud sync; assigned by a database trigger (see SyncSchema). */
+    val syncId: String? = null,
+    /** Time of the last local change (ms), maintained by a database trigger. */
+    @ColumnInfo(defaultValue = "0")
+    val updatedAt: Long = 0,
+)

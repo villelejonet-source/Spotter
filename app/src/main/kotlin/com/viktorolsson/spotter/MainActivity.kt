@@ -27,7 +27,7 @@ class MainActivity : ComponentActivity() {
         // Hold the splash until preferences load, so an explicit light/dark choice never flashes.
         installSplashScreen().setKeepOnScreenCondition { viewModel.uiState.value is MainUiState.Loading }
         super.onCreate(savedInstanceState)
-        if (savedInstanceState == null) syncRepository.handleDeeplink(intent)
+        if (savedInstanceState == null) syncRepository.handleDeeplink(intent.data?.toString())
 
         setContent {
             val uiState by viewModel.uiState.collectAsStateWithLifecycle()
@@ -58,7 +58,7 @@ class MainActivity : ComponentActivity() {
 
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
-        syncRepository.handleDeeplink(intent)
+        syncRepository.handleDeeplink(intent.data?.toString())
     }
 
     private companion object {

@@ -1,6 +1,7 @@
 # Spotter
 
-Android-only, offline-first gym app (Kotlin, Jetpack Compose, Material 3). See [PLAN.md](PLAN.md).
+Offline-first gym app (Kotlin, Jetpack Compose, Material 3) for Android, being ported to iOS with
+Kotlin Multiplatform; see [docs/platform/ios-port.md](docs/platform/ios-port.md). See [PLAN.md](PLAN.md).
 
 ## Build and run
 
@@ -9,10 +10,11 @@ There's no system JDK on this machine, so point Gradle at Android Studio's bundl
 ```bash
 export JAVA_HOME="/Applications/Android Studio.app/Contents/jbr/Contents/Home"
 ./gradlew assembleDebug          # app/build/outputs/apk/debug/app-debug.apk
-./gradlew testDebugUnitTest :core:engine:test :core:model:test   # all unit tests
+./gradlew testDebugUnitTest :core:data:testAndroidHostTest :core:engine:jvmTest :core:model:jvmTest   # all unit tests
 ./gradlew verifyRoborazziDebug     # screenshot tests (recordRoborazziDebug updates the goldens)
 ./gradlew :app:lintRelease
 ./gradlew :app:assembleRelease     # debug-signed R8 build; CI runs it to prove shrinking works
+./gradlew :core:model:iosSimulatorArm64Test :core:engine:iosSimulatorArm64Test :core:data:iosSimulatorArm64Test   # shared code on iOS (needs Xcode)
 ```
 
 CI (`.github/workflows/ci.yml`) runs all of the above plus the website's lint, type check,
@@ -29,14 +31,17 @@ Or open the folder in Android Studio and run the `app` configuration.
 | Module | What's in it |
 |---|---|
 | `app` | Application, MainActivity, bottom-bar navigation shell |
-| `core/model` | Pure Kotlin domain types and enums |
-| `core/data` | Room schema (exported to `core/data/schemas`), DataStore preferences, exercise seeder |
-| `core/engine` | Pure Kotlin training logic, no Android deps, unit-tested: plan generator, progression, swap ranking and weight conversion, PR detection, muscle balance, body-weight trend |
+| `core/model` | Domain types and enums; Kotlin Multiplatform (JVM + iOS), dates are `kotlinx.datetime` / `kotlin.time` |
+| `core/data` | Kotlin Multiplatform (Android + iOS): Room schema (exported to `core/data/schemas`), DAOs, repositories, DataStore preferences, exercise seeder, cloud sync and accounts, and `DataGraph`, which builds them |
+| `core/data-android` | Android wiring for `core/data`: the Hilt module (exposes `DataGraph`), WorkManager sync, the encrypted session store (`AuthStorage`) |
+| `core/engine` | Training logic, Kotlin Multiplatform (JVM + iOS), unit-tested on both: plan generator, progression, swap ranking and weight conversion, PR detection, muscle balance, body-weight trend |
 | `core/ui` | Theme (branded light/dark palette + dynamic color), shared components |
 | `feature/*` | One module per tab (`today`, `history`, `progress`, `settings` = Profile), plus `session` (workout logger, rest timer service, summary), `library` (exercise picker), `onboarding` (questionnaire + plan summary) and `plan` (plan overview) |
-| `build-logic` | Convention plugins (`spotter.android.feature`, `spotter.jvm.library`, …) |
+| `shared` | The iOS framework (`Shared`): the shared modules plus `SpotterIos`, what the Swift app calls |
+| `iosApp` | The iOS app (Xcode project, Swift shell); see [iosApp/README.md](iosApp/README.md) |
+| `build-logic` | Convention plugins (`spotter.android.feature`, `spotter.kmp.library`, …) |
 
-The exercise library lives in `core/data/src/main/assets/exercises.json`. Bump `EXERCISE_CATALOG_VERSION` in `ExerciseSeeder` whenever it changes so installed apps re-seed. Room is at schema version 8; every Room migration must re-create the sync triggers via `SyncSchema.TriggerSpec`.
+The exercise library lives in `core/data/catalog/exercises.json` (an asset on Android, a bundle resource on iOS). Bump `EXERCISE_CATALOG_VERSION` in `ExerciseSeeder` whenever it changes so installed apps re-seed. Room is at schema version 8; every Room migration must re-create the sync triggers via `SyncSchema.TriggerSpec`.
 
 ## Supabase (optional backup + sync, milestone 8)
 

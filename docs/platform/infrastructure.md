@@ -197,7 +197,7 @@ Rules that keep that safe:
    once, in the database callback, not on every open, so a migration that rebuilds or alters a
    synced table has to put them back). The schema is at version 8 (7 added scheduled sessions,
    8 the audit's indexes); the exported JSON lives in `core/data/schemas/`.
-   **The seeded exercise catalog** (`core/data/src/main/assets/exercises.json`) is versioned by
+   **The seeded exercise catalog** (`core/data/catalog/exercises.json`) is versioned by
    `EXERCISE_CATALOG_VERSION` in `ExerciseSeeder`; bump it whenever the JSON changes, or
    installed apps keep the old catalog.
 3. **The phone ignores payload fields it doesn't know, and skips rows it can't hold**

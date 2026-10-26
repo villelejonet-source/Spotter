@@ -26,7 +26,9 @@ import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.annotation.Config
 import org.robolectric.annotation.GraphicsMode
-import java.time.Duration
+import kotlin.time.Duration
+import kotlin.time.Duration.Companion.minutes
+import kotlin.time.Duration.Companion.seconds
 
 /** The shared screen states and small components every feature reuses. */
 @OptIn(ExperimentalRoborazziApi::class)
@@ -86,12 +88,12 @@ class StatesScreenshotTest {
 
     @Test
     fun miniBar_light() = capture("mini_bar_light", dark = false) {
-        Column { WorkoutMiniBar(Duration.ofMinutes(32).plusSeconds(10), onClick = {}) }
+        Column { WorkoutMiniBar(32.minutes + 10.seconds, onClick = {}) }
     }
 
     @Test
     fun miniBar_dark() = capture("mini_bar_dark", dark = true) {
-        Column { WorkoutMiniBar(Duration.ofMinutes(32).plusSeconds(10), onClick = {}) }
+        Column { WorkoutMiniBar(32.minutes + 10.seconds, onClick = {}) }
     }
 
     @Test

@@ -17,7 +17,7 @@ The port lands as a series of pull requests; Android keeps working and shipping 
 | 1 | `core/model` and `core/engine` multiplatform (JVM + iOS). `java.time` → `kotlinx.datetime` / `kotlin.time` everywhere; tests on `kotlin.test`, run on JVM and the iOS simulator in CI | Done |
 | 2 | `core/data` multiplatform: Room KMP (connection API; `AndroidSQLiteDriver` on Android so the existing database file is untouched, `BundledSQLiteDriver` on iOS), DataStore KMP, supabase-kt with the Darwin engine, one plain-Kotlin object graph that Hilt wraps on Android | Done |
 | 3 | `iosApp/` Xcode project around a shared framework; builds and runs in the simulator; CI builds it | Done: seeds the catalog, opens `spotter://` links, syncs while open |
-| 4 | `core/ui` and `feature/*` on Compose Multiplatform: `R.string`/`plurals` → Compose resources, Hilt → Koin (or the phase 2 graph), Navigation Compose and lifecycle ViewModels (both multiplatform), charts (Vico has a multiplatform build) | 4a done: `core/ui`; 4b done: Koin; 4c done: every feature module |
+| 4 | `core/ui` and `feature/*` on Compose Multiplatform: `R.string`/`plurals` → Compose resources, Hilt → Koin (or the phase 2 graph), Navigation Compose and lifecycle ViewModels (both multiplatform), charts (Vico has a multiplatform build) | Done: the iOS app runs every screen (4a `core/ui`, 4b Koin, 4c features, 4d shell and iOS host) |
 | 5 | iOS-only pieces, below | |
 | 6 | App Store release, below | |
 
@@ -82,6 +82,16 @@ The port lands as a series of pull requests; Android keeps working and shipping 
   phase 5. `rest_skip` exists in both string sets.
 - **Charts.** Vico 3.3.1's `compose` and `compose-m3` artifacts are multiplatform (iOS arm64 and
   simulator), and `TrendChart` uses only their common API, so it moved as is.
+
+- **App shell** (`:shell`): navigation, bottom bar, sync dialogs, the shell's view models and
+  `uiModules` (every screen's Koin modules). Android's `MainActivity` hosts `SpotterApp` with its
+  splash screen and system-bar colours; iOS hosts `SpotterRoot()` in a `ComposeUIViewController`
+  from `SpotterIos.mainViewController()`. The workout-service hook is `WhileWorkoutActive`: on
+  iOS it clears a rest that has run out, as Android's service does.
+- **Found on iOS, left for later:** number pads have no Return key, so a field's "next" action
+  can't move focus there (the user taps the next field); tab switches slide rather than fade
+  (Navigation Compose's iOS default); no alert when a rest ends (phase 5). Taps the simulator
+  injects with zero duration are sometimes dropped by Compose; real presses aren't.
 
 ### Phase 5: iOS-only pieces
 

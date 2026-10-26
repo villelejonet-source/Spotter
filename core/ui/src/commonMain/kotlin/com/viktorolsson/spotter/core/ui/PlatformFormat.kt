@@ -1,6 +1,7 @@
 package com.viktorolsson.spotter.core.ui
 
 import androidx.compose.runtime.Composable
+import kotlinx.datetime.DayOfWeek
 import kotlinx.datetime.LocalDate
 import kotlin.time.Instant
 
@@ -28,3 +29,11 @@ internal expect fun formatOneDecimalHalfUp(value: Double): String
 /** "Rows and curls": the locale's own list joiner. */
 @Composable
 internal expect fun formatList(items: List<String>): String
+
+/** The locale's first day of the week: Monday in Sweden, Sunday in the US. */
+@Composable
+expect fun firstDayOfWeek(): DayOfWeek
+
+/** "M", "T", "W": the locale's narrow name for [day], for calendar headers. */
+@Composable
+expect fun narrowDayName(day: DayOfWeek): String

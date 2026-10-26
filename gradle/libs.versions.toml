@@ -130,4 +130,5 @@ spotter-android-compose = { id = "spotter.android.compose" }
 spotter-android-feature = { id = "spotter.android.feature" }
 spotter-kmp-library = { id = "spotter.kmp.library" }
 spotter-kmp-compose = { id = "spotter.kmp.compose" }
+spotter-kmp-feature = { id = "spotter.kmp.feature" }
 spotter-android-screenshots = { id = "spotter.android.screenshots" }

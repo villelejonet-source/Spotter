@@ -39,6 +39,10 @@ gradlePlugin {
             id = "spotter.kmp.compose"
             implementationClass = "KmpComposeConventionPlugin"
         }
+        register("kmpFeature") {
+            id = "spotter.kmp.feature"
+            implementationClass = "KmpFeatureConventionPlugin"
+        }
         register("kmpLibrary") {
             id = "spotter.kmp.library"
             implementationClass = "KmpLibraryConventionPlugin"

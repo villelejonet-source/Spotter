@@ -1,4 +1,4 @@
--- Checks for devices, check_in_device, admins, admin_stats and delete_my_account after every
+-- Checks for devices, check_in_device, the admin tag, admin_stats and delete_my_account after every
 -- migration in supabase/migrations/ has been applied. Like push_rows.sql it runs in one
 -- transaction that is rolled back, and CI does not run it. Run it the same way, against a
 -- local stack or a throwaway project, never production:
@@ -9,7 +9,7 @@
 
 begin;
 
--- U is a user with two phones, O another user, and M the admin.
+-- U is a user with two phones, O another user, and M the admin (tagged further down).
 insert into auth.users (id, email, created_at) values
     ('00000000-0000-4000-8000-000000000011', 'u@example.test', now() - interval '20 days'),
     ('00000000-0000-4000-8000-000000000012', 'o@example.test', now()),
@@ -112,10 +112,16 @@ select pg_temp.expect_error('no direct insert',
     $$insert into public.devices (user_id, device_id, version_code, schema_version) values ('00000000-0000-4000-8000-000000000012', '10000000-0000-4000-8000-000000000009', 7, 8)$$, '42501');
 select pg_temp.expect_error('no direct update', $$update public.devices set version_code = 99$$, '42501');
 select pg_temp.expect_error('no direct delete', $$delete from public.devices$$, '42501');
-select pg_temp.expect_error('admins is closed', $$select count(*) from public.admins$$, '42501');
-select pg_temp.expect_error('cannot make oneself admin',
-    $$insert into public.admins (user_id) values ('00000000-0000-4000-8000-000000000012')$$, '42501');
+select pg_temp.expect_error('cannot tag oneself admin',
+    $$update auth.users set raw_app_meta_data = '{"admin": true}' where id = '00000000-0000-4000-8000-000000000012'$$, '42501');
 select pg_temp.expect_error('non-admin stats', $$select public.admin_stats()$$, '42501');
+reset role;
+
+-- The tag in user_metadata (which a user can set on themselves) doesn't count, nor does false.
+update auth.users set raw_user_meta_data = '{"admin": true}', raw_app_meta_data = '{"admin": false}'
+where id = '00000000-0000-4000-8000-000000000012';
+set local role authenticated;
+select pg_temp.expect_error('user_metadata tag is ignored', $$select public.admin_stats()$$, '42501');
 reset role;
 
 set local role anon;
@@ -145,7 +151,8 @@ insert into public.sync_rows (user_id, table_name, sync_id, payload, updated_at,
     ('00000000-0000-4000-8000-000000000011', 'workout_session', 'w7',
         jsonb_build_object('startedAt', 1e300, 'endedAt', 1), 1, null);
 
-insert into public.admins (user_id) values ('00000000-0000-4000-8000-000000000013');
+update auth.users set raw_app_meta_data = coalesce(raw_app_meta_data, '{}') || '{"admin": true}'
+where id = '00000000-0000-4000-8000-000000000013';
 select pg_temp.act_as('00000000-0000-4000-8000-000000000013');
 
 select pg_temp.expect_error('weeks zero', $$select public.admin_stats(0)$$, '22023');

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { parseAdminStats } from "./admin";
+import { isAdminClaims, parseAdminStats } from "./admin";
 
 describe("parseAdminStats", () => {
   it("reads admin_stats()'s JSON", () => {
@@ -46,5 +46,21 @@ describe("parseAdminStats", () => {
     expect(stats.byWeek).toEqual([]);
     expect(stats.users[0]).toMatchObject({ email: null, workouts: 0, versionCode: null, createdAt: null });
     expect(parseAdminStats(null).users).toEqual([]);
+  });
+});
+
+describe("isAdminClaims", () => {
+  it("is true only for app_metadata.admin true or \"true\"", () => {
+    expect(isAdminClaims({ sub: "u", app_metadata: { provider: "email", admin: true } })).toBe(true);
+    expect(isAdminClaims({ app_metadata: { admin: "true" } })).toBe(true);
+    expect(isAdminClaims({ app_metadata: { admin: false } })).toBe(false);
+    expect(isAdminClaims({ app_metadata: { admin: "yes" } })).toBe(false);
+    expect(isAdminClaims({ app_metadata: {} })).toBe(false);
+    expect(isAdminClaims({ sub: "u" })).toBe(false);
+    expect(isAdminClaims(null)).toBe(false);
+  });
+
+  it("ignores user_metadata, which users can change themselves", () => {
+    expect(isAdminClaims({ user_metadata: { admin: true }, app_metadata: {} })).toBe(false);
   });
 });

@@ -5,7 +5,8 @@ import { requireUser } from "@/lib/supabase/server";
 /**
  * The signed-in shell. The same five sections everywhere: a sidebar on wide screens, a
  * bottom bar on phones. A section with more than one page shows its pages as tabs above the
- * content. Signing out lives on the Profile page, with the rest of the account.
+ * content. Signing out lives on the Profile page, with the rest of the account. Accounts tagged
+ * admin also get Admin, the usage overview.
  */
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
   const { user } = await requireUser();
@@ -20,7 +21,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
       <header className="sticky top-0 z-30 flex h-14 items-center border-b border-outline bg-background/95 px-4 backdrop-blur md:hidden">{brand}</header>
       <aside className="hidden md:sticky md:top-0 md:flex md:h-screen md:w-60 md:shrink-0 md:flex-col md:border-r md:border-outline md:px-3 md:py-8">
         <div className="mb-8 px-4">{brand}</div>
-        <SidebarNav />
+        <SidebarNav admin={user.isAdmin} />
         <Link
           href="/profile"
           className="mt-auto truncate rounded-full px-4 py-2 text-xs text-muted hover:bg-surface hover:text-foreground"
@@ -33,7 +34,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
         <SectionTabs />
         {children}
       </main>
-      <MobileTabBar />
+      <MobileTabBar admin={user.isAdmin} />
     </div>
   );
 }

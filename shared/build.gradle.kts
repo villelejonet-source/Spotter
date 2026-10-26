@@ -15,6 +15,11 @@ kotlin {
     sourceSets {
         iosMain.dependencies {
             implementation(project(":core:data"))
+            // The screens ported to shared code so far, linked in so the iOS build proves they
+            // link; 4d puts them on screen.
+            implementation(project(":feature:today"))
+            implementation(project(":feature:history"))
+            implementation(project(":feature:progress"))
         }
     }
 }

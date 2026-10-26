@@ -2,8 +2,11 @@ package com.viktorolsson.spotter.core.ui
 
 import android.text.format.DateFormat
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.platform.LocalConfiguration
+import kotlinx.datetime.DayOfWeek
 import kotlinx.datetime.LocalDate
+import kotlinx.datetime.isoDayNumber
 import kotlinx.datetime.toJavaLocalDate
 import java.math.BigDecimal
 import java.math.RoundingMode
@@ -11,6 +14,8 @@ import java.text.NumberFormat
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import java.time.format.FormatStyle
+import java.time.format.TextStyle
+import java.time.temporal.WeekFields
 import java.util.Locale
 import java.util.concurrent.ConcurrentHashMap
 import kotlin.time.Instant
@@ -46,6 +51,12 @@ internal actual fun formatOneDecimalHalfUp(value: Double): String =
 internal actual fun formatList(items: List<String>): String =
     android.icu.text.ListFormatter.getInstance(LocalConfiguration.current.locales[0]).format(items)
 
-/** "October 2026", for screens still on `java.time` (history, until it moves to shared code). */
-fun formatMonthYear(month: java.time.YearMonth): String =
-    formatMonthYear(kotlinx.datetime.YearMonth(month.year, month.monthValue))
+@Composable
+actual fun firstDayOfWeek(): DayOfWeek {
+    val locale = LocalConfiguration.current.locales[0]
+    return remember(locale) { DayOfWeek(WeekFields.of(locale).firstDayOfWeek.value) }
+}
+
+@Composable
+actual fun narrowDayName(day: DayOfWeek): String =
+    java.time.DayOfWeek.of(day.isoDayNumber).getDisplayName(TextStyle.NARROW, LocalConfiguration.current.locales[0])

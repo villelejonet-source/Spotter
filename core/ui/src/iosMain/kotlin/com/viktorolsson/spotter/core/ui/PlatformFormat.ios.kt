@@ -1,7 +1,10 @@
 package com.viktorolsson.spotter.core.ui
 
 import androidx.compose.runtime.Composable
+import kotlinx.datetime.DayOfWeek
 import kotlinx.datetime.LocalDate
+import kotlinx.datetime.isoDayNumber
+import platform.Foundation.NSCalendar
 import platform.Foundation.NSDate
 import platform.Foundation.NSDateFormatter
 import platform.Foundation.NSDateFormatterNoStyle
@@ -89,3 +92,13 @@ internal actual fun formatOneDecimalHalfUp(value: Double): String {
 
 @Composable
 internal actual fun formatList(items: List<String>): String = NSListFormatter.localizedStringByJoiningStrings(items)
+
+// NSCalendar counts weekdays from Sunday = 1; ISO from Monday = 1.
+@Composable
+actual fun firstDayOfWeek(): DayOfWeek = DayOfWeek((NSCalendar.currentCalendar.firstWeekday.toInt() + 5) % 7 + 1)
+
+@Composable
+actual fun narrowDayName(day: DayOfWeek): String {
+    val symbols = NSDateFormatter().apply { locale = NSLocale.currentLocale }.veryShortWeekdaySymbols
+    return symbols[day.isoDayNumber % 7] as String
+}

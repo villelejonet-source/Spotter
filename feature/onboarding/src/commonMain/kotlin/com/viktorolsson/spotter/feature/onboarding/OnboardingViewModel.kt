@@ -126,6 +126,8 @@ data class OnboardingUiState(
     /** Just signed in: waiting for the first sync to see if there's a backup to restore. */
     val checkingBackup: Boolean = false,
     val signedIn: Boolean = false,
+    /** This build has cloud backup; without it there are no accounts, so no welcome screen. */
+    val cloudAvailable: Boolean = false,
 )
 
 class OnboardingViewModel(
@@ -150,6 +152,7 @@ class OnboardingViewModel(
                         // No welcome when this build has no cloud backup, or once signed in.
                         welcome = it.welcome && sync.available && !signedIn,
                         signedIn = signedIn,
+                        cloudAvailable = sync.available,
                         checkingBackup = signedIn && sync.lastSyncedAt == null && sync.error == null,
                     )
                 }
@@ -207,7 +210,7 @@ class OnboardingViewModel(
     fun back(): Boolean {
         val state = _uiState.value
         // Signed out on the first question: back returns to the welcome screen.
-        if (state.step == Step.BODY && !state.rebuild && !state.signedIn) {
+        if (state.step == Step.BODY && !state.rebuild && !state.signedIn && state.cloudAvailable) {
             _uiState.update { it.copy(welcome = true) }
             return true
         }

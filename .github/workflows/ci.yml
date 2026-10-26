@@ -71,7 +71,7 @@ jobs:
       # Caches Gradle's dependency and build caches between runs.
       - uses: gradle/actions/setup-gradle@ed408507eac070d1f99cc633dbcf757c94c7933a # v4.4.3
       # Without local.properties the build has no Supabase config, so sync is simply off.
-      - run: ./gradlew testDebugUnitTest :core:engine:jvmTest :core:model:jvmTest verifyRoborazziDebug
+      - run: ./gradlew testDebugUnitTest :core:data:testAndroidHostTest :core:engine:jvmTest :core:model:jvmTest verifyRoborazziDebug
       # On failure, keep the screenshot comparisons (actual, expected and diff images) so
       # they can be inspected without re-running locally.
       - name: Upload screenshot diffs
@@ -140,7 +140,7 @@ jobs:
           distribution: temurin
           java-version: 21
       - uses: gradle/actions/setup-gradle@ed408507eac070d1f99cc633dbcf757c94c7933a # v4.4.3
-      - run: ./gradlew :core:model:iosSimulatorArm64Test :core:engine:iosSimulatorArm64Test
+      - run: ./gradlew :core:model:iosSimulatorArm64Test :core:engine:iosSimulatorArm64Test :core:data:iosSimulatorArm64Test
 
   # The required check. `always()` makes it run (and fail) when a job above failed or was
   # cancelled; without it this job would be skipped, and a skipped check counts as passing.

@@ -17,7 +17,7 @@ pulls them the next time it opens. `src/lib/sync-writer.test.ts` checks the payl
 the app's exported Room schema, so a Room change that the web doesn't follow fails the tests.
 
 The seeded exercise catalog isn't synced; `scripts/copy-shared.mjs` copies
-`core/data/src/main/assets/exercises.json` into `src/data/` before dev, build and test.
+`core/data/catalog/exercises.json` into `src/data/` before dev, build and test.
 
 ## Privacy policy
 
@@ -76,7 +76,7 @@ Live at **https://spotter.northstarsolutions.se** (Vercel project "Spotter", Hob
 deployed 2026-10-25). Every push to `main` deploys production, and every pull request gets a
 preview deployment, unless nothing the site is built from changed: `vercel.json`'s
 `ignoreCommand` skips the build when neither `web/` nor the files it copies (the exercise
-catalog `core/data/src/main/assets/exercises.json` and `docs/play-store/privacy-policy.md`)
+catalog `core/data/catalog/exercises.json` and `docs/play-store/privacy-policy.md`)
 differs from the last deployed commit. Vercel builds on exit 1 and skips on exit 0, but
 fails the deployment on any other exit code. So when `git diff` itself fails (exit 128: the
 last deployed commit isn't in Vercel's shallow clone, or a force-push removed it),

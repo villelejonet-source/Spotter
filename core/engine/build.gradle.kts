@@ -17,7 +17,7 @@ kotlin {
 // Tests load the real exercise catalog; native test binaries can't resolve a relative path,
 // so its absolute location is generated into the test sources.
 val generateCatalogPath by tasks.registering {
-    val catalog = rootProject.layout.projectDirectory.file("core/data/src/main/assets/exercises.json").asFile.absolutePath
+    val catalog = rootProject.layout.projectDirectory.file("core/data/catalog/exercises.json").asFile.absolutePath
     val outputDir = layout.buildDirectory.dir("generated/catalogPath")
     inputs.property("catalog", catalog)
     outputs.dir(outputDir)

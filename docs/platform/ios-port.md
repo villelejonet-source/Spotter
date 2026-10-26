@@ -14,8 +14,8 @@ The port lands as a series of pull requests; Android keeps working and shipping 
 
 | # | What | State |
 |---|---|---|
-| 1 | `core/model` and `core/engine` multiplatform (JVM + iOS). `java.time` → `kotlinx.datetime` / `kotlin.time` everywhere; tests on `kotlin.test`, run on JVM and the iOS simulator in CI | This PR |
-| 2 | `core/data` multiplatform: Room KMP (connection API; `AndroidSQLiteDriver` on Android so the existing database file is untouched, `BundledSQLiteDriver` on iOS), DataStore KMP, supabase-kt with the Darwin engine, one plain-Kotlin object graph that Hilt wraps on Android | Next |
+| 1 | `core/model` and `core/engine` multiplatform (JVM + iOS). `java.time` → `kotlinx.datetime` / `kotlin.time` everywhere; tests on `kotlin.test`, run on JVM and the iOS simulator in CI | Done |
+| 2 | `core/data` multiplatform: Room KMP (connection API; `AndroidSQLiteDriver` on Android so the existing database file is untouched, `BundledSQLiteDriver` on iOS), DataStore KMP, supabase-kt with the Darwin engine, one plain-Kotlin object graph that Hilt wraps on Android | Done |
 | 3 | `iosApp/` Xcode project around a shared framework; builds and runs in the simulator; CI builds it | |
 | 4 | `core/ui` and `feature/*` on Compose Multiplatform: `R.string`/`plurals` → Compose resources, Hilt → Koin (or the phase 2 graph), Navigation Compose and lifecycle ViewModels (both multiplatform), charts (Vico has a multiplatform build) | |
 | 5 | iOS-only pieces, below | |
@@ -29,11 +29,12 @@ The port lands as a series of pull requests; Android keeps working and shipping 
   `useWriterConnection { immediateTransaction { … } }`. `MigrationTest`, `SyncTriggersTest`
   and `HostilePayloadTest` must pass unchanged in behaviour; they stay Robolectric tests on
   the Android target.
-- **Exercise catalog.** Read through a small `expect` loader: an Android asset, an iOS bundle
-  resource. The JSON stays a single file (the website copies it too).
+- **Exercise catalog.** `core/data/catalog/exercises.json`, read through `CatalogSource`: an
+  Android asset (`core/data-android` adds the folder), an iOS bundle resource. One file; the
+  website copies it too.
 - **Auth session.** Android keeps `EncryptedSharedPreferences` (`AuthStorage`); iOS uses the
-  Keychain (`KeychainSettings` from multiplatform-settings). Both are `Settings`, which is
-  what supabase-kt's session manager takes.
+  Keychain (`KeychainSettings` from multiplatform-settings). Both are `Settings` behind `SessionStore`, which is what supabase-kt's session manager
+  takes. iOS items are `AfterFirstUnlockThisDeviceOnly`.
 - **Device id** stays per install: SharedPreferences on Android, `NSUserDefaults` on iOS.
   Decide whether an iCloud-restored iPhone should keep the old id (Android deliberately
   doesn't, see `data_extraction_rules.xml`).

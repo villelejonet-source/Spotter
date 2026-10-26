@@ -20,8 +20,8 @@ system JDK). If Gradle says "Unable to locate a Java Runtime", export it:
 `export JAVA_HOME="/Applications/Android Studio.app/Contents/jbr/Contents/Home"`.
 
 ```bash
-./gradlew testDebugUnitTest :core:engine:jvmTest :core:model:jvmTest   # unit tests
-./gradlew :core:model:iosSimulatorArm64Test :core:engine:iosSimulatorArm64Test   # same tests on iOS
+./gradlew testDebugUnitTest :core:data:testAndroidHostTest :core:engine:jvmTest :core:model:jvmTest   # unit tests
+./gradlew :core:model:iosSimulatorArm64Test :core:engine:iosSimulatorArm64Test :core:data:iosSimulatorArm64Test   # same tests on iOS
 ./gradlew verifyRoborazziDebug     # screenshot tests; recordRoborazziDebug updates goldens
 ./gradlew :app:lintRelease
 ./gradlew :feature:library:testDebugUnitTest   # one module, for quick iteration
@@ -43,17 +43,19 @@ The web dev server is the `web` entry in `.claude/launch.json` (port 3000). CI
 
 - **Strings:** wording shared with the website changes in the app's `strings.xml`/`labels.xml`
   **and** `web/src/lib/labels.ts` together.
-- **Exercise catalog** (`core/data/src/main/assets/exercises.json`, also copied into the web
+- **Exercise catalog** (`core/data/catalog/exercises.json`, also copied into the web
   build): bump `EXERCISE_CATALOG_VERSION` (`core/data/.../seed/SeedExercise.kt`) whenever
   it changes so installed apps re-seed.
 - **Room:** schema is exported to `core/data/schemas`; every migration must re-create the
-  sync triggers via `SyncSchema.TriggerSpec`. Add a `MigrationTest` case.
+  sync triggers via `SyncSchema.TriggerSpec`. Add a `MigrationTest` case. Room runs on its
+  driver API (`SQLiteConnection`, not `SupportSQLiteDatabase`) so the same code runs on iOS;
+  use `db.withTransaction` from `core.data.db`, not `androidx.room`'s.
 - **Supabase:** schema changes only as new files in `supabase/migrations/`, never by editing
   an applied one. There's no staging project, so applying a migration touches production:
   ask first.
 - **Screenshot goldens** (light, dark, large text) live in `*/src/test/screenshots`. When a
   UI change is intended, re-record them and say so in the PR.
-- **Shared code** (`core/model`, `core/engine`) is Kotlin Multiplatform and also compiles for iOS:
+- **Shared code** (`core/model`, `core/engine`, `core/data`) is Kotlin Multiplatform and also compiles for iOS:
   no `java.*` there. Dates are `kotlinx.datetime.LocalDate`, times `kotlin.time.Instant`/`Duration`;
   tests use `kotlin.test` and their names can't contain `, . : ; / < > [ ]`. iOS plan:
   `docs/platform/ios-port.md`.

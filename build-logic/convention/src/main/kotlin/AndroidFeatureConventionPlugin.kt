@@ -22,7 +22,7 @@ class AndroidFeatureConventionPlugin : Plugin<Project> {
 
         dependencies {
             add("implementation", project(":core:model"))
-            add("implementation", project(":core:data"))
+            add("implementation", project(":core:data-android"))
             add("implementation", project(":core:ui"))
 
             add("implementation", libs.lib("androidx-navigation-compose"))

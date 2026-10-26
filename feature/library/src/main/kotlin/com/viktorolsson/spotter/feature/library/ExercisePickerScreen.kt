@@ -45,7 +45,7 @@ import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
-import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
+import org.koin.compose.viewmodel.koinViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.viktorolsson.spotter.core.model.BodyArea
 import com.viktorolsson.spotter.core.model.Equipment
@@ -61,7 +61,7 @@ import org.jetbrains.compose.resources.stringResource
 @Composable
 internal fun ExercisePickerRoute(
     onDone: () -> Unit,
-    viewModel: ExercisePickerViewModel = hiltViewModel(),
+    viewModel: ExercisePickerViewModel = koinViewModel(),
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     var creating by rememberSaveable { mutableStateOf(false) }

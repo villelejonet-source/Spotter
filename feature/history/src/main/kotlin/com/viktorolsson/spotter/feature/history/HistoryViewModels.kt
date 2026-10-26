@@ -19,7 +19,6 @@ import com.viktorolsson.spotter.core.model.WeightUnit
 import com.viktorolsson.spotter.core.model.WorkoutSession
 import com.viktorolsson.spotter.core.model.WorkoutSummary
 import com.viktorolsson.spotter.core.ui.localDate
-import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -35,7 +34,6 @@ import kotlinx.coroutines.launch
 import kotlinx.datetime.LocalDate
 import java.time.YearMonth
 import java.time.ZoneId
-import javax.inject.Inject
 import kotlin.time.toKotlinInstant
 
 data class HistoryUiState(
@@ -51,8 +49,7 @@ data class HistoryUiState(
 )
 
 @OptIn(ExperimentalCoroutinesApi::class)
-@HiltViewModel
-class HistoryViewModel @Inject constructor(
+class HistoryViewModel(
     historyRepository: HistoryRepository,
     preferencesRepository: UserPreferencesRepository,
 ) : ViewModel() {
@@ -98,8 +95,7 @@ data class WorkoutDetailUiState(
     val effortScale: EffortScale = EffortScale.OFF,
 )
 
-@HiltViewModel
-class WorkoutDetailViewModel @Inject constructor(
+class WorkoutDetailViewModel(
     savedStateHandle: SavedStateHandle,
     private val workoutRepository: WorkoutRepository,
     historyRepository: HistoryRepository,
@@ -137,8 +133,7 @@ data class ExerciseHistoryUiState(
     val bestVolumeKg: Double get() = logs.maxOfOrNull { it.volumeKg } ?: 0.0
 }
 
-@HiltViewModel
-class ExerciseHistoryViewModel @Inject constructor(
+class ExerciseHistoryViewModel(
     savedStateHandle: SavedStateHandle,
     exerciseRepository: ExerciseRepository,
     historyRepository: HistoryRepository,

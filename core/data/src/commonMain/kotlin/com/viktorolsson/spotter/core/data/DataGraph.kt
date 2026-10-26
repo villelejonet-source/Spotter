@@ -32,8 +32,8 @@ import kotlin.time.Clock
 
 /**
  * The data layer's objects, each made once on first use. The platform supplies storage,
- * secrets and scheduling; Android's Hilt module exposes these properties, and iOS holds one
- * graph for the app's lifetime.
+ * secrets and scheduling (`androidDataGraph`, `iosDataGraph`), and `dataModule` hands these
+ * properties to Koin on both. One graph per process.
  */
 class DataGraph(
     val database: SpotterDatabase,

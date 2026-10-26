@@ -17,7 +17,7 @@ The port lands as a series of pull requests; Android keeps working and shipping 
 | 1 | `core/model` and `core/engine` multiplatform (JVM + iOS). `java.time` → `kotlinx.datetime` / `kotlin.time` everywhere; tests on `kotlin.test`, run on JVM and the iOS simulator in CI | Done |
 | 2 | `core/data` multiplatform: Room KMP (connection API; `AndroidSQLiteDriver` on Android so the existing database file is untouched, `BundledSQLiteDriver` on iOS), DataStore KMP, supabase-kt with the Darwin engine, one plain-Kotlin object graph that Hilt wraps on Android | Done |
 | 3 | `iosApp/` Xcode project around a shared framework; builds and runs in the simulator; CI builds it | Done: seeds the catalog, opens `spotter://` links, syncs while open |
-| 4 | `core/ui` and `feature/*` on Compose Multiplatform: `R.string`/`plurals` → Compose resources, Hilt → Koin (or the phase 2 graph), Navigation Compose and lifecycle ViewModels (both multiplatform), charts (Vico has a multiplatform build) | 4a done: `core/ui` |
+| 4 | `core/ui` and `feature/*` on Compose Multiplatform: `R.string`/`plurals` → Compose resources, Hilt → Koin (or the phase 2 graph), Navigation Compose and lifecycle ViewModels (both multiplatform), charts (Vico has a multiplatform build) | 4a done: `core/ui`; 4b done: Koin |
 | 5 | iOS-only pieces, below | |
 | 6 | App Store release, below | |
 
@@ -59,6 +59,14 @@ The port lands as a series of pull requests; Android keeps working and shipping 
 - **Screenshot tests** of a multiplatform module are Android host tests
   (`src/androidHostTest`); the goldens stay in `src/test/screenshots`, and the module also answers
   to `testDebugUnitTest` / `verifyRoborazziDebug` / `recordRoborazziDebug`.
+- **Dependency injection: Koin** (Hilt is gone). `core/data`'s `dataModule(graph)` hands the
+  platform's `DataGraph` objects to Koin; Android starts Koin in `SpotterApplication` with
+  `appModules` (data, the app shell's view models, one module per feature), iOS in `SpotterIos`.
+  View models are `viewModelOf(::X)` (SavedStateHandle comes from Koin) and screens take
+  `koinViewModel()`; the WorkManager worker is `workerOf(::SyncWorker)` with Koin's worker factory.
+  `AppModulesTest` (app) fails when a view model or worker asks for something nobody provides.
+- **Lifecycle and navigation** are the JetBrains multiplatform artifacts in feature modules; on
+  Android they resolve to the same androidx versions as before.
 - **Charts.** Vico 3.3.1's `compose` and `compose-m3` artifacts are multiplatform (iOS arm64 and
   simulator), and `TrendChart` uses only their common API, so it moved as is.
 

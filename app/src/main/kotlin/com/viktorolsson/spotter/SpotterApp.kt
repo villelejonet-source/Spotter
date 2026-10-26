@@ -23,7 +23,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
-import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
+import org.koin.compose.viewmodel.koinViewModel
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -71,9 +71,9 @@ import kotlin.time.Instant
 fun SpotterApp(
     needsOnboarding: Boolean,
     navController: NavHostController = rememberNavController(),
-    activeWorkoutViewModel: ActiveWorkoutViewModel = hiltViewModel(),
-    syncChoiceViewModel: SyncChoiceViewModel = hiltViewModel(),
-    passwordRecoveryViewModel: PasswordRecoveryViewModel = hiltViewModel(),
+    activeWorkoutViewModel: ActiveWorkoutViewModel = koinViewModel(),
+    syncChoiceViewModel: SyncChoiceViewModel = koinViewModel(),
+    passwordRecoveryViewModel: PasswordRecoveryViewModel = koinViewModel(),
 ) {
     val backStackEntry by navController.currentBackStackEntryAsState()
     val currentDestination = backStackEntry?.destination

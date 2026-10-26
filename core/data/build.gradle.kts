@@ -1,7 +1,7 @@
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 
 // Shared data layer: Room schema and DAOs, repositories, cloud sync and accounts, for the
-// Android app and iOS. Android-only wiring (Hilt, WorkManager, the encrypted session store)
+// Android app and iOS. Android-only wiring (the Android DataGraph, WorkManager, the encrypted session store)
 // lives in :core:data-android.
 plugins {
     alias(libs.plugins.kotlin.multiplatform)
@@ -41,6 +41,8 @@ kotlin {
             api(libs.supabase.auth)
             implementation(libs.supabase.postgrest)
             api(libs.multiplatform.settings)
+            api(project.dependencies.platform(libs.koin.bom))
+            api(libs.koin.core)
         }
         androidMain.dependencies {
             implementation(libs.androidx.sqlite.framework)

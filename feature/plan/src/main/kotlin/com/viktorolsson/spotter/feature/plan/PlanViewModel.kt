@@ -7,13 +7,11 @@ import androidx.lifecycle.viewModelScope
 import com.viktorolsson.spotter.core.data.repository.PlanRepository
 import com.viktorolsson.spotter.core.data.repository.WorkoutRepository
 import com.viktorolsson.spotter.core.model.Plan
-import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
-import javax.inject.Inject
 
 data class PlanUiState(
     val loading: Boolean = true,
@@ -22,8 +20,7 @@ data class PlanUiState(
     val effortScale: EffortScale = EffortScale.OFF,
 )
 
-@HiltViewModel
-class PlanViewModel @Inject constructor(
+class PlanViewModel(
     planRepository: PlanRepository,
     private val workoutRepository: WorkoutRepository,
     preferencesRepository: UserPreferencesRepository,

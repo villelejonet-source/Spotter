@@ -30,7 +30,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
-import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
+import org.koin.compose.viewmodel.koinViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.viktorolsson.spotter.core.engine.PlanGenerator
 import com.viktorolsson.spotter.core.model.EffortScale
@@ -55,7 +55,7 @@ internal fun PlanRoute(
     onBack: () -> Unit,
     onRebuild: () -> Unit,
     onOpenSession: (Long) -> Unit,
-    viewModel: PlanViewModel = hiltViewModel(),
+    viewModel: PlanViewModel = koinViewModel(),
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     PlanScreen(

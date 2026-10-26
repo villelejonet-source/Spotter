@@ -35,7 +35,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
-import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
+import org.koin.compose.viewmodel.koinViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.viktorolsson.spotter.core.model.BodyWeightPoint
 import com.viktorolsson.spotter.core.model.MuscleVolume
@@ -68,7 +68,7 @@ import com.viktorolsson.spotter.core.ui.resources.action_save
 import org.jetbrains.compose.resources.stringResource
 
 @Composable
-internal fun ProgressRoute(onOpenExercise: (String) -> Unit, viewModel: ProgressViewModel = hiltViewModel()) {
+internal fun ProgressRoute(onOpenExercise: (String) -> Unit, viewModel: ProgressViewModel = koinViewModel()) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     ProgressScreen(
         state = state,

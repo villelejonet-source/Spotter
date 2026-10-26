@@ -22,7 +22,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
-import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
+import org.koin.compose.viewmodel.koinViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.viktorolsson.spotter.core.model.SetType
 import com.viktorolsson.spotter.core.model.fromKg
@@ -50,7 +50,7 @@ import org.jetbrains.compose.resources.stringResource
 import org.jetbrains.compose.resources.pluralStringResource
 
 @Composable
-internal fun ExerciseHistoryRoute(onBack: () -> Unit, viewModel: ExerciseHistoryViewModel = hiltViewModel()) {
+internal fun ExerciseHistoryRoute(onBack: () -> Unit, viewModel: ExerciseHistoryViewModel = koinViewModel()) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     ExerciseHistoryScreen(
         state = state,

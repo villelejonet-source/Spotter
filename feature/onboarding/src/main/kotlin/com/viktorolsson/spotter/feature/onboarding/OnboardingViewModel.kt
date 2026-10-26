@@ -25,7 +25,6 @@ import com.viktorolsson.spotter.core.model.UserProfile
 import com.viktorolsson.spotter.core.model.WeightUnit
 import com.viktorolsson.spotter.core.model.format
 import com.viktorolsson.spotter.core.model.parseToKg
-import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -45,7 +44,6 @@ import kotlinx.datetime.TimeZone
 import kotlinx.datetime.minus
 import kotlinx.datetime.todayIn
 import kotlinx.datetime.yearsUntil
-import javax.inject.Inject
 import kotlin.math.roundToInt
 import kotlin.time.Clock
 
@@ -130,8 +128,7 @@ data class OnboardingUiState(
     val signedIn: Boolean = false,
 )
 
-@HiltViewModel
-class OnboardingViewModel @Inject constructor(
+class OnboardingViewModel(
     savedStateHandle: SavedStateHandle,
     private val exerciseRepository: ExerciseRepository,
     private val planRepository: PlanRepository,

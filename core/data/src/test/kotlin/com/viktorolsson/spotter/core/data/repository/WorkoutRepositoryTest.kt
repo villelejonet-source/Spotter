@@ -20,9 +20,9 @@ import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
 import java.io.File
-import java.time.Clock
-import java.time.Instant
-import java.time.ZoneOffset
+import kotlin.time.Clock
+import kotlin.time.Duration.Companion.seconds
+import kotlin.time.Instant
 
 @RunWith(AndroidJUnit4::class)
 class WorkoutRepositoryTest {
@@ -183,11 +183,9 @@ class WorkoutRepositoryTest {
     }
 }
 
-class MutableClock(private var now: Instant) : Clock() {
+class MutableClock(private var now: Instant) : Clock {
     fun advanceSeconds(seconds: Long) {
-        now = now.plusSeconds(seconds)
+        now += seconds.seconds
     }
-    override fun instant(): Instant = now
-    override fun getZone() = ZoneOffset.UTC
-    override fun withZone(zone: java.time.ZoneId?) = this
+    override fun now(): Instant = now
 }

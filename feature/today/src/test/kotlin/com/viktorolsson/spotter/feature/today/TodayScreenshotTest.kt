@@ -15,7 +15,7 @@ import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.annotation.Config
 import org.robolectric.annotation.GraphicsMode
-import java.time.LocalDate
+import kotlinx.datetime.LocalDate
 
 @OptIn(ExperimentalRoborazziApi::class)
 @RunWith(AndroidJUnit4::class)
@@ -56,7 +56,7 @@ class TodayScreenshotTest {
     @Test
     fun deloadWeek_dark() = capture(
         "today_deload_dark", true,
-        TodayUiState(loading = false, hasPlan = true, nextDay = lowerA, deloadUntil = LocalDate.of(2026, 10, 9)),
+        TodayUiState(loading = false, hasPlan = true, nextDay = lowerA, deloadUntil = LocalDate(2026, 10, 9)),
     )
 
     @Test
@@ -77,12 +77,12 @@ class TodayScreenshotTest {
         "today_scheduled_light", false,
         TodayUiState(
             loading = false, hasPlan = true, nextDay = lowerA,
-            scheduledToday = scheduled(1, LocalDate.of(2026, 10, 24), "Lower A", notes = "Go heavy on squats"),
+            scheduledToday = scheduled(1, LocalDate(2026, 10, 24), "Lower A", notes = "Go heavy on squats"),
             scheduledDay = lowerA,
             upcoming = listOf(
-                scheduled(2, LocalDate.of(2026, 10, 26), "Upper A"),
-                scheduled(3, LocalDate.of(2026, 10, 28), null),
-                scheduled(4, LocalDate.of(2026, 10, 30), "Lower B"),
+                scheduled(2, LocalDate(2026, 10, 26), "Upper A"),
+                scheduled(3, LocalDate(2026, 10, 28), null),
+                scheduled(4, LocalDate(2026, 10, 30), "Lower B"),
             ),
         ),
     )
@@ -90,6 +90,6 @@ class TodayScreenshotTest {
     @Test
     fun scheduledFree_dark() = capture(
         "today_scheduled_free_dark", true,
-        TodayUiState(loading = false, hasPlan = true, nextDay = lowerA, scheduledToday = scheduled(1, LocalDate.of(2026, 10, 24), null)),
+        TodayUiState(loading = false, hasPlan = true, nextDay = lowerA, scheduledToday = scheduled(1, LocalDate(2026, 10, 24), null)),
     )
 }

@@ -34,8 +34,8 @@ import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import java.io.IOException
-import java.time.Clock
-import java.time.Instant
+import kotlin.time.Clock
+import kotlin.time.Instant
 import java.util.concurrent.TimeUnit
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -86,7 +86,7 @@ class SyncRepository @Inject constructor(
             available = accounts.isAvailable,
             account = account,
             syncing = running,
-            lastSyncedAt = cursor.lastSyncedAt.takeIf { it > 0 && cursor.userId == account?.userId }?.let(Instant::ofEpochMilli),
+            lastSyncedAt = cursor.lastSyncedAt.takeIf { it > 0 && cursor.userId == account?.userId }?.let(Instant::fromEpochMilliseconds),
             error = error,
             needsChoice = choice != null,
             fromLink = choice?.fromLink == true,
@@ -176,7 +176,7 @@ class SyncRepository @Inject constructor(
      * edited on the website. At most once a minute, so switching apps doesn't spam syncs.
      */
     fun syncOnOpen() {
-        val now = clock.millis()
+        val now = clock.now().toEpochMilliseconds()
         if (now - lastOpenSyncAt < OPEN_SYNC_INTERVAL_MS) return
         lastOpenSyncAt = now
         requestSync()

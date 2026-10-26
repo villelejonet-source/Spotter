@@ -21,9 +21,9 @@ import dagger.hilt.components.SingletonComponent
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
-import java.time.Clock
 import javax.inject.Qualifier
 import javax.inject.Singleton
+import kotlin.time.Clock
 
 /** Scope for work that must outlive any screen, such as seeding and auto-save writes. */
 @Qualifier
@@ -62,7 +62,7 @@ object DataModule {
         PreferenceDataStoreFactory.create { context.preferencesDataStoreFile("user_preferences") }
 
     @Provides
-    fun provideClock(): Clock = Clock.systemUTC()
+    fun provideClock(): Clock = Clock.System
 
     @Provides
     @Singleton

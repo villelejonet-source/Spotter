@@ -20,7 +20,8 @@ system JDK). If Gradle says "Unable to locate a Java Runtime", export it:
 `export JAVA_HOME="/Applications/Android Studio.app/Contents/jbr/Contents/Home"`.
 
 ```bash
-./gradlew testDebugUnitTest :core:engine:test :core:model:test   # unit tests
+./gradlew testDebugUnitTest :core:engine:jvmTest :core:model:jvmTest   # unit tests
+./gradlew :core:model:iosSimulatorArm64Test :core:engine:iosSimulatorArm64Test   # same tests on iOS
 ./gradlew verifyRoborazziDebug     # screenshot tests; recordRoborazziDebug updates goldens
 ./gradlew :app:lintRelease
 ./gradlew :feature:library:testDebugUnitTest   # one module, for quick iteration
@@ -52,6 +53,10 @@ The web dev server is the `web` entry in `.claude/launch.json` (port 3000). CI
   ask first.
 - **Screenshot goldens** (light, dark, large text) live in `*/src/test/screenshots`. When a
   UI change is intended, re-record them and say so in the PR.
+- **Shared code** (`core/model`, `core/engine`) is Kotlin Multiplatform and also compiles for iOS:
+  no `java.*` there. Dates are `kotlinx.datetime.LocalDate`, times `kotlin.time.Instant`/`Duration`;
+  tests use `kotlin.test` and their names can't contain `, . : ; / < > [ ]`. iOS plan:
+  `docs/platform/ios-port.md`.
 - **Compose text fields** take their value from synchronous state (`mutableStateOf` in the
   ViewModel), never from a flow that passes through async work: that drops keystrokes.
 - **CI actions** are pinned to commit SHAs with the tag in a comment.

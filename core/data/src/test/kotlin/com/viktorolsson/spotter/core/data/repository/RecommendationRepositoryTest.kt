@@ -19,6 +19,10 @@ import com.viktorolsson.spotter.core.model.RecommendationType
 import com.viktorolsson.spotter.core.model.SplitType
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.runTest
+import kotlinx.datetime.DateTimeUnit
+import kotlinx.datetime.TimeZone
+import kotlinx.datetime.plus
+import kotlinx.datetime.todayIn
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
@@ -26,7 +30,7 @@ import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
 import java.io.File
-import java.time.Instant
+import kotlin.time.Instant
 
 @RunWith(AndroidJUnit4::class)
 class RecommendationRepositoryTest {
@@ -67,7 +71,7 @@ class RecommendationRepositoryTest {
             ex("barbell-bench-press", 0), ex("barbell-row", 1), ex("back-squat", 2), ex("romanian-deadlift", 3),
             ex("overhead-press", 4), ex("barbell-hip-thrust", 5),
         )
-        return Plan(0, "Test", SplitType.FULL_BODY, Goal.HYPERTROPHY, clock.instant(), listOf(PlanDay(0, 0, "Full A", day), PlanDay(0, 1, "Full B", day)))
+        return Plan(0, "Test", SplitType.FULL_BODY, Goal.HYPERTROPHY, clock.now(), listOf(PlanDay(0, 0, "Full A", day), PlanDay(0, 1, "Full B", day)))
     }
 
     /**
@@ -139,7 +143,7 @@ class RecommendationRepositoryTest {
     @Test
     fun deloadWeekLightensPlannedWorkoutsAndIsIgnoredByProgression() = runTest {
         stalledBenchWorkout(reps = 8)
-        prefs.setDeloadUntil(java.time.LocalDate.now(clock).plusDays(6))
+        prefs.setDeloadUntil(clock.todayIn(TimeZone.UTC).plus(6, DateTimeUnit.DAY))
         val deloadDay = plans.observeNextDay().first()!!
         val deloadSession = workouts.getSession(workouts.startPlannedWorkout(deloadDay.id))!!
         val bench = deloadSession.exercises.first { it.exercise.id == "barbell-bench-press" }
@@ -165,7 +169,7 @@ class RecommendationRepositoryTest {
         val deload = recommendations.observeActive().first().single { it.type == RecommendationType.DELOAD }
         recommendations.apply(deload.id)
         val until = prefs.preferences.first().deloadUntil!!
-        assertEquals(java.time.LocalDate.now(clock).plusDays(6), until)
+        assertEquals(clock.todayIn(TimeZone.UTC).plus(6, DateTimeUnit.DAY), until)
 
         // Once the week is over, another deload isn't suggested straight away.
         clock.advanceSeconds(8 * 86_400L)

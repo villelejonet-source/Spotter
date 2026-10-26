@@ -9,10 +9,11 @@ import com.viktorolsson.spotter.core.data.repository.PlanRepository
 import com.viktorolsson.spotter.core.data.repository.RecommendationRepository
 import com.viktorolsson.spotter.core.data.seed.ExerciseSeeder
 import kotlinx.coroutines.flow.first
-import java.time.Clock
-import java.time.Duration
 import javax.inject.Inject
 import javax.inject.Singleton
+import kotlin.time.Clock
+import kotlin.time.Duration
+import kotlin.time.Duration.Companion.days
 
 /**
  * The work the app does once after launch, kept cheap for an installed, up-to-date app:
@@ -35,8 +36,8 @@ class StartupMaintenance @Inject constructor(
             plans.convertHoldsToSeconds()
             dataStore.edit { it[HOLDS_CONVERTED] = true }
         }
-        val now = clock.millis()
-        if (now - (marks[RECOMMENDATIONS_REFRESHED_AT] ?: 0L) >= REFRESH_INTERVAL.toMillis()) {
+        val now = clock.now().toEpochMilliseconds()
+        if (now - (marks[RECOMMENDATIONS_REFRESHED_AT] ?: 0L) >= REFRESH_INTERVAL.inWholeMilliseconds) {
             recommendations.refresh()
             dataStore.edit { it[RECOMMENDATIONS_REFRESHED_AT] = now }
         }
@@ -45,6 +46,6 @@ class StartupMaintenance @Inject constructor(
     private companion object {
         val HOLDS_CONVERTED = booleanPreferencesKey("maintenance_holds_converted")
         val RECOMMENDATIONS_REFRESHED_AT = longPreferencesKey("maintenance_recommendations_refreshed_at")
-        val REFRESH_INTERVAL: Duration = Duration.ofDays(1)
+        val REFRESH_INTERVAL: Duration = 1.days
     }
 }

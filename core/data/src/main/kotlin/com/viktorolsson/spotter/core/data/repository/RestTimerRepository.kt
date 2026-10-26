@@ -9,8 +9,8 @@ import com.viktorolsson.spotter.core.model.RestTimer
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.map
-import java.time.Clock
-import java.time.Instant
+import kotlin.time.Clock
+import kotlin.time.Instant
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -25,13 +25,13 @@ class RestTimerRepository @Inject constructor(
 ) {
     val restTimer: Flow<RestTimer?> = dataStore.data.map { prefs ->
         val endsAt = prefs[END_EPOCH_MS] ?: return@map null
-        RestTimer(Instant.ofEpochMilli(endsAt), prefs[TOTAL_SECONDS] ?: 0)
+        RestTimer(Instant.fromEpochMilliseconds(endsAt), prefs[TOTAL_SECONDS] ?: 0)
     }.distinctUntilChanged()
 
     suspend fun start(seconds: Int) {
         if (seconds <= 0) return stop()
         dataStore.edit {
-            it[END_EPOCH_MS] = clock.millis() + seconds * 1000L
+            it[END_EPOCH_MS] = clock.now().toEpochMilliseconds() + seconds * 1000L
             it[TOTAL_SECONDS] = seconds
         }
     }
@@ -41,7 +41,7 @@ class RestTimerRepository @Inject constructor(
         dataStore.edit {
             val endsAt = it[END_EPOCH_MS] ?: return@edit
             val newEnd = endsAt + seconds * 1000L
-            if (newEnd <= clock.millis()) {
+            if (newEnd <= clock.now().toEpochMilliseconds()) {
                 it.remove(END_EPOCH_MS)
                 it.remove(TOTAL_SECONDS)
             } else {

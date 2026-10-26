@@ -29,21 +29,25 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.drop
 import kotlinx.coroutines.flow.filter
-import kotlinx.coroutines.flow.map
-import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import java.time.Clock
-import java.time.LocalDate
-import java.time.Period
+import kotlinx.datetime.DateTimeUnit
+import kotlinx.datetime.LocalDate
+import kotlinx.datetime.TimeZone
+import kotlinx.datetime.minus
+import kotlinx.datetime.todayIn
+import kotlinx.datetime.yearsUntil
 import javax.inject.Inject
 import kotlin.math.roundToInt
+import kotlin.time.Clock
 
 enum class Step { BODY, GOAL, EXPERIENCE, DAYS, LENGTH, EQUIPMENT, FOCUS, LIMITATIONS, LIFTS, SUMMARY }
 
@@ -246,8 +250,8 @@ class OnboardingViewModel @Inject constructor(
                 PlanInput(
                     profile = profile,
                     library = library,
-                    today = LocalDate.now(clock),
-                    now = clock.instant(),
+                    today = clock.todayIn(TimeZone.UTC),
+                    now = clock.now(),
                     knownLifts = state.answers.knownLifts(),
                     splitOverride = state.splitOverride,
                 ),
@@ -259,7 +263,7 @@ class OnboardingViewModel @Inject constructor(
     private fun Answers.toProfile(): UserProfile? = UserProfile(
         sex = sex ?: return null,
         heightCm = heightCmValue ?: return null,
-        birthDate = LocalDate.now(clock).minusYears((ageYears ?: return null).toLong()),
+        birthDate = clock.todayIn(TimeZone.UTC).minus((ageYears ?: return null).toLong(), DateTimeUnit.YEAR),
         bodyWeightKg = weightKg ?: return null,
         units = unit,
         experience = experience ?: return null,
@@ -277,7 +281,7 @@ class OnboardingViewModel @Inject constructor(
         return Answers(
             sex = sex,
             imperial = imperial,
-            age = Period.between(birthDate, LocalDate.now(clock)).years.toString(),
+            age = birthDate.yearsUntil(clock.todayIn(TimeZone.UTC)).toString(),
             heightCm = heightCm.roundToInt().toString(),
             heightFt = (totalInches / 12).toString(),
             heightIn = (totalInches % 12).toString(),

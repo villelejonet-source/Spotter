@@ -9,11 +9,11 @@ import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
-import java.time.Clock
-import java.time.Instant
-import java.time.OffsetDateTime
 import javax.inject.Inject
 import javax.inject.Singleton
+import kotlin.time.Clock
+import kotlin.time.Duration.Companion.seconds
+import kotlin.time.Instant
 
 /** Where sync left off, per signed-in user. */
 data class SyncCursor(
@@ -124,11 +124,11 @@ class SyncEngine(
 
         // Push: anything changed locally since the last push (rows just pulled are skipped
         // by the server, which only keeps strictly newer versions).
-        val pushStartedAt = clock.millis()
+        val pushStartedAt = clock.now().toEpochMilliseconds()
         val changes = store.changesSince(cursor.pushedUpTo)
         changes.chunked(PAGE).forEach { remote.push(it) }
 
-        cursors.save(SyncCursor(userId, newPulledUpTo, pushStartedAt, clock.millis()))
+        cursors.save(SyncCursor(userId, newPulledUpTo, pushStartedAt, clock.now().toEpochMilliseconds()))
         checkIn()
         return SyncOutcome.Done(pulled = pulled, pushed = changes.size)
     }
@@ -149,9 +149,9 @@ class SyncEngine(
     }
 
     /** Re-reads a couple of minutes back, so rows committed slightly out of order aren't missed. */
-    private fun withOverlap(serverTime: String): String = parse(serverTime).minusSeconds(120).toString()
+    private fun withOverlap(serverTime: String): String = (parse(serverTime) - 120.seconds).toString()
 
-    private fun parse(serverTime: String): Instant = OffsetDateTime.parse(serverTime).toInstant()
+    private fun parse(serverTime: String): Instant = Instant.parse(serverTime)
 
     private companion object {
         const val PAGE = 500

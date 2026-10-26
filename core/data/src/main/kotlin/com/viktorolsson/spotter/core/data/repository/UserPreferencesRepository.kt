@@ -15,7 +15,7 @@ import com.viktorolsson.spotter.core.model.WeightUnit
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
-import java.time.LocalDate
+import kotlinx.datetime.LocalDate
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -37,7 +37,7 @@ class UserPreferencesRepository @Inject constructor(
                 if (prefs[Keys.LOG_RIR] == true) EffortScale.RIR else defaults.effortScale,
             ),
             onboardingCompleted = prefs[Keys.ONBOARDING_COMPLETED] ?: defaults.onboardingCompleted,
-            deloadUntil = prefs[Keys.DELOAD_UNTIL]?.let(LocalDate::ofEpochDay),
+            deloadUntil = prefs[Keys.DELOAD_UNTIL]?.let(LocalDate::fromEpochDays),
         )
     }
 
@@ -68,7 +68,7 @@ class UserPreferencesRepository @Inject constructor(
     }
 
     suspend fun setDeloadUntil(date: LocalDate?) {
-        dataStore.edit { if (date == null) it.remove(Keys.DELOAD_UNTIL) else it[Keys.DELOAD_UNTIL] = date.toEpochDay() }
+        dataStore.edit { if (date == null) it.remove(Keys.DELOAD_UNTIL) else it[Keys.DELOAD_UNTIL] = date.toEpochDays() }
     }
 
     suspend fun setOnboardingCompleted(done: Boolean) {

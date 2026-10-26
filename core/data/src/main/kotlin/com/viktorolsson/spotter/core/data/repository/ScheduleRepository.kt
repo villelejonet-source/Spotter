@@ -6,10 +6,14 @@ import com.viktorolsson.spotter.core.model.ScheduledWorkout
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
-import java.time.Clock
-import java.time.LocalDate
+import kotlinx.datetime.DateTimeUnit
+import kotlinx.datetime.LocalDate
+import kotlinx.datetime.TimeZone
+import kotlinx.datetime.plus
+import kotlinx.datetime.todayIn
 import javax.inject.Inject
 import javax.inject.Singleton
+import kotlin.time.Clock
 
 /** Workouts planned on dates (made on the website's calendar and synced here). */
 @Singleton
@@ -20,8 +24,8 @@ class ScheduleRepository @Inject constructor(
 ) {
     /** Scheduled workouts from today through the next [days] - 1 days. */
     fun observeUpcoming(days: Long = 7): Flow<List<ScheduledWorkout>> {
-        val today = LocalDate.now(clock)
-        return dao.observeRange(today, today.plusDays(days - 1)).map { rows -> rows.map(ScheduledSessionRow::toModel) }
+        val today = clock.todayIn(TimeZone.UTC)
+        return dao.observeRange(today, today.plus(days - 1, DateTimeUnit.DAY)).map { rows -> rows.map(ScheduledSessionRow::toModel) }
     }
 
     /**

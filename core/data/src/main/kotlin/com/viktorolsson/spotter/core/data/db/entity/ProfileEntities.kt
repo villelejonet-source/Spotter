@@ -11,7 +11,7 @@ import com.viktorolsson.spotter.core.model.Goal
 import com.viktorolsson.spotter.core.model.Limitation
 import com.viktorolsson.spotter.core.model.Sex
 import com.viktorolsson.spotter.core.model.WeightUnit
-import java.time.LocalDate
+import kotlinx.datetime.LocalDate
 
 /** Single-user app: the profile is always the row with [id] = [SINGLETON_ID]. */
 @Entity(tableName = "user_profile", indices = [Index("syncId", unique = true), Index("updatedAt")])

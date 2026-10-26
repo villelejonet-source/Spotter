@@ -17,6 +17,9 @@ import com.viktorolsson.spotter.core.model.Sex
 import com.viktorolsson.spotter.core.model.WeightUnit
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.runTest
+import kotlinx.datetime.DateTimeUnit
+import kotlinx.datetime.LocalDate
+import kotlinx.datetime.plus
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
@@ -24,8 +27,7 @@ import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
 import java.io.File
-import java.time.Instant
-import java.time.LocalDate
+import kotlin.time.Instant
 
 @RunWith(AndroidJUnit4::class)
 class HistoryRepositoryTest {
@@ -130,16 +132,16 @@ class HistoryRepositoryTest {
     fun bodyWeightKeepsOneEntryPerDayAndUpdatesTheProfile() = runTest {
         db.userProfileDao().upsert(
             UserProfileEntity(
-                sex = Sex.MALE, heightCm = 180.0, birthDate = LocalDate.of(1990, 1, 1), bodyWeightKg = 85.0,
+                sex = Sex.MALE, heightCm = 180.0, birthDate = LocalDate(1990, 1, 1), bodyWeightKg = 85.0,
                 units = WeightUnit.KG, experience = ExperienceLevel.INTERMEDIATE, goal = Goal.STRENGTH, daysPerWeek = 3,
                 sessionLengthMinutes = 60, equipment = setOf(Equipment.BARBELL), focusAreas = emptySet(), limitations = emptySet(),
             ),
         )
         val repo = BodyWeightRepository(db, db.userProfileDao())
-        val day = LocalDate.of(2026, 10, 1)
+        val day = LocalDate(2026, 10, 1)
         repo.log(day, 84.0)
         repo.log(day, 83.5)
-        repo.log(day.plusDays(2), 83.0)
+        repo.log(day.plus(2, DateTimeUnit.DAY), 83.0)
         val trend = repo.observeTrend().first()
         assertEquals(listOf(83.5, 83.0), trend.map { it.weightKg })
         assertEquals(83.25, trend.last().sevenDayAverageKg, 0.001)

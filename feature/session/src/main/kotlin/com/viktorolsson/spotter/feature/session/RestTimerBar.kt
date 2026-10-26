@@ -19,7 +19,7 @@ import androidx.compose.ui.res.stringResource
 import com.viktorolsson.spotter.core.ui.theme.Spacing
 import com.viktorolsson.spotter.core.model.RestTimer
 import com.viktorolsson.spotter.core.ui.formatClock
-import java.time.Instant
+import kotlin.time.Instant
 
 @Composable
 internal fun RestTimerBar(

@@ -5,19 +5,19 @@ import com.viktorolsson.spotter.core.model.BodyArea
 import com.viktorolsson.spotter.core.model.Equipment
 import com.viktorolsson.spotter.core.model.Limitation
 import com.viktorolsson.spotter.core.model.Muscle
-import java.time.Instant
-import java.time.LocalDate
+import kotlin.time.Instant
+import kotlinx.datetime.LocalDate
 
 /**
  * Enums are stored by name (Room's default). Enum collections are stored as a
  * comma-separated list of names, which keeps rows readable in the DB inspector.
  */
 class Converters {
-    @TypeConverter fun instantToEpochMillis(value: Instant?): Long? = value?.toEpochMilli()
-    @TypeConverter fun epochMillisToInstant(value: Long?): Instant? = value?.let(Instant::ofEpochMilli)
+    @TypeConverter fun instantToEpochMillis(value: Instant?): Long? = value?.toEpochMilliseconds()
+    @TypeConverter fun epochMillisToInstant(value: Long?): Instant? = value?.let(Instant::fromEpochMilliseconds)
 
-    @TypeConverter fun localDateToEpochDay(value: LocalDate?): Long? = value?.toEpochDay()
-    @TypeConverter fun epochDayToLocalDate(value: Long?): LocalDate? = value?.let(LocalDate::ofEpochDay)
+    @TypeConverter fun localDateToEpochDay(value: LocalDate?): Long? = value?.toEpochDays()
+    @TypeConverter fun epochDayToLocalDate(value: Long?): LocalDate? = value?.let(LocalDate::fromEpochDays)
 
     @TypeConverter fun musclesToString(value: List<Muscle>): String = value.joinNames()
     @TypeConverter fun stringToMuscles(value: String): List<Muscle> = value.splitNames(Muscle::valueOf)

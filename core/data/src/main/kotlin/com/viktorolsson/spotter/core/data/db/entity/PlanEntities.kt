@@ -8,7 +8,7 @@ import androidx.room.PrimaryKey
 import com.viktorolsson.spotter.core.model.Goal
 import com.viktorolsson.spotter.core.model.ProgressionRule
 import com.viktorolsson.spotter.core.model.SplitType
-import java.time.Instant
+import kotlin.time.Instant
 
 @Entity(tableName = "plan", indices = [Index("syncId", unique = true), Index("updatedAt"), Index("isActive")])
 data class PlanEntity(

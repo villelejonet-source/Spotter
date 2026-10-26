@@ -26,8 +26,8 @@ import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
 import java.io.File
-import java.time.Instant
-import java.time.LocalDate
+import kotlin.time.Instant
+import kotlinx.datetime.LocalDate
 
 @RunWith(AndroidJUnit4::class)
 class ExerciseDaoTest {
@@ -90,7 +90,7 @@ class ExerciseDaoTest {
         val profile = UserProfileEntity(
             sex = Sex.FEMALE,
             heightCm = 168.0,
-            birthDate = LocalDate.of(1997, 5, 14),
+            birthDate = LocalDate(1997, 5, 14),
             bodyWeightKg = 62.5,
             units = WeightUnit.KG,
             experience = ExperienceLevel.INTERMEDIATE,
@@ -115,7 +115,7 @@ class ExerciseDaoTest {
         val sessionId = db.openHelper.writableDatabase.let { sql ->
             sql.execSQL(
                 "INSERT INTO workout_session (startedAt, endedAt, planDayId, notes, perceivedDifficulty) VALUES (?, NULL, NULL, NULL, NULL)",
-                arrayOf<Any>(Instant.parse("2026-10-03T10:00:00Z").toEpochMilli()),
+                arrayOf<Any>(Instant.parse("2026-10-03T10:00:00Z").toEpochMilliseconds()),
             )
             sql.query("SELECT last_insert_rowid()").use { it.moveToFirst(); it.getLong(0) }
         }

@@ -6,7 +6,7 @@ import androidx.room.Query
 import com.viktorolsson.spotter.core.data.db.entity.RecommendationEntity
 import com.viktorolsson.spotter.core.model.RecommendationStatus
 import kotlinx.coroutines.flow.Flow
-import java.time.Instant
+import kotlin.time.Instant
 
 @Dao
 interface RecommendationDao {

@@ -20,7 +20,8 @@ import com.viktorolsson.spotter.core.model.SetType
 import com.viktorolsson.spotter.core.model.SplitType
 import com.viktorolsson.spotter.core.model.WorkoutSession
 import com.viktorolsson.spotter.core.model.WorkoutSet
-import java.time.Instant
+import kotlin.time.Duration.Companion.seconds
+import kotlin.time.Instant
 
 /** Sample data for previews and screenshot tests. Dates are fixed so goldens are stable. */
 object PreviewData {
@@ -50,7 +51,7 @@ object PreviewData {
     )
 
     fun set(id: Long, position: Int, kg: Double?, reps: Int?, type: SetType = SetType.WORKING, completed: Boolean = false, rir: Int? = null) =
-        WorkoutSet(id, position, kg, reps, rir, type, if (completed) startedAt.plusSeconds(600L * position) else null, null)
+        WorkoutSet(id, position, kg, reps, rir, type, if (completed) startedAt + (600L * position).seconds else null, null)
 
     /** Bench press: two warm-ups done, one working set done, two to go. */
     fun bench(id: Long = 1, completedWorking: Int = 1, reason: ProgressionReason? = ProgressionReason.ADD_REPS) = SessionExercise(
@@ -104,7 +105,7 @@ object PreviewData {
     ) = WorkoutSession(
         id = id,
         startedAt = startedAt,
-        endedAt = if (finished) startedAt.plusSeconds(54 * 60) else null,
+        endedAt = if (finished) startedAt + (54 * 60).seconds else null,
         notes = notes,
         exercises = exercises,
         planDayName = dayName,

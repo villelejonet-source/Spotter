@@ -17,7 +17,7 @@ import com.viktorolsson.spotter.core.data.db.entity.SessionWithExercises
 import com.viktorolsson.spotter.core.data.db.entity.SetEntryEntity
 import com.viktorolsson.spotter.core.data.db.entity.WorkoutSessionEntity
 import kotlinx.coroutines.flow.Flow
-import java.time.Instant
+import kotlin.time.Instant
 
 @Dao
 interface WorkoutDao {

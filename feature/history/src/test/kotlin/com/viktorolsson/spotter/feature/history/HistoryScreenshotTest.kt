@@ -1,8 +1,8 @@
 package com.viktorolsson.spotter.feature.history
 
 import androidx.compose.runtime.Composable
-import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.github.takahirom.roborazzi.ExperimentalRoborazziApi
 import com.github.takahirom.roborazzi.RobolectricDeviceQualifiers
 import com.github.takahirom.roborazzi.RoborazziComposeOptions
@@ -16,14 +16,16 @@ import com.viktorolsson.spotter.core.model.WorkoutSummary
 import com.viktorolsson.spotter.core.ui.PreviewData
 import com.viktorolsson.spotter.core.ui.localDate
 import com.viktorolsson.spotter.core.ui.theme.SpotterTheme
+import kotlinx.datetime.LocalDate
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.annotation.Config
 import org.robolectric.annotation.GraphicsMode
-import java.time.Duration
-import java.time.LocalDate
 import java.time.YearMonth
+import kotlin.time.Duration
+import kotlin.time.Duration.Companion.days
+import kotlin.time.Duration.Companion.seconds
 
 @OptIn(ExperimentalRoborazziApi::class)
 @RunWith(AndroidJUnit4::class)
@@ -35,7 +37,7 @@ class HistoryScreenshotTest {
     @get:Rule
     val compose = createComposeRule()
 
-    private val today = LocalDate.of(2026, 10, 24)
+    private val today = LocalDate(2026, 10, 24)
     private val month = YearMonth.of(2026, 10)
 
     /** Five sessions across October 2026 with different volumes, for the heat-map. */
@@ -46,8 +48,8 @@ class HistoryScreenshotTest {
         PreviewData.session(4, dayName = "Upper B"),
         PreviewData.session(5, dayName = "Lower B", exercises = listOf(PreviewData.rows(id = 50))),
     ).mapIndexed { i, s ->
-        val start = PreviewData.startedAt.plus(Duration.ofDays(listOf(0L, 2L, 5L, 9L, 14L)[i]))
-        s.copy(startedAt = start, endedAt = start.plusSeconds(3000L + i * 400))
+        val start = PreviewData.startedAt.plus((listOf(0L, 2L, 5L, 9L, 14L)[i]).days)
+        s.copy(startedAt = start, endedAt = start + (3000L + i * 400).seconds)
     }.sortedByDescending { it.startedAt }
 
     private fun historyState(sessions: List<WorkoutSession>) = HistoryUiState(
@@ -116,7 +118,7 @@ class HistoryScreenshotTest {
         val kg = 70.0 + i * 2.5
         ExerciseSessionLog(
             sessionId = i.toLong() + 1,
-            date = PreviewData.startedAt.plus(Duration.ofDays(i * 4L)),
+            date = PreviewData.startedAt.plus((i * 4L).days),
             sets = listOf(
                 PreviewData.set(i * 10L + 1, 0, 40.0, 8, SetType.WARMUP, completed = true),
                 PreviewData.set(i * 10L + 2, 1, kg, 10, completed = true),

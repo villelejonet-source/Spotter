@@ -12,11 +12,14 @@ import com.viktorolsson.spotter.core.model.WeightUnit
 import com.viktorolsson.spotter.core.model.format
 import com.viktorolsson.spotter.core.model.fromKg
 import com.viktorolsson.spotter.core.model.label
+import kotlinx.datetime.LocalDate
+import kotlinx.datetime.TimeZone
+import kotlinx.datetime.toJavaLocalDate
+import kotlinx.datetime.toKotlinLocalDate
+import kotlinx.datetime.toLocalDateTime
 import java.math.BigDecimal
 import java.math.RoundingMode
 import java.text.NumberFormat
-import java.time.Instant
-import java.time.LocalDate
 import java.time.YearMonth
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
@@ -24,6 +27,8 @@ import java.time.format.FormatStyle
 import java.util.Locale
 import java.util.concurrent.ConcurrentHashMap
 import kotlin.math.roundToLong
+import kotlin.time.Instant
+import kotlin.time.toJavaInstant
 
 // Numbers and units. Every user-facing string goes through a resource so wording
 // and plurals live in one place.
@@ -117,7 +122,7 @@ fun formatSessionCount(count: Int): String = pluralStringResource(R.plurals.sess
 // Dates. Patterns come from the locale (via date-time skeletons), so "Sat 3 Oct" is
 // "Sat, Oct 3" for a US phone without any screen caring.
 
-fun Instant.localDate(): LocalDate = atZone(ZoneId.systemDefault()).toLocalDate()
+fun Instant.localDate(): LocalDate = toLocalDateTime(TimeZone.currentSystemDefault()).date
 
 private val formatters = ConcurrentHashMap<String, DateTimeFormatter>()
 
@@ -130,13 +135,13 @@ private fun forSkeleton(skeleton: String): DateTimeFormatter {
 }
 
 /** "Sat 3 Oct" */
-fun formatShortDate(date: LocalDate): String = date.format(forSkeleton("EEEdMMM"))
+fun formatShortDate(date: LocalDate): String = date.toJavaLocalDate().format(forSkeleton("EEEdMMM"))
 
 /** "3 Oct 2026" */
-fun formatMediumDate(date: LocalDate): String = date.format(forSkeleton("dMMMy"))
+fun formatMediumDate(date: LocalDate): String = date.toJavaLocalDate().format(forSkeleton("dMMMy"))
 
 /** "3 Oct", for chart axes. */
-fun formatAxisDate(date: LocalDate): String = date.format(forSkeleton("dMMM"))
+fun formatAxisDate(date: LocalDate): String = date.toJavaLocalDate().format(forSkeleton("dMMM"))
 
 /** "October 2026" */
 fun formatMonthYear(month: YearMonth): String = month.format(forSkeleton("yMMMM"))
@@ -144,7 +149,7 @@ fun formatMonthYear(month: YearMonth): String = month.format(forSkeleton("yMMMM"
 /** "Sat 3 Oct, 14:05" */
 @Composable
 fun formatShortDateTime(instant: Instant): String {
-    val local = instant.atZone(ZoneId.systemDefault())
+    val local = instant.toJavaInstant().atZone(ZoneId.systemDefault())
     val time = local.format(DateTimeFormatter.ofLocalizedTime(FormatStyle.SHORT).withLocale(Locale.getDefault()))
-    return stringResource(R.string.date_at_time, formatShortDate(local.toLocalDate()), time)
+    return stringResource(R.string.date_at_time, formatShortDate(local.toLocalDate().toKotlinLocalDate()), time)
 }

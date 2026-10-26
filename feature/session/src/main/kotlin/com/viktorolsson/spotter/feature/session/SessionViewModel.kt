@@ -29,7 +29,6 @@ import com.viktorolsson.spotter.core.model.WorkoutSet
 import com.viktorolsson.spotter.core.model.isTimed
 import com.viktorolsson.spotter.core.model.parseToKg
 import dagger.hilt.android.lifecycle.HiltViewModel
-import javax.inject.Inject
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.Job
@@ -50,6 +49,11 @@ import kotlinx.coroutines.flow.onStart
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.datetime.TimeZone
+import kotlinx.datetime.todayIn
+import kotlinx.datetime.yearsUntil
+import javax.inject.Inject
+import kotlin.time.Clock
 
 enum class SetField { WEIGHT, REPS, EFFORT }
 
@@ -262,7 +266,7 @@ class SessionViewModel @Inject constructor(
 
     /** Adds a warm-up ramp; lifters 50+ get a longer one. */
     fun addWarmUps(exerciseId: Long) = launch {
-        val age = profileRepository.get()?.birthDate?.let { java.time.Period.between(it, java.time.LocalDate.now()).years }
+        val age = profileRepository.get()?.birthDate?.let { it.yearsUntil(Clock.System.todayIn(TimeZone.currentSystemDefault())) }
         workoutRepository.addWarmUps(exerciseId, extended = (age ?: 0) >= 50)
     }
 

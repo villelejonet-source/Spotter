@@ -111,7 +111,7 @@ internal fun TodayScreen(
 }
 
 @Composable
-private fun DeloadCard(until: java.time.LocalDate) {
+private fun DeloadCard(until: kotlinx.datetime.LocalDate) {
     Card(
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.tertiaryContainer),
         modifier = Modifier.fillMaxWidth(),

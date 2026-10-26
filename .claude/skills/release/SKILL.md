@@ -44,7 +44,7 @@ On a branch `release/android-X.Y.Z`:
 ## 3. Check and build
 
 ```bash
-./gradlew testDebugUnitTest :core:engine:test :core:model:test verifyRoborazziDebug :app:lintRelease
+./gradlew testDebugUnitTest :core:engine:jvmTest :core:model:jvmTest verifyRoborazziDebug :app:lintRelease
 ./gradlew bundleRelease
 ```
 

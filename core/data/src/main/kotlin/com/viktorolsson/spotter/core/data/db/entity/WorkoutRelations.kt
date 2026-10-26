@@ -52,14 +52,14 @@ data class ExerciseHistorySet(
     @Embedded val set: SetEntryEntity,
     val sessionId: Long,
     val exerciseId: String,
-    val startedAt: java.time.Instant,
+    val startedAt: kotlin.time.Instant,
 )
 
 /** One (exercise, finished session) pair; the session's start and whether it was a deload. */
 data class ExerciseSessionRef(
     val exerciseId: String,
     val sessionId: Long,
-    val startedAt: java.time.Instant,
+    val startedAt: kotlin.time.Instant,
     val isDeload: Boolean,
 )
 
@@ -67,7 +67,7 @@ data class ExerciseSessionRef(
 data class DatedSet(
     @Embedded val set: SetEntryEntity,
     val sessionId: Long,
-    val startedAt: java.time.Instant,
+    val startedAt: kotlin.time.Instant,
 )
 
 data class RecordWithExercise(
@@ -79,6 +79,6 @@ data class RecordWithExercise(
 /** An exercise the user has logged, with when it was last done. */
 data class LoggedExercise(
     @Embedded val exercise: ExerciseEntity,
-    val lastDone: java.time.Instant,
+    val lastDone: kotlin.time.Instant,
     val sessionCount: Int,
 )

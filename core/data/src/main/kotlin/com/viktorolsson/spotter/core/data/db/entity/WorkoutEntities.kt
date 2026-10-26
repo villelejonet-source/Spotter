@@ -10,7 +10,7 @@ import com.viktorolsson.spotter.core.model.ProgressionReason
 import com.viktorolsson.spotter.core.model.RecommendationStatus
 import com.viktorolsson.spotter.core.model.RecommendationType
 import com.viktorolsson.spotter.core.model.SetType
-import java.time.Instant
+import kotlin.time.Instant
 
 /** A session with [endedAt] = null is in progress; the stopwatch is derived from [startedAt]. */
 @Entity(

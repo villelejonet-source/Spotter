@@ -13,11 +13,11 @@ import com.viktorolsson.spotter.core.data.db.toModel
 import com.viktorolsson.spotter.core.data.db.toPrevious
 import com.viktorolsson.spotter.core.engine.Deload
 import com.viktorolsson.spotter.core.engine.ExerciseBests
-import com.viktorolsson.spotter.core.engine.WarmUps
 import com.viktorolsson.spotter.core.engine.LoggedSet
 import com.viktorolsson.spotter.core.engine.PersonalRecords
 import com.viktorolsson.spotter.core.engine.Progression
 import com.viktorolsson.spotter.core.engine.ProgressionInput
+import com.viktorolsson.spotter.core.engine.WarmUps
 import com.viktorolsson.spotter.core.engine.WeightConversion
 import com.viktorolsson.spotter.core.model.PreviousSet
 import com.viktorolsson.spotter.core.model.SetType
@@ -25,11 +25,13 @@ import com.viktorolsson.spotter.core.model.WorkoutSession
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
-import java.time.Clock
-import java.time.Instant
-import java.time.LocalDate
+import kotlinx.datetime.LocalDate
+import kotlinx.datetime.TimeZone
+import kotlinx.datetime.todayIn
 import javax.inject.Inject
 import javax.inject.Singleton
+import kotlin.time.Clock
+import kotlin.time.Instant
 
 /**
  * Every edit is written straight to Room, so an in-progress workout survives a
@@ -56,7 +58,7 @@ class WorkoutRepository @Inject constructor(
     suspend fun startEmptyWorkout(): Long = db.withTransaction {
         dao.getActiveSession()?.id ?: dao.insertSession(
             WorkoutSessionEntity(
-                startedAt = clock.instant(),
+                startedAt = clock.now(),
                 endedAt = null,
                 planDayId = null,
                 notes = null,
@@ -76,10 +78,10 @@ class WorkoutRepository @Inject constructor(
         val day = planDao.getDay(planDayId) ?: error("No plan day $planDayId")
         val prefs = preferences.preferences.first()
         val unit = prefs.weightUnit
-        val deload = prefs.isDeload(LocalDate.now(clock))
+        val deload = prefs.isDeload(clock.todayIn(TimeZone.UTC))
         val sessionId = dao.insertSession(
             WorkoutSessionEntity(
-                startedAt = clock.instant(),
+                startedAt = clock.now(),
                 endedAt = null,
                 planDayId = planDayId,
                 notes = null,
@@ -390,7 +392,7 @@ class WorkoutRepository @Inject constructor(
             dao.updateSets(listOf(set.copy(completedAt = null)))
             return@withTransaction false
         }
-        val completed = set.copy(completedAt = clock.instant())
+        val completed = set.copy(completedAt = clock.now())
         val following = dao.getSets(set.sessionExerciseId)
             .filter { it.position > set.position && it.completedAt == null && it.weightKg == null && it.reps == null }
             .map { it.copy(weightKg = set.weightKg, reps = set.reps) }
@@ -408,7 +410,7 @@ class WorkoutRepository @Inject constructor(
     suspend fun finishWorkout(sessionId: Long) = db.withTransaction {
         dao.deleteIncompleteSets(sessionId)
         dao.deleteExercisesWithoutSets(sessionId)
-        val now = clock.instant()
+        val now = clock.now()
         dao.endSession(sessionId, now)
         recordPersonalRecords(sessionId, now)
     }

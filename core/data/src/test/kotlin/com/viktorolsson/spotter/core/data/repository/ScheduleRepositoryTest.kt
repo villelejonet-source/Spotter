@@ -17,7 +17,7 @@ import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
-import java.time.Instant
+import kotlin.time.Instant
 
 @RunWith(AndroidJUnit4::class)
 class ScheduleRepositoryTest {
@@ -42,7 +42,7 @@ class ScheduleRepositoryTest {
 
     @Test
     fun upcomingCoversTheNextWeekWithDayNames() = runTest {
-        val plan = db.planDao().insertPlan(PlanEntity(name = "P", splitType = SplitType.CUSTOM, goal = Goal.STRENGTH, createdAt = Instant.EPOCH, isActive = true))
+        val plan = db.planDao().insertPlan(PlanEntity(name = "P", splitType = SplitType.CUSTOM, goal = Goal.STRENGTH, createdAt = Instant.fromEpochMilliseconds(0), isActive = true))
         val day = db.planDao().insertDay(PlanDayEntity(planId = plan, position = 0, name = "Upper"))
         exec("INSERT INTO scheduled_session (date, planDayId, notes, sessionId) VALUES (20749, $day, NULL, NULL)") // yesterday
         exec("INSERT INTO scheduled_session (date, planDayId, notes, sessionId) VALUES (20750, $day, 'Heavy', NULL)") // today
@@ -50,7 +50,7 @@ class ScheduleRepositoryTest {
         exec("INSERT INTO scheduled_session (date, planDayId, notes, sessionId) VALUES (20757, NULL, NULL, NULL)") // in 7 days
 
         val upcoming = repo.observeUpcoming().first()
-        assertEquals(listOf(20750L, 20756L), upcoming.map { it.date.toEpochDay() })
+        assertEquals(listOf(20750L, 20756L), upcoming.map { it.date.toEpochDays() })
         assertEquals("Upper", upcoming[0].planDayName)
         assertEquals("Heavy", upcoming[0].notes)
         assertEquals(null, upcoming[1].planDayName) // free workout

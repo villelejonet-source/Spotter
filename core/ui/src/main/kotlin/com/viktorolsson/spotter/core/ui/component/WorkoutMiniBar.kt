@@ -18,7 +18,7 @@ import androidx.compose.ui.semantics.Role
 import com.viktorolsson.spotter.core.ui.R
 import com.viktorolsson.spotter.core.ui.formatClock
 import com.viktorolsson.spotter.core.ui.theme.Spacing
-import java.time.Duration
+import kotlin.time.Duration
 
 /** "Workout in progress · 32:10" above the tabs; tap to jump back in. */
 @Composable

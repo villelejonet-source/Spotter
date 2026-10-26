@@ -6,7 +6,7 @@ import androidx.room.Upsert
 import com.viktorolsson.spotter.core.data.db.entity.BodyWeightEntryEntity
 import com.viktorolsson.spotter.core.data.db.entity.UserProfileEntity
 import kotlinx.coroutines.flow.Flow
-import java.time.LocalDate
+import kotlinx.datetime.LocalDate
 
 @Dao
 interface UserProfileDao {

@@ -4,7 +4,7 @@ import androidx.room.Dao
 import androidx.room.Query
 import com.viktorolsson.spotter.core.data.db.entity.ScheduledSessionRow
 import kotlinx.coroutines.flow.Flow
-import java.time.LocalDate
+import kotlinx.datetime.LocalDate
 
 @Dao
 interface ScheduleDao {

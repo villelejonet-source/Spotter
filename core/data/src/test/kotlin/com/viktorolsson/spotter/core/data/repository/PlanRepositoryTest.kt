@@ -29,8 +29,8 @@ import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
 import java.io.File
-import java.time.Instant
-import java.time.LocalDate
+import kotlin.time.Instant
+import kotlinx.datetime.LocalDate
 
 @RunWith(AndroidJUnit4::class)
 class PlanRepositoryTest {
@@ -41,7 +41,7 @@ class PlanRepositoryTest {
     private val clock = MutableClock(Instant.parse("2026-10-03T10:00:00Z"))
 
     private val profile = UserProfile(
-        sex = Sex.FEMALE, heightCm = 168.0, birthDate = LocalDate.of(1998, 1, 1), bodyWeightKg = 62.0,
+        sex = Sex.FEMALE, heightCm = 168.0, birthDate = LocalDate(1998, 1, 1), bodyWeightKg = 62.0,
         units = WeightUnit.KG, experience = ExperienceLevel.INTERMEDIATE, goal = Goal.HYPERTROPHY,
         daysPerWeek = 4, sessionLengthMinutes = 60, equipment = Equipment.entries.toSet(),
         focusAreas = setOf(BodyArea.GLUTES), limitations = emptySet(),
@@ -64,7 +64,7 @@ class PlanRepositoryTest {
 
     private suspend fun generatedPlan(p: UserProfile = profile): Plan {
         val library = db.exerciseDao().observeAll().first().map { it.toModel() }
-        return PlanGenerator().generate(PlanInput(p, library, LocalDate.of(2026, 10, 3), clock.instant())).plan
+        return PlanGenerator().generate(PlanInput(p, library, LocalDate(2026, 10, 3), clock.now())).plan
     }
 
     private suspend fun completeWorkout(sessionId: Long) {

@@ -28,7 +28,7 @@ import com.patrykandpatrick.vico.compose.common.Fill
 import com.patrykandpatrick.vico.compose.common.ProvideVicoTheme
 import com.patrykandpatrick.vico.compose.m3.common.rememberM3VicoTheme
 import com.viktorolsson.spotter.core.ui.formatAxisDate
-import java.time.LocalDate
+import kotlinx.datetime.LocalDate
 import kotlin.math.ceil
 import kotlin.math.floor
 import kotlin.math.roundToInt
@@ -63,7 +63,7 @@ fun TrendChart(
         return
     }
     fun x(points: List<ChartPoint>) =
-        if (evenlySpaced) points.indices.map { it.toDouble() } else points.map { it.date.toEpochDay().toDouble() }
+        if (evenlySpaced) points.indices.map { it.toDouble() } else points.map { it.date.toEpochDays().toDouble() }
     // Built synchronously: the data is small, and the chart is then complete on its first frame
     // (which also keeps screenshot tests deterministic).
     val model = remember(primary, secondary, evenlySpaced) {
@@ -84,7 +84,7 @@ fun TrendChart(
         CartesianLayerRangeProvider.fixed(minY = minY, maxY = minY + span)
     }
     val dateFor: (Double) -> LocalDate = remember(primary, evenlySpaced) {
-        { value -> if (evenlySpaced) primary[value.roundToInt().coerceIn(0, primary.lastIndex)].date else LocalDate.ofEpochDay(value.toLong()) }
+        { value -> if (evenlySpaced) primary[value.roundToInt().coerceIn(0, primary.lastIndex)].date else LocalDate.fromEpochDays(value.toLong()) }
     }
     val primaryColor = MaterialTheme.colorScheme.primary
     val secondaryColor = MaterialTheme.colorScheme.tertiary

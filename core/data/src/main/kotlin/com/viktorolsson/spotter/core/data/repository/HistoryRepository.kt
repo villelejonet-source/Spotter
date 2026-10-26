@@ -16,11 +16,12 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.map
-import java.time.Clock
-import java.time.Duration
-import java.time.Instant
 import javax.inject.Inject
 import javax.inject.Singleton
+import kotlin.time.Clock
+import kotlin.time.Duration
+import kotlin.time.Duration.Companion.days
+import kotlin.time.Instant
 
 /**
  * Read side of workouts: finished sessions, per-exercise history, records and weekly volume.
@@ -67,7 +68,7 @@ class HistoryRepository @Inject constructor(
 
     /** Working sets per muscle group over the last 7 days, against the goal's target. */
     fun observeWeeklyVolume(goal: Goal?): Flow<List<MuscleVolume>> =
-        dao.observeFinishedSessionsSince(clock.instant().minus(Duration.ofDays(7))).map { sessions ->
+        dao.observeFinishedSessionsSince(clock.now().minus(7.days)).map { sessions ->
             val sets: List<Exercise> = sessions.flatMap { session ->
                 session.exercises.flatMap { ex ->
                     val exercise = ex.exercise.toModel()

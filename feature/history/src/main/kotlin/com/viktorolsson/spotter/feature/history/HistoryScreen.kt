@@ -53,11 +53,16 @@ import com.viktorolsson.spotter.core.ui.formatTotal
 import com.viktorolsson.spotter.core.ui.localDate
 import com.viktorolsson.spotter.core.ui.theme.Dimens
 import com.viktorolsson.spotter.core.ui.theme.Spacing
+import kotlinx.datetime.LocalDate
+import kotlinx.datetime.TimeZone
+import kotlinx.datetime.toJavaLocalDate
+import kotlinx.datetime.toKotlinLocalDate
+import kotlinx.datetime.todayIn
 import java.time.DayOfWeek
-import java.time.LocalDate
 import java.time.YearMonth
 import java.time.format.TextStyle
 import java.time.temporal.WeekFields
+import kotlin.time.Clock
 
 @Composable
 internal fun HistoryRoute(onOpenWorkout: (Long) -> Unit, viewModel: HistoryViewModel = hiltViewModel()) {
@@ -76,7 +81,7 @@ internal fun HistoryScreen(
     onOpenWorkout: (Long) -> Unit,
     onPreviousMonth: () -> Unit,
     onNextMonth: () -> Unit,
-    today: LocalDate = LocalDate.now(),
+    today: LocalDate = Clock.System.todayIn(TimeZone.currentSystemDefault()),
 ) {
     Scaffold(topBar = { SpotterTopBar(title = stringResource(R.string.history_title)) }) { padding ->
         when {
@@ -137,7 +142,7 @@ private fun MonthCalendar(
     val firstDay = remember(locale) { WeekFields.of(locale).firstDayOfWeek }
     val cells = remember(month, firstDay) {
         val leading = (month.atDay(1).dayOfWeek.value - firstDay.value + 7) % 7
-        (List(leading) { null } + (1..month.lengthOfMonth()).map { month.atDay(it) }).chunked(7)
+        (List(leading) { null } + (1..month.lengthOfMonth()).map { month.atDay(it).toKotlinLocalDate() }).chunked(7)
     }
 
     Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow)) {
@@ -152,7 +157,7 @@ private fun MonthCalendar(
                     textAlign = TextAlign.Center,
                     modifier = Modifier.weight(1f),
                 )
-                IconButton(onClick = onNext, enabled = month < YearMonth.from(today)) {
+                IconButton(onClick = onNext, enabled = month < YearMonth.from(today.toJavaLocalDate())) {
                     Icon(Icons.AutoMirrored.Rounded.KeyboardArrowRight, stringResource(R.string.history_next_month))
                 }
             }
@@ -208,7 +213,7 @@ private fun DayCell(date: LocalDate, volumeKg: Double?, maxVolume: Double, unit:
         contentAlignment = Alignment.Center,
     ) {
         Text(
-            date.dayOfMonth.toString(),
+            date.day.toString(),
             style = MaterialTheme.typography.labelMedium,
             fontWeight = if (isToday) FontWeight.Bold else FontWeight.Normal,
             color = foreground,

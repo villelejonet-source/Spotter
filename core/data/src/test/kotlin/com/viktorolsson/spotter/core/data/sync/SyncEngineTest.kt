@@ -27,6 +27,9 @@ import com.viktorolsson.spotter.core.model.UserProfile
 import com.viktorolsson.spotter.core.model.WeightUnit
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.runTest
+import kotlinx.datetime.DateTimeUnit
+import kotlinx.datetime.LocalDate
+import kotlinx.datetime.plus
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
@@ -34,8 +37,9 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.junit.runner.RunWith
 import java.io.File
-import java.time.Instant
-import java.time.LocalDate
+import kotlin.time.Clock
+import kotlin.time.Duration.Companion.milliseconds
+import kotlin.time.Instant
 
 /**
  * An in-memory Supabase: last-write-wins on strictly newer rows, increasing server time.
@@ -64,7 +68,7 @@ class FakeRemote : SyncRemote {
             val key = Triple(signedIn, row.tableName, row.syncId)
             val existing = this.rows[key]
             if (existing == null || row.updatedAt > existing.updatedAt) {
-                serverTime = serverTime.plusMillis(1)
+                serverTime = serverTime + 1.milliseconds
                 this.rows[key] = RemoteRow(row.tableName, row.syncId, row.payload, row.updatedAt, row.deletedAt, serverTime.toString())
             }
         }
@@ -94,7 +98,7 @@ class SyncEngineTest {
         val exercises = ExerciseRepository(db.exerciseDao())
         val bodyWeight = BodyWeightRepository(db, db.userProfileDao())
         val checkIn = DeviceCheckIn("install-$userId", versionCode = 7, schemaVersion = 8)
-        val engine = SyncEngine(LocalSyncStore(db), remote, SyncCursorStore(prefsStore()), java.time.Clock.systemUTC()) { checkIn }
+        val engine = SyncEngine(LocalSyncStore(db), remote, SyncCursorStore(prefsStore()), Clock.System) { checkIn }
 
         suspend fun seed() = db.exerciseDao().upsertAll(
             parseExerciseSeed(File("src/main/assets/exercises.json").readText()).exercises.map(SeedExercise::toEntity),
@@ -118,7 +122,7 @@ class SyncEngineTest {
     fun tearDown() = devices.forEach { it.db.close() }
 
     private val profile = UserProfile(
-        Sex.MALE, 180.0, LocalDate.of(1990, 1, 1), 82.0, WeightUnit.KG, ExperienceLevel.INTERMEDIATE, Goal.HYPERTROPHY,
+        Sex.MALE, 180.0, LocalDate(1990, 1, 1), 82.0, WeightUnit.KG, ExperienceLevel.INTERMEDIATE, Goal.HYPERTROPHY,
         4, 60, Equipment.entries.toSet(), emptySet(), emptySet(),
     )
 
@@ -139,7 +143,7 @@ class SyncEngineTest {
     }
 
     private suspend fun Device.planFor(p: UserProfile) = plans.saveAsActive(
-        PlanGenerator().generate(PlanInput(p, exercises.observeAll().first(), LocalDate.of(2026, 10, 3), Instant.now())).plan,
+        PlanGenerator().generate(PlanInput(p, exercises.observeAll().first(), LocalDate(2026, 10, 3), Clock.System.now())).plan,
     )
 
     @Test
@@ -148,7 +152,7 @@ class SyncEngineTest {
         a.profiles.save(profile)
         a.planFor(profile)
         a.logWorkout()
-        a.bodyWeight.log(LocalDate.of(2026, 10, 1), 82.4)
+        a.bodyWeight.log(LocalDate(2026, 10, 1), 82.4)
         assertEquals(SyncOutcome.Done::class, a.sync()::class)
 
         val b = device()
@@ -266,7 +270,7 @@ class SyncEngineTest {
     fun aLargeBackupIsAppliedPageByPage() = runTest {
         val a = device()
         a.planFor(profile)
-        repeat(12) { a.bodyWeight.log(LocalDate.of(2026, 1, 1).plusDays(it.toLong()), 80.0 + it) }
+        repeat(12) { a.bodyWeight.log(LocalDate(2026, 1, 1).plus(it.toLong(), DateTimeUnit.DAY), 80.0 + it) }
         a.logWorkout()
         a.sync()
         val b = device()

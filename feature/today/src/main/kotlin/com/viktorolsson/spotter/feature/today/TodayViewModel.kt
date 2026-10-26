@@ -18,8 +18,11 @@ import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
-import java.time.LocalDate
+import kotlinx.datetime.LocalDate
+import kotlinx.datetime.TimeZone
+import kotlinx.datetime.todayIn
 import javax.inject.Inject
+import kotlin.time.Clock
 
 data class TodayUiState(
     val loading: Boolean = true,
@@ -49,7 +52,7 @@ class TodayViewModel @Inject constructor(
     preferencesRepository: UserPreferencesRepository,
 ) : ViewModel() {
     private val schedule = scheduleRepository.observeUpcoming().flatMapLatest { entries ->
-        val today = LocalDate.now()
+        val today = Clock.System.todayIn(TimeZone.currentSystemDefault())
         val todays = entries.filter { it.date == today }
         val pending = todays.firstOrNull { !it.done }
         val upcoming = entries.filter { it.date > today }
@@ -69,7 +72,7 @@ class TodayViewModel @Inject constructor(
             hasPlan = plan != null,
             nextDay = next,
             activeSessionId = active?.id,
-            deloadUntil = prefs.deloadUntil?.takeIf { prefs.isDeload(LocalDate.now()) },
+            deloadUntil = prefs.deloadUntil?.takeIf { prefs.isDeload(Clock.System.todayIn(TimeZone.currentSystemDefault())) },
             scheduledToday = schedule.today,
             scheduledDay = schedule.day,
             scheduledTodayDone = schedule.todayDone,

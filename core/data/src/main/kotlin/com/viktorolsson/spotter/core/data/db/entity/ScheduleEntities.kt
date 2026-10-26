@@ -5,7 +5,7 @@ import androidx.room.Entity
 import androidx.room.ForeignKey
 import androidx.room.Index
 import androidx.room.PrimaryKey
-import java.time.LocalDate
+import kotlinx.datetime.LocalDate
 
 /**
  * A workout planned for [date]: a plan day, or a free workout when [planDayId] is null.

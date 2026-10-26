@@ -71,7 +71,7 @@ class RecommendationTest {
         val bench = slot("barbell-bench-press", 1)
         val plateau = RecommendationEngine.detectPlateau(bench, flat(80.0, 8, sessions = 4))
         assertNotNull(plateau)
-        assertEquals(3, plateau!!.sessions)
+        assertEquals(3, plateau.sessions)
         assertEquals(3, plateau.weeks)
         assertEquals(80.0 to 8, plateau.latest!!.weightKg to plateau.latest.reps)
 

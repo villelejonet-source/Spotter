@@ -1,8 +1,8 @@
 package com.viktorolsson.spotter.feature.progress
 
 import androidx.compose.runtime.Composable
-import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.github.takahirom.roborazzi.ExperimentalRoborazziApi
 import com.github.takahirom.roborazzi.RobolectricDeviceQualifiers
 import com.github.takahirom.roborazzi.RoborazziComposeOptions
@@ -17,12 +17,14 @@ import com.viktorolsson.spotter.core.model.MuscleGroup
 import com.viktorolsson.spotter.core.model.MuscleVolume
 import com.viktorolsson.spotter.core.ui.PreviewData
 import com.viktorolsson.spotter.core.ui.theme.SpotterTheme
+import kotlinx.datetime.DateTimeUnit
+import kotlinx.datetime.LocalDate
+import kotlinx.datetime.plus
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.annotation.Config
 import org.robolectric.annotation.GraphicsMode
-import java.time.LocalDate
 
 @OptIn(ExperimentalRoborazziApi::class)
 @RunWith(AndroidJUnit4::class)
@@ -43,7 +45,7 @@ class ProgressScreenshotTest {
         MuscleVolume(MuscleGroup.GLUTES, 22.0, 10, 20),
     )
     private val weight = (0 until 10).map { i ->
-        BodyWeightPoint(LocalDate.of(2026, 10, 1).plusDays(i * 2L), 82.0 - i * 0.2 + (i % 3) * 0.3, 82.0 - i * 0.18)
+        BodyWeightPoint(LocalDate(2026, 10, 1).plus(i * 2L, DateTimeUnit.DAY), 82.0 - i * 0.2 + (i % 3) * 0.3, 82.0 - i * 0.18)
     }
     private val lifts = listOf(
         LoggedExerciseSummary(PreviewData.exercise(), PreviewData.startedAt, 12),

@@ -27,12 +27,17 @@ import com.viktorolsson.spotter.core.model.RecommendationType
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
-import java.time.Clock
-import java.time.Duration
-import java.time.LocalDate
-import java.time.ZoneId
+import kotlinx.datetime.DateTimeUnit
+import kotlinx.datetime.LocalDate
+import kotlinx.datetime.TimeZone
+import kotlinx.datetime.plus
+import kotlinx.datetime.toLocalDateTime
+import kotlinx.datetime.todayIn
 import javax.inject.Inject
 import javax.inject.Singleton
+import kotlin.time.Clock
+import kotlin.time.Duration
+import kotlin.time.Duration.Companion.days
 
 /**
  * Runs the recommendation engine over the active plan and history after each workout,
@@ -62,14 +67,14 @@ class RecommendationRepository @Inject constructor(
             val existing = dao.getAll()
             val context = buildContext(existing) ?: return@withTransaction
             val drafts = RecommendationEngine.evaluate(context)
-            val now = clock.instant()
+            val now = clock.now()
             val active = existing.filter { it.status == RecommendationStatus.ACTIVE }.associateBy { it.dedupKey }
             val byKey = drafts.associateBy(::keyOf)
             // Cards whose problem went away, or whose best fix changed, are replaced.
             val outdated = active.values.filter { rec -> byKey[rec.dedupKey]?.payload?.encode() != rec.payload }
             if (outdated.isNotEmpty()) dao.delete(outdated.map { it.id })
             val coolingDown = existing
-                .filter { it.resolvedAt != null && Duration.between(it.resolvedAt, now) < COOLDOWN }
+                .filter { it.resolvedAt != null && (now - it.resolvedAt) < COOLDOWN }
                 .map { it.dedupKey }.toSet()
             val keep = active.keys - outdated.map { it.dedupKey }.toSet()
             val fresh = byKey.filterKeys { it !in coolingDown && it !in keep }
@@ -90,7 +95,7 @@ class RecommendationRepository @Inject constructor(
 
     /** Dismisses, then re-evaluates: e.g. dismissing a deload lets held-back per-lift fixes through. */
     suspend fun dismiss(id: Long) {
-        dao.resolve(id, RecommendationStatus.DISMISSED, clock.instant())
+        dao.resolve(id, RecommendationStatus.DISMISSED, clock.now())
         refresh()
     }
 
@@ -127,17 +132,17 @@ class RecommendationRepository @Inject constructor(
                     planDao.replaceExercise(action.planExerciseId, action.toExerciseId, start)
                 }
                 is RecommendationAction.Deload ->
-                    preferences.setDeloadUntil(LocalDate.now(clock).plusDays(action.days - 1L))
+                    preferences.setDeloadUntil(clock.todayIn(TimeZone.UTC).plus(action.days - 1L, DateTimeUnit.DAY))
             }
-            dao.resolve(id, RecommendationStatus.APPLIED, clock.instant())
+            dao.resolve(id, RecommendationStatus.APPLIED, clock.now())
         }
         refresh()
     }
 
     private suspend fun buildContext(all: List<RecommendationEntity>): RecommendationContext? {
         val plan = planDao.getActivePlan() ?: return null
-        val zone = ZoneId.systemDefault()
-        val today = LocalDate.now(clock)
+        val zone = TimeZone.currentSystemDefault()
+        val today = clock.todayIn(TimeZone.UTC)
         val profile = profiles.get()
         val slots = plan.days.sortedBy { it.day.position }.flatMap { day ->
             day.exercises.sortedBy { it.planExercise.position }.map { (pe, exercise) ->
@@ -147,24 +152,24 @@ class RecommendationRepository @Inject constructor(
         val historyByExercise = slots.map { it.exercise.id }.distinct().associateWith { exerciseId ->
             workoutDao.getExposureSets(exerciseId).groupBy { it.sessionId }.values.map { sets ->
                 ExerciseExposure(
-                    sets.first().startedAt.atZone(zone).toLocalDate(),
+                    sets.first().startedAt.toLocalDateTime(zone).date,
                     sets.map { LoggedSet(it.set.weightKg, it.set.reps ?: 0, it.set.rir) },
                 )
             }
         }
         val prefs = preferences.preferences.first()
         val lastDeload = listOfNotNull(
-            prefs.deloadUntil?.takeIf { !it.isAfter(today) },
-            workoutDao.getLastDeloadSession()?.atZone(zone)?.toLocalDate(),
+            prefs.deloadUntil?.takeIf { it <= today },
+            workoutDao.getLastDeloadSession()?.toLocalDateTime(zone)?.date,
         ).maxOrNull()
         val deloadRecentlyHandled = all.any {
-            it.type == RecommendationType.DELOAD && it.resolvedAt != null && Duration.between(it.resolvedAt, clock.instant()) < COOLDOWN
+            it.type == RecommendationType.DELOAD && it.resolvedAt != null && (clock.now() - it.resolvedAt) < COOLDOWN
         }
         val applied = all
             .filter { it.status == RecommendationStatus.APPLIED && it.type == RecommendationType.VARIATION }
             .mapNotNull { rec ->
                 val action = RecommendationPayload.decode(rec.payload).action as? RecommendationAction.SwapVariation
-                val on = rec.resolvedAt?.atZone(zone)?.toLocalDate()
+                val on = rec.resolvedAt?.toLocalDateTime(zone)?.date
                 if (action != null && on != null) AppliedVariation(action, on) else null
             }
         return RecommendationContext(
@@ -172,10 +177,10 @@ class RecommendationRepository @Inject constructor(
             plan = slots,
             planDays = plan.days.sortedBy { it.day.position }.map { it.day.id to it.day.name },
             history = historyByExercise,
-            trainingDates = workoutDao.getTrainingStarts().map { it.atZone(zone).toLocalDate() },
+            trainingDates = workoutDao.getTrainingStarts().map { it.toLocalDateTime(zone).date },
             lastDeloadEnd = lastDeload,
             weeklyVolume = history.observeWeeklyVolume(profile?.goal).first(),
-            recentRir = workoutDao.getRirSince(clock.instant().minus(Duration.ofDays(14))),
+            recentRir = workoutDao.getRirSince(clock.now().minus(14.days)),
             library = exerciseDao.observeAll().first().map { it.toModel() },
             equipment = profile?.equipment ?: Equipment.entries.toSet(),
             limitations = profile?.limitations.orEmpty(),
@@ -200,6 +205,6 @@ class RecommendationRepository @Inject constructor(
     }
 
     private companion object {
-        val COOLDOWN: Duration = Duration.ofDays(28)
+        val COOLDOWN: Duration = 28.days
     }
 }

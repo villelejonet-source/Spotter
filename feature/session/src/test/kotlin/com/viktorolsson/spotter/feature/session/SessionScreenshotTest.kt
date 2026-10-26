@@ -30,6 +30,7 @@ import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.annotation.Config
 import org.robolectric.annotation.GraphicsMode
+import kotlin.time.Duration.Companion.seconds
 
 @OptIn(ExperimentalRoborazziApi::class)
 @RunWith(AndroidJUnit4::class)
@@ -46,7 +47,7 @@ class SessionScreenshotTest {
     )
     private val actions = SessionActions({}, {}, {}, {}, {}, {}, {}, {}, { _, _, _ -> }, {}, {}, { _, _ -> }, {})
     private val active = PreviewData.session(finished = false, exercises = listOf(bench, PreviewData.rows(supersetGroup = 1), PreviewData.plank()))
-    private val now = PreviewData.startedAt.plusSeconds(32 * 60 + 10)
+    private val now = PreviewData.startedAt + (32 * 60 + 10).seconds
 
     private fun capture(name: String, dark: Boolean, fontScale: Float = 1f, dynamic: Boolean = false, content: @Composable () -> Unit) =
         captureRoboImage(
@@ -111,12 +112,12 @@ class SessionScreenshotTest {
 
     @Test
     fun session_dark_resting() = capture("session_dark_resting", dark = true) {
-        session(restTimer = RestTimer(endsAt = now.plusSeconds(75), totalSeconds = 135), effortScale = EffortScale.RPE)
+        session(restTimer = RestTimer(endsAt = now + 75.seconds, totalSeconds = 135), effortScale = EffortScale.RPE)
     }
 
     @Test
     fun session_resting_keypad() = capture("session_resting_keypad_light", dark = false) {
-        session(restTimer = RestTimer(endsAt = now.plusSeconds(75), totalSeconds = 135), keypadTarget = KeypadTarget(14, SetField.WEIGHT))
+        session(restTimer = RestTimer(endsAt = now + 75.seconds, totalSeconds = 135), keypadTarget = KeypadTarget(14, SetField.WEIGHT))
     }
 
     @Test

@@ -25,7 +25,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.res.stringResource
+import org.jetbrains.compose.resources.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
@@ -38,6 +38,19 @@ import com.viktorolsson.spotter.core.ui.labelRes
 import com.viktorolsson.spotter.core.ui.theme.Dimens
 import com.viktorolsson.spotter.core.ui.theme.Spacing
 import org.jetbrains.compose.resources.stringResource
+import com.viktorolsson.spotter.feature.session.resources.Res
+import com.viktorolsson.spotter.feature.session.resources.swap_bodyweight
+import com.viktorolsson.spotter.feature.session.resources.swap_filter_all
+import com.viktorolsson.spotter.feature.session.resources.swap_filter_bodyweight
+import com.viktorolsson.spotter.feature.session.resources.swap_filter_dumbbell
+import com.viktorolsson.spotter.feature.session.resources.swap_filter_machine
+import com.viktorolsson.spotter.feature.session.resources.swap_filter_same
+import com.viktorolsson.spotter.feature.session.resources.swap_in_plan
+import com.viktorolsson.spotter.feature.session.resources.swap_none
+import com.viktorolsson.spotter.feature.session.resources.swap_none_title
+import com.viktorolsson.spotter.feature.session.resources.swap_pick
+import com.viktorolsson.spotter.feature.session.resources.swap_this_session
+import com.viktorolsson.spotter.feature.session.resources.swap_title
 
 /** Ranked alternatives for a busy or missing piece of equipment; "Just this session" by default. */
 @OptIn(ExperimentalMaterial3Api::class)
@@ -65,13 +78,13 @@ internal fun SwapSheetContent(
 ) {
     Column(Modifier.padding(horizontal = Dimens.SheetPadding), verticalArrangement = Arrangement.spacedBy(Spacing.md)) {
         Text(
-            stringResource(R.string.swap_title, state.sessionExercise.exercise.name),
+            stringResource(Res.string.swap_title, state.sessionExercise.exercise.name),
             style = MaterialTheme.typography.titleLarge,
             modifier = Modifier.semantics { heading() },
         )
         if (state.canReplaceInPlan) {
             SegmentedChoice(
-                options = listOf(false to stringResource(R.string.swap_this_session), true to stringResource(R.string.swap_in_plan)),
+                options = listOf(false to stringResource(Res.string.swap_this_session), true to stringResource(Res.string.swap_in_plan)),
                 selected = replaceInPlan,
                 onSelect = onReplaceInPlan,
             )
@@ -83,11 +96,11 @@ internal fun SwapSheetContent(
     ) {
         items(
             listOf(
-                SwapFilter.ALL to R.string.swap_filter_all,
-                SwapFilter.SAME_EQUIPMENT to R.string.swap_filter_same,
-                SwapFilter.DUMBBELL to R.string.swap_filter_dumbbell,
-                SwapFilter.MACHINE to R.string.swap_filter_machine,
-                SwapFilter.BODYWEIGHT to R.string.swap_filter_bodyweight,
+                SwapFilter.ALL to Res.string.swap_filter_all,
+                SwapFilter.SAME_EQUIPMENT to Res.string.swap_filter_same,
+                SwapFilter.DUMBBELL to Res.string.swap_filter_dumbbell,
+                SwapFilter.MACHINE to Res.string.swap_filter_machine,
+                SwapFilter.BODYWEIGHT to Res.string.swap_filter_bodyweight,
             ),
         ) { (filter, label) ->
             FilterChip(selected = state.filter == filter, onClick = { onFilter(filter) }, label = { Text(stringResource(label)) })
@@ -97,8 +110,8 @@ internal fun SwapSheetContent(
         state.loading -> LoadingState(Modifier.fillMaxWidth().padding(bottom = Dimens.SheetPadding))
         state.visible.isEmpty() -> EmptyState(
             icon = Icons.Rounded.SwapHoriz,
-            title = stringResource(R.string.swap_none_title),
-            body = stringResource(R.string.swap_none),
+            title = stringResource(Res.string.swap_none_title),
+            body = stringResource(Res.string.swap_none),
             modifier = Modifier.padding(bottom = Dimens.SheetPadding),
         )
         else -> LazyColumn(Modifier.heightIn(max = LIST_MAX_HEIGHT), contentPadding = PaddingValues(bottom = Dimens.SheetPadding)) {
@@ -113,8 +126,8 @@ internal fun SwapSheetContent(
 private fun CandidateRow(exercise: Exercise, onClick: () -> Unit) {
     val muscles = exercise.primaryMuscles.map { stringResource(it.labelRes) }.joinToString(", ")
     val equipment = exercise.equipment.map { stringResource(it.labelRes) }.joinToString(", ")
-        .ifEmpty { stringResource(R.string.swap_bodyweight) }
-    val pickLabel = stringResource(R.string.swap_pick)
+        .ifEmpty { stringResource(Res.string.swap_bodyweight) }
+    val pickLabel = stringResource(Res.string.swap_pick)
     ListItem(
         headlineContent = { Text(exercise.name) },
         supportingContent = { Text("$muscles · $equipment") },

@@ -1,6 +1,5 @@
 package com.viktorolsson.spotter.feature.session
 
-import android.os.SystemClock
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -22,13 +21,19 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.res.stringResource
+import org.jetbrains.compose.resources.stringResource
 import com.viktorolsson.spotter.core.ui.theme.Dimens
 import com.viktorolsson.spotter.core.ui.theme.Spacing
 import kotlinx.coroutines.delay
 import com.viktorolsson.spotter.core.ui.resources.Res as CoreRes
 import com.viktorolsson.spotter.core.ui.resources.seconds_short
 import org.jetbrains.compose.resources.stringResource
+import com.viktorolsson.spotter.feature.session.resources.Res
+import com.viktorolsson.spotter.feature.session.resources.stopwatch_countdown
+import com.viktorolsson.spotter.feature.session.resources.stopwatch_pause
+import com.viktorolsson.spotter.feature.session.resources.stopwatch_reset
+import com.viktorolsson.spotter.feature.session.resources.stopwatch_start
+import com.viktorolsson.spotter.core.ui.localFormat
 
 /**
  * A standalone stopwatch for timed sets (planks, carries), plus quick countdowns
@@ -47,7 +52,7 @@ internal fun StopwatchSheet(
 
     LaunchedEffect(runningSince) {
         while (true) {
-            displayMs = bankedMs + (runningSince?.let { SystemClock.elapsedRealtime() - it } ?: 0L)
+            displayMs = bankedMs + (runningSince?.let { elapsedRealtimeMs() - it } ?: 0L)
             if (runningSince == null) break
             delay(50)
         }
@@ -62,9 +67,9 @@ internal fun StopwatchSheet(
             onStartPause = {
                 val since = runningSince
                 if (since == null) {
-                    runningSince = SystemClock.elapsedRealtime()
+                    runningSince = elapsedRealtimeMs()
                 } else {
-                    bankedMs += SystemClock.elapsedRealtime() - since
+                    bankedMs += elapsedRealtimeMs() - since
                     runningSince = null
                 }
             },
@@ -91,13 +96,13 @@ internal fun StopwatchSheetContent(
                 style = MaterialTheme.typography.displayLarge.copy(fontFeatureSettings = "tnum"),
             )
             Row(horizontalArrangement = Arrangement.spacedBy(Spacing.md)) {
-                OutlinedButton(onClick = onReset, enabled = !running && displayMs > 0) { Text(stringResource(R.string.stopwatch_reset)) }
+                OutlinedButton(onClick = onReset, enabled = !running && displayMs > 0) { Text(stringResource(Res.string.stopwatch_reset)) }
                 Button(onClick = onStartPause) {
-                    Text(stringResource(if (running) R.string.stopwatch_pause else R.string.stopwatch_start))
+                    Text(stringResource(if (running) Res.string.stopwatch_pause else Res.string.stopwatch_start))
                 }
             }
             Text(
-                stringResource(R.string.stopwatch_countdown),
+                stringResource(Res.string.stopwatch_countdown),
                 style = MaterialTheme.typography.titleSmall,
                 modifier = Modifier.padding(top = Spacing.sm),
             )
@@ -114,5 +119,5 @@ internal fun StopwatchSheetContent(
 
 private fun formatStopwatch(ms: Long): String {
     val totalSeconds = ms / 1000
-    return "%d:%02d.%d".format(totalSeconds / 60, totalSeconds % 60, (ms % 1000) / 100)
+    return "%d:%02d.%d".localFormat(totalSeconds / 60, totalSeconds % 60, (ms % 1000) / 100)
 }

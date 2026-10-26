@@ -40,7 +40,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.lerp
-import androidx.compose.ui.res.stringResource
+import org.jetbrains.compose.resources.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
@@ -61,6 +61,30 @@ import com.viktorolsson.spotter.core.ui.theme.Spacing
 import com.viktorolsson.spotter.core.ui.resources.Res as CoreRes
 import com.viktorolsson.spotter.core.ui.resources.action_delete
 import org.jetbrains.compose.resources.stringResource
+import com.viktorolsson.spotter.feature.session.resources.Res
+import com.viktorolsson.spotter.feature.session.resources.a11y_change_type
+import com.viktorolsson.spotter.feature.session.resources.a11y_complete_set
+import com.viktorolsson.spotter.feature.session.resources.a11y_copy_previous
+import com.viktorolsson.spotter.feature.session.resources.a11y_edit
+import com.viktorolsson.spotter.feature.session.resources.a11y_empty
+import com.viktorolsson.spotter.feature.session.resources.a11y_no_previous
+import com.viktorolsson.spotter.feature.session.resources.a11y_previous
+import com.viktorolsson.spotter.feature.session.resources.a11y_reps_field
+import com.viktorolsson.spotter.feature.session.resources.a11y_rir_field
+import com.viktorolsson.spotter.feature.session.resources.a11y_rpe_field
+import com.viktorolsson.spotter.feature.session.resources.a11y_seconds_field
+import com.viktorolsson.spotter.feature.session.resources.a11y_set_label
+import com.viktorolsson.spotter.feature.session.resources.a11y_weight_field
+import com.viktorolsson.spotter.feature.session.resources.set_drop_short
+import com.viktorolsson.spotter.feature.session.resources.set_failure_short
+import com.viktorolsson.spotter.feature.session.resources.set_label_with_note
+import com.viktorolsson.spotter.feature.session.resources.set_no_previous
+import com.viktorolsson.spotter.feature.session.resources.set_note
+import com.viktorolsson.spotter.feature.session.resources.set_type_drop
+import com.viktorolsson.spotter.feature.session.resources.set_type_failure
+import com.viktorolsson.spotter.feature.session.resources.set_type_warmup
+import com.viktorolsson.spotter.feature.session.resources.set_type_working
+import com.viktorolsson.spotter.feature.session.resources.set_warmup_short
 
 /**
  * One set: label (tap for type/note/delete), previous (tap to copy), weight, reps,
@@ -86,7 +110,7 @@ internal fun SetRow(
     onNote: (String) -> Unit,
 ) {
     var editingNote by rememberSaveable { mutableStateOf(false) }
-    val setNumber = if (set.setType == SetType.WARMUP) stringResource(R.string.set_warmup_short) else workingNumber.toString()
+    val setNumber = if (set.setType == SetType.WARMUP) stringResource(Res.string.set_warmup_short) else workingNumber.toString()
 
     val dismissState = rememberSwipeToDismissBoxState()
     SwipeToDismissBox(
@@ -125,7 +149,7 @@ internal fun SetRow(
                 text = if (focusedField == SetField.WEIGHT) buffer else set.weightKg?.let(unit::format).orEmpty(),
                 placeholder = previous?.weightKg?.let(unit::format).orEmpty(),
                 focused = focusedField == SetField.WEIGHT,
-                description = stringResource(R.string.a11y_weight_field, workingNumber),
+                description = stringResource(Res.string.a11y_weight_field, workingNumber),
                 modifier = Modifier.width(WeightColumnWidth),
                 onClick = { onFieldClick(SetField.WEIGHT) },
             )
@@ -133,7 +157,7 @@ internal fun SetRow(
                 text = if (focusedField == SetField.REPS) buffer else set.reps?.toString().orEmpty(),
                 placeholder = previous?.reps?.toString().orEmpty(),
                 focused = focusedField == SetField.REPS,
-                description = stringResource(if (timed) R.string.a11y_seconds_field else R.string.a11y_reps_field, workingNumber),
+                description = stringResource(if (timed) Res.string.a11y_seconds_field else Res.string.a11y_reps_field, workingNumber),
                 modifier = Modifier.width(RepsColumnWidth),
                 onClick = { onFieldClick(SetField.REPS) },
             )
@@ -143,7 +167,7 @@ internal fun SetRow(
                     placeholder = "",
                     focused = focusedField == SetField.EFFORT,
                     description = stringResource(
-                        if (effortScale == EffortScale.RPE) R.string.a11y_rpe_field else R.string.a11y_rir_field,
+                        if (effortScale == EffortScale.RPE) Res.string.a11y_rpe_field else Res.string.a11y_rir_field,
                         workingNumber,
                     ),
                     modifier = Modifier.width(EffortColumnWidth),
@@ -161,7 +185,7 @@ internal fun SetRow(
 
     if (editingNote) {
         TextInputDialog(
-            title = stringResource(R.string.set_note),
+            title = stringResource(Res.string.set_note),
             initial = set.notes.orEmpty(),
             onSave = { onNote(it); editingNote = false },
             onDismiss = { editingNote = false },
@@ -172,10 +196,10 @@ internal fun SetRow(
 @Composable
 private fun PreviousCell(previous: PreviousSet?, unit: WeightUnit, timed: Boolean, onCopy: (PreviousSet) -> Unit, modifier: Modifier) {
     // The column header already names the unit, so the cell leaves it out.
-    val text = previous?.let { formatSet(it.weightKg, it.reps, unit, timed, withUnit = false) } ?: stringResource(R.string.set_no_previous)
-    val description = previous?.let { stringResource(R.string.a11y_previous, formatSet(it.weightKg, it.reps, unit, timed)) }
-        ?: stringResource(R.string.a11y_no_previous)
-    val copyLabel = stringResource(R.string.a11y_copy_previous)
+    val text = previous?.let { formatSet(it.weightKg, it.reps, unit, timed, withUnit = false) } ?: stringResource(Res.string.set_no_previous)
+    val description = previous?.let { stringResource(Res.string.a11y_previous, formatSet(it.weightKg, it.reps, unit, timed)) }
+        ?: stringResource(Res.string.a11y_no_previous)
+    val copyLabel = stringResource(Res.string.a11y_copy_previous)
     Text(
         text,
         style = MaterialTheme.typography.bodyMedium,
@@ -203,8 +227,8 @@ private fun FieldBox(
 ) {
     val requester = remember { BringIntoViewRequester() }
     LaunchedEffect(focused) { if (focused) requester.bringIntoView() }
-    val empty = stringResource(R.string.a11y_empty)
-    val editLabel = stringResource(R.string.a11y_edit)
+    val empty = stringResource(Res.string.a11y_empty)
+    val editLabel = stringResource(Res.string.a11y_edit)
     Surface(
         shape = MaterialTheme.shapes.small,
         color = if (focused) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceContainerHighest,
@@ -240,21 +264,21 @@ private fun SetLabel(
 ) {
     var open by remember { mutableStateOf(false) }
     val (typeLabel, color) = when (set.setType) {
-        SetType.WARMUP -> stringResource(R.string.set_type_warmup) to MaterialTheme.colorScheme.tertiary
-        SetType.DROP -> stringResource(R.string.set_type_drop) to MaterialTheme.colorScheme.secondary
-        SetType.FAILURE -> stringResource(R.string.set_type_failure) to MaterialTheme.colorScheme.error
-        SetType.WORKING -> stringResource(R.string.set_type_working) to MaterialTheme.colorScheme.onSurface
+        SetType.WARMUP -> stringResource(Res.string.set_type_warmup) to MaterialTheme.colorScheme.tertiary
+        SetType.DROP -> stringResource(Res.string.set_type_drop) to MaterialTheme.colorScheme.secondary
+        SetType.FAILURE -> stringResource(Res.string.set_type_failure) to MaterialTheme.colorScheme.error
+        SetType.WORKING -> stringResource(Res.string.set_type_working) to MaterialTheme.colorScheme.onSurface
     }
     val shortLabel = when (set.setType) {
-        SetType.DROP -> stringResource(R.string.set_drop_short)
-        SetType.FAILURE -> stringResource(R.string.set_failure_short)
+        SetType.DROP -> stringResource(Res.string.set_drop_short)
+        SetType.FAILURE -> stringResource(Res.string.set_failure_short)
         else -> number
     }
-    val description = stringResource(R.string.a11y_set_label, number, typeLabel)
-    val changeLabel = stringResource(R.string.a11y_change_type)
+    val description = stringResource(Res.string.a11y_set_label, number, typeLabel)
+    val changeLabel = stringResource(Res.string.a11y_change_type)
     Box(Modifier.width(SetColumnWidth)) {
         Text(
-            if (set.notes != null) stringResource(R.string.set_label_with_note, shortLabel) else shortLabel,
+            if (set.notes != null) stringResource(Res.string.set_label_with_note, shortLabel) else shortLabel,
             style = MaterialTheme.typography.titleSmall,
             fontWeight = FontWeight.Bold,
             color = color,
@@ -268,10 +292,10 @@ private fun SetLabel(
         )
         DropdownMenu(expanded = open, onDismissRequest = { open = false }) {
             listOf(
-                SetType.WARMUP to R.string.set_type_warmup,
-                SetType.WORKING to R.string.set_type_working,
-                SetType.DROP to R.string.set_type_drop,
-                SetType.FAILURE to R.string.set_type_failure,
+                SetType.WARMUP to Res.string.set_type_warmup,
+                SetType.WORKING to Res.string.set_type_working,
+                SetType.DROP to Res.string.set_type_drop,
+                SetType.FAILURE to Res.string.set_type_failure,
             ).forEach { (type, label) ->
                 DropdownMenuItem(
                     text = { Text(stringResource(label)) },
@@ -279,7 +303,7 @@ private fun SetLabel(
                     onClick = { open = false; onTypeChange(type) },
                 )
             }
-            DropdownMenuItem(text = { Text(stringResource(R.string.set_note)) }, onClick = { open = false; onNote() })
+            DropdownMenuItem(text = { Text(stringResource(Res.string.set_note)) }, onClick = { open = false; onNote() })
             DropdownMenuItem(
                 text = { Text(stringResource(CoreRes.string.action_delete), color = MaterialTheme.colorScheme.error) },
                 onClick = { open = false; onDelete() },
@@ -291,7 +315,7 @@ private fun SetLabel(
 /** The tick; a checkbox for screen readers. */
 @Composable
 private fun CheckButton(completed: Boolean, enabled: Boolean, setLabel: String, onToggle: () -> Unit) {
-    val description = stringResource(R.string.a11y_complete_set, setLabel)
+    val description = stringResource(Res.string.a11y_complete_set, setLabel)
     Box(
         Modifier
             .width(CheckColumnWidth)

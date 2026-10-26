@@ -16,7 +16,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
-import androidx.compose.ui.res.stringResource
+import org.jetbrains.compose.resources.stringResource
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import com.viktorolsson.spotter.core.ui.resources.Res as CoreRes
 import com.viktorolsson.spotter.core.ui.resources.action_cancel

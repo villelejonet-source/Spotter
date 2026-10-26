@@ -60,3 +60,8 @@ actual fun firstDayOfWeek(): DayOfWeek {
 @Composable
 actual fun narrowDayName(day: DayOfWeek): String =
     java.time.DayOfWeek.of(day.isoDayNumber).getDisplayName(TextStyle.NARROW, LocalConfiguration.current.locales[0])
+
+actual fun plainNumber(value: Double): String = BigDecimal(value).stripTrailingZeros().toPlainString()
+
+actual fun plainNumberRounded(value: Double, decimals: Int): String =
+    BigDecimal(value).setScale(decimals, RoundingMode.HALF_UP).stripTrailingZeros().toPlainString()

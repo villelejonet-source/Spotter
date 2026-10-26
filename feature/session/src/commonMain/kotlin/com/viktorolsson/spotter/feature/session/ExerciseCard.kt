@@ -40,7 +40,8 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.res.stringResource
+import org.jetbrains.compose.resources.StringResource
+import org.jetbrains.compose.resources.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
@@ -66,7 +67,43 @@ import com.viktorolsson.spotter.core.ui.formatTarget
 import com.viktorolsson.spotter.core.ui.label
 import com.viktorolsson.spotter.core.ui.theme.Dimens
 import com.viktorolsson.spotter.core.ui.theme.Spacing
-import java.util.Locale
+import com.viktorolsson.spotter.feature.session.resources.Res
+import com.viktorolsson.spotter.feature.session.resources.a11y_change_rest
+import com.viktorolsson.spotter.feature.session.resources.a11y_exercise_info
+import com.viktorolsson.spotter.feature.session.resources.add_set
+import com.viktorolsson.spotter.feature.session.resources.col_previous
+import com.viktorolsson.spotter.feature.session.resources.col_reps
+import com.viktorolsson.spotter.feature.session.resources.col_seconds
+import com.viktorolsson.spotter.feature.session.resources.col_set
+import com.viktorolsson.spotter.feature.session.resources.exercise_move_down
+import com.viktorolsson.spotter.feature.session.resources.exercise_move_up
+import com.viktorolsson.spotter.feature.session.resources.exercise_note
+import com.viktorolsson.spotter.feature.session.resources.exercise_remove
+import com.viktorolsson.spotter.feature.session.resources.exercise_remove_body
+import com.viktorolsson.spotter.feature.session.resources.exercise_remove_confirm
+import com.viktorolsson.spotter.feature.session.resources.exercise_remove_title
+import com.viktorolsson.spotter.feature.session.resources.exercise_rest
+import com.viktorolsson.spotter.feature.session.resources.exercise_superset_next
+import com.viktorolsson.spotter.feature.session.resources.exercise_superset_remove
+import com.viktorolsson.spotter.feature.session.resources.exercise_swap
+import com.viktorolsson.spotter.feature.session.resources.exercise_swapped_from
+import com.viktorolsson.spotter.feature.session.resources.exercise_target
+import com.viktorolsson.spotter.feature.session.resources.exercise_target_rir
+import com.viktorolsson.spotter.feature.session.resources.progress_add_reps
+import com.viktorolsson.spotter.feature.session.resources.progress_add_time
+import com.viktorolsson.spotter.feature.session.resources.progress_bodyweight_top
+import com.viktorolsson.spotter.feature.session.resources.progress_calibration
+import com.viktorolsson.spotter.feature.session.resources.progress_deload
+import com.viktorolsson.spotter.feature.session.resources.progress_first_time
+import com.viktorolsson.spotter.feature.session.resources.progress_first_time_timed
+import com.viktorolsson.spotter.feature.session.resources.progress_hold_hard
+import com.viktorolsson.spotter.feature.session.resources.progress_increase
+import com.viktorolsson.spotter.feature.session.resources.progress_increase_easy
+import com.viktorolsson.spotter.feature.session.resources.progress_repeat
+import com.viktorolsson.spotter.feature.session.resources.progress_reset
+import com.viktorolsson.spotter.feature.session.resources.session_more
+import com.viktorolsson.spotter.feature.session.resources.warmup_add
+import com.viktorolsson.spotter.core.ui.uppercaseLocal
 
 /**
  * Everything a card can ask the screen to do. One instance serves every card (each
@@ -149,19 +186,19 @@ internal fun ExerciseCard(
                         maxLines = 2,
                         overflow = TextOverflow.Ellipsis,
                         modifier = Modifier
-                            .clickable(onClickLabel = stringResource(R.string.a11y_exercise_info), role = Role.Button) { showingInfo = true }
+                            .clickable(onClickLabel = stringResource(Res.string.a11y_exercise_info), role = Role.Button) { showingInfo = true }
                             .semantics { heading() },
                     )
                 }
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
                     modifier = Modifier
-                        .clickable(onClickLabel = stringResource(R.string.a11y_change_rest), role = Role.Button) { pickingRest = true }
+                        .clickable(onClickLabel = stringResource(Res.string.a11y_change_rest), role = Role.Button) { pickingRest = true }
                         .padding(horizontal = Spacing.xs, vertical = Spacing.sm),
                 ) {
                     Icon(
                         Icons.Rounded.Timer,
-                        contentDescription = stringResource(R.string.exercise_rest),
+                        contentDescription = stringResource(Res.string.exercise_rest),
                         tint = MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier.padding(end = Spacing.xs),
                     )
@@ -172,25 +209,25 @@ internal fun ExerciseCard(
                     )
                 }
                 IconButton(onClick = { actions.onSwap(exercise) }) {
-                    Icon(Icons.Rounded.SwapHoriz, stringResource(R.string.exercise_swap))
+                    Icon(Icons.Rounded.SwapHoriz, stringResource(Res.string.exercise_swap))
                 }
                 Box {
                     IconButton(onClick = { menuOpen = true }) {
-                        Icon(Icons.Rounded.MoreVert, stringResource(R.string.session_more))
+                        Icon(Icons.Rounded.MoreVert, stringResource(Res.string.session_more))
                     }
                     DropdownMenu(expanded = menuOpen, onDismissRequest = { menuOpen = false }) {
-                        MenuItem(R.string.exercise_swap) { menuOpen = false; actions.onSwap(exercise) }
-                        if (canWarmUp) MenuItem(R.string.warmup_add) { menuOpen = false; actions.onWarmUps(exercise.id) }
-                        MenuItem(R.string.exercise_note) { menuOpen = false; editingNote = true }
-                        MenuItem(R.string.exercise_rest) { menuOpen = false; pickingRest = true }
-                        if (!isLast) MenuItem(R.string.exercise_superset_next) { menuOpen = false; actions.onSupersetNext(exercise.id) }
+                        MenuItem(Res.string.exercise_swap) { menuOpen = false; actions.onSwap(exercise) }
+                        if (canWarmUp) MenuItem(Res.string.warmup_add) { menuOpen = false; actions.onWarmUps(exercise.id) }
+                        MenuItem(Res.string.exercise_note) { menuOpen = false; editingNote = true }
+                        MenuItem(Res.string.exercise_rest) { menuOpen = false; pickingRest = true }
+                        if (!isLast) MenuItem(Res.string.exercise_superset_next) { menuOpen = false; actions.onSupersetNext(exercise.id) }
                         if (exercise.supersetGroup != null) {
-                            MenuItem(R.string.exercise_superset_remove) { menuOpen = false; actions.onRemoveSuperset(exercise.id) }
+                            MenuItem(Res.string.exercise_superset_remove) { menuOpen = false; actions.onRemoveSuperset(exercise.id) }
                         }
-                        if (!isFirst) MenuItem(R.string.exercise_move_up) { menuOpen = false; actions.onMove(exercise.id, -1) }
-                        if (!isLast) MenuItem(R.string.exercise_move_down) { menuOpen = false; actions.onMove(exercise.id, 1) }
+                        if (!isFirst) MenuItem(Res.string.exercise_move_up) { menuOpen = false; actions.onMove(exercise.id, -1) }
+                        if (!isLast) MenuItem(Res.string.exercise_move_down) { menuOpen = false; actions.onMove(exercise.id, 1) }
                         DropdownMenuItem(
-                            text = { Text(stringResource(R.string.exercise_remove), color = MaterialTheme.colorScheme.error) },
+                            text = { Text(stringResource(Res.string.exercise_remove), color = MaterialTheme.colorScheme.error) },
                             onClick = { menuOpen = false; confirmRemove = true },
                         )
                     }
@@ -201,8 +238,8 @@ internal fun ExerciseCard(
                 // Reps in reserve don't apply to a hold.
                 val rir = target.targetRir?.takeUnless { timed }
                 Text(
-                    if (rir != null) stringResource(R.string.exercise_target_rir, range, formatEffort(rir, preferences.effortScale))
-                    else stringResource(R.string.exercise_target, range),
+                    if (rir != null) stringResource(Res.string.exercise_target_rir, range, formatEffort(rir, preferences.effortScale))
+                    else stringResource(Res.string.exercise_target, range),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.padding(horizontal = Dimens.CardPadding),
@@ -210,7 +247,7 @@ internal fun ExerciseCard(
             }
             exercise.substitutedFromName?.let { from ->
                 Text(
-                    stringResource(R.string.exercise_swapped_from, from),
+                    stringResource(Res.string.exercise_swapped_from, from),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.tertiary,
                     modifier = Modifier.padding(horizontal = Dimens.CardPadding),
@@ -220,7 +257,7 @@ internal fun ExerciseCard(
             if (canWarmUp) {
                 AssistChip(
                     onClick = { actions.onWarmUps(exercise.id) },
-                    label = { Text(stringResource(R.string.warmup_add)) },
+                    label = { Text(stringResource(Res.string.warmup_add)) },
                     leadingIcon = { Icon(Icons.Rounded.Whatshot, contentDescription = null, modifier = Modifier.size(CHIP_ICON_SIZE)) },
                     modifier = Modifier.padding(horizontal = Dimens.CardPadding),
                 )
@@ -266,7 +303,7 @@ internal fun ExerciseCard(
                 modifier = Modifier.fillMaxWidth().padding(horizontal = Spacing.sm),
             ) {
                 Icon(Icons.Rounded.Add, contentDescription = null)
-                Text(stringResource(R.string.add_set), modifier = Modifier.padding(start = Spacing.xs))
+                Text(stringResource(Res.string.add_set), modifier = Modifier.padding(start = Spacing.xs))
             }
         }
     }
@@ -274,7 +311,7 @@ internal fun ExerciseCard(
     if (showingInfo) ExerciseInfoSheet(exercise.exercise, onDismiss = { showingInfo = false })
     if (editingNote) {
         TextInputDialog(
-            title = stringResource(R.string.exercise_note),
+            title = stringResource(Res.string.exercise_note),
             initial = exercise.notes.orEmpty(),
             onSave = { actions.onExerciseNote(exercise.id, it); editingNote = false },
             onDismiss = { editingNote = false },
@@ -282,7 +319,7 @@ internal fun ExerciseCard(
     }
     if (pickingRest) {
         RestTimePickerDialog(
-            title = stringResource(R.string.exercise_rest),
+            title = stringResource(Res.string.exercise_rest),
             selectedSeconds = restSeconds,
             onSelect = { actions.onRest(exercise.id, it); pickingRest = false },
             onDismiss = { pickingRest = false },
@@ -290,9 +327,9 @@ internal fun ExerciseCard(
     }
     if (confirmRemove) {
         ConfirmDialog(
-            title = stringResource(R.string.exercise_remove_title, exercise.exercise.name),
-            text = stringResource(R.string.exercise_remove_body),
-            confirmText = stringResource(R.string.exercise_remove_confirm),
+            title = stringResource(Res.string.exercise_remove_title, exercise.exercise.name),
+            text = stringResource(Res.string.exercise_remove_body),
+            confirmText = stringResource(Res.string.exercise_remove_confirm),
             onConfirm = { confirmRemove = false; actions.onRemove(exercise.id) },
             onDismiss = { confirmRemove = false },
             destructive = true,
@@ -304,18 +341,18 @@ internal fun ExerciseCard(
 @Composable
 private fun ProgressionNote(reason: ProgressionReason, timed: Boolean) {
     val (text, icon, emphasised) = when (reason) {
-        ProgressionReason.CALIBRATION -> Triple(R.string.progress_calibration, Icons.Rounded.Tune, false)
+        ProgressionReason.CALIBRATION -> Triple(Res.string.progress_calibration, Icons.Rounded.Tune, false)
         ProgressionReason.FIRST_TIME ->
-            Triple(if (timed) R.string.progress_first_time_timed else R.string.progress_first_time, Icons.Rounded.Tune, false)
-        ProgressionReason.INCREASE_WEIGHT -> Triple(R.string.progress_increase, Icons.AutoMirrored.Rounded.TrendingUp, true)
-        ProgressionReason.INCREASE_TOO_EASY -> Triple(R.string.progress_increase_easy, Icons.AutoMirrored.Rounded.TrendingUp, true)
+            Triple(if (timed) Res.string.progress_first_time_timed else Res.string.progress_first_time, Icons.Rounded.Tune, false)
+        ProgressionReason.INCREASE_WEIGHT -> Triple(Res.string.progress_increase, Icons.AutoMirrored.Rounded.TrendingUp, true)
+        ProgressionReason.INCREASE_TOO_EASY -> Triple(Res.string.progress_increase_easy, Icons.AutoMirrored.Rounded.TrendingUp, true)
         ProgressionReason.ADD_REPS ->
-            Triple(if (timed) R.string.progress_add_time else R.string.progress_add_reps, Icons.AutoMirrored.Rounded.TrendingUp, false)
-        ProgressionReason.HOLD_TOO_HARD -> Triple(R.string.progress_hold_hard, Icons.AutoMirrored.Rounded.TrendingFlat, false)
-        ProgressionReason.REPEAT -> Triple(R.string.progress_repeat, Icons.AutoMirrored.Rounded.TrendingFlat, false)
-        ProgressionReason.RESET_AFTER_MISSES -> Triple(R.string.progress_reset, Icons.AutoMirrored.Rounded.TrendingDown, false)
-        ProgressionReason.BODYWEIGHT_TOP_OF_RANGE -> Triple(R.string.progress_bodyweight_top, Icons.AutoMirrored.Rounded.TrendingUp, true)
-        ProgressionReason.DELOAD -> Triple(R.string.progress_deload, Icons.AutoMirrored.Rounded.TrendingDown, false)
+            Triple(if (timed) Res.string.progress_add_time else Res.string.progress_add_reps, Icons.AutoMirrored.Rounded.TrendingUp, false)
+        ProgressionReason.HOLD_TOO_HARD -> Triple(Res.string.progress_hold_hard, Icons.AutoMirrored.Rounded.TrendingFlat, false)
+        ProgressionReason.REPEAT -> Triple(Res.string.progress_repeat, Icons.AutoMirrored.Rounded.TrendingFlat, false)
+        ProgressionReason.RESET_AFTER_MISSES -> Triple(Res.string.progress_reset, Icons.AutoMirrored.Rounded.TrendingDown, false)
+        ProgressionReason.BODYWEIGHT_TOP_OF_RANGE -> Triple(Res.string.progress_bodyweight_top, Icons.AutoMirrored.Rounded.TrendingUp, true)
+        ProgressionReason.DELOAD -> Triple(Res.string.progress_deload, Icons.AutoMirrored.Rounded.TrendingDown, false)
     }
     val color = if (emphasised) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
     Row(
@@ -329,7 +366,7 @@ private fun ProgressionNote(reason: ProgressionReason, timed: Boolean) {
 }
 
 @Composable
-private fun MenuItem(label: Int, onClick: () -> Unit) {
+private fun MenuItem(label: StringResource, onClick: () -> Unit) {
     DropdownMenuItem(text = { Text(stringResource(label)) }, onClick = onClick)
 }
 
@@ -343,10 +380,10 @@ private fun SetHeader(preferences: UserPreferences, timed: Boolean) {
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(Spacing.xs),
     ) {
-        HeaderCell(stringResource(R.string.col_set), Modifier.width(SetColumnWidth))
-        HeaderCell(stringResource(R.string.col_previous), Modifier.weight(1f))
+        HeaderCell(stringResource(Res.string.col_set), Modifier.width(SetColumnWidth))
+        HeaderCell(stringResource(Res.string.col_previous), Modifier.weight(1f))
         HeaderCell(preferences.weightUnit.label, Modifier.width(WeightColumnWidth))
-        HeaderCell(stringResource(if (timed) R.string.col_seconds else R.string.col_reps), Modifier.width(RepsColumnWidth))
+        HeaderCell(stringResource(if (timed) Res.string.col_seconds else Res.string.col_reps), Modifier.width(RepsColumnWidth))
         if (preferences.effortScale != EffortScale.OFF) HeaderCell(preferences.effortScale.label(), Modifier.width(EffortColumnWidth))
         Box(Modifier.width(CheckColumnWidth))
     }
@@ -355,7 +392,7 @@ private fun SetHeader(preferences: UserPreferences, timed: Boolean) {
 @Composable
 private fun RowScope.HeaderCell(text: String, modifier: Modifier) {
     Text(
-        text.uppercase(Locale.getDefault()),
+        text.uppercaseLocal(),
         style = MaterialTheme.typography.labelSmall,
         color = MaterialTheme.colorScheme.onSurfaceVariant,
         textAlign = TextAlign.Center,

@@ -1,0 +1,4 @@
+<en-US>
+• Backup and sync now only ever download your own account's data, ready for coaching features coming later
+• When it syncs, the app now reports its version number (see the updated privacy policy)
+</en-US>

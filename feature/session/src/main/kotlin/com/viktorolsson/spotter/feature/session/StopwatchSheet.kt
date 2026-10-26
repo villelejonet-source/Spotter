@@ -26,6 +26,9 @@ import androidx.compose.ui.res.stringResource
 import com.viktorolsson.spotter.core.ui.theme.Dimens
 import com.viktorolsson.spotter.core.ui.theme.Spacing
 import kotlinx.coroutines.delay
+import com.viktorolsson.spotter.core.ui.resources.Res as CoreRes
+import com.viktorolsson.spotter.core.ui.resources.seconds_short
+import org.jetbrains.compose.resources.stringResource
 
 /**
  * A standalone stopwatch for timed sets (planks, carries), plus quick countdowns
@@ -102,7 +105,7 @@ internal fun StopwatchSheetContent(
                 listOf(30, 45, 60, 90).forEach { seconds ->
                     AssistChip(
                         onClick = { onCountdown(seconds) },
-                        label = { Text(stringResource(com.viktorolsson.spotter.core.ui.R.string.seconds_short, seconds)) },
+                        label = { Text(stringResource(CoreRes.string.seconds_short, seconds)) },
                     )
                 }
             }

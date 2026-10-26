@@ -1,5 +1,5 @@
 // User-facing names, copied from the Android app's string resources so both read the same.
-// Sources: core/ui/src/main/res/values/labels.xml and strings.xml, feature/*/src/main/res/values/strings.xml.
+// Sources: core/ui/src/commonMain/composeResources/values/labels.xml and strings.xml, feature/*/src/main/res/values/strings.xml.
 // Enum values are the app's enum names (core/model); `label()` falls back to a readable
 // form of the name so an enum value the web doesn't know yet still shows something.
 

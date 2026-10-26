@@ -29,6 +29,9 @@ import com.viktorolsson.spotter.core.model.Equipment
 import com.viktorolsson.spotter.core.model.MovementPattern
 import com.viktorolsson.spotter.core.model.Muscle
 import com.viktorolsson.spotter.core.ui.labelRes
+import com.viktorolsson.spotter.core.ui.resources.Res as CoreRes
+import com.viktorolsson.spotter.core.ui.resources.action_cancel
+import org.jetbrains.compose.resources.stringResource
 
 @Composable
 internal fun CreateExerciseDialog(
@@ -78,7 +81,7 @@ internal fun CreateExerciseDialog(
             ) { Text(stringResource(R.string.create_save)) }
         },
         dismissButton = {
-            TextButton(onClick = onDismiss) { Text(stringResource(com.viktorolsson.spotter.core.ui.R.string.action_cancel)) }
+            TextButton(onClick = onDismiss) { Text(stringResource(CoreRes.string.action_cancel)) }
         },
     )
 }

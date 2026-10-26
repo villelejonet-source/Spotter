@@ -37,6 +37,7 @@ import com.viktorolsson.spotter.core.ui.component.SegmentedChoice
 import com.viktorolsson.spotter.core.ui.labelRes
 import com.viktorolsson.spotter.core.ui.theme.Dimens
 import com.viktorolsson.spotter.core.ui.theme.Spacing
+import org.jetbrains.compose.resources.stringResource
 
 /** Ranked alternatives for a busy or missing piece of equipment; "Just this session" by default. */
 @OptIn(ExperimentalMaterial3Api::class)
@@ -70,7 +71,7 @@ internal fun SwapSheetContent(
         )
         if (state.canReplaceInPlan) {
             SegmentedChoice(
-                options = listOf(false to R.string.swap_this_session, true to R.string.swap_in_plan),
+                options = listOf(false to stringResource(R.string.swap_this_session), true to stringResource(R.string.swap_in_plan)),
                 selected = replaceInPlan,
                 onSelect = onReplaceInPlan,
             )

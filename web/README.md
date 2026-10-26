@@ -66,8 +66,8 @@ setting changes and both app and web read it from there, so the two can't disagr
 
 The app is the source of truth for wording. `src/lib/labels.ts` mirrors the app's string
 resources (goal names, "Lighter week", equipment and movement labels, progression reasons, set
-and record formats): when wording changes, update the app's `strings.xml`/`labels.xml` **and**
-`labels.ts` together. Dates and numbers use one locale constant in `src/lib/tz.ts` (`en-GB`)
+and record formats): when wording changes, update the app's `strings.xml`/`labels.xml` (core/ui's are in
+`core/ui/src/commonMain/composeResources/values/`) **and** `labels.ts` together. Dates and numbers use one locale constant in `src/lib/tz.ts` (`en-GB`)
 next to the Europe/Stockholm time zone.
 
 ## Deploy (Vercel)

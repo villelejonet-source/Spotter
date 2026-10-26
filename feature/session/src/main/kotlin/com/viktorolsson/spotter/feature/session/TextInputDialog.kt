@@ -18,6 +18,10 @@ import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.KeyboardCapitalization
+import com.viktorolsson.spotter.core.ui.resources.Res as CoreRes
+import com.viktorolsson.spotter.core.ui.resources.action_cancel
+import com.viktorolsson.spotter.core.ui.resources.action_save
+import org.jetbrains.compose.resources.stringResource
 
 @Composable
 internal fun TextInputDialog(
@@ -41,7 +45,7 @@ internal fun TextInputDialog(
                 modifier = Modifier.fillMaxWidth().focusRequester(focus),
             )
         },
-        confirmButton = { TextButton(onClick = { onSave(text) }) { Text(stringResource(com.viktorolsson.spotter.core.ui.R.string.action_save)) } },
-        dismissButton = { TextButton(onClick = onDismiss) { Text(stringResource(com.viktorolsson.spotter.core.ui.R.string.action_cancel)) } },
+        confirmButton = { TextButton(onClick = { onSave(text) }) { Text(stringResource(CoreRes.string.action_save)) } },
+        dismissButton = { TextButton(onClick = onDismiss) { Text(stringResource(CoreRes.string.action_cancel)) } },
     )
 }

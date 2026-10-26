@@ -31,6 +31,9 @@ import com.viktorolsson.spotter.core.model.Exercise
 import com.viktorolsson.spotter.core.model.WeightUnit
 import com.viktorolsson.spotter.core.model.label
 import java.math.BigDecimal
+import com.viktorolsson.spotter.core.ui.resources.Res as CoreRes
+import com.viktorolsson.spotter.core.ui.resources.weight_with_unit
+import org.jetbrains.compose.resources.stringResource
 
 /** Plates per side for the weight in the focused field. */
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
@@ -45,7 +48,7 @@ internal fun PlateSheet(exercise: Exercise, weightKg: Double, unit: WeightUnit, 
 internal fun PlateSheetContent(exercise: Exercise, weightKg: Double, unit: WeightUnit) {
     val loading = Plates.load(weightKg, exercise, unit)
     @Composable
-    fun fmt(value: Double) = stringResource(com.viktorolsson.spotter.core.ui.R.string.weight_with_unit, BigDecimal(value).stripTrailingZeros().toPlainString(), unit.label)
+    fun fmt(value: Double) = stringResource(CoreRes.string.weight_with_unit, BigDecimal(value).stripTrailingZeros().toPlainString(), unit.label)
     Column(
         Modifier.fillMaxWidth().padding(horizontal = Dimens.SheetPadding).padding(bottom = Dimens.SheetPadding),
         verticalArrangement = Arrangement.spacedBy(Spacing.md),

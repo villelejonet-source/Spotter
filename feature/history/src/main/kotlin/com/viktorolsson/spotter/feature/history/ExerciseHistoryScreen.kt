@@ -43,6 +43,11 @@ import com.viktorolsson.spotter.core.ui.formatWeight
 import com.viktorolsson.spotter.core.ui.localDate
 import com.viktorolsson.spotter.core.ui.theme.Dimens
 import com.viktorolsson.spotter.core.ui.theme.Spacing
+import com.viktorolsson.spotter.core.ui.resources.Res as CoreRes
+import com.viktorolsson.spotter.core.ui.resources.reps_count
+import com.viktorolsson.spotter.core.ui.resources.seconds_short
+import org.jetbrains.compose.resources.stringResource
+import org.jetbrains.compose.resources.pluralStringResource
 
 @Composable
 internal fun ExerciseHistoryRoute(onBack: () -> Unit, viewModel: ExerciseHistoryViewModel = hiltViewModel()) {
@@ -145,8 +150,8 @@ internal fun ExerciseHistoryScreen(
                                     Row {
                                         Text(formatWeight(weight, unit), modifier = Modifier.weight(1f))
                                         Text(
-                                            if (timed) stringResource(com.viktorolsson.spotter.core.ui.R.string.seconds_short, reps)
-                                            else pluralStringResource(com.viktorolsson.spotter.core.ui.R.plurals.reps_count, reps, reps),
+                                            if (timed) stringResource(CoreRes.string.seconds_short, reps)
+                                            else pluralStringResource(CoreRes.plurals.reps_count, reps, reps),
                                         )
                                     }
                                 }

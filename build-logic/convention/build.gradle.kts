@@ -10,6 +10,7 @@ dependencies {
     compileOnly(libs.ksp.gradlePlugin)
     compileOnly(libs.compose.gradlePlugin)
     compileOnly(libs.roborazzi.gradlePlugin)
+    compileOnly(libs.compose.multiplatform.gradlePlugin)
 }
 
 gradlePlugin {
@@ -37,6 +38,10 @@ gradlePlugin {
         register("androidScreenshots") {
             id = "spotter.android.screenshots"
             implementationClass = "AndroidScreenshotsConventionPlugin"
+        }
+        register("kmpCompose") {
+            id = "spotter.kmp.compose"
+            implementationClass = "KmpComposeConventionPlugin"
         }
         register("kmpLibrary") {
             id = "spotter.kmp.library"

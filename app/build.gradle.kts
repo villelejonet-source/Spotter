@@ -3,7 +3,6 @@ import java.util.Properties
 plugins {
     alias(libs.plugins.spotter.android.application)
     alias(libs.plugins.spotter.android.compose)
-    alias(libs.plugins.spotter.hilt)
     alias(libs.plugins.kotlin.serialization)
 }
 
@@ -80,6 +79,10 @@ android {
     buildFeatures {
         buildConfig = true
     }
+
+    testOptions {
+        unitTests.isIncludeAndroidResources = true
+    }
 }
 
 dependencies {
@@ -101,11 +104,18 @@ dependencies {
     implementation(libs.androidx.lifecycle.runtime.compose)
     implementation(libs.androidx.lifecycle.viewmodel.compose)
     implementation(libs.androidx.navigation.compose)
-    implementation(libs.androidx.hilt.lifecycle.viewmodel.compose)
+    implementation(platform(libs.koin.bom))
+    implementation(libs.koin.android)
+    implementation(libs.koin.androidx.workmanager)
+    implementation(libs.koin.compose.viewmodel)
     implementation(libs.androidx.compose.material.icons.extended)
     implementation(libs.kotlinx.serialization.json)
     implementation(libs.androidx.work.runtime)
-    implementation(libs.androidx.hilt.work)
+
+    testImplementation(libs.junit4)
+    testImplementation(libs.robolectric)
+    testImplementation(libs.androidx.test.ext.junit)
+    testImplementation(libs.koin.test)
 }
 
 // Refuse to produce a Play bundle signed with the debug key. Captures a plain Boolean

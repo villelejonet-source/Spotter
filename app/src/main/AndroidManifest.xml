@@ -31,7 +31,7 @@
             </intent-filter>
         </activity>
 
-        <!-- WorkManager is initialised by SpotterApplication (Hilt worker factory). -->
+        <!-- WorkManager is initialised by SpotterApplication (Koin worker factory). -->
         <provider
             android:name="androidx.startup.InitializationProvider"
             android:authorities="${applicationId}.androidx-startup"

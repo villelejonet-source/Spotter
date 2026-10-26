@@ -16,8 +16,8 @@ import androidx.core.app.ServiceCompat
 import androidx.core.content.ContextCompat
 import com.viktorolsson.spotter.core.data.repository.RestTimerRepository
 import com.viktorolsson.spotter.core.data.repository.WorkoutRepository
-import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.CoroutineScope
+import org.koin.android.ext.android.inject
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
@@ -26,7 +26,6 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.launch
-import javax.inject.Inject
 import kotlin.time.Clock
 import kotlin.time.Duration
 import kotlin.time.Instant
@@ -37,10 +36,9 @@ import kotlin.time.Instant
  * alerts when rest ends, including with the screen off or another app open.
  * Stops itself when no workout is active.
  */
-@AndroidEntryPoint
 class WorkoutService : Service() {
-    @Inject lateinit var workoutRepository: WorkoutRepository
-    @Inject lateinit var restTimerRepository: RestTimerRepository
+    private val workoutRepository: WorkoutRepository by inject()
+    private val restTimerRepository: RestTimerRepository by inject()
 
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
     private var observer: Job? = null

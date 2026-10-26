@@ -1,35 +1,32 @@
 package com.viktorolsson.spotter
 
 import android.app.Application
-import androidx.hilt.work.HiltWorkerFactory
 import androidx.work.Configuration
 import com.viktorolsson.spotter.core.data.StartupMaintenance
 import com.viktorolsson.spotter.core.data.di.ApplicationScope
 import com.viktorolsson.spotter.core.data.sync.SyncRepository
-import dagger.hilt.android.HiltAndroidApp
+import com.viktorolsson.spotter.di.appModules
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
-import javax.inject.Inject
+import org.koin.android.ext.android.get
+import org.koin.android.ext.koin.androidContext
+import org.koin.androidx.workmanager.factory.KoinWorkerFactory
+import org.koin.core.context.startKoin
 
-@HiltAndroidApp
 class SpotterApplication : Application(), Configuration.Provider {
-    @Inject lateinit var workerFactory: HiltWorkerFactory
-
-    // Injected eagerly so it starts syncing as soon as a signed-in session is restored. The
-    // Supabase client it needs is built lazily on IO, so this costs nothing on the main thread.
-    @Inject lateinit var syncRepository: SyncRepository
-
-    /** Seeding, one-off conversions and daily refreshes; each returns early when there's nothing to do. */
-    @Inject lateinit var maintenance: dagger.Lazy<StartupMaintenance>
-
-    @Inject @ApplicationScope
-    lateinit var applicationScope: CoroutineScope
-
     override val workManagerConfiguration: Configuration
-        get() = Configuration.Builder().setWorkerFactory(workerFactory).build()
+        get() = Configuration.Builder().setWorkerFactory(KoinWorkerFactory()).build()
 
     override fun onCreate() {
         super.onCreate()
-        applicationScope.launch { maintenance.get().run() }
+        startKoin {
+            androidContext(this@SpotterApplication)
+            modules(appModules(this@SpotterApplication))
+        }
+        // Made eagerly so it starts syncing as soon as a signed-in session is restored. The
+        // Supabase client it needs is built lazily on IO, so this costs nothing on the main thread.
+        get<SyncRepository>()
+        // Seeding, one-off conversions and daily refreshes; each returns early when there's nothing to do.
+        get<CoroutineScope>(ApplicationScope).launch { get<StartupMaintenance>().run() }
     }
 }

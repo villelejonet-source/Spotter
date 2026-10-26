@@ -1,7 +1,6 @@
 package com.viktorolsson.spotter.core.data.sync
 
 import android.content.Context
-import androidx.hilt.work.HiltWorker
 import androidx.work.BackoffPolicy
 import androidx.work.Constraints
 import androidx.work.CoroutineWorker
@@ -12,8 +11,6 @@ import androidx.work.OneTimeWorkRequestBuilder
 import androidx.work.PeriodicWorkRequestBuilder
 import androidx.work.WorkManager
 import androidx.work.WorkerParameters
-import dagger.assisted.Assisted
-import dagger.assisted.AssistedInject
 import java.util.concurrent.TimeUnit
 
 /** Background sync with WorkManager: every few hours, and soon after workouts. */
@@ -44,10 +41,10 @@ class WorkManagerSyncScheduler(private val context: Context) : SyncScheduler {
     }
 }
 
-@HiltWorker
-class SyncWorker @AssistedInject constructor(
-    @Assisted context: Context,
-    @Assisted params: WorkerParameters,
+/** Made by Koin's worker factory (`workerOf(::SyncWorker)` in [androidDataModule]). */
+class SyncWorker(
+    context: Context,
+    params: WorkerParameters,
     private val sync: SyncRepository,
 ) : CoroutineWorker(context, params) {
     override suspend fun doWork(): Result = if (sync.syncNow()) Result.success() else Result.retry()

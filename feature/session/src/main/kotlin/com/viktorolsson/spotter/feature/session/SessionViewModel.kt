@@ -4,7 +4,6 @@ import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.navigation.toRoute
-import com.viktorolsson.spotter.core.data.di.ApplicationScope
 import com.viktorolsson.spotter.core.data.repository.ExerciseRepository
 import com.viktorolsson.spotter.core.data.repository.RecommendationRepository
 import com.viktorolsson.spotter.core.data.repository.RestTimerRepository
@@ -28,7 +27,6 @@ import com.viktorolsson.spotter.core.model.WorkoutSession
 import com.viktorolsson.spotter.core.model.WorkoutSet
 import com.viktorolsson.spotter.core.model.isTimed
 import com.viktorolsson.spotter.core.model.parseToKg
-import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.Job
@@ -52,7 +50,6 @@ import kotlinx.coroutines.launch
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.todayIn
 import kotlinx.datetime.yearsUntil
-import javax.inject.Inject
 import kotlin.time.Clock
 
 enum class SetField { WEIGHT, REPS, EFFORT }
@@ -108,8 +105,7 @@ data class SessionUiState(
 )
 
 @OptIn(ExperimentalCoroutinesApi::class)
-@HiltViewModel
-class SessionViewModel @Inject constructor(
+class SessionViewModel(
     savedStateHandle: SavedStateHandle,
     private val workoutRepository: WorkoutRepository,
     private val restTimerRepository: RestTimerRepository,
@@ -117,7 +113,8 @@ class SessionViewModel @Inject constructor(
     private val profileRepository: UserProfileRepository,
     private val recommendationRepository: RecommendationRepository,
     private val syncRepository: SyncRepository,
-    @param:ApplicationScope private val applicationScope: CoroutineScope,
+    /** Outlives the screen, for writes that must finish (Koin: `get(ApplicationScope)`). */
+    private val applicationScope: CoroutineScope,
     preferencesRepository: UserPreferencesRepository,
 ) : ViewModel() {
     private val _swap = MutableStateFlow<SwapUiState?>(null)

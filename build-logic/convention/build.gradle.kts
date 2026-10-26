@@ -31,10 +31,6 @@ gradlePlugin {
             id = "spotter.android.feature"
             implementationClass = "AndroidFeatureConventionPlugin"
         }
-        register("hilt") {
-            id = "spotter.hilt"
-            implementationClass = "HiltConventionPlugin"
-        }
         register("androidScreenshots") {
             id = "spotter.android.screenshots"
             implementationClass = "AndroidScreenshotsConventionPlugin"

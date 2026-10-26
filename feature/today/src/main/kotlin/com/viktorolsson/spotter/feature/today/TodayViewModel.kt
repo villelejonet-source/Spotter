@@ -8,7 +8,6 @@ import com.viktorolsson.spotter.core.data.repository.UserPreferencesRepository
 import com.viktorolsson.spotter.core.data.repository.WorkoutRepository
 import com.viktorolsson.spotter.core.model.PlanDay
 import com.viktorolsson.spotter.core.model.ScheduledWorkout
-import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -21,7 +20,6 @@ import kotlinx.coroutines.launch
 import kotlinx.datetime.LocalDate
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.todayIn
-import javax.inject.Inject
 import kotlin.time.Clock
 
 data class TodayUiState(
@@ -44,8 +42,7 @@ data class TodayUiState(
 private data class Schedule(val today: ScheduledWorkout?, val day: PlanDay?, val todayDone: Boolean, val upcoming: List<ScheduledWorkout>)
 
 @OptIn(ExperimentalCoroutinesApi::class)
-@HiltViewModel
-class TodayViewModel @Inject constructor(
+class TodayViewModel(
     planRepository: PlanRepository,
     private val workoutRepository: WorkoutRepository,
     private val scheduleRepository: ScheduleRepository,

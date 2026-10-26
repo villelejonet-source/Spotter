@@ -1,19 +1,24 @@
 package com.viktorolsson.spotter.shared
 
 import com.viktorolsson.spotter.core.data.DataGraph
+import com.viktorolsson.spotter.core.data.di.dataModule
 import com.viktorolsson.spotter.core.data.iosDataGraph
 import com.viktorolsson.spotter.core.data.sync.SupabaseConfig
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import org.koin.core.context.startKoin
 
 /**
- * What the Swift app talks to; one per process. The screens move to Compose Multiplatform
- * in phase 4 (docs/platform/ios-port.md); until then this proves the data layer runs.
+ * What the Swift app talks to; one per process. It starts Koin with the shared data layer, as
+ * Android's Application does, so the shared screens (phase 4, docs/platform/ios-port.md) get
+ * their view models the same way on both platforms.
  */
 class SpotterIos(supabaseUrl: String, supabasePublishableKey: String, versionCode: Int) {
-    private val graph: DataGraph = iosDataGraph(SupabaseConfig(supabaseUrl, supabasePublishableKey), versionCode)
+    private val graph: DataGraph = startKoin {
+        modules(dataModule(iosDataGraph(SupabaseConfig(supabaseUrl, supabasePublishableKey), versionCode)))
+    }.koin.get()
 
     /** Seeds the catalog and runs start-up maintenance, then reports the library size. */
     fun start(onReady: (exerciseCount: Int) -> Unit) {

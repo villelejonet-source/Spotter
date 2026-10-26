@@ -31,7 +31,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
+import org.koin.compose.viewmodel.koinViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.viktorolsson.spotter.core.engine.PlanGenerator
 import com.viktorolsson.spotter.core.model.PlanDay
@@ -54,7 +54,7 @@ internal fun TodayRoute(
     onOpenSession: (Long) -> Unit,
     onOpenPlan: () -> Unit,
     onBuildPlan: () -> Unit,
-    viewModel: TodayViewModel = hiltViewModel(),
+    viewModel: TodayViewModel = koinViewModel(),
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     TodayScreen(

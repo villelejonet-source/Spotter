@@ -35,8 +35,9 @@ import com.viktorolsson.spotter.core.model.Sex
 import com.viktorolsson.spotter.core.model.UserProfile
 import com.viktorolsson.spotter.core.model.WeightUnit
 import com.viktorolsson.spotter.core.model.isTimed
-import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.CoroutineScope
+import org.koin.core.component.KoinComponent
+import org.koin.core.component.get
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.datetime.DateTimeUnit
@@ -48,7 +49,6 @@ import kotlinx.datetime.minus
 import kotlinx.datetime.plus
 import kotlinx.datetime.toInstant
 import kotlinx.datetime.todayIn
-import javax.inject.Inject
 import kotlin.math.roundToInt
 import kotlin.random.Random
 import kotlin.time.Clock
@@ -65,13 +65,10 @@ import kotlin.time.Instant
  *
  * Does nothing if workouts are already logged.
  */
-@AndroidEntryPoint
-class DemoDataReceiver : BroadcastReceiver() {
-    @Inject lateinit var seeder: DemoDataSeeder
-
-    @Inject @ApplicationScope lateinit var scope: CoroutineScope
-
+class DemoDataReceiver : BroadcastReceiver(), KoinComponent {
     override fun onReceive(context: Context, intent: Intent) {
+        val seeder = DemoDataSeeder(get(), get(), get(), get(), get(), get(), get(), get(), get())
+        val scope: CoroutineScope = get(ApplicationScope)
         val pending = goAsync()
         scope.launch {
             try {
@@ -89,7 +86,7 @@ class DemoDataReceiver : BroadcastReceiver() {
     }
 }
 
-class DemoDataSeeder @Inject constructor(
+class DemoDataSeeder(
     private val workoutDao: WorkoutDao,
     private val planDao: PlanDao,
     private val profiles: UserProfileRepository,

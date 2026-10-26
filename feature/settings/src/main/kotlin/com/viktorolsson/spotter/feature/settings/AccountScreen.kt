@@ -47,7 +47,7 @@ import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
-import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
+import org.koin.compose.viewmodel.koinViewModel
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -65,14 +65,12 @@ import com.viktorolsson.spotter.core.ui.component.SecondaryButton
 import com.viktorolsson.spotter.core.ui.component.SpotterTopBar
 import com.viktorolsson.spotter.core.ui.theme.Dimens
 import com.viktorolsson.spotter.core.ui.theme.Spacing
-import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.serialization.Serializable
-import javax.inject.Inject
 
 /**
  * Accounts are shared with the website: email + password, confirmed by an emailed code or
@@ -115,8 +113,7 @@ data class AccountUiState(
     val emailValid: Boolean get() = Patterns.EMAIL_ADDRESS.matcher(email.trim()).matches()
 }
 
-@HiltViewModel
-class AccountViewModel @Inject constructor(
+class AccountViewModel(
     private val sync: SyncRepository,
     savedStateHandle: SavedStateHandle,
 ) : ViewModel() {
@@ -250,7 +247,7 @@ private fun AuthProblem.message(): Int = when (this) {
 }
 
 @Composable
-internal fun AccountRoute(onDone: () -> Unit, viewModel: AccountViewModel = hiltViewModel()) {
+internal fun AccountRoute(onDone: () -> Unit, viewModel: AccountViewModel = koinViewModel()) {
     val state by viewModel.state.collectAsStateWithLifecycle()
     val leave = {
         viewModel.leave()

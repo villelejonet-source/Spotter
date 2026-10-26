@@ -14,7 +14,6 @@ import com.viktorolsson.spotter.core.model.PersonalRecord
 import com.viktorolsson.spotter.core.model.Recommendation
 import com.viktorolsson.spotter.core.model.WeightUnit
 import com.viktorolsson.spotter.core.model.parseToKg
-import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -25,7 +24,6 @@ import kotlinx.coroutines.launch
 import kotlinx.datetime.LocalDate
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.todayIn
-import javax.inject.Inject
 import kotlin.time.Clock
 
 data class ProgressUiState(
@@ -41,8 +39,7 @@ data class ProgressUiState(
 }
 
 @OptIn(ExperimentalCoroutinesApi::class)
-@HiltViewModel
-class ProgressViewModel @Inject constructor(
+class ProgressViewModel(
     historyRepository: HistoryRepository,
     private val bodyWeightRepository: BodyWeightRepository,
     private val recommendationRepository: RecommendationRepository,

@@ -33,7 +33,7 @@ import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.tooling.preview.Preview
-import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
+import org.koin.compose.viewmodel.koinViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.viktorolsson.spotter.core.data.sync.SyncError
 import com.viktorolsson.spotter.core.data.sync.SyncStatus
@@ -58,7 +58,7 @@ internal fun SettingsRoute(
     onOpenPlan: () -> Unit,
     onRebuildPlan: () -> Unit,
     onOpenAccount: (AccountRoute) -> Unit,
-    viewModel: SettingsViewModel = hiltViewModel(),
+    viewModel: SettingsViewModel = koinViewModel(),
 ) {
     val preferences by viewModel.preferences.collectAsStateWithLifecycle()
     val planName by viewModel.planName.collectAsStateWithLifecycle()

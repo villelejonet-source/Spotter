@@ -1,8 +1,7 @@
-// Android wiring for the shared :core:data: the Hilt graph, WorkManager background sync, the
+// Android wiring for the shared :core:data: the DataGraph built from Android storage, WorkManager background sync, the
 // encrypted session store and the bundled exercise catalog as an asset.
 plugins {
     alias(libs.plugins.spotter.android.library)
-    alias(libs.plugins.spotter.hilt)
 }
 
 extensions.configure<com.android.build.api.dsl.LibraryExtension> {
@@ -19,8 +18,8 @@ dependencies {
     implementation(libs.androidx.security.crypto)
     implementation(libs.multiplatform.settings)
     implementation(libs.androidx.work.runtime)
-    implementation(libs.androidx.hilt.work)
-    ksp(libs.androidx.hilt.compiler)
+    implementation(project.dependencies.platform(libs.koin.bom))
+    implementation(libs.koin.androidx.workmanager)
 
     testImplementation(libs.junit4)
     testImplementation(libs.robolectric)

@@ -24,7 +24,7 @@ This is a new project and has nothing to do with the HubSpot Helper repo. It liv
 |---|---|
 | UI | Jetpack Compose, Material 3, dynamic color |
 | Architecture | MVVM + unidirectional data flow (ViewModel → `StateFlow<UiState>`) |
-| DI | Hilt |
+| DI | Koin (Hilt until the iOS port, phase 4b) |
 | DB | Room (+ migrations), Kotlin coroutines/Flow |
 | Settings | DataStore (theme, units, rest defaults) |
 | Navigation | Navigation-Compose (type-safe routes) |

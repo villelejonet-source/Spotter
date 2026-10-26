@@ -28,7 +28,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
-import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
+import org.koin.compose.viewmodel.koinViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.viktorolsson.spotter.core.model.EffortScale
 import com.viktorolsson.spotter.core.model.PersonalRecord
@@ -57,7 +57,7 @@ internal fun WorkoutDetailRoute(
     onBack: () -> Unit,
     onOpenExercise: (String) -> Unit,
     onOpenSession: (Long) -> Unit,
-    viewModel: WorkoutDetailViewModel = hiltViewModel(),
+    viewModel: WorkoutDetailViewModel = koinViewModel(),
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     WorkoutDetailScreen(

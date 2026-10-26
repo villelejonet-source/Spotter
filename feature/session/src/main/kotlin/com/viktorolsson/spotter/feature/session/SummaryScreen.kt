@@ -27,7 +27,7 @@ import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
-import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
+import org.koin.compose.viewmodel.koinViewModel
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -51,8 +51,6 @@ import com.viktorolsson.spotter.core.ui.formatSetCount
 import com.viktorolsson.spotter.core.ui.formatTotal
 import com.viktorolsson.spotter.core.ui.theme.Dimens
 import com.viktorolsson.spotter.core.ui.theme.Spacing
-import dagger.hilt.android.lifecycle.HiltViewModel
-import javax.inject.Inject
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
@@ -66,8 +64,7 @@ data class SummaryUiState(
     val records: List<PersonalRecord> = emptyList(),
 )
 
-@HiltViewModel
-class SummaryViewModel @Inject constructor(
+class SummaryViewModel(
     savedStateHandle: SavedStateHandle,
     workoutRepository: WorkoutRepository,
     historyRepository: HistoryRepository,
@@ -85,7 +82,7 @@ class SummaryViewModel @Inject constructor(
 }
 
 @Composable
-internal fun SummaryRoute(onDone: () -> Unit, viewModel: SummaryViewModel = hiltViewModel()) {
+internal fun SummaryRoute(onDone: () -> Unit, viewModel: SummaryViewModel = koinViewModel()) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val summary = uiState.summary
     when {

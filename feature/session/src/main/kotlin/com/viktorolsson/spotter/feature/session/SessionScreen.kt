@@ -63,7 +63,7 @@ import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.semantics
 import androidx.core.content.ContextCompat
-import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
+import org.koin.compose.viewmodel.koinViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.viktorolsson.spotter.core.engine.Plates
 import com.viktorolsson.spotter.core.model.EffortScale
@@ -103,7 +103,7 @@ internal fun SessionRoute(
     onAddExercises: (Long) -> Unit,
     onFinished: (Long) -> Unit,
     onClose: () -> Unit,
-    viewModel: SessionViewModel = hiltViewModel(),
+    viewModel: SessionViewModel = koinViewModel(),
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val swap by viewModel.swap.collectAsStateWithLifecycle()

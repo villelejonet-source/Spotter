@@ -49,6 +49,7 @@ import androidx.lifecycle.viewModelScope
 import androidx.navigation.NavGraphBuilder
 import androidx.navigation.compose.composable
 import androidx.navigation.toRoute
+import com.viktorolsson.spotter.core.data.logWarn
 import com.viktorolsson.spotter.core.data.sync.AuthException
 import com.viktorolsson.spotter.core.data.sync.AuthProblem
 import com.viktorolsson.spotter.core.data.sync.CodePurpose
@@ -59,6 +60,7 @@ import com.viktorolsson.spotter.core.ui.component.SecondaryButton
 import com.viktorolsson.spotter.core.ui.component.SpotterTopBar
 import com.viktorolsson.spotter.core.ui.theme.Dimens
 import com.viktorolsson.spotter.core.ui.theme.Spacing
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -274,9 +276,18 @@ class AccountViewModel(
             _state.update { it.copy(busy = false) }
         } catch (e: AuthException) {
             _state.update { it.copy(busy = false, error = e.problem.message()) }
+        } catch (e: CancellationException) {
+            throw e
         } catch (e: Exception) {
+            // Not an auth error the screen can explain: keep a trace of what it was. Class names
+            // only, since messages can carry server responses.
+            logWarn(TAG, "Account action failed: ${e::class.simpleName} (cause: ${e.cause?.let { it::class.simpleName }})")
             _state.update { it.copy(busy = false, error = Res.string.account_error_other) }
         }
+    }
+
+    private companion object {
+        const val TAG = "SpotterAccount"
     }
 }
 

@@ -1,4 +1,4 @@
-package com.viktorolsson.spotter
+package com.viktorolsson.spotter.shell
 
 import androidx.lifecycle.ViewModel
 import com.viktorolsson.spotter.core.data.sync.SyncRepository

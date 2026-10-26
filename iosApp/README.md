@@ -1,7 +1,7 @@
 # Spotter for iOS
 
-The iOS app: a thin Swift shell around the shared Kotlin code (`:shared` builds the `Shared`
-framework from `core/*`). The plan and what's still to come: `docs/platform/ios-port.md`.
+The iOS app: a thin Swift shell around the shared app (`:shared` builds the `Shared` framework
+from `:shell`, the features and `core/*`). Every screen is the shared Compose UI. The plan and what's still to come: `docs/platform/ios-port.md`.
 
 ## Run it
 
@@ -29,7 +29,7 @@ project URL and **publishable** key, as `local.properties` does for Android.
 
 | Path | What |
 |---|---|
-| `Spotter/SpotterApp.swift` | App entry; starts `SpotterIos` (in `shared/`), passes opened URLs and foreground events |
+| `Spotter/SpotterApp.swift` | App entry; starts `SpotterIos` (in `shared/`), shows its Compose UI full-window, passes opened URLs and foreground events |
 | `Spotter/Info.plist` | The `spotter://` URL scheme for sign-in links, Supabase keys from the xcconfig |
 | `Config/App.xcconfig` | Build settings; includes the optional `Secrets.xcconfig` |
 | `../core/data/catalog/exercises.json` | Copied into the app bundle; seeded on first launch |

@@ -1,7 +1,11 @@
-// The framework the iOS app links (`Shared`): the shared modules plus a small Swift-facing
-// entry point. Xcode builds it with `:shared:embedAndSignAppleFrameworkForXcode` (see iosApp/).
+// The framework the iOS app links (`Shared`): the shared app (`:shell` and everything below it)
+// plus a small Swift-facing entry point. Xcode builds it with
+// `:shared:embedAndSignAppleFrameworkForXcode` (see iosApp/), which also copies every module's
+// Compose resources (strings) into the app bundle.
 plugins {
     alias(libs.plugins.kotlin.multiplatform)
+    alias(libs.plugins.kotlin.compose)
+    alias(libs.plugins.compose.multiplatform)
 }
 
 kotlin {
@@ -15,16 +19,9 @@ kotlin {
     sourceSets {
         iosMain.dependencies {
             implementation(project(":core:data"))
-            // The screens ported to shared code so far, linked in so the iOS build proves they
-            // link; 4d puts them on screen.
-            implementation(project(":feature:today"))
-            implementation(project(":feature:history"))
-            implementation(project(":feature:progress"))
-            implementation(project(":feature:library"))
-            implementation(project(":feature:plan"))
-            implementation(project(":feature:onboarding"))
-            implementation(project(":feature:settings"))
-            implementation(project(":feature:session"))
+            implementation(project(":shell"))
+            implementation(libs.compose.mp.runtime)
+            implementation(libs.compose.mp.ui)
         }
     }
 }

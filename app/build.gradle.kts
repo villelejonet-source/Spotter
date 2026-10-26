@@ -97,6 +97,7 @@ dependencies {
     implementation(project(":feature:session"))
     implementation(project(":feature:onboarding"))
     implementation(project(":feature:plan"))
+    implementation(project(":shell"))
 
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.core.splashscreen)

@@ -2,13 +2,14 @@ import clsx from "clsx";
 import Link from "next/link";
 import { Suspense } from "react";
 import { BarChartView } from "@/components/charts";
+import { TrainingHeatmap, heatmapStart } from "@/components/training-heatmap";
 import { Card, CardTitle, EmptyState, PageHeader, Stat } from "@/components/ui";
 import { exerciseName } from "@/lib/catalog";
 import { getCatalog, getFinishedSessionCount, getPersonalRecords, getProfile, getRecordCount, getSessionTimes, getSetHistory, getUnit } from "@/lib/data";
-import { formatDateValue, formatDateValueMonthShort, formatFullDate } from "@/lib/dates";
+import { formatDateValueMonthShort, formatFullDate } from "@/lib/dates";
 import { GOAL_LABELS, label, PR_LABELS } from "@/lib/labels";
 import { formatDuration, formatRecord, volumeTarget } from "@/lib/model";
-import { DAY_MS, dateValueKey, finished, localDate, muscleVolume, WEEK_MS, weekStart, weeklyTotals, workoutsPerDay } from "@/lib/stats";
+import { DAY_MS, finished, localDate, muscleVolume, WEEK_MS, weeklyTotals, workoutsPerDay } from "@/lib/stats";
 
 export const metadata = { title: "Insights" };
 
@@ -59,13 +60,9 @@ export default async function InsightsPage() {
 }
 
 /** The heatmap window: 53 columns of weeks (Monday on top), ending with this week. */
-function heatmapStart(now: number) {
-  return weekStart(now) - (HEATMAP_WEEKS - 1) * WEEK_MS;
-}
-
 async function Overview() {
   const now = Date.now();
-  const [times, records, profile] = await Promise.all([getSessionTimes(heatmapStart(now)), getRecordCount(), getProfile()]);
+  const [times, records, profile] = await Promise.all([getSessionTimes(heatmapStart(HEATMAP_WEEKS, now)), getRecordCount(), getProfile()]);
   const done = finished(times);
   const weeks = weeklyTotals(times, 12, now);
   const avgPerWeek = weeks.reduce((s, w) => s + w.sessions, 0) / weeks.length;
@@ -128,34 +125,11 @@ async function MuscleBalance() {
 
 async function TrainingDays() {
   const now = Date.now();
-  const firstWeek = heatmapStart(now);
-  const times = await getSessionTimes(firstWeek);
-  const perDay = workoutsPerDay(times);
-  const today = localDate(now);
+  const perDay = workoutsPerDay(await getSessionTimes(heatmapStart(HEATMAP_WEEKS, now)));
   return (
     <>
       <CardTitle>Training days</CardTitle>
-      <div className="overflow-x-auto">
-        <div className="inline-grid grid-flow-col grid-rows-7 gap-[3px]" role="img" aria-label={`Training days over the last ${HEATMAP_WEEKS} weeks`}>
-          {Array.from({ length: HEATMAP_WEEKS * 7 }, (_, i) => {
-            const date = firstWeek + Math.floor(i / 7) * WEEK_MS + (i % 7) * DAY_MS;
-            const count = perDay.get(dateValueKey(date)) ?? 0;
-            const text = `${formatDateValue(date)}: ${count ? `${count} workout${count > 1 ? "s" : ""}` : "rest"}`;
-            return (
-              <div
-                key={date}
-                title={date > today ? undefined : text}
-                className={clsx("h-3 w-3 rounded-[3px]", date > today ? "opacity-0" : count >= 2 ? "bg-on-primary-container" : count === 1 ? "bg-primary" : "bg-surface-high")}
-              />
-            );
-          })}
-        </div>
-      </div>
-      <div className="mt-2 flex items-center gap-2 text-xs text-muted">
-        <span className="h-3 w-3 rounded-[3px] bg-surface-high" /> Rest
-        <span className="ml-2 h-3 w-3 rounded-[3px] bg-primary" /> Workout
-        <span className="ml-2 h-3 w-3 rounded-[3px] bg-on-primary-container" /> Two or more
-      </div>
+      <TrainingHeatmap weeks={HEATMAP_WEEKS} perDay={perDay} now={now} />
     </>
   );
 }

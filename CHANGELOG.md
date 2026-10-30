@@ -17,6 +17,9 @@ into the new version's entry and writes the store notes from it. Versions are th
 - The website has a new look: dark-first with a glowing orange accent, monospace numbers, a new
   sidebar, and a "Jump to…" command palette (⌘K) to reach any page or action. Light mode
   follows your system setting.
+- The website's Today page is a dashboard: stat tiles with trend lines and the change in volume
+  against the previous four weeks, a weekly volume chart with a 4W/12W/6M/1Y switch, your next
+  workout with this week's progress as a ring, a training heatmap, records and recent workouts.
 
 ### iOS (not released yet)
 - The whole app runs on iOS from the same shared code as Android (#13–#20).

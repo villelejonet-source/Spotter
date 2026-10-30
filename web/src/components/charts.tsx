@@ -17,3 +17,8 @@ export const LineChartView = dynamic(() => import("./charts-impl").then((m) => m
   ssr: false,
   loading: () => placeholder(240),
 });
+
+export const AreaChartView = dynamic(() => import("./charts-impl").then((m) => m.AreaChartView), {
+  ssr: false,
+  loading: () => placeholder(240),
+});

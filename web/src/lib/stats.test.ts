@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { dayKey, exerciseProgress, muscleVolume, workoutsPerDay, nextPlanDay, weekStart, weekStreak, weeklyTotals } from "./stats";
+import { dayKey, formatChange, percentChange, exerciseProgress, muscleVolume, workoutsPerDay, nextPlanDay, weekStart, weekStreak, weeklyTotals } from "./stats";
 
 // Thursday 2026-10-22, 14:00 in Stockholm.
 const NOW = Date.UTC(2026, 9, 22, 12);
@@ -101,5 +101,24 @@ describe("workoutsPerDay", () => {
     const days = workoutsPerDay([session(day(2026, 10, 20)), session(day(2026, 10, 20)), { ...session(day(2026, 10, 21)), ended_at: null }]);
     expect(days.get("2026-10-20")).toBe(2);
     expect(days.has("2026-10-21")).toBe(false);
+  });
+});
+
+describe("percentChange", () => {
+  it("compares with the previous period, rounded", () => {
+    expect(percentChange(112, 100)).toBe(12);
+    expect(percentChange(92.4, 100)).toBe(-8);
+    expect(percentChange(4330, 3863)).toBe(12);
+  });
+
+  it("has nothing to say without a previous period", () => {
+    expect(percentChange(4330, 0)).toBeNull();
+    expect(percentChange(0, 0)).toBeNull();
+  });
+
+  it("formats with a sign", () => {
+    expect(formatChange(12)).toBe("+12%");
+    expect(formatChange(-8)).toBe("\u22128%");
+    expect(formatChange(0)).toBe("±0%");
   });
 });

@@ -72,6 +72,21 @@ export function weeklyTotals(sessions: Session[], weeks: number, now = Date.now(
   return buckets;
 }
 
+/**
+ * The change from [previous] to [current] in percent, rounded to a whole number, or null when
+ * there's nothing to compare with (previous is 0): "+12%" on a stat tile.
+ */
+export function percentChange(current: number, previous: number): number | null {
+  if (!previous) return null;
+  return Math.round(((current - previous) / previous) * 100);
+}
+
+/** "+12%", "−8%" (a true minus sign), "±0%". */
+export function formatChange(percent: number): string {
+  if (percent === 0) return "±0%";
+  return `${percent > 0 ? "+" : "\u2212"}${Math.abs(percent)}%`;
+}
+
 /** The start of the week [weeks] - 1 weeks before this one: the oldest week in a [weeklyTotals] window. */
 export function windowStart(weeks: number, now = Date.now()): number {
   return addWeeks(weekStart(now), 1 - weeks);

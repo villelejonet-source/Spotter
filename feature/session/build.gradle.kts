@@ -21,5 +21,9 @@ kotlin {
         commonTest.dependencies {
             implementation(libs.kotlinx.coroutines.test)
         }
+        // View model tests run against a real in-memory database (SessionViewModelTest).
+        getByName("androidHostTest").dependencies {
+            implementation(libs.androidx.sqlite.framework)
+        }
     }
 }

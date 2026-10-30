@@ -60,6 +60,24 @@ class WorkoutRepositoryTest {
         assertTrue(exercises[0].sets.all { it.weightKg == null && it.reps == null && !it.isCompleted })
     }
 
+    /** Each keypad field writes only itself; the others keep what the database has. */
+    @Test
+    fun settingOneFieldLeavesTheOthers() = runTest {
+        val id = repo.startEmptyWorkout()
+        repo.addExercises(id, listOf("barbell-bench-press"))
+        val set = session(id).exercises.single().sets.first()
+        repo.updateSetValues(set.id, 80.0, 8, 2)
+
+        repo.setSetWeight(set.id, 82.5)
+        repo.setSetReps(set.id, 6)
+        repo.setSetRir(set.id, null)
+
+        val after = session(id).exercises.single().sets.first()
+        assertEquals(82.5, after.weightKg!!, 0.0)
+        assertEquals(6, after.reps)
+        assertNull(after.rir)
+    }
+
     @Test
     fun tickingCarriesValuesToUntouchedLaterSets() = runTest {
         val id = repo.startEmptyWorkout()

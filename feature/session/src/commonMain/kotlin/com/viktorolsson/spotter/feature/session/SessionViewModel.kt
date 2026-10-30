@@ -24,7 +24,6 @@ import com.viktorolsson.spotter.core.model.SessionExercise
 import com.viktorolsson.spotter.core.model.SetType
 import com.viktorolsson.spotter.core.model.UserPreferences
 import com.viktorolsson.spotter.core.model.WorkoutSession
-import com.viktorolsson.spotter.core.model.WorkoutSet
 import com.viktorolsson.spotter.core.model.isTimed
 import com.viktorolsson.spotter.core.model.parseToKg
 import kotlinx.coroutines.CoroutineScope
@@ -209,19 +208,16 @@ class SessionViewModel(
 
     private suspend fun commitEdit() = keypadEdit.commit()
 
+    // Writes only the field that was typed: the screen's copy of the set's other values may be
+    // behind the database (a tick just filled them in, a sync), so they're never written back.
     private suspend fun writeField(edit: FieldEdit) {
-        val set = findSet(edit.setId) ?: return
-        val unit = prefs.weightUnit
         val text = edit.text
-        workoutRepository.updateSetValues(
-            setId = edit.setId,
-            weightKg = if (edit.field == SetField.WEIGHT) unit.parseToKg(text) else set.weightKg,
-            reps = if (edit.field == SetField.REPS) text.toIntOrNull()?.takeIf { it in 0..999 } else set.reps,
-            rir = if (edit.field == SetField.EFFORT) text.toIntOrNull()?.let(prefs.effortScale::toRir) else set.rir,
-        )
+        when (edit.field) {
+            SetField.WEIGHT -> workoutRepository.setSetWeight(edit.setId, prefs.weightUnit.parseToKg(text))
+            SetField.REPS -> workoutRepository.setSetReps(edit.setId, text.toIntOrNull()?.takeIf { it in 0..999 })
+            SetField.EFFORT -> workoutRepository.setSetRir(edit.setId, text.toIntOrNull()?.let(prefs.effortScale::toRir))
+        }
     }
-
-    private fun findSet(setId: Long): WorkoutSet? = uiState.value.session?.exercises?.flatMap { it.sets }?.firstOrNull { it.id == setId }
 
     private val _prEvents = MutableSharedFlow<PrEvent>(extraBufferCapacity = 4)
     /** Fires when a ticked set beats the best from earlier sessions (and earlier sets today). */
@@ -252,7 +248,10 @@ class SessionViewModel(
         workoutRepository.addWarmUps(exerciseId, extended = (age ?: 0) >= 50)
     }
 
+    /** The copy is the later action: a value still queued for this set is dropped, not written over it. */
     fun copyPrevious(setId: Long, previous: PreviousSet) = launch {
+        if (keypadEdit.pending?.setId == setId) keypadEdit.take()
+        commitEdit()
         workoutRepository.updateSetValues(setId, previous.weightKg, previous.reps, rir = null)
     }
 

@@ -2,13 +2,15 @@ package com.viktorolsson.spotter.shell
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.viktorolsson.spotter.core.data.AppErrors
+import com.viktorolsson.spotter.core.data.Failure
+import com.viktorolsson.spotter.core.data.launchReporting
 import com.viktorolsson.spotter.core.data.sync.FirstSyncChoice
 import com.viktorolsson.spotter.core.data.sync.SyncRepository
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
-import kotlinx.coroutines.launch
 
 /** What the first-sync dialog needs: whether to show, and whose account it's about. */
 data class SyncChoiceUiState(
@@ -19,13 +21,13 @@ data class SyncChoiceUiState(
 )
 
 /** The first sync on a phone with its own data asks, wherever the user is, what to keep. */
-class SyncChoiceViewModel(private val sync: SyncRepository) : ViewModel() {
+class SyncChoiceViewModel(private val sync: SyncRepository, private val errors: AppErrors) : ViewModel() {
     val uiState: StateFlow<SyncChoiceUiState> = sync.status
         .map { SyncChoiceUiState(needsChoice = it.needsChoice, email = it.account?.email, fromLink = it.fromLink) }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), SyncChoiceUiState())
 
-    fun choose(choice: FirstSyncChoice) = viewModelScope.launch { sync.syncNow(choice) }
+    fun choose(choice: FirstSyncChoice) = viewModelScope.launchReporting(errors, Failure.ACTION) { sync.syncNow(choice) }
 
     /** Declines uploading this phone's data to a link-signed-in account. */
-    fun signOut() = viewModelScope.launch { sync.signOut() }
+    fun signOut() = viewModelScope.launchReporting(errors, Failure.ACTION) { sync.signOut() }
 }

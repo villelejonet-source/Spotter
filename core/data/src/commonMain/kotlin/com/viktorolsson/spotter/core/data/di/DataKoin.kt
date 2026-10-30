@@ -15,6 +15,7 @@ val ApplicationScope = named("ApplicationScope")
 fun dataModule(graph: DataGraph): Module = module {
     single { graph }
     single { graph.clock }
+    single { graph.errors }
     single(ApplicationScope) { graph.scope }
     single { graph.database }
 

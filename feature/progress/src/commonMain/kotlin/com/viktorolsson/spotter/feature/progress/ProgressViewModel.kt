@@ -2,6 +2,8 @@ package com.viktorolsson.spotter.feature.progress
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.viktorolsson.spotter.core.data.AppErrors
+import com.viktorolsson.spotter.core.data.launchReporting
 import com.viktorolsson.spotter.core.data.repository.BodyWeightRepository
 import com.viktorolsson.spotter.core.data.repository.HistoryRepository
 import com.viktorolsson.spotter.core.data.repository.LoggedExerciseSummary
@@ -45,6 +47,7 @@ class ProgressViewModel(
     private val recommendationRepository: RecommendationRepository,
     profileRepository: UserProfileRepository,
     preferencesRepository: UserPreferencesRepository,
+    private val errors: AppErrors,
 ) : ViewModel() {
     private val base = combine(
         historyRepository.observeRecentRecords(limit = 5),
@@ -60,14 +63,14 @@ class ProgressViewModel(
         state.copy(recommendations = recs)
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), ProgressUiState())
 
-    fun apply(id: Long) = viewModelScope.launch { recommendationRepository.apply(id) }
+    fun apply(id: Long) = viewModelScope.launchReporting(errors) { recommendationRepository.apply(id) }
 
-    fun dismiss(id: Long) = viewModelScope.launch { recommendationRepository.dismiss(id) }
+    fun dismiss(id: Long) = viewModelScope.launchReporting(errors) { recommendationRepository.dismiss(id) }
 
     /** Saves today's body weight; returns false (and saves nothing) for text outside the accepted range. */
     fun logWeight(text: String): Boolean {
         val kg = uiState.value.unit.parseToKg(text)?.takeIf { it in MIN_WEIGHT_KG..MAX_WEIGHT_KG } ?: return false
-        viewModelScope.launch { bodyWeightRepository.log(Clock.System.todayIn(TimeZone.currentSystemDefault()), kg) }
+        viewModelScope.launchReporting(errors) { bodyWeightRepository.log(Clock.System.todayIn(TimeZone.currentSystemDefault()), kg) }
         return true
     }
 

@@ -7,6 +7,8 @@ import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.navigation.toRoute
+import com.viktorolsson.spotter.core.data.AppErrors
+import com.viktorolsson.spotter.core.data.launchReporting
 import com.viktorolsson.spotter.core.data.repository.ExerciseRepository
 import com.viktorolsson.spotter.core.data.repository.WorkoutRepository
 import com.viktorolsson.spotter.core.model.BodyArea
@@ -50,6 +52,7 @@ class ExercisePickerViewModel(
     savedStateHandle: SavedStateHandle,
     private val exerciseRepository: ExerciseRepository,
     private val workoutRepository: WorkoutRepository,
+    private val errors: AppErrors,
 ) : ViewModel() {
     private val sessionId = savedStateHandle.toRoute<ExercisePickerRoute>().sessionId
     private val filters = MutableStateFlow(PickerFilters())
@@ -84,13 +87,13 @@ class ExercisePickerViewModel(
 
     fun toggle(exerciseId: String) = selected.update { if (exerciseId in it) it - exerciseId else it + exerciseId }
 
-    fun addSelected(onDone: () -> Unit) = viewModelScope.launch {
+    fun addSelected(onDone: () -> Unit) = viewModelScope.launchReporting(errors) {
         workoutRepository.addExercises(sessionId, selected.value)
         onDone()
     }
 
     fun createCustom(name: String, muscle: Muscle, pattern: MovementPattern, equipment: Equipment?) =
-        viewModelScope.launch {
+        viewModelScope.launchReporting(errors) {
             val id = exerciseRepository.createCustom(name, muscle, pattern, listOfNotNull(equipment))
             selected.update { it + id }
             setQuery(name.trim())

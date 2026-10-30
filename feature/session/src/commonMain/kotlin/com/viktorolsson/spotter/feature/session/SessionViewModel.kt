@@ -4,6 +4,8 @@ import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.navigation.toRoute
+import com.viktorolsson.spotter.core.data.AppErrors
+import com.viktorolsson.spotter.core.data.launchReporting
 import com.viktorolsson.spotter.core.data.repository.ExerciseRepository
 import com.viktorolsson.spotter.core.data.repository.RecommendationRepository
 import com.viktorolsson.spotter.core.data.repository.RestTimerRepository
@@ -115,6 +117,7 @@ class SessionViewModel(
     /** Outlives the screen, for writes that must finish (Koin: `get(ApplicationScope)`). */
     private val applicationScope: CoroutineScope,
     preferencesRepository: UserPreferencesRepository,
+    private val errors: AppErrors,
 ) : ViewModel() {
     private val _swap = MutableStateFlow<SwapUiState?>(null)
     /** The open swap sheet, if any. */
@@ -277,7 +280,7 @@ class SessionViewModel(
     /** The undo snackbar went away without Undo: delete for real. No-op if already settled. */
     fun confirmDeleteSet(setId: Long) {
         if (setId !in pendingDeletes.value) return
-        viewModelScope.launch {
+        viewModelScope.launchReporting(errors) {
             workoutRepository.deleteSet(setId)
             pendingDeletes.update { it - setId }
         }
@@ -335,7 +338,8 @@ class SessionViewModel(
         }
     }
 
-    private fun launch(block: suspend () -> Unit) = viewModelScope.launch { block() }
+    // Every action: a failure shows "Couldn't save" instead of crashing the app (AppErrors).
+    private fun launch(block: suspend () -> Unit) = viewModelScope.launchReporting(errors) { block() }
 
     private companion object {
         const val EDIT_DEBOUNCE_MS = 300L

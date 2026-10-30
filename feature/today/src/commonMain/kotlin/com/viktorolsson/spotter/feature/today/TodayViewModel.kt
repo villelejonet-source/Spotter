@@ -2,6 +2,9 @@ package com.viktorolsson.spotter.feature.today
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.viktorolsson.spotter.core.data.AppErrors
+import com.viktorolsson.spotter.core.data.Failure
+import com.viktorolsson.spotter.core.data.launchReporting
 import com.viktorolsson.spotter.core.data.repository.PlanRepository
 import com.viktorolsson.spotter.core.data.repository.ScheduleRepository
 import com.viktorolsson.spotter.core.data.repository.UserPreferencesRepository
@@ -47,6 +50,7 @@ class TodayViewModel(
     private val workoutRepository: WorkoutRepository,
     private val scheduleRepository: ScheduleRepository,
     preferencesRepository: UserPreferencesRepository,
+    private val errors: AppErrors,
 ) : ViewModel() {
     private val schedule = scheduleRepository.observeUpcoming().flatMapLatest { entries ->
         val today = Clock.System.todayIn(TimeZone.currentSystemDefault())
@@ -78,7 +82,7 @@ class TodayViewModel(
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), TodayUiState())
 
     /** Starts today's scheduled workout if there is one, otherwise the plan's next day. */
-    fun startNext(onStarted: (Long) -> Unit) = viewModelScope.launch {
+    fun startNext(onStarted: (Long) -> Unit) = viewModelScope.launchReporting(errors, Failure.ACTION) {
         val state = uiState.value
         val scheduled = state.scheduledToday
         when {
@@ -87,7 +91,7 @@ class TodayViewModel(
         }
     }
 
-    fun startEmptyWorkout(onStarted: (Long) -> Unit) = viewModelScope.launch {
+    fun startEmptyWorkout(onStarted: (Long) -> Unit) = viewModelScope.launchReporting(errors, Failure.ACTION) {
         onStarted(workoutRepository.startEmptyWorkout())
     }
 }

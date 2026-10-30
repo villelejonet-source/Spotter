@@ -7,5 +7,7 @@ internal actual fun logDebug(tag: String, message: String) {
 }
 
 actual fun logWarn(tag: String, message: String) {
-    NSLog("%@: %@", tag, message)
+    // One preformatted string as the format, with % escaped. Passing Kotlin strings through
+    // NSLog's C varargs ("%@: %@", tag, message) crashed the process (LogTest).
+    NSLog("$tag: $message".replace("%", "%%"))
 }

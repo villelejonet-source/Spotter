@@ -4,10 +4,12 @@ import android.content.Context
 import androidx.datastore.preferences.core.PreferenceDataStoreFactory
 import androidx.lifecycle.SavedStateHandle
 import androidx.room.Room
+import androidx.room.useWriterConnection
 import androidx.sqlite.driver.AndroidSQLiteDriver
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.viktorolsson.spotter.core.data.DataGraph
+import com.viktorolsson.spotter.core.data.Failure
 import com.viktorolsson.spotter.core.data.db.SpotterDatabase
 import com.viktorolsson.spotter.core.data.sync.AppBuild
 import com.viktorolsson.spotter.core.data.sync.SupabaseConfig
@@ -20,10 +22,12 @@ import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.advanceTimeBy
 import kotlinx.coroutines.test.resetMain
+import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
 import org.junit.After
@@ -66,6 +70,7 @@ class SessionViewModelTest {
         syncRepository = graph.sync,
         applicationScope = backgroundScope,
         preferencesRepository = graph.preferences,
+        errors = graph.errors,
     )
 
     private suspend fun sets(sessionId: Long): List<WorkoutSet> =
@@ -120,6 +125,29 @@ class SessionViewModelTest {
         assertNull(sets(id).first().weightKg)
     }
 
+    /** A save that fails (here SQLite rejects it, as with a full disk) shows "Couldn't save" instead of crashing the app. */
+    @Test
+    fun aFailedSaveIsShownInsteadOfCrashing() = runTest(main) {
+        graph.seeder.seedIfNeeded()
+        val id = graph.workouts.startEmptyWorkout()
+        graph.workouts.addExercises(id, listOf("barbell-bench-press"))
+        val set = sets(id).first()
+        val vm = viewModel(id)
+        vm.uiState.first { it.session != null }
+        val shown = mutableListOf<Failure>()
+        backgroundScope.launch { graph.errors.messages.collect { shown += it } }
+        runCurrent()
+
+        graph.database.useWriterConnection { connection ->
+            connection.usePrepared("CREATE TRIGGER reject_set_updates BEFORE UPDATE ON set_entry BEGIN SELECT RAISE(ABORT, 'disk full'); END") { it.step() }
+        }
+        vm.updateSetField(set.id, SetField.WEIGHT, "80")
+        vm.flushEdit().join()
+        runCurrent()
+
+        assertEquals(listOf(Failure.SAVE), shown)
+    }
+
     /** Copying last time's set onto a set with a typed value waiting: the copy is the later action and wins. */
     @Test
     fun copyPreviousWinsOverAPendingEdit() = runTest(main) {
@@ -152,7 +180,7 @@ internal fun testDataGraph(scope: CoroutineScope): DataGraph {
         ).build(),
         dataStore = PreferenceDataStoreFactory.create(scope = scope) { prefsFile },
         clock = Clock.System,
-        scope = scope,
+        applicationScope = scope,
         supabaseConfig = SupabaseConfig("", ""),
         sessionStore = { null },
         deviceStore = { error("No device store in tests") },

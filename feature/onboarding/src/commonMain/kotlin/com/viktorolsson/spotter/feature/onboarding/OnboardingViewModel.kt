@@ -4,6 +4,9 @@ import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.navigation.toRoute
+import com.viktorolsson.spotter.core.data.AppErrors
+import com.viktorolsson.spotter.core.data.Failure
+import com.viktorolsson.spotter.core.data.launchReporting
 import com.viktorolsson.spotter.core.data.repository.ExerciseRepository
 import com.viktorolsson.spotter.core.data.repository.PlanRepository
 import com.viktorolsson.spotter.core.data.repository.UserPreferencesRepository
@@ -139,13 +142,14 @@ class OnboardingViewModel(
     private val preferencesRepository: UserPreferencesRepository,
     syncRepository: SyncRepository,
     private val clock: Clock,
+    private val errors: AppErrors,
 ) : ViewModel() {
     private val rebuild = savedStateHandle.toRoute<OnboardingRoute>().rebuild
     private val _uiState = MutableStateFlow(OnboardingUiState(rebuild = rebuild, welcome = !rebuild))
     val uiState: StateFlow<OnboardingUiState> = _uiState.asStateFlow()
 
     init {
-        if (!rebuild) viewModelScope.launch {
+        if (!rebuild) viewModelScope.launchReporting(errors, Failure.ACTION) {
             syncRepository.status.collect { sync ->
                 val signedIn = sync.account != null
                 _uiState.update {
@@ -159,8 +163,8 @@ class OnboardingViewModel(
                 }
             }
         }
-        viewModelScope.launch {
-            val profile = profileRepository.get() ?: return@launch
+        viewModelScope.launchReporting(errors, Failure.ACTION) {
+            val profile = profileRepository.get() ?: return@launchReporting
             _uiState.update { it.copy(answers = profile.toAnswers()) }
         }
     }
@@ -225,15 +229,15 @@ class OnboardingViewModel(
         generate()
     }
 
-    fun skip(onDone: () -> Unit) = viewModelScope.launch {
+    fun skip(onDone: () -> Unit) = viewModelScope.launchReporting(errors) {
         preferencesRepository.setOnboardingCompleted(true)
         onDone()
     }
 
-    fun finish(onDone: () -> Unit) = viewModelScope.launch {
+    fun finish(onDone: () -> Unit) = viewModelScope.launchReporting(errors) {
         val state = _uiState.value
-        val plan = state.generated?.plan ?: return@launch
-        val profile = state.answers.toProfile() ?: return@launch
+        val plan = state.generated?.plan ?: return@launchReporting
+        val profile = state.answers.toProfile() ?: return@launchReporting
         _uiState.update { it.copy(saving = true) }
         profileRepository.save(profile)
         planRepository.saveAsActive(plan)
@@ -242,9 +246,9 @@ class OnboardingViewModel(
         onDone()
     }
 
-    private fun generate() = viewModelScope.launch {
+    private fun generate() = viewModelScope.launchReporting(errors, Failure.ACTION) {
         val state = _uiState.value
-        val profile = state.answers.toProfile() ?: return@launch
+        val profile = state.answers.toProfile() ?: return@launchReporting
         val library = exerciseRepository.observeAll().first()
         val generated = withContext(Dispatchers.Default) {
             PlanGenerator().generate(

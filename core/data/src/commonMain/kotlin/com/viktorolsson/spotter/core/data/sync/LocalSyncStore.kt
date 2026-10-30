@@ -13,6 +13,7 @@ import com.viktorolsson.spotter.core.data.db.SpotterDatabase
 import com.viktorolsson.spotter.core.data.db.SyncSchema
 import com.viktorolsson.spotter.core.data.db.entity.UserProfileEntity
 import com.viktorolsson.spotter.core.data.logDebug
+import com.viktorolsson.spotter.core.data.logWarn
 import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonNull
 import kotlinx.serialization.json.JsonObject
@@ -249,7 +250,7 @@ class LocalSyncStore(private val database: SpotterDatabase) {
             val parent = fks[name]
             if (parent != null && element is JsonPrimitive && element.isString) {
                 val localId = query("SELECT id FROM $parent WHERE syncId = ?", element.content) { if (it.step()) it.getLong(0) else null }
-                    ?: return Upsert.PARENT_MISSING.also { skipped(row, "parent $parent ${element.content} not here (yet)") }
+                    ?: return Upsert.PARENT_MISSING.also { logDebug(TAG, "Deferred ${row.tableName}/${row.syncId}: parent $parent not here yet") }
                 values[name] = localId
             } else {
                 values[name] = element.sqlValue()
@@ -296,7 +297,9 @@ class LocalSyncStore(private val database: SpotterDatabase) {
         return true
     }
 
-    private fun skipped(row: SyncRow, why: String) = logDebug(TAG, "Skipped ${row.tableName}/${row.syncId}: $why")
+    // A pulled row that can't be stored here: data the person has elsewhere won't show on this
+    // phone, so it's always logged, not only with debug logging on.
+    private fun skipped(row: SyncRow, why: String) = logWarn(TAG, "Skipped ${row.tableName}/${row.syncId}: $why")
 
     private suspend fun <R> read(block: suspend Sql.() -> R): R =
         database.useReaderConnection { connection -> Sql(connection).block() }

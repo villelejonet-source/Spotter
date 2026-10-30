@@ -57,7 +57,7 @@ export default async function HistoryPage({ searchParams }: { searchParams: Prom
                         </div>
                       </div>
                       <div className="shrink-0 text-right text-sm tabular-nums">
-                        <div>{formatVolume(s.volume_kg, unit)}</div>
+                        <div className="font-mono">{formatVolume(s.volume_kg, unit)}</div>
                         <div className="text-xs text-muted">
                           {s.exercise_count} exercises · {s.completed_sets} sets
                         </div>

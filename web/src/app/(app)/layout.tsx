@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { Brand } from "@/components/brand";
 import { CommandPalette } from "@/components/command-palette";
 import { MobileTabBar, SectionTabs, SidebarNav } from "@/components/nav";
 import { requireUser } from "@/lib/supabase/server";
@@ -11,16 +12,7 @@ import { requireUser } from "@/lib/supabase/server";
  */
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
   const { user } = await requireUser();
-  const brand = (
-    <Link href="/" className="inline-flex items-center gap-2.5 rounded-md text-[1.0625rem] font-semibold tracking-[-0.02em]">
-      <span aria-hidden="true" className="btn-primary grid h-7 w-7 place-items-center rounded-lg">
-        <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round">
-          <path d="M6 12h12M4 8v8M8 6v12M16 6v12M20 8v8" />
-        </svg>
-      </span>
-      Spotter
-    </Link>
-  );
+  const brand = <Brand />;
 
   return (
     <div className="mx-auto flex min-h-screen max-w-7xl flex-col md:flex-row">

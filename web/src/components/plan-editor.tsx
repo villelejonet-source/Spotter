@@ -1,5 +1,6 @@
 "use client";
 
+import clsx from "clsx";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState, useTransition } from "react";
 import { savePlan } from "@/app/actions/plans";
@@ -159,7 +160,7 @@ export function PlanEditor({
         <Card key={day.sync_id} className="p-0">
           <div className="flex flex-wrap items-center gap-2 border-b border-outline p-4">
             <input
-              className="min-w-0 flex-1 rounded-md bg-transparent px-1 text-lg font-semibold outline-none focus:ring-1 focus:ring-primary"
+              className="min-w-0 flex-1 rounded-md border border-transparent bg-transparent px-2 py-1 text-lg font-semibold tracking-tight outline-none transition hover:border-outline focus:border-primary focus:ring-3 focus:ring-primary/20"
               value={day.name}
               maxLength={60}
               onChange={(e) => setDay(dayIndex, { ...day, name: e.target.value })}
@@ -268,7 +269,7 @@ export function PlanEditor({
                           <input type="number" min={1} max={50} className={compact} aria-label={`Superset group for ${name}`} placeholder="–" value={e.superset_group ?? ""} onChange={(x) => setExercise(dayIndex, i, { superset_group: num(x.target.value) })} />
                         </td>
                         <td className="px-1 py-2">
-                          <select className={compact} aria-label={`Progression for ${name}`} value={e.progression_rule} onChange={(x) => setExercise(dayIndex, i, { progression_rule: x.target.value as ExerciseDraft["progression_rule"] })}>
+                          <select className={clsx(compact, "font-sans text-sm")} aria-label={`Progression for ${name}`} value={e.progression_rule} onChange={(x) => setExercise(dayIndex, i, { progression_rule: x.target.value as ExerciseDraft["progression_rule"] })}>
                             {PROGRESSION_RULES.map((r) => (
                               <option key={r} value={r}>
                                 {PROGRESSION_RULE_LABELS[r]}

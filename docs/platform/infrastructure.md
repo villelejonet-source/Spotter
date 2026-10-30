@@ -177,7 +177,13 @@ for f in supabase/tests/*.sql; do docker exec -i supabase_db_spotter psql -U pos
 supabase stop
 ```
 
-Each test file prints "… all checks passed" or stops at the first failing check. For a policy
+Each test file prints "… all checks passed" or stops at the first failing check. CI's
+Database job does the same on every pull request (a fresh database from every migration, then
+every test file, including `rls.sql`: row-level security on every table, views that respect it,
+pinned search paths, nothing granted to `anon`). After a schema change, regenerate the website's
+types with the stack running, `npm --prefix web run db:types`, and commit them; CI fails when
+they're out of date, and `web/src/lib/supabase/schema-check.ts` fails the type check when a
+column the website reads changed. For a policy
 change, also `explain` the app's pull as `authenticated` and check it still uses
 `sync_rows_pull_idx` (an unfiltered pull, as older apps send, included).
 

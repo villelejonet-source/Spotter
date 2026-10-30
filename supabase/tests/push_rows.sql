@@ -1,6 +1,6 @@
 -- Checks for push_rows, delete_my_account and the sync_rows grants after every migration in
 -- supabase/migrations/ has been applied. Everything runs in one transaction that is rolled
--- back, so the database is left as it was. CI does not run this file.
+-- back, so the database is left as it was. CI runs it (the Database job).
 --
 -- Run against a local stack or a throwaway project, never production:
 --   supabase start

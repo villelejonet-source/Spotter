@@ -1,6 +1,6 @@
 -- Checks for profiles, trainer_links, their functions, can_read_user and delete_my_account
 -- after every migration in supabase/migrations/ has been applied. Like push_rows.sql it runs
--- in one transaction that is rolled back, and CI does not run it. Run it the same way,
+-- in one transaction that is rolled back; CI runs it (the Database job). Run it the same way,
 -- against a local stack or a throwaway project, never production:
 --   docker exec -i supabase_db_spotter psql -U postgres -d postgres -v ON_ERROR_STOP=1 -q -t < supabase/tests/trainer_links.sql
 -- (docs/platform/infrastructure.md, "Database migrations", has the full local steps).

@@ -8,7 +8,6 @@ import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
@@ -40,7 +39,9 @@ import androidx.navigation.compose.rememberNavController
 import com.viktorolsson.spotter.core.data.AppErrors
 import com.viktorolsson.spotter.core.data.Failure
 import com.viktorolsson.spotter.core.data.sync.FirstSyncChoice
+import com.viktorolsson.spotter.core.ui.component.SpotterNavigationBar
 import com.viktorolsson.spotter.core.ui.component.WorkoutMiniBar
+import com.viktorolsson.spotter.core.ui.component.spotterNavigationItemColors
 import com.viktorolsson.spotter.core.ui.theme.Spacing
 import com.viktorolsson.spotter.feature.history.ExerciseHistoryRoute
 import com.viktorolsson.spotter.feature.history.WorkoutDetailRoute
@@ -154,7 +155,7 @@ fun SpotterApp(
                         }
                         WorkoutMiniBar(elapsed, onClick = { navController.navigate(SessionRoute(session.id)) })
                     }
-                    NavigationBar {
+                    SpotterNavigationBar {
                         TopLevelDestination.entries.forEach { destination ->
                             val selected = currentDestination.isOnTab(destination)
                             NavigationBarItem(
@@ -167,6 +168,7 @@ fun SpotterApp(
                                     )
                                 },
                                 label = { Text(stringResource(destination.label)) },
+                                colors = spotterNavigationItemColors(),
                             )
                         }
                     }

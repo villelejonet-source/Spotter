@@ -24,8 +24,7 @@ internal fun Project.configureKotlinJvmTarget() {
 }
 
 /**
- * Namespace derived from the Gradle path, e.g. `:core:data` → `com.viktorolsson.spotter.core.data`
- * and `:core:data-android` → `com.viktorolsson.spotter.core.data.android`.
+ * Namespace derived from the Gradle path, e.g. `:feature:session` → `com.viktorolsson.spotter.feature.session`.
  */
 internal val Project.spotterNamespace: String
     get() = "com.viktorolsson.spotter" + path.replace(':', '.').replace('-', '.')

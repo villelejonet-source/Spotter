@@ -48,6 +48,10 @@ android {
         buildConfigField("String", "SUPABASE_PUBLISHABLE_KEY", "\"${localProperty("supabase.publishableKey")}\"")
     }
 
+    // The exercise catalog the database is seeded from (core/data's CatalogSource reads it as an
+    // asset); iOS bundles the same file.
+    sourceSets.getByName("main").assets.directories.add("../core/data/catalog")
+
     signingConfigs {
         if (hasUploadKey) {
             create("upload") {
@@ -87,7 +91,7 @@ android {
 
 dependencies {
     implementation(project(":core:model"))
-    implementation(project(":core:data-android"))
+    implementation(project(":core:data"))
     implementation(project(":core:ui"))
     implementation(project(":feature:today"))
     implementation(project(":feature:history"))

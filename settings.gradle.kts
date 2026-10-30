@@ -20,7 +20,6 @@ rootProject.name = "Spotter"
 include(":app")
 include(":core:model")
 include(":core:data")
-include(":core:data-android")
 include(":core:ui")
 include(":core:engine")
 include(":feature:today")

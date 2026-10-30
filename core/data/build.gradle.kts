@@ -1,8 +1,8 @@
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 
 // Shared data layer: Room schema and DAOs, repositories, cloud sync and accounts, for the
-// Android app and iOS. Android-only wiring (the Android DataGraph, WorkManager, the encrypted session store)
-// lives in :core:data-android.
+// Android app and iOS. What differs per platform is in androidMain (the Android DataGraph,
+// WorkManager background sync, the encrypted session store) and iosMain (the iOS DataGraph).
 plugins {
     alias(libs.plugins.kotlin.multiplatform)
     alias(libs.plugins.android.kotlin.multiplatform.library)
@@ -47,6 +47,10 @@ kotlin {
         androidMain.dependencies {
             implementation(libs.androidx.sqlite.framework)
             implementation(libs.ktor.client.okhttp)
+            // Auth session and PKCE verifier live in EncryptedSharedPreferences (see AuthStorage).
+            implementation(libs.androidx.security.crypto)
+            implementation(libs.androidx.work.runtime)
+            implementation(libs.koin.androidx.workmanager)
         }
         iosMain.dependencies {
             implementation(libs.ktor.client.darwin)

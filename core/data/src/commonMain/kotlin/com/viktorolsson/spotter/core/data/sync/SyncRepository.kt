@@ -197,7 +197,7 @@ class SyncRepository(
 private const val OPEN_SYNC_INTERVAL_MS = 60_000L
 
 /**
- * Background sync: WorkManager on Android (`WorkManagerSyncScheduler` in :core:data-android);
+ * Background sync: WorkManager on Android (`WorkManagerSyncScheduler` in androidMain);
  * on iOS a sync on launch and on coming to the foreground for now.
  */
 interface SyncScheduler {

@@ -61,7 +61,7 @@ data class SupabaseConfig(val url: String, val publishableKey: String) {
 
 /**
  * Where the auth session and PKCE verifier are kept: Android's EncryptedSharedPreferences
- * (`AuthStorage` in :core:data-android), the Keychain on iOS. Null when the store can't be
+ * (`AuthStorage` in androidMain), the Keychain on iOS. Null when the store can't be
  * opened; the session is then kept in memory for this process.
  */
 fun interface SessionStore {

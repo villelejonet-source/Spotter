@@ -93,25 +93,31 @@ async function MuscleBalance() {
       <p className="-mt-1 mb-4 text-xs text-muted">
         Working sets per muscle group. Target {low}–{high} for your goal (shaded). The tick is your weekly average over the last 4 weeks.
       </p>
-      <ul className="space-y-2.5">
+      <ul className="space-y-3.5">
         {week.map((g) => {
           const avg = fourWeeks.get(g.group) ?? 0;
           const status = g.sets < low ? "under" : g.sets > high ? "over" : "in";
           const text = `${g.group}: ${Number(g.sets.toFixed(1))} sets this week, ${status === "in" ? "on target" : status}; 4-week average ${avg.toFixed(1)}`;
           return (
             <li key={g.group} className="grid grid-cols-[90px_1fr_64px] items-center gap-3 text-sm">
-              <span>{g.group}</span>
-              <div className="relative h-5 rounded-full bg-surface-high" role="img" aria-label={text} title={text}>
-                <div className="absolute inset-y-0 rounded-full bg-tertiary-container" style={{ left: `${(low / scaleMax) * 100}%`, width: `${((high - low) / scaleMax) * 100}%` }} />
+              <span className="text-muted">{g.group}</span>
+              <div className="relative h-2.5 rounded-full bg-surface-high" role="img" aria-label={text} title={text}>
                 <div
-                  className={clsx("absolute inset-y-1 left-1 rounded-full", status === "in" ? "bg-primary" : "bg-muted")}
-                  style={{ width: `calc(${(g.sets / scaleMax) * 100}% - 4px)`, minWidth: g.sets ? 6 : 0 }}
+                  className="absolute -inset-y-1.5 border-x border-dashed border-on-primary-container/45 bg-primary/[0.07]"
+                  style={{ left: `${(low / scaleMax) * 100}%`, width: `${((high - low) / scaleMax) * 100}%` }}
                 />
-                <div className="absolute -inset-y-0.5 w-0.5 bg-foreground" style={{ left: `${(avg / scaleMax) * 100}%` }} />
+                <div
+                  className={clsx(
+                    "absolute inset-y-0 left-0 rounded-full",
+                    status === "in" ? "bg-gradient-to-r from-primary-strong via-primary to-on-primary-container shadow-[0_0_12px_var(--glow)]" : "bg-muted/50",
+                  )}
+                  style={{ width: `${(g.sets / scaleMax) * 100}%`, minWidth: g.sets ? 6 : 0 }}
+                />
+                <div className="absolute -inset-y-1 w-0.5 rounded-full bg-foreground" style={{ left: `${(avg / scaleMax) * 100}%` }} />
               </div>
-              <span className={clsx("text-right tabular-nums", status === "in" ? "text-foreground" : "text-muted")}>
+              <span className={clsx("text-right font-mono text-xs tabular-nums", status === "in" ? "text-foreground" : "text-muted")}>
                 {Number(g.sets.toFixed(1))}
-                <span className="ml-1 text-xs" aria-hidden="true">
+                <span className="ml-1" aria-hidden="true">
                   {status === "under" ? "↓" : status === "over" ? "↑" : "✓"}
                 </span>
               </span>

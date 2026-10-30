@@ -2,7 +2,7 @@ package com.viktorolsson.spotter.feature.onboarding
 
 import androidx.compose.runtime.Composable
 import androidx.test.ext.junit.runners.AndroidJUnit4
-import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.compose.ui.test.junit4.v2.createComposeRule
 import com.github.takahirom.roborazzi.ExperimentalRoborazziApi
 import com.github.takahirom.roborazzi.RobolectricDeviceQualifiers
 import com.github.takahirom.roborazzi.RoborazziComposeOptions
@@ -48,7 +48,7 @@ class OnboardingScreenshotTest {
         }
 
     @Composable
-    private fun step(step: Step, dark: Boolean = false, state: OnboardingUiState = OnboardingUiState(step = step, answers = answers)) =
+    private fun StepScreen(step: Step, dark: Boolean = false, state: OnboardingUiState = OnboardingUiState(step = step, answers = answers)) =
         OnboardingScreen(
             state = state, onBack = {}, onSkip = {}, onNext = {}, onUpdate = {}, onChoose = {},
             onImperial = {}, onSplit = {}, onFinish = {},
@@ -64,41 +64,41 @@ class OnboardingScreenshotTest {
     fun checkingBackup_light() = capture("welcome_checking_backup_light", dark = false) { CheckingBackup() }
 
     @Test
-    fun step_body() = capture("onboarding_body_light", dark = false) { step(Step.BODY) }
+    fun step_body() = capture("onboarding_body_light", dark = false) { StepScreen(Step.BODY) }
 
     @Test
-    fun step_body_dark_largeFont() = capture("onboarding_body_dark_font_1_6", dark = true, fontScale = 1.6f) { step(Step.BODY) }
+    fun step_body_dark_largeFont() = capture("onboarding_body_dark_font_1_6", dark = true, fontScale = 1.6f) { StepScreen(Step.BODY) }
 
     @Test
-    fun step_goal() = capture("onboarding_goal_light", dark = false) { step(Step.GOAL) }
+    fun step_goal() = capture("onboarding_goal_light", dark = false) { StepScreen(Step.GOAL) }
 
     @Test
-    fun step_experience_dark() = capture("onboarding_experience_dark", dark = true) { step(Step.EXPERIENCE) }
+    fun step_experience_dark() = capture("onboarding_experience_dark", dark = true) { StepScreen(Step.EXPERIENCE) }
 
     @Test
-    fun step_days() = capture("onboarding_days_light", dark = false) { step(Step.DAYS) }
+    fun step_days() = capture("onboarding_days_light", dark = false) { StepScreen(Step.DAYS) }
 
     @Test
-    fun step_length() = capture("onboarding_length_light", dark = false) { step(Step.LENGTH) }
+    fun step_length() = capture("onboarding_length_light", dark = false) { StepScreen(Step.LENGTH) }
 
     @Test
-    fun step_equipment() = capture("onboarding_equipment_light", dark = false) { step(Step.EQUIPMENT) }
+    fun step_equipment() = capture("onboarding_equipment_light", dark = false) { StepScreen(Step.EQUIPMENT) }
 
     @Test
-    fun step_focus_dark() = capture("onboarding_focus_dark", dark = true) { step(Step.FOCUS) }
+    fun step_focus_dark() = capture("onboarding_focus_dark", dark = true) { StepScreen(Step.FOCUS) }
 
     @Test
-    fun step_limitations() = capture("onboarding_limitations_light", dark = false) { step(Step.LIMITATIONS) }
+    fun step_limitations() = capture("onboarding_limitations_light", dark = false) { StepScreen(Step.LIMITATIONS) }
 
     @Test
-    fun step_lifts() = capture("onboarding_lifts_light", dark = false) { step(Step.LIFTS) }
+    fun step_lifts() = capture("onboarding_lifts_light", dark = false) { StepScreen(Step.LIFTS) }
 
     @Test
-    fun step_summary_generating() = capture("onboarding_summary_loading_light", dark = false) { step(Step.SUMMARY) }
+    fun step_summary_generating() = capture("onboarding_summary_loading_light", dark = false) { StepScreen(Step.SUMMARY) }
 
     @Test
     fun step_summary() = capture("onboarding_summary_light", dark = false) {
-        step(
+        StepScreen(
             Step.SUMMARY,
             state = OnboardingUiState(
                 step = Step.SUMMARY,
@@ -110,7 +110,7 @@ class OnboardingScreenshotTest {
 
     @Test
     fun step_summary_dark() = capture("onboarding_summary_dark", dark = true) {
-        step(
+        StepScreen(
             Step.SUMMARY,
             state = OnboardingUiState(step = Step.SUMMARY, answers = answers, generated = GeneratedPlan(PreviewData.plan, listOf(52, 58), emptySet())),
         )

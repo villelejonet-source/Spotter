@@ -26,6 +26,8 @@ kotlin {
 
     compilerOptions {
         optIn.add("kotlin.uuid.ExperimentalUuidApi")
+        // Room KMP's generated SpotterDatabaseConstructor is an expect/actual object (Beta).
+        freeCompilerArgs.add("-Xexpect-actual-classes")
     }
 
     sourceSets {

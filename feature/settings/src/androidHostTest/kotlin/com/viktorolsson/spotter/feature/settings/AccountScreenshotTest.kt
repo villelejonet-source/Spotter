@@ -1,7 +1,7 @@
 package com.viktorolsson.spotter.feature.settings
 
 import androidx.test.ext.junit.runners.AndroidJUnit4
-import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.compose.ui.test.junit4.v2.createComposeRule
 import com.github.takahirom.roborazzi.RobolectricDeviceQualifiers
 import com.github.takahirom.roborazzi.captureRoboImage
 import com.viktorolsson.spotter.core.data.sync.CodePurpose

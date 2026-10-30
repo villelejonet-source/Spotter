@@ -1,7 +1,7 @@
 package com.viktorolsson.spotter.feature.progress
 
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.github.takahirom.roborazzi.ExperimentalRoborazziApi
 import com.github.takahirom.roborazzi.RobolectricDeviceQualifiers
@@ -89,7 +89,7 @@ class ProgressScreenshotTest {
     fun progress_loading() = capture("progress_loading_light", dark = false, state = ProgressUiState(loading = true))
 
     @Composable
-    private fun weightDialog() = LogWeightDialog(unit = com.viktorolsson.spotter.core.model.WeightUnit.KG, initial = "82.5", onSave = { false }, onDismiss = {})
+    private fun WeightDialog() = LogWeightDialog(unit = com.viktorolsson.spotter.core.model.WeightUnit.KG, initial = "82.5", onSave = { false }, onDismiss = {})
 
     @Test
     fun logWeightDialog_light() {
@@ -101,7 +101,7 @@ class ProgressScreenshotTest {
                 compareOptions = RoborazziOptions.CompareOptions(resultValidator = ThresholdValidator(0.001f)),
             ),
         ) {
-            SpotterTheme(darkTheme = false, dynamicColor = false) { weightDialog() }
+            SpotterTheme(darkTheme = false, dynamicColor = false) { WeightDialog() }
         }
     }
 }

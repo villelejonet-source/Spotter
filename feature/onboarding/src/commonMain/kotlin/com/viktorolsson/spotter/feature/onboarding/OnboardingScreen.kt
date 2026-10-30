@@ -139,6 +139,11 @@ internal fun OnboardingRoute(
             return
         }
     }
+    // BackHandler is deprecated for NavigationEventHandler (androidx.navigationevent), a new
+    // library with a different, state-based API; moving over is its own change, with a test
+    // of system back on both platforms. Until then this stays, and is the build's one
+    // allowed deprecation.
+    @Suppress("DEPRECATION")
     @OptIn(ExperimentalComposeUiApi::class)
     BackHandler { if (!viewModel.back()) onDone() }
     OnboardingScreen(

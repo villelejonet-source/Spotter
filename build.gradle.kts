@@ -10,3 +10,12 @@ plugins {
     alias(libs.plugins.room) apply false
     alias(libs.plugins.roborazzi) apply false
 }
+
+// Every Kotlin warning fails the build, in every module and on both platforms, so they can't
+// pile up unnoticed. Fix the cause; where that's not possible yet, suppress the one call with
+// @Suppress and a comment saying why (see OnboardingScreen's BackHandler).
+subprojects {
+    tasks.withType<org.jetbrains.kotlin.gradle.tasks.KotlinCompilationTask<*>>().configureEach {
+        compilerOptions.allWarningsAsErrors.set(true)
+    }
+}

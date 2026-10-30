@@ -38,6 +38,9 @@ class HistoryRepository(
     fun observeFinishedSessionsBetween(start: Instant, end: Instant): Flow<List<WorkoutSession>> =
         dao.observeFinishedSessionsBetween(start, end).map { it.map(SessionWithExercises::toModel) }.flowOn(Dispatchers.Default)
 
+    /** How many workouts have been finished, ever. */
+    fun observeFinishedCount(): Flow<Int> = dao.observeFinishedCount()
+
     /** The [limit] most recent finished sessions, newest first. */
     fun observeRecentFinished(limit: Int): Flow<List<WorkoutSession>> =
         dao.observeRecentFinished(limit).map { it.map(SessionWithExercises::toModel) }.flowOn(Dispatchers.Default)

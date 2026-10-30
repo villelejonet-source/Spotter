@@ -20,4 +20,27 @@
     <string name="today_coming_up">Coming up</string>
     <string name="today_deload_title">Lighter week</string>
     <string name="today_deload_body">Until %1$s, planned workouts use fewer sets and lighter weights.</string>
+    <string name="today_ring_description">%1$d of %2$d workouts this week</string>
+    <string name="today_stat_week">This week</string>
+    <string name="today_stat_week_goal_hint">workouts of your weekly goal</string>
+    <plurals name="today_stat_workouts_hint">
+        <item quantity="one">workout</item>
+        <item quantity="other">workouts</item>
+    </plurals>
+    <string name="today_stat_volume">Volume, 4 weeks</string>
+    <string name="today_stat_volume_hint">vs the 4 weeks before</string>
+    <string name="today_stat_streak">Week streak</string>
+    <plurals name="today_stat_streak_hint">
+        <item quantity="one">week in a row</item>
+        <item quantity="other">weeks in a row</item>
+    </plurals>
+    <string name="today_stat_total">Workouts</string>
+    <string name="today_stat_total_hint">all time</string>
+    <string name="today_heatmap_title">Training days</string>
+    <plurals name="today_heatmap_summary">
+        <item quantity="one">%1$d workout in the last %2$d weeks</item>
+        <item quantity="other">%1$d workouts in the last %2$d weeks</item>
+    </plurals>
+    <string name="today_heatmap_less">Less</string>
+    <string name="today_heatmap_more">More</string>
 </resources>

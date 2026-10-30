@@ -27,6 +27,10 @@ into the new version's entry and writes the store notes from it. Versions are th
   cards, a glowing main button and a new tab bar. Android's wallpaper colours (Material You) are
   now off by default; turn them on in Profile → Appearance. Anyone who already chose keeps their
   choice.
+- The app's Today tab is a dashboard: your next workout with this week's progress as a ring,
+  stat tiles with trend lines (this week against your goal, volume over four weeks with the change
+  against the four before, week streak, all-time workouts) and a heatmap of training days. Start
+  workout now sits at the bottom of the screen, in reach of your thumb.
 
 ### iOS (not released yet)
 - The whole app runs on iOS from the same shared code as Android (#13–#20).

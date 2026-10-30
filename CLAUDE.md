@@ -157,7 +157,7 @@ Fix the cause. If that's impossible, suppress the single spot with a comment say
 
 ## Releases
 
-Run `/release` (`.claude/skills/release/SKILL.md`). Play rejects any `versionCode` it has
+Run `/release` (`.claude/commands/release.md`); new work starts with `/feature` or `/bugfix`. Play rejects any `versionCode` it has
 seen, so it always goes up; the version table in `docs/play-store/README.md` is the record.
 `CHANGELOG.md`'s "Unreleased" section becomes the new version's entry and the source of its
 store notes. iOS versions live in `iosApp/Config/App.xcconfig` (`MARKETING_VERSION` follows

@@ -9,6 +9,7 @@
 //   children without writing tombstones, so the web tombstones children explicitly.
 import { z } from "zod";
 import { newSyncId } from "./ids";
+import type { WorkoutForDelete } from "./queries";
 import {
   BODY_AREAS,
   COMPOUND_PATTERNS,
@@ -31,7 +32,19 @@ import {
 
 // A type, not an interface, so it counts as JSON for push_rows' generated argument type.
 export type SyncRowInput = {
-  table_name: "plan" | "plan_day" | "plan_exercise" | "exercise" | "user_profile" | "body_weight_entry" | "scheduled_session";
+  table_name:
+    | "plan"
+    | "plan_day"
+    | "plan_exercise"
+    | "exercise"
+    | "user_profile"
+    | "body_weight_entry"
+    | "scheduled_session"
+    // Workouts are written by the phone; the website only deletes finished ones (deleteWorkoutRows).
+    | "workout_session"
+    | "session_exercise"
+    | "set_entry"
+    | "personal_record";
   sync_id: string;
   payload: Record<string, string | number | null> | null;
   updated_at: number;
@@ -276,7 +289,10 @@ export function copyPlan(plan: StoredPlan, name: string): PlanDraft {
 /** Plan rows go in parent-first order so a device pulling mid-batch can resolve parents. */
 export function orderForPush(rows: SyncRowInput[]): SyncRowInput[] {
   // Custom exercises come first: plan exercises may reference one created in the same batch.
-  const rank = { exercise: 0, user_profile: 0, body_weight_entry: 0, plan: 1, plan_day: 2, plan_exercise: 3, scheduled_session: 3 } as const;
+  const rank = {
+    exercise: 0, user_profile: 0, body_weight_entry: 0, plan: 1, plan_day: 2, plan_exercise: 3, scheduled_session: 3,
+    workout_session: 1, session_exercise: 2, set_entry: 3, personal_record: 2,
+  } as const;
   const live = rows.filter((r) => r.deleted_at == null).sort((a, b) => rank[a.table_name] - rank[b.table_name]);
   const dead = rows.filter((r) => r.deleted_at != null).sort((a, b) => rank[b.table_name] - rank[a.table_name]);
   return [...live, ...dead];
@@ -425,4 +441,36 @@ export function planWeeksAhead(opts: {
     index = (index + 1) % dayIds.length;
   }
   return out;
+}
+
+// ---- Deleting a finished workout ----
+
+/**
+ * The rows that delete a finished workout everywhere, as the app's
+ * WorkoutRepository.deleteFinishedWorkout does: deletion markers for the workout, its
+ * exercises, its sets and the personal records set in it, and its scheduled days unlinked
+ * (kept, shown as not done again). Every row is stamped newer than the version read, so if the
+ * phone changed one since, push() reports it instead of half-deleting.
+ */
+export function deleteWorkoutRows(w: WorkoutForDelete, now: number): SyncRowInput[] {
+  const tomb = (table: SyncRowInput["table_name"], row: { sync_id: string; updated_at: number }): SyncRowInput => ({
+    table_name: table,
+    sync_id: row.sync_id,
+    payload: null,
+    updated_at: stamp(now, row.updated_at),
+    deleted_at: stamp(now, row.updated_at),
+  });
+  return [
+    ...w.sets.map((r) => tomb("set_entry", r)),
+    ...w.exercises.map((r) => tomb("session_exercise", r)),
+    ...w.records.map((r) => tomb("personal_record", r)),
+    tomb("workout_session", w.session),
+    ...w.scheduled.map((s) => ({
+      table_name: "scheduled_session" as const,
+      sync_id: s.sync_id,
+      payload: scheduledPayload({ epoch_day: s.epoch_day, plan_day_id: s.plan_day_id, notes: s.notes }, null),
+      updated_at: stamp(now, s.updated_at),
+      deleted_at: null,
+    })),
+  ];
 }

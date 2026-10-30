@@ -12,6 +12,7 @@ import com.viktorolsson.spotter.core.data.repository.HistoryRepository
 import com.viktorolsson.spotter.core.data.repository.RecommendationRepository
 import com.viktorolsson.spotter.core.data.repository.UserPreferencesRepository
 import com.viktorolsson.spotter.core.data.repository.WorkoutRepository
+import com.viktorolsson.spotter.core.data.sync.SyncRepository
 import com.viktorolsson.spotter.core.model.EffortScale
 import com.viktorolsson.spotter.core.model.Exercise
 import com.viktorolsson.spotter.core.model.ExerciseSessionLog
@@ -105,6 +106,8 @@ data class WorkoutDetailUiState(
     val records: List<PersonalRecord> = emptyList(),
     val unit: WeightUnit = WeightUnit.KG,
     val effortScale: EffortScale = EffortScale.OFF,
+    /** Being deleted: the screen waits instead of showing "not found" before it closes. */
+    val deleting: Boolean = false,
 )
 
 class WorkoutDetailViewModel(
@@ -112,19 +115,42 @@ class WorkoutDetailViewModel(
     private val workoutRepository: WorkoutRepository,
     historyRepository: HistoryRepository,
     preferencesRepository: UserPreferencesRepository,
+    private val recommendationRepository: RecommendationRepository,
+    private val syncRepository: SyncRepository,
     private val errors: AppErrors,
 ) : ViewModel() {
     private val sessionId = savedStateHandle.toRoute<WorkoutDetailRoute>().sessionId
+    private val deleting = MutableStateFlow(false)
 
     val uiState: StateFlow<WorkoutDetailUiState> = combine(
         workoutRepository.observeSession(sessionId),
         historyRepository.observeSessionRecords(sessionId),
         preferencesRepository.preferences,
-    ) { session, records, prefs -> WorkoutDetailUiState(false, session, records, prefs.weightUnit, prefs.effortScale) }
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), WorkoutDetailUiState())
+        deleting,
+    ) { session, records, prefs, deleting ->
+        WorkoutDetailUiState(false, session, records, prefs.weightUnit, prefs.effortScale, deleting)
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), WorkoutDetailUiState())
 
     fun repeat(onStarted: (Long) -> Unit) = viewModelScope.launchReporting(errors, Failure.ACTION) {
         onStarted(workoutRepository.repeatWorkout(sessionId))
+    }
+
+    /**
+     * Deletes this (finished) workout, its sets and the records set in it, here and, through
+     * sync, everywhere else; then recommendations are re-evaluated without it and [onDeleted]
+     * closes the screen.
+     */
+    fun delete(onDeleted: () -> Unit) = viewModelScope.launchReporting(errors) {
+        deleting.value = true
+        try {
+            if (workoutRepository.deleteFinishedWorkout(sessionId)) {
+                recommendationRepository.refresh()
+                syncRepository.requestSync()
+            }
+            onDeleted()
+        } finally {
+            deleting.value = false
+        }
     }
 }
 

@@ -14,6 +14,10 @@
     <string name="detail_volume">Volume</string>
     <string name="detail_sets">Sets</string>
     <string name="detail_repeat">Repeat this workout</string>
+    <string name="detail_delete">Delete workout</string>
+    <string name="detail_delete_title">Delete this workout?</string>
+    <string name="detail_delete_body">Its sets and any records set in it are removed here and from your backup. This can't be undone.</string>
+    <string name="detail_delete_confirm">Delete</string>
     <string name="detail_prs">Personal records</string>
     <string name="detail_warmup">W</string>
     <string name="detail_open_exercise">History</string>

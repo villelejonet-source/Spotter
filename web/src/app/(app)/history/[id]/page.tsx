@@ -1,5 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { deleteWorkout } from "@/app/actions/history";
+import { ConfirmButton } from "@/components/confirm-button";
 import { BackLink, Badge, Card, PageHeader, Stat } from "@/components/ui";
 import { exerciseName } from "@/lib/catalog";
 import { getCatalog, getSessionDetail, getUnit } from "@/lib/data";
@@ -25,6 +27,20 @@ export default async function SessionPage({ params }: { params: Promise<{ id: st
             {formatFullDate(session.started_at)} · {formatTime(session.started_at)}
             {session.is_deload && <Badge tone="tertiary">{LIGHTER_WEEK}</Badge>}
           </span>
+        }
+        actions={
+          // Finished workouts only: one in progress belongs to the phone.
+          session.ended_at != null && (
+            <ConfirmButton
+              action={deleteWorkout.bind(null, session.sync_id)}
+              variant="danger"
+              title="Delete this workout?"
+              body="Its sets and any records set in it are removed here, from your backup and from the app. This can't be undone."
+              confirmLabel="Delete"
+            >
+              Delete workout
+            </ConfirmButton>
+          )
         }
       />
 

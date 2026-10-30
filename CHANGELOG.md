@@ -8,6 +8,11 @@ into the new version's entry and writes the store notes from it. Versions are th
 
 ## Unreleased
 
+### Added
+- Delete a finished workout, in the app (History → the workout → the bin icon) or on the website
+  (the workout's page → Delete workout). Its sets and any records set in it go too, on every
+  device; a scheduled day it completed shows as not done again.
+
 ### iOS (not released yet)
 - The whole app runs on iOS from the same shared code as Android (#13–#20).
 - Fixed a crash on iOS whenever the app logged a warning, such as a failed sync (#27).

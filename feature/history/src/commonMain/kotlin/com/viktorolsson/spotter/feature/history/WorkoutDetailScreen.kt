@@ -12,20 +12,30 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.KeyboardArrowRight
+import androidx.compose.material.icons.rounded.Delete
 import androidx.compose.material.icons.rounded.EmojiEvents
 import androidx.compose.material.icons.rounded.Replay
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import com.viktorolsson.spotter.core.ui.component.ConfirmDialog
+import com.viktorolsson.spotter.feature.history.resources.detail_delete
+import com.viktorolsson.spotter.feature.history.resources.detail_delete_body
+import com.viktorolsson.spotter.feature.history.resources.detail_delete_confirm
+import com.viktorolsson.spotter.feature.history.resources.detail_delete_title
 import org.jetbrains.compose.resources.stringResource
 import androidx.compose.ui.unit.dp
 import org.koin.compose.viewmodel.koinViewModel
@@ -78,6 +88,7 @@ internal fun WorkoutDetailRoute(
         onBack = onBack,
         onOpenExercise = onOpenExercise,
         onRepeat = { viewModel.repeat(onOpenSession) },
+        onDelete = { viewModel.delete(onBack) },
     )
 }
 
@@ -87,14 +98,39 @@ internal fun WorkoutDetailScreen(
     onBack: () -> Unit,
     onOpenExercise: (String) -> Unit,
     onRepeat: () -> Unit,
+    onDelete: () -> Unit,
+    /** For screenshot tests: open with the delete confirmation showing. */
+    confirmingDelete: Boolean = false,
 ) {
     val session = state.session
+    var confirmDelete by rememberSaveable { mutableStateOf(confirmingDelete) }
+    if (confirmDelete) {
+        ConfirmDialog(
+            title = stringResource(Res.string.detail_delete_title),
+            text = stringResource(Res.string.detail_delete_body),
+            confirmText = stringResource(Res.string.detail_delete_confirm),
+            onConfirm = {
+                confirmDelete = false
+                onDelete()
+            },
+            onDismiss = { confirmDelete = false },
+            destructive = true,
+        )
+    }
     Scaffold(
         topBar = {
             SpotterTopBar(
                 title = session?.planDayName ?: stringResource(Res.string.history_workout),
                 subtitle = session?.let { formatMediumDate(it.startedAt.localDate()) },
                 onBack = onBack,
+                actions = {
+                    // Finished workouts only; one in progress is discarded from the workout screen.
+                    if (session?.endedAt != null && !state.deleting) {
+                        IconButton(onClick = { confirmDelete = true }) {
+                            Icon(Icons.Rounded.Delete, contentDescription = stringResource(Res.string.detail_delete))
+                        }
+                    }
+                },
             )
         },
         bottomBar = {
@@ -109,7 +145,7 @@ internal fun WorkoutDetailScreen(
         },
     ) { padding ->
         when {
-            state.loading -> LoadingState(Modifier.padding(padding).fillMaxSize())
+            state.loading || state.deleting -> LoadingState(Modifier.padding(padding).fillMaxSize())
             session == null -> ErrorState(
                 title = stringResource(Res.string.detail_not_found_title),
                 body = stringResource(Res.string.detail_not_found_body),

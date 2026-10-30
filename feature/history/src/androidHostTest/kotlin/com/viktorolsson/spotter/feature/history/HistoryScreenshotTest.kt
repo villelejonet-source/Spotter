@@ -103,7 +103,11 @@ class HistoryScreenshotTest {
     )
 
     @Composable
-    private fun Detail(state: WorkoutDetailUiState) = WorkoutDetailScreen(state, onBack = {}, onOpenExercise = {}, onRepeat = {})
+    private fun Detail(state: WorkoutDetailUiState, confirmingDelete: Boolean = false) =
+        WorkoutDetailScreen(state, onBack = {}, onOpenExercise = {}, onRepeat = {}, onDelete = {}, confirmingDelete = confirmingDelete)
+
+    @Test
+    fun workoutDetail_confirmDelete() = capture("workout_detail_delete_light", dark = false) { Detail(detail, confirmingDelete = true) }
 
     @Test
     fun workoutDetail_light() = capture("workout_detail_light", dark = false) { Detail(detail) }

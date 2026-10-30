@@ -49,6 +49,12 @@ interface WorkoutDao {
     @Query("DELETE FROM workout_session WHERE id = :sessionId")
     suspend fun deleteSession(sessionId: Long)
 
+    @Query("SELECT endedAt IS NOT NULL FROM workout_session WHERE id = :sessionId")
+    suspend fun isSessionFinished(sessionId: Long): Boolean?
+
+    @Query("DELETE FROM personal_record WHERE sessionId = :sessionId")
+    suspend fun deleteSessionRecords(sessionId: Long)
+
     @Transaction
     @Query("SELECT * FROM workout_session WHERE endedAt IS NOT NULL ORDER BY startedAt DESC")
     fun observeFinishedSessions(): Flow<List<SessionWithExercises>>

@@ -458,6 +458,21 @@ class WorkoutRepository(
 
     suspend fun discardWorkout(sessionId: Long) = dao.deleteSession(sessionId)
 
+    /**
+     * Deletes a finished workout and everything that came from it: its exercises and sets
+     * (cascade), and the personal records set in it, since a record from a deleted workout
+     * isn't real. A scheduled day that pointed to it is unlinked (foreign key SET NULL), so it
+     * shows as not done again. The sync triggers record every deletion and the unlink, so the
+     * backup, other phones and the website drop it too. Returns false, deleting nothing, for a
+     * workout still in progress (that's [discardWorkout]) or one that no longer exists.
+     */
+    suspend fun deleteFinishedWorkout(sessionId: Long): Boolean = db.withTransaction {
+        if (dao.isSessionFinished(sessionId) != true) return@withTransaction false
+        dao.deleteSessionRecords(sessionId)
+        dao.deleteSession(sessionId)
+        true
+    }
+
     // Read and write in one transaction, so a write in between (a tick, a sync) isn't undone.
     private suspend fun updateSet(setId: Long, change: (SetEntryEntity) -> SetEntryEntity) = db.withTransaction {
         val set = dao.getSet(setId) ?: return@withTransaction

@@ -200,6 +200,46 @@ class SyncEngineTest {
         assertEquals(0, b.db.sql.query("SELECT COUNT(*) FROM set_entry").use { it.moveToFirst(); it.getInt(0) })
     }
 
+    private fun Device.syncIds(table: String): List<String> =
+        db.sql.query("SELECT syncId FROM $table").use { c -> buildList { while (c.moveToNext()) add(c.getString(0)!!) } }
+
+    /** The website deletes a finished workout (deletion markers, as web deleteWorkoutRows): the phone drops it. */
+    @Test
+    fun aWorkoutDeletedOnTheWebsiteIsDeletedOnThePhone() = runTest {
+        val phone = device()
+        phone.logWorkout()
+        phone.sync()
+
+        val at = Clock.System.now().toEpochMilliseconds() + 60_000
+        val markers = listOf("set_entry", "session_exercise", "workout_session").flatMap { table ->
+            phone.syncIds(table).map { SyncRow(table, it, payload = null, updatedAt = at, deletedAt = at) }
+        }
+        remote.push(markers)
+        phone.sync()
+
+        assertTrue(phone.sessions().isEmpty())
+        assertEquals(0, phone.db.sql.query("SELECT COUNT(*) FROM set_entry").use { it.moveToFirst(); it.getInt(0) })
+        assertEquals(0, phone.db.sql.query("SELECT COUNT(*) FROM session_exercise").use { it.moveToFirst(); it.getInt(0) })
+    }
+
+    /** Deleting a finished workout on one phone removes it, and the records set in it, on the other. */
+    @Test
+    fun aFinishedWorkoutDeletedOnOnePhoneIsDeletedOnTheOther() = runTest {
+        val a = device()
+        a.logWorkout()
+        a.sync()
+        val b = device()
+        b.sync()
+        assertEquals(1, b.sessions().size)
+
+        assertTrue(a.workouts.deleteFinishedWorkout(a.sessions().single().id))
+        a.sync()
+        b.sync()
+
+        assertTrue(b.sessions().isEmpty())
+        assertEquals(0, b.db.sql.query("SELECT COUNT(*) FROM personal_record").use { it.moveToFirst(); it.getInt(0) })
+    }
+
     @Test
     fun theNewestEditWins() = runTest {
         val a = device()

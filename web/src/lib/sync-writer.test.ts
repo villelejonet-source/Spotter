@@ -2,6 +2,7 @@ import { readdirSync, readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { describe, expect, it } from "vitest";
 import {
+  deleteWorkoutRows,
   activatePlanRows,
   bodyWeightSchema,
   customExerciseSchema,
@@ -368,5 +369,47 @@ describe("planWeeksAhead", () => {
 
   it("does nothing without days or weekdays", () => {
     expect(planWeeksAhead({ fromDay: monday, weeks: 4, weekdays: [], dayIds: ["a"], nextDayIndex: 0, taken: new Set() })).toEqual([]);
+  });
+});
+
+describe("deleteWorkoutRows", () => {
+  const v = (sync_id: string, updated_at: number) => ({ sync_id, updated_at });
+  const workout = {
+    session: { ...v("s1", 500), ended_at: 400 },
+    exercises: [v("e1", 510), v("e2", 520)],
+    sets: [v("set1", 530), v("set2", 540), v("set3", 9_000)],
+    records: [v("pr1", 550)],
+    scheduled: [{ sync_id: "sch1", epoch_day: 20750, plan_day_id: "day1", notes: "Heavy", session_id: "s1", updated_at: 600 }],
+  };
+  const rows = deleteWorkoutRows(workout, 1_000);
+  const byId = new Map(rows.map((r) => [r.sync_id, r]));
+
+  it("deletes the workout, its exercises, its sets and its records", () => {
+    for (const [id, table] of [["s1", "workout_session"], ["e1", "session_exercise"], ["e2", "session_exercise"], ["set1", "set_entry"], ["set2", "set_entry"], ["set3", "set_entry"], ["pr1", "personal_record"]]) {
+      const row = byId.get(id);
+      expect(row?.table_name, id).toBe(table);
+      expect(row?.payload, id).toBeNull();
+      expect(row?.deleted_at, id).toBe(row?.updated_at);
+    }
+  });
+
+  it("stamps every row newer than the version read, even one stamped ahead of this clock", () => {
+    for (const r of rows) expect(r.updated_at).toBeGreaterThanOrEqual(1_000);
+    expect(byId.get("set3")!.updated_at).toBeGreaterThan(9_000);
+  });
+
+  it("keeps the scheduled day and only unlinks it", () => {
+    const sch = byId.get("sch1")!;
+    expect(sch.table_name).toBe("scheduled_session");
+    expect(sch.deleted_at).toBeNull();
+    expect(sch.payload).toEqual({ date: 20750, planDayId: "day1", notes: "Heavy", sessionId: null });
+    expect(sch.updated_at).toBeGreaterThan(600);
+  });
+
+  it("sends the unlink first, then deletions children before parents", () => {
+    const order = orderForPush(rows).map((r) => r.table_name);
+    expect(order[0]).toBe("scheduled_session");
+    expect(order.lastIndexOf("set_entry")).toBeLessThan(order.indexOf("session_exercise"));
+    expect(order.lastIndexOf("session_exercise")).toBeLessThan(order.indexOf("workout_session"));
   });
 });

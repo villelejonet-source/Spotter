@@ -403,3 +403,35 @@ export async function planDay(client: OwnClient, syncId: string): Promise<(PlanD
   const exercises = await selectAll<PlanExerciseRow>(client, "v_plan_exercise", { filter: (q) => q.eq("plan_day_id", syncId) });
   return { ...day, exercises: exercises.sort((a, b) => a.position - b.position) };
 }
+
+/** A synced row's id and version: what a deletion marker for it must be newer than. */
+export interface Versioned {
+  sync_id: string;
+  updated_at: number;
+}
+
+/** Everything that goes when a workout is deleted (WorkoutRepository.deleteFinishedWorkout in the app). */
+export interface WorkoutForDelete {
+  session: Versioned & { ended_at: number | null };
+  exercises: Versioned[];
+  sets: Versioned[];
+  /** Personal records set in this workout. */
+  records: Versioned[];
+  /** Scheduled days this workout completed: they're unlinked, not deleted. */
+  scheduled: ScheduledRow[];
+}
+
+export async function workoutForDelete(client: OwnClient, syncId: string): Promise<WorkoutForDelete | null> {
+  const session = await single<WorkoutForDelete["session"]>(client, "v_session", "sync_id", syncId);
+  if (!session) return null;
+  const versions = "sync_id,updated_at";
+  const [exercises, records, scheduled] = await Promise.all([
+    selectAll<Versioned>(client, "v_session_exercise", { filter: (q) => q.eq("session_id", syncId), columns: versions }),
+    selectAll<Versioned>(client, "v_personal_record", { filter: (q) => q.eq("session_id", syncId), columns: versions }),
+    selectAll<ScheduledRow>(client, "v_scheduled_session", { filter: (q) => q.eq("session_id", syncId) }),
+  ]);
+  const sets = exercises.length
+    ? await selectAll<Versioned>(client, "v_set_entry", { filter: (q) => q.in("session_exercise_id", exercises.map((e) => e.sync_id)), columns: versions })
+    : [];
+  return { session: { sync_id: session.sync_id, ended_at: session.ended_at, updated_at: session.updated_at }, exercises, sets, records, scheduled };
+}

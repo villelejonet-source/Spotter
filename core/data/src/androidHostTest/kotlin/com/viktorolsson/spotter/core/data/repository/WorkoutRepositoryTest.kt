@@ -7,6 +7,7 @@ import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.viktorolsson.spotter.core.data.db.SpotterDatabase
 import com.viktorolsson.spotter.core.data.seed.SeedExercise
 import com.viktorolsson.spotter.core.data.seed.parseExerciseSeed
+import com.viktorolsson.spotter.core.data.sql
 import com.viktorolsson.spotter.core.data.testDatabase
 import com.viktorolsson.spotter.core.model.PreviousSet
 import com.viktorolsson.spotter.core.model.SetType
@@ -58,6 +59,71 @@ class WorkoutRepositoryTest {
         assertEquals(listOf("barbell-bench-press", "pull-up"), exercises.map { it.exercise.id })
         assertEquals(3, exercises[0].sets.size)
         assertTrue(exercises[0].sets.all { it.weightKg == null && it.reps == null && !it.isCompleted })
+    }
+
+    /** Logs a finished bench workout of [sets] × 80 kg × [reps], an hour long; returns its id. */
+    private suspend fun benchWorkout(reps: Int, sets: Int = 2): Long {
+        val id = repo.startEmptyWorkout()
+        repo.addExercises(id, listOf("barbell-bench-press"), defaultSetCount = sets)
+        session(id).exercises.single().sets.forEach {
+            repo.updateSetValues(it.id, 80.0, reps, null)
+            repo.toggleSetCompleted(it.id)
+        }
+        clock.advanceSeconds(3600)
+        repo.finishWorkout(id)
+        clock.advanceSeconds(2 * 86_400L)
+        return id
+    }
+
+    private fun count(sql: String): Long = db.sql.query(sql).use { it.moveToFirst(); it.getLong(0) }
+
+    /** Deleting a finished workout removes it, its exercises, sets and records, and leaves deletion markers for sync. */
+    @Test
+    fun deletingAFinishedWorkoutRemovesEverythingFromIt() = runTest {
+        val first = benchWorkout(reps = 5)
+        val second = benchWorkout(reps = 8) // more reps at the same weight: sets records
+        val recordsBefore = count("SELECT COUNT(*) FROM personal_record")
+        val secondRecords = count("SELECT COUNT(*) FROM personal_record WHERE sessionId = $second")
+        assertTrue("the second workout should set records", secondRecords > 0)
+
+        assertTrue(repo.deleteFinishedWorkout(second))
+
+        assertNull(repo.getSession(second))
+        assertNotNull(repo.getSession(first))
+        assertEquals(recordsBefore - secondRecords, count("SELECT COUNT(*) FROM personal_record"))
+        assertEquals(0L, count("SELECT COUNT(*) FROM personal_record WHERE sessionId IS NULL"))
+        assertEquals(1L, count("SELECT COUNT(*) FROM session_exercise"))
+        assertEquals(2L, count("SELECT COUNT(*) FROM set_entry"))
+        // One deletion marker per synced row that went: the session, its exercise, its sets, its records.
+        assertEquals(1L, count("SELECT COUNT(*) FROM sync_tombstone WHERE tableName = 'workout_session'"))
+        assertEquals(1L, count("SELECT COUNT(*) FROM sync_tombstone WHERE tableName = 'session_exercise'"))
+        assertEquals(2L, count("SELECT COUNT(*) FROM sync_tombstone WHERE tableName = 'set_entry'"))
+        assertEquals(secondRecords, count("SELECT COUNT(*) FROM sync_tombstone WHERE tableName = 'personal_record'"))
+    }
+
+    /** A scheduled day that the deleted workout completed is unlinked, and the change syncs. */
+    @Test
+    fun deletingAWorkoutUnlinksItsScheduledDay() = runTest {
+        val id = benchWorkout(reps = 5)
+        db.sql.execSQL("INSERT INTO scheduled_session (date, planDayId, notes, sessionId) VALUES (20730, NULL, NULL, $id)")
+        val before = count("SELECT updatedAt FROM scheduled_session")
+        clock.advanceSeconds(60)
+
+        repo.deleteFinishedWorkout(id)
+
+        assertEquals(0L, count("SELECT COUNT(*) FROM scheduled_session WHERE sessionId IS NOT NULL"))
+        assertTrue("the unlink must be stamped for sync", count("SELECT updatedAt FROM scheduled_session") > before)
+    }
+
+    /** A workout still in progress isn't deleted this way; it's discarded. */
+    @Test
+    fun aWorkoutInProgressIsNotDeleted() = runTest {
+        val id = repo.startEmptyWorkout()
+        repo.addExercises(id, listOf("barbell-bench-press"))
+
+        assertFalse(repo.deleteFinishedWorkout(id))
+        assertNotNull(repo.getSession(id))
+        assertFalse(repo.deleteFinishedWorkout(9_999))
     }
 
     /** Each keypad field writes only itself; the others keep what the database has. */

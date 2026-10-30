@@ -256,7 +256,7 @@ export function formatSetEffort(set: Pick<SetEntryRow, "rir" | "rpe">): string |
   return null;
 }
 
-/** Epley estimated one-rep max; a single is its own 1RM (core/model Progress.kt). */
+/** Epley estimated one-rep max; a single is its own 1RM (core/model Lifting.kt; cases in core/model/fixtures/training-math.json). */
 export function epley(weightKg: number, reps: number): number {
   return reps <= 1 ? weightKg : weightKg * (1 + reps / 30);
 }

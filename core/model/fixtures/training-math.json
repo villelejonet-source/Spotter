@@ -1,0 +1,80 @@
+{
+  "about": "Cases the app (core/model Lifting.kt, NumberInput.kt) and the website (web/src/lib) must agree on. Checked by core/engine TrainingMathFixturesTest and web/src/lib/training-math.test.ts; change a rule here first, then make both pass.",
+  "timedExerciseIds": ["plank", "side-plank", "copenhagen-plank", "hollow-body-hold"],
+  "decimalInput": [
+    { "text": "62,5", "value": 62.5 },
+    { "text": "62.5", "value": 62.5 },
+    { "text": " 62,5 ", "value": 62.5 },
+    { "text": "102,25", "value": 102.25 },
+    { "text": "62,", "value": 62 },
+    { "text": ",5", "value": 0.5 },
+    { "text": "0", "value": 0 },
+    { "text": "", "result": "blank" },
+    { "text": "   ", "result": "blank" },
+    { "text": ".", "result": "invalid" },
+    { "text": ",", "result": "invalid" },
+    { "text": "1,2,3", "result": "invalid" },
+    { "text": "1.2.3", "result": "invalid" },
+    { "text": "62,5kg", "result": "invalid" },
+    { "text": "-1", "result": "invalid" },
+    { "text": "+1", "result": "invalid" },
+    { "text": "1e3", "result": "invalid" },
+    { "text": "NaN", "result": "invalid" },
+    { "text": "Infinity", "result": "invalid" },
+    { "text": "1 000", "result": "invalid" }
+  ],
+  "epley": [
+    { "weightKg": 100, "reps": 0, "oneRepMaxKg": 100 },
+    { "weightKg": 100, "reps": 1, "oneRepMaxKg": 100 },
+    { "weightKg": 100, "reps": 5, "oneRepMaxKg": 116.66667 },
+    { "weightKg": 80, "reps": 8, "oneRepMaxKg": 101.33333 }
+  ],
+  "exerciseSessions": [
+    {
+      "name": "working sets after a warm-up",
+      "exerciseId": "barbell-bench-press",
+      "sets": [
+        { "weightKg": 40, "reps": 10, "warmup": true },
+        { "weightKg": 80, "reps": 8 },
+        { "weightKg": 82.5, "reps": 6 },
+        { "weightKg": 82.5, "reps": 5 }
+      ],
+      "volumeKg": 1547.5,
+      "oneRepMaxKg": 101.33333,
+      "bestSet": { "weightKg": 82.5, "reps": 6 }
+    },
+    {
+      "name": "bodyweight only",
+      "exerciseId": "pull-up",
+      "sets": [
+        { "weightKg": null, "reps": 12 },
+        { "weightKg": null, "reps": 10 }
+      ],
+      "volumeKg": 0,
+      "oneRepMaxKg": null,
+      "bestSet": { "weightKg": null, "reps": 12 }
+    },
+    {
+      "name": "bodyweight and added weight (the added weight is what's stored)",
+      "exerciseId": "pull-up",
+      "sets": [
+        { "weightKg": null, "reps": 12 },
+        { "weightKg": 10, "reps": 6 }
+      ],
+      "volumeKg": 60,
+      "oneRepMaxKg": 12,
+      "bestSet": { "weightKg": 10, "reps": 6 }
+    },
+    {
+      "name": "a weighted hold: reps are seconds, so no volume or 1RM",
+      "exerciseId": "plank",
+      "sets": [
+        { "weightKg": 10, "reps": 45 },
+        { "weightKg": null, "reps": 60 }
+      ],
+      "volumeKg": 0,
+      "oneRepMaxKg": null,
+      "bestSet": { "weightKg": 10, "reps": 45 }
+    }
+  ]
+}

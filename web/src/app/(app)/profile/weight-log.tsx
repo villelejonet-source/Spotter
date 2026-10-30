@@ -5,7 +5,8 @@ import { deleteBodyWeight, logBodyWeight } from "@/app/actions/profile";
 import { ConfirmDialog } from "@/components/dialog";
 import { Button, Field, IconButton, InlineMessage, inputClass } from "@/components/ui";
 import { formatEpochDay } from "@/lib/dates";
-import { formatWeightValue, fromUnit, toUnit, unitLabel, type BodyWeightRow, type WeightUnit } from "@/lib/model";
+import { formatWeightValue, fromUnit, unitLabel, type BodyWeightRow, type WeightUnit } from "@/lib/model";
+import { decimalOrNull } from "@/lib/number-input";
 import { DAY_MS, dayKey } from "@/lib/stats";
 
 /** Today in the display time zone, so server and browser agree (and so does the app's calendar). */
@@ -25,9 +26,14 @@ export function WeightLog({ entries, unit }: { entries: BodyWeightRow[]; unit: W
   function add(e: React.FormEvent) {
     e.preventDefault();
     setError(null);
+    const value = decimalOrNull(weight);
+    if (value == null) {
+      setError(`Enter a weight such as ${unit === "LB" ? "180,5" : "82,5"}.`);
+      return;
+    }
     const epochDay = Math.round(Date.parse(`${date}T00:00:00Z`) / DAY_MS);
     start(async () => {
-      const result = await logBodyWeight(epochDay, fromUnit(Number(weight), unit));
+      const result = await logBodyWeight(epochDay, fromUnit(value, unit));
       if (!result.ok) setError(result.error);
       else setWeight("");
     });
@@ -51,12 +57,11 @@ export function WeightLog({ entries, unit }: { entries: BodyWeightRow[]; unit: W
           <input type="date" required max={todayIso()} className={inputClass} value={date} onChange={(e) => setDate(e.target.value)} />
         </Field>
         <Field label={`Weight (${u})`} className="w-28">
+          {/* Text, not type="number": a decimal comma ("82,5") works in every browser. */}
           <input
-            type="number"
+            type="text"
+            inputMode="decimal"
             required
-            step={0.1}
-            min={Math.floor(toUnit(30, unit))}
-            max={Math.ceil(toUnit(300, unit))}
             className={inputClass}
             value={weight}
             onChange={(e) => setWeight(e.target.value)}

@@ -22,6 +22,11 @@ into the new version's entry and writes the store notes from it. Versions are th
   workout with this week's progress as a ring, a training heatmap, records and recent workouts.
 - The website's charts match: progress lines and body weight glow over a fading area, bar charts
   fade with the latest bar highlighted, and muscle balance shows its target range as a dashed band.
+- The app takes on the website's look: Spotter's own colours (a near-black dark mode with the
+  orange accent, and a matching light mode), the Geist fonts with monospace numbers, outlined
+  cards, a glowing main button and a new tab bar. Android's wallpaper colours (Material You) are
+  now off by default; turn them on in Profile → Appearance. Anyone who already chose keeps their
+  choice.
 
 ### iOS (not released yet)
 - The whole app runs on iOS from the same shared code as Android (#13–#20).

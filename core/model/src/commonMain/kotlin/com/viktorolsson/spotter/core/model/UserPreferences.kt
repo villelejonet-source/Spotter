@@ -2,7 +2,7 @@ package com.viktorolsson.spotter.core.model
 
 data class UserPreferences(
     val themeMode: ThemeMode = ThemeMode.SYSTEM,
-    val dynamicColor: Boolean = true,
+    val dynamicColor: Boolean = false,
     val weightUnit: WeightUnit = WeightUnit.KG,
     val defaultRestSeconds: Int = 120,
     /** Which effort column (if any) to show when logging sets. */

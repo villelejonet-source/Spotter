@@ -61,6 +61,15 @@ object Dimens {
     /** Elevation of a banner floating over content. */
     val BannerElevation = 6.dp
 
+    /** The primary button's glow. */
+    val GlowElevation = 14.dp
+
+    /** Flat surfaces: no tonal elevation. */
+    val None = 0.dp
+
+    /** Card borders and dividers. */
+    val Hairline = 1.dp
+
     /** Minimum touch target. */
     val TouchTarget = 48.dp
 

@@ -84,6 +84,15 @@ android {
         buildConfig = true
     }
 
+    // Lint covers the app and every module it depends on. Warnings fail it too, so they can't
+    // pile up; fix the cause, or suppress the one spot with a comment saying why.
+    lint {
+        warningsAsErrors = true
+        // "A newer version exists" notices: updating a library is its own deliberate change,
+        // not a lint failure that turns CI red whenever something upstream releases.
+        disable += setOf("NewerVersionAvailable", "AndroidGradlePluginVersion", "GradleDependency")
+    }
+
     testOptions {
         unitTests.isIncludeAndroidResources = true
     }

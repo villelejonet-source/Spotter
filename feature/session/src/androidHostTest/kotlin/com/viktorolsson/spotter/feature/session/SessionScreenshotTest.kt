@@ -6,7 +6,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.github.takahirom.roborazzi.ExperimentalRoborazziApi
 import com.github.takahirom.roborazzi.RobolectricDeviceQualifiers
@@ -58,7 +58,7 @@ class SessionScreenshotTest {
         }
 
     @Composable
-    private fun card(effortScale: EffortScale = EffortScale.OFF) = Column(Modifier.padding(Spacing.md)) {
+    private fun Card(effortScale: EffortScale = EffortScale.OFF) = Column(Modifier.padding(Spacing.md)) {
         ExerciseCard(
             exercise = bench,
             isFirst = true,
@@ -72,14 +72,14 @@ class SessionScreenshotTest {
     }
 
     @Test
-    fun exerciseCard_light() = capture("exercise_card_light", dark = false) { card() }
+    fun exerciseCard_light() = capture("exercise_card_light", dark = false) { Card() }
 
     @Test
-    fun exerciseCard_dark() = capture("exercise_card_dark", dark = true) { card(effortScale = EffortScale.RPE) }
+    fun exerciseCard_dark() = capture("exercise_card_dark", dark = true) { Card(effortScale = EffortScale.RPE) }
 
     /** Large text: the set row must stay usable (no clipped numbers or overlapping columns). */
     @Test
-    fun exerciseCard_largeFont() = capture("exercise_card_font_1_6", dark = false, fontScale = 1.6f) { card() }
+    fun exerciseCard_largeFont() = capture("exercise_card_font_1_6", dark = false, fontScale = 1.6f) { Card() }
 
     @Test
     fun keypad_light() = capture("keypad_light", dark = false) {
@@ -87,7 +87,7 @@ class SessionScreenshotTest {
     }
 
     @Composable
-    private fun session(restTimer: RestTimer? = null, keypadTarget: KeypadTarget? = null, effortScale: EffortScale = EffortScale.RIR, celebration: PrEvent? = null) {
+    private fun Session(restTimer: RestTimer? = null, keypadTarget: KeypadTarget? = null, effortScale: EffortScale = EffortScale.RIR, celebration: PrEvent? = null) {
         val keypad = rememberKeypadState()
         if (keypadTarget != null && keypad.target == null) keypad.focus(keypadTarget, "10")
         SessionScreen(
@@ -108,27 +108,27 @@ class SessionScreenshotTest {
     }
 
     @Test
-    fun session_light() = capture("session_light", dark = false) { session() }
+    fun session_light() = capture("session_light", dark = false) { Session() }
 
     @Test
     fun session_dark_resting() = capture("session_dark_resting", dark = true) {
-        session(restTimer = RestTimer(endsAt = now + 75.seconds, totalSeconds = 135), effortScale = EffortScale.RPE)
+        Session(restTimer = RestTimer(endsAt = now + 75.seconds, totalSeconds = 135), effortScale = EffortScale.RPE)
     }
 
     @Test
     fun session_resting_keypad() = capture("session_resting_keypad_light", dark = false) {
-        session(restTimer = RestTimer(endsAt = now + 75.seconds, totalSeconds = 135), keypadTarget = KeypadTarget(14, SetField.WEIGHT))
+        Session(restTimer = RestTimer(endsAt = now + 75.seconds, totalSeconds = 135), keypadTarget = KeypadTarget(14, SetField.WEIGHT))
     }
 
     @Test
-    fun session_dynamic() = capture("session_dynamic", dark = false, dynamic = true) { session() }
+    fun session_dynamic() = capture("session_dynamic", dark = false, dynamic = true) { Session() }
 
     @Test
-    fun session_largeFont() = capture("session_font_1_6", dark = false, fontScale = 1.6f) { session() }
+    fun session_largeFont() = capture("session_font_1_6", dark = false, fontScale = 1.6f) { Session() }
 
     @Test
     fun session_prBanner() = capture("session_pr_banner_light", dark = false) {
-        session(
+        Session(
             celebration = PrEvent(
                 "Barbell Bench Press", 82.5, 10,
                 listOf(DetectedRecord(PersonalRecordType.ESTIMATED_1RM, 110.0, 82.5, 10), DetectedRecord(PersonalRecordType.REPS_AT_WEIGHT, 10.0, 82.5, 10)),

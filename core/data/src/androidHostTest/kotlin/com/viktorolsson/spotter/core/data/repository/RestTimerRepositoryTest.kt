@@ -4,6 +4,7 @@ import androidx.datastore.preferences.core.PreferenceDataStoreFactory
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
@@ -20,6 +21,7 @@ import kotlin.time.Duration.Companion.seconds
 import kotlin.time.Instant
 
 /** RestTimerRepository.runOut: the rest timing both platforms share. */
+@OptIn(ExperimentalCoroutinesApi::class)
 @RunWith(AndroidJUnit4::class)
 class RestTimerRepositoryTest {
     private val clock = MutableClock(Instant.parse("2026-10-30T10:00:00Z"))

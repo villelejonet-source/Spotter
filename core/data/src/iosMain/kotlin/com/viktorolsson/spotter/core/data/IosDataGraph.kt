@@ -3,6 +3,7 @@ package com.viktorolsson.spotter.core.data
 import androidx.datastore.preferences.core.PreferenceDataStoreFactory
 import androidx.room.Room
 import androidx.sqlite.driver.bundled.BundledSQLiteDriver
+import com.russhwolf.settings.ExperimentalSettingsApi
 import com.russhwolf.settings.ExperimentalSettingsImplementation
 import com.russhwolf.settings.KeychainSettings
 import com.russhwolf.settings.NSUserDefaultsSettings
@@ -34,7 +35,7 @@ import platform.Security.kSecAttrService
  * app's process when asked for (on opening, after a workout); scheduled background sync
  * (BGAppRefreshTask) comes later, see docs/platform/ios-port.md.
  */
-@OptIn(ExperimentalForeignApi::class, ExperimentalSettingsImplementation::class)
+@OptIn(ExperimentalForeignApi::class, ExperimentalSettingsApi::class, ExperimentalSettingsImplementation::class)
 fun iosDataGraph(supabaseConfig: SupabaseConfig, versionCode: Int): DataGraph {
     val documents = NSFileManager.defaultManager.URLForDirectory(NSDocumentDirectory, NSUserDomainMask, null, true, null)
         ?.path ?: error("No Documents directory")

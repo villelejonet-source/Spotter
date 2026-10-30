@@ -8,7 +8,7 @@
     "prebuild": "node scripts/copy-shared.mjs",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint",
+    "lint": "eslint --max-warnings=0",
     "typecheck": "node scripts/copy-shared.mjs && tsc --noEmit",
     "pretest": "node scripts/copy-shared.mjs",
     "test": "vitest run"

@@ -7,7 +7,7 @@ import androidx.compose.material.icons.rounded.CalendarMonth
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.github.takahirom.roborazzi.ExperimentalRoborazziApi
 import com.github.takahirom.roborazzi.RobolectricDeviceQualifiers
@@ -48,7 +48,7 @@ class StatesScreenshotTest {
         }
 
     @Composable
-    private fun empty() = EmptyState(
+    private fun Empty() = EmptyState(
         icon = Icons.Rounded.CalendarMonth,
         title = "No workouts yet",
         body = "Finished workouts show up here, with every set, by date and by exercise.",
@@ -58,13 +58,13 @@ class StatesScreenshotTest {
     )
 
     @Test
-    fun emptyState_light() = capture("empty_state_light", dark = false) { empty() }
+    fun emptyState_light() = capture("empty_state_light", dark = false) { Empty() }
 
     @Test
-    fun emptyState_dark() = capture("empty_state_dark", dark = true) { empty() }
+    fun emptyState_dark() = capture("empty_state_dark", dark = true) { Empty() }
 
     @Test
-    fun emptyState_largeFont() = capture("empty_state_font_1_6", dark = false, fontScale = 1.6f) { empty() }
+    fun emptyState_largeFont() = capture("empty_state_font_1_6", dark = false, fontScale = 1.6f) { Empty() }
 
     @Test
     fun loadingState_light() = capture("loading_state_light", dark = false) {

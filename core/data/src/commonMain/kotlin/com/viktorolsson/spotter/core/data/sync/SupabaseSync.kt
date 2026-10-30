@@ -29,6 +29,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.Deferred
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.IO
 import kotlinx.coroutines.async
 import kotlinx.coroutines.flow.Flow
@@ -105,6 +106,7 @@ class SupabaseProvider(
     suspend fun client(): SupabaseClient? = deferred.await()
 
     /** The client if it has already been built; never triggers the build. */
+    @OptIn(ExperimentalCoroutinesApi::class)
     fun clientOrNull(): SupabaseClient? = if (deferred.isCompleted && !deferred.isCancelled) deferred.getCompleted() else null
 }
 
@@ -260,7 +262,6 @@ class AccountService(
             CodePurpose.RECOVERY -> OtpType.Email.RECOVERY
         }
         requireClient().auth.verifyEmailOtp(type = type, email = email.trim(), token = code.trim())
-        Unit
     }
 
     /**

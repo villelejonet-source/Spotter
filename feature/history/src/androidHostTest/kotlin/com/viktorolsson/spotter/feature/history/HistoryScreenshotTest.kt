@@ -1,7 +1,7 @@
 package com.viktorolsson.spotter.feature.history
 
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.github.takahirom.roborazzi.ExperimentalRoborazziApi
 import com.github.takahirom.roborazzi.RobolectricDeviceQualifiers
@@ -70,29 +70,29 @@ class HistoryScreenshotTest {
         }
 
     @Composable
-    private fun history(state: HistoryUiState) = HistoryScreen(state, onOpenWorkout = {}, onPreviousMonth = {}, onNextMonth = {}, today = today)
+    private fun History(state: HistoryUiState) = HistoryScreen(state, onOpenWorkout = {}, onPreviousMonth = {}, onNextMonth = {}, today = today)
 
     @Test
-    fun history_light() = capture("history_light", dark = false) { history(historyState(sessions)) }
+    fun history_light() = capture("history_light", dark = false) { History(historyState(sessions)) }
 
     @Test
-    fun history_dark() = capture("history_dark", dark = true) { history(historyState(sessions)) }
+    fun history_dark() = capture("history_dark", dark = true) { History(historyState(sessions)) }
 
     @Test
-    fun history_dynamic() = capture("history_dynamic", dark = false, dynamic = true) { history(historyState(sessions)) }
+    fun history_dynamic() = capture("history_dynamic", dark = false, dynamic = true) { History(historyState(sessions)) }
 
     @Test
-    fun history_largeFont() = capture("history_font_1_6", dark = false, fontScale = 1.6f) { history(historyState(sessions)) }
+    fun history_largeFont() = capture("history_font_1_6", dark = false, fontScale = 1.6f) { History(historyState(sessions)) }
 
     @Test
-    fun history_empty() = capture("history_empty_light", dark = false) { history(HistoryUiState(loading = false)) }
+    fun history_empty() = capture("history_empty_light", dark = false) { History(HistoryUiState(loading = false)) }
 
     @Test
-    fun history_loading() = capture("history_loading_light", dark = false) { history(HistoryUiState(loading = true)) }
+    fun history_loading() = capture("history_loading_light", dark = false) { History(HistoryUiState(loading = true)) }
 
     @Test
     fun history_monthWithoutWorkouts() = capture("history_month_empty_dark", dark = true) {
-        history(historyState(sessions).copy(monthSessions = emptyList(), volumeByDay = emptyMap(), month = YearMonth(2026, 9)))
+        History(historyState(sessions).copy(monthSessions = emptyList(), volumeByDay = emptyMap(), month = YearMonth(2026, 9)))
     }
 
     private val detail = WorkoutDetailUiState(
@@ -103,16 +103,16 @@ class HistoryScreenshotTest {
     )
 
     @Composable
-    private fun detail(state: WorkoutDetailUiState) = WorkoutDetailScreen(state, onBack = {}, onOpenExercise = {}, onRepeat = {})
+    private fun Detail(state: WorkoutDetailUiState) = WorkoutDetailScreen(state, onBack = {}, onOpenExercise = {}, onRepeat = {})
 
     @Test
-    fun workoutDetail_light() = capture("workout_detail_light", dark = false) { detail(detail) }
+    fun workoutDetail_light() = capture("workout_detail_light", dark = false) { Detail(detail) }
 
     @Test
-    fun workoutDetail_dark() = capture("workout_detail_dark", dark = true) { detail(detail.copy(effortScale = EffortScale.RPE)) }
+    fun workoutDetail_dark() = capture("workout_detail_dark", dark = true) { Detail(detail.copy(effortScale = EffortScale.RPE)) }
 
     @Test
-    fun workoutDetail_notFound() = capture("workout_detail_not_found_light", dark = false) { detail(WorkoutDetailUiState(loading = false)) }
+    fun workoutDetail_notFound() = capture("workout_detail_not_found_light", dark = false) { Detail(WorkoutDetailUiState(loading = false)) }
 
     private val logs: List<ExerciseSessionLog> = (0 until 6).map { i ->
         val kg = 70.0 + i * 2.5
@@ -138,19 +138,19 @@ class HistoryScreenshotTest {
     )
 
     @Composable
-    private fun exerciseHistory(state: ExerciseHistoryUiState) =
+    private fun ExerciseHistory(state: ExerciseHistoryUiState) =
         ExerciseHistoryScreen(state, onBack = {}, onMetric = {}, onApply = {}, onDismiss = {})
 
     @Test
-    fun exerciseHistory_light() = capture("exercise_history_light", dark = false) { exerciseHistory(exerciseHistory) }
+    fun exerciseHistory_light() = capture("exercise_history_light", dark = false) { ExerciseHistory(exerciseHistory) }
 
     @Test
     fun exerciseHistory_dark() = capture("exercise_history_dark", dark = true) {
-        exerciseHistory(exerciseHistory.copy(metric = ExerciseMetric.VOLUME))
+        ExerciseHistory(exerciseHistory.copy(metric = ExerciseMetric.VOLUME))
     }
 
     @Test
     fun exerciseHistory_empty() = capture("exercise_history_empty_light", dark = false) {
-        exerciseHistory(ExerciseHistoryUiState(loading = false, exercise = PreviewData.exercise()))
+        ExerciseHistory(ExerciseHistoryUiState(loading = false, exercise = PreviewData.exercise()))
     }
 }

@@ -47,11 +47,15 @@ class TrainingMathFixturesTest {
         val bestSet: FixtureSet?,
     )
 
-    private val fixtures = Json { ignoreUnknownKeys = true }.decodeFromString<Fixtures>(readTextFile(TRAINING_MATH_PATH))
+    private val fixtures = json.decodeFromString<Fixtures>(readTextFile(TRAINING_MATH_PATH))
 
     private fun assertClose(expected: Double?, actual: Double?, what: String) {
         if (expected == null || actual == null) return assertEquals(expected, actual, what)
         assertTrue(abs(expected - actual) < 1e-4, "$what: expected $expected, got $actual")
+    }
+
+    private companion object {
+        val json = Json { ignoreUnknownKeys = true }
     }
 
     @Test

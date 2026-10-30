@@ -24,8 +24,9 @@ import com.viktorolsson.spotter.core.model.SessionExercise
 import com.viktorolsson.spotter.core.model.SetType
 import com.viktorolsson.spotter.core.model.UserPreferences
 import com.viktorolsson.spotter.core.model.WorkoutSession
+import com.viktorolsson.spotter.core.model.NumberInput
 import com.viktorolsson.spotter.core.model.isTimed
-import com.viktorolsson.spotter.core.model.parseToKg
+import com.viktorolsson.spotter.core.model.toKg
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableSharedFlow
@@ -210,13 +211,21 @@ class SessionViewModel(
 
     // Writes only the field that was typed: the screen's copy of the set's other values may be
     // behind the database (a tick just filled them in, a sync), so they're never written back.
+    // Blank clears the field; text that isn't a number yet ("." on its own) leaves it alone.
     private suspend fun writeField(edit: FieldEdit) {
-        val text = edit.text
+        val id = edit.setId
         when (edit.field) {
-            SetField.WEIGHT -> workoutRepository.setSetWeight(edit.setId, prefs.weightUnit.parseToKg(text))
-            SetField.REPS -> workoutRepository.setSetReps(edit.setId, text.toIntOrNull()?.takeIf { it in 0..999 })
-            SetField.EFFORT -> workoutRepository.setSetRir(edit.setId, text.toIntOrNull()?.let(prefs.effortScale::toRir))
+            SetField.WEIGHT -> NumberInput.decimal(edit.text).ifTyped { workoutRepository.setSetWeight(id, it?.let(prefs.weightUnit::toKg)) }
+            SetField.REPS -> NumberInput.whole(edit.text).ifTyped { workoutRepository.setSetReps(id, it?.toInt()?.coerceAtMost(999)) }
+            SetField.EFFORT -> NumberInput.whole(edit.text).ifTyped { workoutRepository.setSetRir(id, it?.toInt()?.let(prefs.effortScale::toRir)) }
         }
+    }
+
+    /** Runs [write] with the number, or null for blank; not at all for invalid text. */
+    private inline fun NumberInput.ifTyped(write: (Double?) -> Unit) = when (this) {
+        NumberInput.Blank -> write(null)
+        is NumberInput.Value -> write(value)
+        NumberInput.Invalid -> Unit
     }
 
     private val _prEvents = MutableSharedFlow<PrEvent>(extraBufferCapacity = 4)

@@ -33,6 +33,5 @@ internal fun formatTwoDecimals(value: Double): String {
     return if (fraction.isEmpty()) "$sign$whole" else "$sign$whole.$fraction"
 }
 
-/** Parses user input ("82,5" or "82.5") in [unit] to kg; blank or invalid gives null. */
-fun WeightUnit.parseToKg(text: String): Double? =
-    text.trim().replace(',', '.').toDoubleOrNull()?.takeIf { it >= 0 }?.let(::toKg)
+/** Parses user input ("82,5" or "82.5") in [unit] to kg; blank or invalid gives null. See [NumberInput]. */
+fun WeightUnit.parseToKg(text: String): Double? = NumberInput.decimalOrNull(text)?.let(::toKg)

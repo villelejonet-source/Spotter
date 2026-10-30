@@ -59,6 +59,7 @@ import org.koin.compose.viewmodel.koinViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.viktorolsson.spotter.core.engine.Plates
 import com.viktorolsson.spotter.core.model.EffortScale
+import com.viktorolsson.spotter.core.model.NumberInput
 import com.viktorolsson.spotter.core.model.PersonalRecordType
 import com.viktorolsson.spotter.core.model.SessionExercise
 import com.viktorolsson.spotter.core.model.SetType
@@ -344,7 +345,7 @@ internal fun SessionScreen(
                             write(base.dropLast(1))
                         },
                         onStep = { sign ->
-                            val value = (keypad.buffer.replace(',', '.').toDoubleOrNull() ?: 0.0) + sign * step
+                            val value = (NumberInput.decimalOrNull(keypad.buffer) ?: 0.0) + sign * step
                             keypad.fresh = true
                             write(plainNumberRounded(value.coerceAtLeast(0.0), 2))
                         },

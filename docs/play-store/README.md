@@ -22,7 +22,7 @@ personal accounts.
 Tag each uploaded build so it can be rebuilt exactly: `git tag android-v1.0.1 <commit>` from
 1.0.1 on (room for `ios-v…` tags later); earlier builds use `vX.Y.Z`. The `/release` Claude
 Code command (`.claude/commands/release.md`) walks through bumping, notes, checks, the bundle,
-the internal-testing upload and a smoke test.
+the production upload and a smoke test.
 
 ## 1. Create the upload key (once)
 

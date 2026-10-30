@@ -20,6 +20,8 @@ into the new version's entry and writes the store notes from it. Versions are th
 - The website's Today page is a dashboard: stat tiles with trend lines and the change in volume
   against the previous four weeks, a weekly volume chart with a 4W/12W/6M/1Y switch, your next
   workout with this week's progress as a ring, a training heatmap, records and recent workouts.
+- The website's charts match: progress lines and body weight glow over a fading area, bar charts
+  fade with the latest bar highlighted, and muscle balance shows its target range as a dashed band.
 
 ### iOS (not released yet)
 - The whole app runs on iOS from the same shared code as Android (#13–#20).

@@ -32,15 +32,14 @@ Or open the folder in Android Studio and run the `app` configuration.
 |---|---|
 | `app` | Application, MainActivity, bottom-bar navigation shell |
 | `core/model` | Domain types and enums; Kotlin Multiplatform (JVM + iOS), dates are `kotlinx.datetime` / `kotlin.time` |
-| `core/data` | Kotlin Multiplatform (Android + iOS): Room schema (exported to `core/data/schemas`), DAOs, repositories, DataStore preferences, exercise seeder, cloud sync and accounts, and `DataGraph`, which builds them; `dataModule(graph)` hands them to Koin |
-| `core/data-android` | Android wiring for `core/data`: `androidDataGraph` and its Koin module, WorkManager sync, the encrypted session store (`AuthStorage`) |
+| `core/data` | Kotlin Multiplatform (Android + iOS): Room schema (exported to `core/data/schemas`), DAOs, repositories, DataStore preferences, exercise seeder, cloud sync and accounts, and `DataGraph`, which builds them; `dataModule(graph)` hands them to Koin. Platform parts: `androidMain` (`androidDataGraph`, WorkManager sync, the encrypted session store `AuthStorage`), `iosMain` (`iosDataGraph`, Keychain) |
 | `core/engine` | Training logic, Kotlin Multiplatform (JVM + iOS), unit-tested on both: plan generator, progression, swap ranking and weight conversion, PR detection, muscle balance, body-weight trend |
 | `core/ui` | Compose Multiplatform (Android + iOS): theme (branded light/dark palette + dynamic color on Android), shared components, labels and formatting; strings are Compose resources in `src/commonMain/composeResources` |
 | `feature/*` | Shared code (`spotter.kmp.feature`); `session`'s rest-timer service and notifications are Android-only (`androidMain`). One module per tab (`today`, `history`, `progress`, `settings` = Profile), plus `session` (workout logger, rest timer service, summary), `library` (exercise picker), `onboarding` (questionnaire + plan summary) and `plan` (plan overview) |
 | `shell` | The app's root UI, shared: navigation, bottom bar, sync dialogs, and every screen's Koin modules |
 | `shared` | The iOS framework (`Shared`): `:shell` and everything below it, plus `SpotterIos`, what the Swift app calls |
 | `iosApp` | The iOS app (Xcode project, Swift shell); see [iosApp/README.md](iosApp/README.md) |
-| `build-logic` | Convention plugins (`spotter.android.feature`, `spotter.kmp.library`, …) |
+| `build-logic` | Convention plugins (`spotter.kmp.feature`, `spotter.kmp.library`, …) |
 
 The exercise library lives in `core/data/catalog/exercises.json` (an asset on Android, a bundle resource on iOS). Bump `EXERCISE_CATALOG_VERSION` in `ExerciseSeeder` whenever it changes so installed apps re-seed. Room is at schema version 8; every Room migration must re-create the sync triggers via `SyncSchema.TriggerSpec`.
 

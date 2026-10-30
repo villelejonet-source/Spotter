@@ -6,11 +6,11 @@ import com.viktorolsson.spotter.core.data.di.androidDataGraph
 import com.viktorolsson.spotter.core.data.di.androidDataModule
 import com.viktorolsson.spotter.core.data.sync.AppBuild
 import com.viktorolsson.spotter.core.data.sync.SupabaseConfig
-import com.viktorolsson.spotter.shell.uiModules
+import com.viktorolsson.spotter.shell.spotterModules
 import org.koin.core.module.Module
 
 /** Everything the app injects: the data layer, then every screen's view models (shared with iOS). */
-fun appModules(context: Context): List<Module> = listOf(
+fun appModules(context: Context): List<Module> = spotterModules(
     androidDataModule(
         androidDataGraph(
             context,
@@ -20,4 +20,4 @@ fun appModules(context: Context): List<Module> = listOf(
             AppBuild(BuildConfig.VERSION_CODE),
         ),
     ),
-) + uiModules
+)

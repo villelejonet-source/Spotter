@@ -12,9 +12,6 @@ import com.viktorolsson.spotter.core.data.sync.DeviceIdentity
 import com.viktorolsson.spotter.core.data.sync.SupabaseConfig
 import com.viktorolsson.spotter.core.data.sync.SyncScheduler
 import kotlinx.cinterop.ExperimentalForeignApi
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
 import okio.Path.Companion.toPath
 import platform.Foundation.CFBridgingRetain
@@ -29,7 +26,6 @@ import platform.Foundation.stringWithContentsOfFile
 import platform.Security.kSecAttrAccessible
 import platform.Security.kSecAttrAccessibleAfterFirstUnlockThisDeviceOnly
 import platform.Security.kSecAttrService
-import kotlin.time.Clock
 
 /**
  * The data graph for the iOS app: the database and preferences in the app's Documents
@@ -58,8 +54,6 @@ fun iosDataGraph(supabaseConfig: SupabaseConfig, versionCode: Int): DataGraph {
     graph = DataGraph(
         database = database,
         dataStore = dataStore,
-        clock = Clock.System,
-        scope = CoroutineScope(SupervisorJob() + Dispatchers.Default),
         supabaseConfig = supabaseConfig,
         // On this device only (never in backups or iCloud Keychain), and readable after the
         // first unlock so a background sync can use the session.

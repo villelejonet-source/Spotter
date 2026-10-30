@@ -28,6 +28,9 @@ import com.viktorolsson.spotter.core.data.sync.SyncCursorStore
 import com.viktorolsson.spotter.core.data.sync.SyncRepository
 import com.viktorolsson.spotter.core.data.sync.SyncScheduler
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.launch
 import kotlin.time.Clock
 
 /**
@@ -38,15 +41,15 @@ import kotlin.time.Clock
 class DataGraph(
     val database: SpotterDatabase,
     val dataStore: DataStore<Preferences>,
-    val clock: Clock,
-    /** Work that must outlive any screen, such as seeding, auto-save writes and sync. */
-    val scope: CoroutineScope,
     private val supabaseConfig: SupabaseConfig,
     private val sessionStore: SessionStore,
     private val deviceStore: () -> Settings,
     private val appBuild: AppBuild,
     private val catalog: CatalogSource,
     private val syncScheduler: SyncScheduler,
+    val clock: Clock = Clock.System,
+    /** Work that must outlive any screen, such as seeding, auto-save writes and sync. */
+    val scope: CoroutineScope = CoroutineScope(SupervisorJob() + Dispatchers.Default),
 ) {
     val userProfiles by lazy { UserProfileRepository(database.userProfileDao()) }
     val preferences by lazy { UserPreferencesRepository(dataStore, database.userProfileDao()) }
@@ -76,5 +79,16 @@ class DataGraph(
             accounts, SupabaseSyncRemote(supabase), LocalSyncStore(database), SyncCursorStore(dataStore),
             preferences, userProfiles, syncScheduler, scope, clock, deviceIdentity,
         )
+    }
+
+    /**
+     * What both apps do once at launch, after Koin has started. Sync is made eagerly so it
+     * starts as soon as a signed-in session is restored (the Supabase client it needs is built
+     * lazily, off the main thread); then seeding, one-off conversions and daily refreshes, each
+     * of which returns early when there's nothing to do.
+     */
+    fun onAppStart() {
+        sync
+        scope.launch { startupMaintenance.run() }
     }
 }

@@ -7,15 +7,11 @@ import androidx.activity.SystemBarStyle
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.runtime.DisposableEffect
-import androidx.compose.runtime.getValue
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
-import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.viktorolsson.spotter.core.data.sync.SyncRepository
-import com.viktorolsson.spotter.core.ui.theme.SpotterTheme
-import com.viktorolsson.spotter.core.ui.theme.isDark
 import com.viktorolsson.spotter.shell.MainUiState
 import com.viktorolsson.spotter.shell.MainViewModel
-import com.viktorolsson.spotter.shell.SpotterApp
+import com.viktorolsson.spotter.shell.SpotterRoot
 import org.koin.android.ext.android.inject
 import org.koin.androidx.viewmodel.ext.android.viewModel
 
@@ -31,23 +27,18 @@ class MainActivity : ComponentActivity() {
         if (savedInstanceState == null) syncRepository.handleDeeplink(intent.data?.toString())
 
         setContent {
-            val uiState by viewModel.uiState.collectAsStateWithLifecycle()
-            val preferences = (uiState as? MainUiState.Ready)?.preferences ?: return@setContent
-            val darkTheme = preferences.themeMode.isDark()
-
-            DisposableEffect(darkTheme) {
-                enableEdgeToEdge(
-                    statusBarStyle = SystemBarStyle.auto(
-                        android.graphics.Color.TRANSPARENT,
-                        android.graphics.Color.TRANSPARENT,
-                    ) { darkTheme },
-                    navigationBarStyle = SystemBarStyle.auto(LightScrim, DarkScrim) { darkTheme },
-                )
-                onDispose {}
-            }
-
-            SpotterTheme(darkTheme = darkTheme, dynamicColor = preferences.dynamicColor) {
-                SpotterApp(needsOnboarding = !preferences.onboardingCompleted)
+            // The same root as iOS; Android adds only system bars that follow the theme.
+            SpotterRoot(viewModel) { darkTheme ->
+                DisposableEffect(darkTheme) {
+                    enableEdgeToEdge(
+                        statusBarStyle = SystemBarStyle.auto(
+                            android.graphics.Color.TRANSPARENT,
+                            android.graphics.Color.TRANSPARENT,
+                        ) { darkTheme },
+                        navigationBarStyle = SystemBarStyle.auto(LightScrim, DarkScrim) { darkTheme },
+                    )
+                    onDispose {}
+                }
             }
         }
     }

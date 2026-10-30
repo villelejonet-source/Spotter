@@ -89,14 +89,14 @@ data class WorkoutSummary(
                 completedSets = counted.size,
                 volumeKg = lifted
                     .filter { it.setType != SetType.WARMUP }
-                    .sumOf { (it.weightKg ?: 0.0) * (it.reps ?: 0) },
+                    .sumOf { setVolumeKg(it.weightKg, it.reps) },
                 exercises = session.exercises.map { ex ->
                     val done = ex.sets.filter { it.isCompleted }
                     ExerciseSummary(
                         exerciseName = ex.exercise.name,
                         completedSets = done.size,
                         bestSet = done.filter { it.setType != SetType.WARMUP }
-                            .maxWithOrNull(compareBy<WorkoutSet>({ it.weightKg ?: 0.0 }, { it.reps ?: 0 }))
+                            .maxWithOrNull(bestSetOrder<WorkoutSet>({ it.weightKg }, { it.reps }))
                             ?.let { PreviousSet(it.weightKg, it.reps) },
                         timed = ex.exercise.isTimed,
                     )

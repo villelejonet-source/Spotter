@@ -2,6 +2,7 @@ package com.viktorolsson.spotter.core.engine
 
 import com.viktorolsson.spotter.core.model.PersonalRecordType
 import com.viktorolsson.spotter.core.model.epley
+import com.viktorolsson.spotter.core.model.setVolumeKg
 
 /** Best results so far for one exercise. */
 data class ExerciseBests(
@@ -81,5 +82,5 @@ object PersonalRecords {
         return records
     }
 
-    private fun volume(sets: List<LoggedSet>) = sets.sumOf { (it.weightKg ?: 0.0) * it.reps }
+    private fun volume(sets: List<LoggedSet>) = sets.sumOf { setVolumeKg(it.weightKg, it.reps) }
 }

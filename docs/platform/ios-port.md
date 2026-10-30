@@ -30,7 +30,7 @@ The port lands as a series of pull requests; Android keeps working and shipping 
   and `HostilePayloadTest` must pass unchanged in behaviour; they stay Robolectric tests on
   the Android target.
 - **Exercise catalog.** `core/data/catalog/exercises.json`, read through `CatalogSource`: an
-  Android asset (`core/data-android` adds the folder), an iOS bundle resource. One file; the
+  Android asset (the app module adds the folder), an iOS bundle resource. One file; the
   website copies it too.
 - **Auth session.** Android keeps `EncryptedSharedPreferences` (`AuthStorage`); iOS uses the
   Keychain (`KeychainSettings` from multiplatform-settings). Both are `Settings` behind `SessionStore`, which is what supabase-kt's session manager
@@ -68,7 +68,7 @@ The port lands as a series of pull requests; Android keeps working and shipping 
 - **Lifecycle and navigation** are the JetBrains multiplatform artifacts in feature modules; on
   Android they resolve to the same androidx versions as before.
 - **Feature modules** move to `spotter.kmp.feature` (shared Compose, Koin, navigation, lifecycle,
-  wired to `core:data` rather than `core:data-android`): code in `commonMain`, strings in
+  wired to `core:data`): code in `commonMain`, strings in
   `composeResources`, screenshot tests as Android host tests. Resource ids passed around as `Int`
   become `StringResource`. Locale calendar facts (first day of the week, narrow weekday names)
   come from `core/ui`'s `PlatformFormat`. System back is Compose Multiplatform's `BackHandler`

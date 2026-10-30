@@ -19,6 +19,7 @@ import com.viktorolsson.spotter.core.model.Equipment
 import com.viktorolsson.spotter.core.model.ExperienceLevel
 import com.viktorolsson.spotter.core.model.Goal
 import com.viktorolsson.spotter.core.model.Limitation
+import com.viktorolsson.spotter.core.model.NumberInput
 import com.viktorolsson.spotter.core.model.Sex
 import com.viktorolsson.spotter.core.model.SplitType
 import com.viktorolsson.spotter.core.model.UserProfile
@@ -81,15 +82,15 @@ data class Answers(
 ) {
     val unit: WeightUnit get() = if (imperial) WeightUnit.LB else WeightUnit.KG
 
-    val ageYears: Int? get() = age.toIntOrNull()?.takeIf { it in 13..100 }
+    val ageYears: Int? get() = NumberInput.wholeOrNull(age)?.takeIf { it in 13..100 }
 
     val heightCmValue: Double?
         get() = if (imperial) {
-            val ft = heightFt.toIntOrNull() ?: return null
-            val inches = heightIn.toIntOrNull() ?: 0
+            val ft = NumberInput.wholeOrNull(heightFt) ?: return null
+            val inches = if (heightIn.isBlank()) 0 else NumberInput.wholeOrNull(heightIn) ?: return null
             ((ft * 12 + inches) * 2.54).takeIf { it in 120.0..230.0 }
         } else {
-            heightCm.replace(',', '.').toDoubleOrNull()?.takeIf { it in 120.0..230.0 }
+            NumberInput.decimalOrNull(heightCm)?.takeIf { it in 120.0..230.0 }
         }
 
     val weightKg: Double? get() = unit.parseToKg(weight)?.takeIf { it in 30.0..300.0 }
@@ -98,7 +99,7 @@ data class Answers(
         fun result(lift: Lift): LiftResult? {
             val input = lifts[lift] ?: return null
             val kg = unit.parseToKg(input.weight)?.takeIf { it > 0 } ?: return null
-            val reps = input.reps.toIntOrNull()?.takeIf { it in 1..20 } ?: return null
+            val reps = NumberInput.wholeOrNull(input.reps)?.takeIf { it in 1..20 } ?: return null
             return LiftResult(kg, reps)
         }
         return KnownLifts(bench = result(Lift.BENCH), squat = result(Lift.SQUAT), deadlift = result(Lift.DEADLIFT))

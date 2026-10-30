@@ -97,6 +97,29 @@ class SessionViewModelTest {
         assertEquals(8, after.reps)
     }
 
+    /** "62,5" from a Swedish keyboard is 62.5 kg; "." on its own isn't a number yet and changes nothing. */
+    @Test
+    fun typedWeightsAcceptACommaAndIgnoreALonePoint() = runTest(main) {
+        graph.seeder.seedIfNeeded()
+        val id = graph.workouts.startEmptyWorkout()
+        graph.workouts.addExercises(id, listOf("barbell-bench-press"))
+        val set = sets(id).first()
+        val vm = viewModel(id)
+        vm.uiState.first { it.session != null }
+
+        vm.updateSetField(set.id, SetField.WEIGHT, "62,5")
+        vm.flushEdit().join()
+        assertEquals(62.5, sets(id).first().weightKg!!, 0.0)
+
+        vm.updateSetField(set.id, SetField.WEIGHT, ".")
+        vm.flushEdit().join()
+        assertEquals(62.5, sets(id).first().weightKg!!, 0.0)
+
+        vm.updateSetField(set.id, SetField.WEIGHT, "")
+        vm.flushEdit().join()
+        assertNull(sets(id).first().weightKg)
+    }
+
     /** Copying last time's set onto a set with a typed value waiting: the copy is the later action and wins. */
     @Test
     fun copyPreviousWinsOverAPendingEdit() = runTest(main) {

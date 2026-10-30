@@ -11,6 +11,7 @@ import com.viktorolsson.spotter.core.model.Goal
 import com.viktorolsson.spotter.core.model.MuscleVolume
 import com.viktorolsson.spotter.core.model.PersonalRecord
 import com.viktorolsson.spotter.core.model.SetType
+import com.viktorolsson.spotter.core.model.TIMED_EXERCISE_IDS
 import com.viktorolsson.spotter.core.model.WorkoutSession
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
@@ -45,7 +46,7 @@ class HistoryRepository(
     fun observeExerciseLogs(exerciseId: String): Flow<List<ExerciseSessionLog>> =
         dao.observeExerciseSets(exerciseId).map { rows ->
             rows.groupBy { it.sessionId }.map { (sessionId, sets) ->
-                ExerciseSessionLog(sessionId, sets.first().startedAt, sets.map { it.set.toModel() })
+                ExerciseSessionLog(sessionId, sets.first().startedAt, sets.map { it.set.toModel() }, timed = exerciseId in TIMED_EXERCISE_IDS)
             }
         }.flowOn(Dispatchers.Default)
 

@@ -4,11 +4,12 @@ import com.viktorolsson.spotter.core.model.Exercise
 import com.viktorolsson.spotter.core.model.ExperienceLevel
 import com.viktorolsson.spotter.core.model.Sex
 import com.viktorolsson.spotter.core.model.UserProfile
+import com.viktorolsson.spotter.core.model.epley
 
 /** A set the user reports, e.g. "bench 80 kg × 5". */
 data class LiftResult(val weightKg: Double, val reps: Int) {
-    /** Epley estimated one-rep max. */
-    val estimatedOneRepMax: Double get() = weightKg * (1 + reps / 30.0)
+    /** Epley estimated one-rep max (the app's one rule, a single is its own 1RM). */
+    val estimatedOneRepMax: Double get() = epley(weightKg, reps)
 }
 
 data class KnownLifts(

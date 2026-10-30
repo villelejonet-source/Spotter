@@ -6,10 +6,12 @@ import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.longPreferencesKey
 import com.viktorolsson.spotter.core.model.RestTimer
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.map
 import kotlin.time.Clock
+import kotlin.time.Duration
 import kotlin.time.Instant
 
 /**
@@ -53,6 +55,28 @@ class RestTimerRepository(
             it.remove(END_EPOCH_MS)
             it.remove(TOTAL_SECONDS)
         }
+    }
+
+    /**
+     * Waits out [rest] and ends it, the same way on both platforms; only the alerting differs
+     * (Android's workout service, the app on iOS). [onResting] gets the time left when the wait
+     * starts, [onEnded] runs when the rest runs out (the alert), then the rest is cleared. A
+     * rest that ran out while nothing was waiting (the app wasn't running) is cleared without
+     * [onEnded]. Clearing re-emits [restTimer], which cancels a `collectLatest` caller, so
+     * anything that must happen after the alert belongs in [onEnded].
+     */
+    suspend fun runOut(
+        rest: RestTimer,
+        onResting: suspend (remaining: Duration) -> Unit = {},
+        onEnded: suspend () -> Unit = {},
+    ) {
+        val remaining = rest.endsAt - clock.now()
+        if (remaining.isPositive()) {
+            onResting(remaining)
+            delay(remaining)
+            onEnded()
+        }
+        stop()
     }
 
     private companion object {

@@ -7,9 +7,8 @@ import org.jetbrains.kotlin.gradle.dsl.KotlinMultiplatformExtension
 
 /**
  * A feature module in shared code (Android + iOS): `spotter.kmp.compose` plus Koin view models,
- * type-safe navigation and lifecycle, wired to the shared core modules. The multiplatform
- * counterpart of `spotter.android.feature`; modules move over as they're ported.
- * `material-icons-extended` is not included, as there: a module that needs it declares it.
+ * type-safe navigation and lifecycle, wired to the shared core modules. Every feature module
+ * uses it. `material-icons-extended` is not included: a module that needs it declares it.
  */
 class KmpFeatureConventionPlugin : Plugin<Project> {
     override fun apply(target: Project) = with(target) {

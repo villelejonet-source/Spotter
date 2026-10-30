@@ -128,7 +128,6 @@ roborazzi = { id = "io.github.takahirom.roborazzi", version.ref = "roborazzi" }
 spotter-android-application = { id = "spotter.android.application" }
 spotter-android-library = { id = "spotter.android.library" }
 spotter-android-compose = { id = "spotter.android.compose" }
-spotter-android-feature = { id = "spotter.android.feature" }
 spotter-kmp-library = { id = "spotter.kmp.library" }
 spotter-kmp-compose = { id = "spotter.kmp.compose" }
 spotter-kmp-feature = { id = "spotter.kmp.feature" }

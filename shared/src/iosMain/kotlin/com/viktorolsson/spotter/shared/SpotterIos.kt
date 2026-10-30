@@ -6,8 +6,7 @@ import com.viktorolsson.spotter.core.data.di.dataModule
 import com.viktorolsson.spotter.core.data.iosDataGraph
 import com.viktorolsson.spotter.core.data.sync.SupabaseConfig
 import com.viktorolsson.spotter.shell.SpotterRoot
-import com.viktorolsson.spotter.shell.uiModules
-import kotlinx.coroutines.launch
+import com.viktorolsson.spotter.shell.spotterModules
 import org.koin.core.context.startKoin
 import platform.UIKit.UIViewController
 
@@ -17,13 +16,11 @@ import platform.UIKit.UIViewController
  */
 class SpotterIos(supabaseUrl: String, supabasePublishableKey: String, versionCode: Int) {
     private val graph: DataGraph = startKoin {
-        modules(listOf(dataModule(iosDataGraph(SupabaseConfig(supabaseUrl, supabasePublishableKey), versionCode))) + uiModules)
+        modules(spotterModules(dataModule(iosDataGraph(SupabaseConfig(supabaseUrl, supabasePublishableKey), versionCode))))
     }.koin.get()
 
-    /** Seeding, one-off conversions and daily refreshes; each returns early when there's nothing to do. */
-    fun start() {
-        graph.scope.launch { graph.startupMaintenance.run() }
-    }
+    /** Once at launch, as Android's Application does: see [DataGraph.onAppStart]. */
+    fun start() = graph.onAppStart()
 
     /** The whole app, for the window's root view. */
     fun mainViewController(): UIViewController = ComposeUIViewController { SpotterRoot() }

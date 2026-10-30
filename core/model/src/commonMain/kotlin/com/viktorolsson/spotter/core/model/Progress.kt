@@ -52,24 +52,23 @@ data class PersonalRecord(
     val sessionId: Long?,
 )
 
-/** One session's sets of a single exercise, for exercise history. */
+/** One session's sets of a single exercise, for exercise history. Rules: Lifting.kt. */
 data class ExerciseSessionLog(
     val sessionId: Long,
     val date: Instant,
     val sets: List<WorkoutSet>,
+    /** A hold: reps are seconds, so there's no volume or 1RM. */
+    val timed: Boolean = false,
 ) {
     private val working get() = sets.filter { it.setType != SetType.WARMUP && it.reps != null }
-    val bestSet: WorkoutSet? get() = working.maxWithOrNull(compareBy({ it.weightKg ?: 0.0 }, { it.reps ?: 0 }))
+    val bestSet: WorkoutSet? get() = working.maxWithOrNull(bestSetOrder({ it.weightKg }, { it.reps }))
     val estimatedOneRepMax: Double?
-        get() = working.mapNotNull { set ->
+        get() = if (timed) null else working.mapNotNull { set ->
             val kg = set.weightKg
             val reps = set.reps
             if (kg != null && reps != null) epley(kg, reps) else null
         }.maxOrNull()
-    val volumeKg: Double get() = working.sumOf { (it.weightKg ?: 0.0) * (it.reps ?: 0) }
+    val volumeKg: Double get() = if (timed) 0.0 else working.sumOf { setVolumeKg(it.weightKg, it.reps) }
 }
-
-/** Epley estimated one-rep max; a single is its own 1RM. */
-fun epley(weightKg: Double, reps: Int): Double = if (reps <= 1) weightKg else weightKg * (1 + reps / 30.0)
 
 data class BodyWeightPoint(val date: LocalDate, val weightKg: Double, val sevenDayAverageKg: Double)

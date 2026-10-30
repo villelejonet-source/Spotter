@@ -12,6 +12,7 @@ into the new version's entry and writes the store notes from it. Versions are th
 - The whole app runs on iOS from the same shared code as Android (#13–#20).
 - Fixed a crash on iOS whenever the app logged a warning, such as a failed sync (#27).
 - Builds without cloud backup no longer show account buttons that couldn't work (#21).
+- The app has its icon on iOS too (it showed a blank placeholder).
 
 ## 1.1.0 (8) — 2026-10-30
 

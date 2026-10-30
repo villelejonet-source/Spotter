@@ -10,6 +10,10 @@
 MARKETING_VERSION = 1.1.0
 CURRENT_PROJECT_VERSION = 1
 
+// The home-screen icon: Spotter/Assets.xcassets/AppIcon, one 1024 px image rendered from
+// docs/play-store/graphics/icon-ios.html (the same drawing as the Play Store icon).
+ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon
+
 // The Kotlin framework is built for Apple silicon simulators and devices only.
 EXCLUDED_ARCHS[sdk=iphonesimulator*] = x86_64
 

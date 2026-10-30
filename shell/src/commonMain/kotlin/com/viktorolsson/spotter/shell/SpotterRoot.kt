@@ -8,16 +8,20 @@ import com.viktorolsson.spotter.core.ui.theme.isDark
 import org.koin.compose.viewmodel.koinViewModel
 
 /**
- * The whole app inside a platform window that has nothing else to set up: the theme from the
- * user's preferences, then [SpotterApp]. Nothing shows until the preferences load, so an
- * explicit light/dark choice never flashes. iOS hosts this; Android's MainActivity does the
- * same itself, plus its splash screen and system-bar colours.
+ * The whole app, on both platforms: the theme from the user's preferences, then [SpotterApp].
+ * Nothing shows until the preferences load, so an explicit light/dark choice never flashes.
+ * [onDarkTheme] lets the host style its own chrome to match (Android's system bars).
  */
 @Composable
-fun SpotterRoot(viewModel: MainViewModel = koinViewModel()) {
+fun SpotterRoot(
+    viewModel: MainViewModel = koinViewModel(),
+    onDarkTheme: @Composable (darkTheme: Boolean) -> Unit = {},
+) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val preferences = (uiState as? MainUiState.Ready)?.preferences ?: return
-    SpotterTheme(darkTheme = preferences.themeMode.isDark(), dynamicColor = preferences.dynamicColor) {
+    val darkTheme = preferences.themeMode.isDark()
+    onDarkTheme(darkTheme)
+    SpotterTheme(darkTheme = darkTheme, dynamicColor = preferences.dynamicColor) {
         SpotterApp(needsOnboarding = !preferences.onboardingCompleted)
     }
 }

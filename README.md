@@ -40,7 +40,7 @@ Or open the folder in Android Studio and run the `app` configuration.
 | `shell` | The app's root UI, shared: navigation, bottom bar, sync dialogs, and every screen's Koin modules |
 | `shared` | The iOS framework (`Shared`): `:shell` and everything below it, plus `SpotterIos`, what the Swift app calls |
 | `iosApp` | The iOS app (Xcode project, Swift shell); see [iosApp/README.md](iosApp/README.md) |
-| `build-logic` | Convention plugins (`spotter.android.feature`, `spotter.kmp.library`, …) |
+| `build-logic` | Convention plugins (`spotter.kmp.feature`, `spotter.kmp.library`, …) |
 
 The exercise library lives in `core/data/catalog/exercises.json` (an asset on Android, a bundle resource on iOS). Bump `EXERCISE_CATALOG_VERSION` in `ExerciseSeeder` whenever it changes so installed apps re-seed. Room is at schema version 8; every Room migration must re-create the sync triggers via `SyncSchema.TriggerSpec`.
 

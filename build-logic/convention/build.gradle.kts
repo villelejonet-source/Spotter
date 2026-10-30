@@ -27,10 +27,6 @@ gradlePlugin {
             id = "spotter.android.compose"
             implementationClass = "AndroidComposeConventionPlugin"
         }
-        register("androidFeature") {
-            id = "spotter.android.feature"
-            implementationClass = "AndroidFeatureConventionPlugin"
-        }
         register("androidScreenshots") {
             id = "spotter.android.screenshots"
             implementationClass = "AndroidScreenshotsConventionPlugin"

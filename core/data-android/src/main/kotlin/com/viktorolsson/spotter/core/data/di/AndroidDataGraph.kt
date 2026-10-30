@@ -14,13 +14,9 @@ import com.viktorolsson.spotter.core.data.sync.DeviceIdentity
 import com.viktorolsson.spotter.core.data.sync.SupabaseConfig
 import com.viktorolsson.spotter.core.data.sync.SyncWorker
 import com.viktorolsson.spotter.core.data.sync.WorkManagerSyncScheduler
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.SupervisorJob
 import org.koin.androidx.workmanager.dsl.workerOf
 import org.koin.core.module.Module
 import org.koin.dsl.module
-import kotlin.time.Clock
 
 /**
  * The shared [DataGraph], built from Android's storage, Keystore session store and WorkManager.
@@ -32,8 +28,6 @@ fun androidDataGraph(context: Context, supabaseConfig: SupabaseConfig, appBuild:
         AndroidSQLiteDriver(),
     ).build(),
     dataStore = PreferenceDataStoreFactory.create { context.preferencesDataStoreFile("user_preferences") },
-    clock = Clock.System,
-    scope = CoroutineScope(SupervisorJob() + Dispatchers.Default),
     supabaseConfig = supabaseConfig,
     sessionStore = AndroidSessionStore(context),
     deviceStore = { SharedPreferencesSettings(context.getSharedPreferences(DeviceIdentity.FILE, Context.MODE_PRIVATE), commit = true) },

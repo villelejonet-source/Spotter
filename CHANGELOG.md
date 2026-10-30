@@ -13,6 +13,11 @@ into the new version's entry and writes the store notes from it. Versions are th
   (the workout's page → Delete workout). Its sets and any records set in it go too, on every
   device; a scheduled day it completed shows as not done again.
 
+### Changed
+- The website has a new look: dark-first with a glowing orange accent, monospace numbers, a new
+  sidebar, and a "Jump to…" command palette (⌘K) to reach any page or action. Light mode
+  follows your system setting.
+
 ### iOS (not released yet)
 - The whole app runs on iOS from the same shared code as Android (#13–#20).
 - Fixed a crash on iOS whenever the app logged a warning, such as a failed sync (#27).

@@ -28,7 +28,7 @@ export function Dialog({ open, onClose, title, children, className }: { open: bo
       onClose={onClose}
       onClick={(e) => e.target === e.currentTarget && onClose()}
       className={clsx(
-        "m-auto w-full max-w-md rounded-2xl border border-outline bg-surface p-0 text-foreground shadow-xl backdrop:bg-scrim",
+        "m-auto w-full max-w-md rounded-2xl border border-outline-strong bg-raised p-0 text-foreground shadow-2xl backdrop:bg-scrim backdrop:backdrop-blur-sm",
         "max-sm:mb-0 max-sm:max-w-full max-sm:rounded-b-none",
         className,
       )}

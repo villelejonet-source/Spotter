@@ -1,5 +1,5 @@
 ---
-description: Prepare a Spotter release — pick the version, bump Android and iOS, turn the changelog into notes, run every check, build and verify the signed Android bundle, open the release PR, and hand over the upload steps and a smoke-test checklist. Also records an upload or go-live afterwards. Run only when the user asks for a release.
+description: Prepare a Spotter release — pick the version, bump Android and iOS, turn the changelog into notes, run every check, build and verify the signed Android bundle, open the release PR, and hand over the production upload steps and a smoke-test checklist. Also records an upload or go-live afterwards. Run only when the user asks for a release.
 disable-model-invocation: true
 argument-hint: "[patch|minor|major|x.y.z] or 'live' after the upload went through"
 ---
@@ -92,12 +92,11 @@ name must be the new one.
 - Tell the user:
   - **Bundle:** the path above.
   - **Release notes:** to paste.
-  - **Upload, internal testing first:** Testa och lansera → Testning → Internt test → Skapa ny
-    version → upload → notes → Nästa → Spara och publicera. Install it from the testers'
-    opt-in link and run the smoke test below.
-  - **Then production:** Produktion → Skapa ny version → Lägg till från bibliotek (the same
-    build) → notes → Nästa → 100 % → Spara och publicera.
-- Give the **smoke-test checklist**, to run on the internal-testing build on a real phone:
+  - **Upload straight to production** (the user doesn't use the testing tracks): Testa och
+    lansera → Produktion → Skapa ny version → upload → notes → Nästa → 100 % → Spara och
+    publicera.
+- Give the **smoke-test checklist**, to run on a real phone as soon as Play updates it. A
+  failure means a patch release (`/release patch`) right away:
   1. **Log a workout:** start the next planned workout, fill in and tick three sets, check
      the rest timer runs (with the screen off too) and alerts, then finish. The summary and
      History show it.
@@ -118,13 +117,13 @@ name must be the new one.
 
 - Tag the release commit on `main`: `git tag android-vX.Y.Z <commit>`, then push the tag
   (ask first).
-- Update the version table: "In internal testing since <date>", then "live in production since
-  <date>" once Google approves (or "in review since <date>" until then). Mark the previous
+- Update the version table: "in review since <date>", then "live in production since <date>"
+  once Google approves. Mark the previous
   production row as replaced. Commit on a branch, PR.
 
 ## No over-the-air updates
 
 Spotter is native code (Kotlin, compiled), not JavaScript, so there's nothing like EAS Update:
 every change, even a one-line fix, ships as a store release. The website is the exception: it
-deploys on every merge to `main`. A fix needed fast goes out as a patch release to internal
-testing, then production; Play usually reviews within hours.
+deploys on every merge to `main`. A fix needed fast goes out as a patch release straight to
+production; Play usually reviews within hours.

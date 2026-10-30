@@ -18,6 +18,9 @@ into the new version's entry and writes the store notes from it. Versions are th
   plate, matching the website and the workout summary (#23).
 - Starting weights from onboarding treat a single rep as its own 1RM, as everywhere else (#23).
 - The keypad's +2.5 then Done no longer reverts the weight (#19).
+- Between midnight and 01:00 (02:00 in summer) the app treated "today" as yesterday: a finished
+  deload week still lightened workouts, yesterday's scheduled workout still showed as upcoming,
+  and a deload applied then started a day early. "Today" is now the phone's date everywhere.
 
 ### Changed
 - A save or action that fails now says so ("Couldn't save. Try again.") instead of the app

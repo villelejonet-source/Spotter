@@ -129,7 +129,7 @@ class RecommendationRepository(
                     planDao.replaceExercise(action.planExerciseId, action.toExerciseId, start)
                 }
                 is RecommendationAction.Deload ->
-                    preferences.setDeloadUntil(clock.todayIn(TimeZone.UTC).plus(action.days - 1L, DateTimeUnit.DAY))
+                    preferences.setDeloadUntil(clock.todayIn(TimeZone.currentSystemDefault()).plus(action.days - 1L, DateTimeUnit.DAY))
             }
             dao.resolve(id, RecommendationStatus.APPLIED, clock.now())
         }
@@ -139,7 +139,7 @@ class RecommendationRepository(
     private suspend fun buildContext(all: List<RecommendationEntity>): RecommendationContext? {
         val plan = planDao.getActivePlan() ?: return null
         val zone = TimeZone.currentSystemDefault()
-        val today = clock.todayIn(TimeZone.UTC)
+        val today = clock.todayIn(zone)
         val profile = profiles.get()
         val slots = plan.days.sortedBy { it.day.position }.flatMap { day ->
             day.exercises.sortedBy { it.planExercise.position }.map { (pe, exercise) ->

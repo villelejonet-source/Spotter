@@ -56,6 +56,18 @@ class ScheduleRepositoryTest {
         assertEquals(null, upcoming[1].planDayName) // free workout
     }
 
+    /** Half past midnight in Sweden: "today" is the phone's date, not yesterday's in UTC. */
+    @Test
+    fun afterMidnightTodayIsThePhonesDate() = runTest {
+        inStockholm {
+            clock.advanceToHalfPastMidnightInStockholm() // 2026-10-24T22:30Z, 00:30 on the 25th in Stockholm
+            exec("INSERT INTO scheduled_session (date, planDayId, notes, sessionId) VALUES (20750, NULL, NULL, NULL)") // the 24th: yesterday
+            exec("INSERT INTO scheduled_session (date, planDayId, notes, sessionId) VALUES (20751, NULL, NULL, NULL)") // the 25th: today
+
+            assertEquals(listOf(20751L), repo.observeUpcoming().first().map { it.date.toEpochDays() })
+        }
+    }
+
     @Test
     fun startingLinksTheWorkoutAndFinishingMarksItDone() = runTest {
         exec("INSERT INTO scheduled_session (date, planDayId, notes, sessionId) VALUES (20750, NULL, NULL, NULL)")

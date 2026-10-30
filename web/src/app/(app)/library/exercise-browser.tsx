@@ -84,7 +84,7 @@ export function ExerciseBrowser({ exercises }: { exercises: LibraryExercise[] })
           {results.map((e) => (
             <li key={e.id}>
               <Link href={`/progress/${e.id}`} className="group block h-full rounded-2xl">
-                <Card className="h-full transition group-hover:border-primary group-focus-visible:border-primary">
+                <Card className="h-full transition group-hover:border-primary/50 group-hover:shadow-[0_0_28px_-10px_var(--glow)] group-focus-visible:border-primary">
                   <div className="flex items-start justify-between gap-2">
                     <div className="font-medium">{e.name}</div>
                     {e.isCustom && <Badge>Custom</Badge>}

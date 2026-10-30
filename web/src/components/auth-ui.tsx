@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useMemo, useState, type ReactNode } from "react";
 import { createClient } from "@/lib/supabase/client";
+import { Brand } from "./brand";
 import { Card } from "./ui";
 
 /** The centred card every sign-in, sign-up and password page sits in, with the privacy policy below. */
@@ -12,10 +13,8 @@ export function AuthCard({ title, subtitle, children, footer }: { title: string;
       <div className="w-full max-w-sm">
         <Card className="p-6 sm:p-8">
           <div className="mb-6">
-            <Link href="/login" className="rounded-md text-sm font-semibold text-primary">
-              Spotter
-            </Link>
-            <h1 className="mt-1 text-2xl font-semibold tracking-tight">{title}</h1>
+            <Brand href="/login" />
+            <h1 className="mt-6 text-2xl font-semibold tracking-tight">{title}</h1>
             {subtitle && <p className="mt-1 text-sm text-muted">{subtitle}</p>}
           </div>
           {children}

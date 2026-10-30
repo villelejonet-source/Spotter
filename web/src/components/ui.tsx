@@ -210,7 +210,7 @@ export function InlineMessage({ tone, children, className }: { tone: "error" | "
 export function inputClasses({ compact = false }: { compact?: boolean } = {}) {
   return clsx(
     "w-full rounded-lg border border-outline-strong outline-none transition focus:border-primary focus:ring-3 focus:ring-primary/20 aria-[invalid=true]:border-error disabled:opacity-50",
-    compact ? "px-2 py-1 text-sm tabular-nums" : "px-3 py-2 text-sm",
+    compact ? "px-2 py-1 font-mono text-[0.8125rem] tabular-nums" : "px-3 py-2 text-sm",
   );
 }
 

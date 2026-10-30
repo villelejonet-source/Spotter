@@ -372,6 +372,11 @@ class WorkoutRepository(
         it.copy(weightKg = weightKg, reps = reps, rir = rir)
     }
 
+    /** One value typed on the keypad; the set's other values are left as they are in the database. */
+    suspend fun setSetWeight(setId: Long, weightKg: Double?) = updateSet(setId) { it.copy(weightKg = weightKg) }
+    suspend fun setSetReps(setId: Long, reps: Int?) = updateSet(setId) { it.copy(reps = reps) }
+    suspend fun setSetRir(setId: Long, rir: Int?) = updateSet(setId) { it.copy(rir = rir) }
+
     suspend fun setSetType(setId: Long, type: SetType) = updateSet(setId) { it.copy(setType = type) }
 
     suspend fun setSetNotes(setId: Long, notes: String?) = updateSet(setId) {
@@ -453,13 +458,14 @@ class WorkoutRepository(
 
     suspend fun discardWorkout(sessionId: Long) = dao.deleteSession(sessionId)
 
-    private suspend fun updateSet(setId: Long, change: (SetEntryEntity) -> SetEntryEntity) {
-        val set = dao.getSet(setId) ?: return
+    // Read and write in one transaction, so a write in between (a tick, a sync) isn't undone.
+    private suspend fun updateSet(setId: Long, change: (SetEntryEntity) -> SetEntryEntity) = db.withTransaction {
+        val set = dao.getSet(setId) ?: return@withTransaction
         dao.updateSets(listOf(change(set)))
     }
 
-    private suspend fun updateExercise(id: Long, change: (SessionExerciseEntity) -> SessionExerciseEntity) {
-        val exercise = dao.getSessionExercise(id) ?: return
+    private suspend fun updateExercise(id: Long, change: (SessionExerciseEntity) -> SessionExerciseEntity) = db.withTransaction {
+        val exercise = dao.getSessionExercise(id) ?: return@withTransaction
         dao.updateSessionExercises(listOf(change(exercise)))
     }
 

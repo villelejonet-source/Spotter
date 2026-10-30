@@ -9,6 +9,6 @@ import org.koin.dsl.module
 val sessionModule = module {
     viewModelOf(::SummaryViewModel)
     viewModel {
-        SessionViewModel(get(), get(), get(), get(), get(), get(), get(), get(ApplicationScope), get())
+        SessionViewModel(get(), get(), get(), get(), get(), get(), get(), get(ApplicationScope), get(), get())
     }
 }

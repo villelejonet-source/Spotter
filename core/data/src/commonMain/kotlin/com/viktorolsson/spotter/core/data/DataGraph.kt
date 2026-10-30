@@ -48,9 +48,18 @@ class DataGraph(
     private val catalog: CatalogSource,
     private val syncScheduler: SyncScheduler,
     val clock: Clock = Clock.System,
-    /** Work that must outlive any screen, such as seeding, auto-save writes and sync. */
-    val scope: CoroutineScope = CoroutineScope(SupervisorJob() + Dispatchers.Default),
+    /** Tests pass their own; the app gets [scope]'s default. */
+    applicationScope: CoroutineScope? = null,
 ) {
+    /** Where every failure goes: logged, and shown when the person should know (AppErrors). */
+    val errors = AppErrors()
+
+    /**
+     * Work that must outlive any screen, such as seeding, auto-save writes and sync. Anything
+     * uncaught in it is reported through [errors] instead of crashing the app.
+     */
+    val scope: CoroutineScope = applicationScope ?: CoroutineScope(SupervisorJob() + Dispatchers.Default + errors.handler)
+
     val userProfiles by lazy { UserProfileRepository(database.userProfileDao()) }
     val preferences by lazy { UserPreferencesRepository(dataStore, database.userProfileDao()) }
     val exercises by lazy { ExerciseRepository(database.exerciseDao()) }
@@ -72,7 +81,7 @@ class DataGraph(
     val startupMaintenance by lazy { StartupMaintenance(dataStore, seeder, plans, recommendations, clock) }
 
     val supabase by lazy { SupabaseProvider(supabaseConfig, sessionStore, scope) }
-    val accounts by lazy { AccountService(supabase, scope) }
+    val accounts by lazy { AccountService(supabase, scope, errors) }
     val deviceIdentity by lazy { DeviceIdentity(deviceStore, appBuild, database) }
     val sync by lazy {
         SyncRepository(

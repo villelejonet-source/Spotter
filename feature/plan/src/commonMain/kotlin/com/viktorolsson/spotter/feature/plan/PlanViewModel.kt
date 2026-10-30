@@ -1,5 +1,8 @@
 package com.viktorolsson.spotter.feature.plan
 
+import com.viktorolsson.spotter.core.data.AppErrors
+import com.viktorolsson.spotter.core.data.Failure
+import com.viktorolsson.spotter.core.data.launchReporting
 import com.viktorolsson.spotter.core.data.repository.UserPreferencesRepository
 import com.viktorolsson.spotter.core.model.EffortScale
 import androidx.lifecycle.ViewModel
@@ -24,6 +27,7 @@ class PlanViewModel(
     planRepository: PlanRepository,
     private val workoutRepository: WorkoutRepository,
     preferencesRepository: UserPreferencesRepository,
+    private val errors: AppErrors,
 ) : ViewModel() {
     // One plan subscription: the next day is derived inside the repository.
     val uiState: StateFlow<PlanUiState> = combine(
@@ -32,7 +36,7 @@ class PlanViewModel(
     ) { (plan, next), prefs -> PlanUiState(loading = false, plan = plan, nextDayId = next?.id, effortScale = prefs.effortScale) }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), PlanUiState())
 
-    fun startDay(planDayId: Long, onStarted: (Long) -> Unit) = viewModelScope.launch {
+    fun startDay(planDayId: Long, onStarted: (Long) -> Unit) = viewModelScope.launchReporting(errors, Failure.ACTION) {
         onStarted(workoutRepository.startPlannedWorkout(planDayId))
     }
 }

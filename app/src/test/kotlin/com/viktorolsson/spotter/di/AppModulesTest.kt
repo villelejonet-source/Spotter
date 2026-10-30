@@ -6,6 +6,7 @@ import androidx.lifecycle.SavedStateHandle
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.work.WorkerParameters
+import com.viktorolsson.spotter.core.data.AppErrors
 import com.viktorolsson.spotter.core.data.DataGraph
 import com.viktorolsson.spotter.core.data.StartupMaintenance
 import com.viktorolsson.spotter.core.data.db.SpotterDatabase
@@ -58,7 +59,7 @@ class AppModulesTest {
 
     /** What the data layer (the first module, `androidDataModule`) provides. */
     private val dataTypes: List<KClass<*>> = listOf(
-        DataGraph::class, Clock::class, SpotterDatabase::class,
+        DataGraph::class, Clock::class, AppErrors::class, SpotterDatabase::class,
         ExerciseDao::class, UserProfileDao::class, WorkoutDao::class, PlanDao::class, RecommendationDao::class, ScheduleDao::class,
         UserProfileRepository::class, UserPreferencesRepository::class, ExerciseRepository::class, HistoryRepository::class,
         PlanRepository::class, BodyWeightRepository::class, RestTimerRepository::class, WorkoutRepository::class,

@@ -32,6 +32,9 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import com.viktorolsson.spotter.core.data.AppErrors
+import com.viktorolsson.spotter.core.data.Failure
+import com.viktorolsson.spotter.core.data.launchReporting
 import org.jetbrains.compose.resources.stringResource
 import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.heading
@@ -165,6 +168,7 @@ data class AccountUiState(
 class AccountViewModel(
     private val sync: SyncRepository,
     savedStateHandle: SavedStateHandle,
+    private val errors: AppErrors,
 ) : ViewModel() {
     private val route = savedStateHandle.toRoute<AccountRoute>()
     private val _state = MutableStateFlow(
@@ -181,7 +185,7 @@ class AccountViewModel(
     init {
         // Tapping a link in the email signs in from outside this screen. A sign-in or sign-up
         // is then finished; a password reset goes on to choosing the new password.
-        viewModelScope.launch {
+        viewModelScope.launchReporting(errors, Failure.ACTION) {
             sync.status.collect { status ->
                 if (status.account == null) return@collect
                 val s = _state.value

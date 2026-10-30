@@ -5,6 +5,7 @@ import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.longPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
+import com.viktorolsson.spotter.core.data.logWarn
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
@@ -117,7 +118,14 @@ class SyncEngine(
             if (page.size < PAGE) break
             offset += PAGE
         }
-        if (deferred.isNotEmpty()) store.apply(deferred)
+        if (deferred.isNotEmpty()) {
+            // A row whose parent still isn't here after every page (deleted on another phone,
+            // or pushed without it) can't be stored. Rare, but it's data that won't show here.
+            val dropped = store.applyAll(deferred).deferred
+            if (dropped.isNotEmpty()) {
+                logWarn(TAG, "Dropped ${dropped.size} pulled rows with no parent: ${dropped.groupingBy { it.tableName }.eachCount()}")
+            }
+        }
 
         // Push: anything changed locally since the last push (rows just pulled are skipped
         // by the server, which only keeps strictly newer versions).
@@ -152,5 +160,6 @@ class SyncEngine(
 
     private companion object {
         const val PAGE = 500
+        const val TAG = "SpotterSync"
     }
 }

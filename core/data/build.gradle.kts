@@ -19,6 +19,9 @@ kotlin {
         compilerOptions.jvmTarget.set(JvmTarget.JVM_17)
         withHostTest {
             isIncludeAndroidResources = true
+            // Shared (commonTest) tests run here without Robolectric: android.util.Log calls
+            // (logWarn) are no-ops instead of throwing.
+            isReturnDefaultValues = true
         }
     }
     iosArm64()

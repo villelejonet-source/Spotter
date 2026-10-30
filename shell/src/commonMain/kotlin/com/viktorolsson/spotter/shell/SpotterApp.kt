@@ -11,6 +11,8 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -18,10 +20,13 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.produceState
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import org.jetbrains.compose.resources.getString
 import org.jetbrains.compose.resources.stringResource
+import org.koin.compose.koinInject
 import org.koin.compose.viewmodel.koinViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavDestination
@@ -32,6 +37,8 @@ import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
+import com.viktorolsson.spotter.core.data.AppErrors
+import com.viktorolsson.spotter.core.data.Failure
 import com.viktorolsson.spotter.core.data.sync.FirstSyncChoice
 import com.viktorolsson.spotter.core.ui.component.WorkoutMiniBar
 import com.viktorolsson.spotter.core.ui.theme.Spacing
@@ -61,6 +68,9 @@ import kotlin.time.Clock
 import kotlin.time.Duration
 import kotlin.time.Instant
 import com.viktorolsson.spotter.shell.resources.Res
+import com.viktorolsson.spotter.shell.resources.error_action
+import com.viktorolsson.spotter.shell.resources.error_save
+import com.viktorolsson.spotter.shell.resources.error_sign_in_link
 import com.viktorolsson.spotter.shell.resources.sync_choice_backup
 import com.viktorolsson.spotter.shell.resources.sync_choice_body
 import com.viktorolsson.spotter.shell.resources.sync_choice_body_account
@@ -81,6 +91,7 @@ fun SpotterApp(
     activeWorkoutViewModel: ActiveWorkoutViewModel = koinViewModel(),
     syncChoiceViewModel: SyncChoiceViewModel = koinViewModel(),
     passwordRecoveryViewModel: PasswordRecoveryViewModel = koinViewModel(),
+    errors: AppErrors = koinInject(),
 ) {
     val backStackEntry by navController.currentBackStackEntryAsState()
     val currentDestination = backStackEntry?.destination
@@ -95,6 +106,22 @@ fun SpotterApp(
             UploadChoiceDialog(email = syncChoice.email, onUpload = { syncChoiceViewModel.choose(FirstSyncChoice.MERGE) }, onSignOut = syncChoiceViewModel::signOut)
         } else {
             SyncChoiceDialog(email = syncChoice.email, onChoose = syncChoiceViewModel::choose)
+        }
+    }
+
+    // Any failure the person should know about, from any screen or background work (AppErrors).
+    val snackbar = remember { SnackbarHostState() }
+    LaunchedEffect(errors) {
+        errors.messages.collect { failure ->
+            snackbar.showSnackbar(
+                getString(
+                    when (failure) {
+                        Failure.SAVE -> Res.string.error_save
+                        Failure.ACTION -> Res.string.error_action
+                        Failure.SIGN_IN_LINK -> Res.string.error_sign_in_link
+                    },
+                ),
+            )
         }
     }
 
@@ -146,6 +173,7 @@ fun SpotterApp(
                 }
             }
         },
+        snackbarHost = { SnackbarHost(snackbar) },
         // Each screen owns its top app bar and status-bar insets.
         contentWindowInsets = WindowInsets(0),
     ) { padding ->

@@ -1,7 +1,8 @@
 package com.viktorolsson.spotter.core.data.sync
 
 import com.russhwolf.settings.Settings
-import com.viktorolsson.spotter.core.data.logWarn
+import com.viktorolsson.spotter.core.data.AppErrors
+import com.viktorolsson.spotter.core.data.Failure
 import io.github.jan.supabase.SupabaseClient
 import io.github.jan.supabase.auth.Auth
 import io.github.jan.supabase.auth.FlowType
@@ -183,6 +184,7 @@ enum class SignUpResult {
 class AccountService(
     private val provider: SupabaseProvider,
     private val scope: CoroutineScope,
+    private val errors: AppErrors,
 ) {
     val isAvailable: Boolean get() = provider.isConfigured
 
@@ -330,7 +332,8 @@ class AccountService(
                 throw e
             } catch (e: Exception) {
                 signedInFromLink = false
-                logWarn(TAG, "Sign-in link failed: ${e::class.simpleName}")
+                // Expired, already used, or opened on another phone than the one that asked.
+                errors.failed(Failure.SIGN_IN_LINK, e)
             }
         }
     }
@@ -347,10 +350,6 @@ class AccountService(
     }
 
     private suspend fun requireClient() = provider.client() ?: error("Cloud sync isn't configured in this build")
-
-    private companion object {
-        const val TAG = "SpotterAuth"
-    }
 }
 
 /**

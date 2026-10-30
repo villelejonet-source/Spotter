@@ -4,6 +4,9 @@ import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.navigation.toRoute
+import com.viktorolsson.spotter.core.data.AppErrors
+import com.viktorolsson.spotter.core.data.Failure
+import com.viktorolsson.spotter.core.data.launchReporting
 import com.viktorolsson.spotter.core.data.repository.ExerciseRepository
 import com.viktorolsson.spotter.core.data.repository.HistoryRepository
 import com.viktorolsson.spotter.core.data.repository.RecommendationRepository
@@ -109,6 +112,7 @@ class WorkoutDetailViewModel(
     private val workoutRepository: WorkoutRepository,
     historyRepository: HistoryRepository,
     preferencesRepository: UserPreferencesRepository,
+    private val errors: AppErrors,
 ) : ViewModel() {
     private val sessionId = savedStateHandle.toRoute<WorkoutDetailRoute>().sessionId
 
@@ -119,7 +123,7 @@ class WorkoutDetailViewModel(
     ) { session, records, prefs -> WorkoutDetailUiState(false, session, records, prefs.weightUnit, prefs.effortScale) }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), WorkoutDetailUiState())
 
-    fun repeat(onStarted: (Long) -> Unit) = viewModelScope.launch {
+    fun repeat(onStarted: (Long) -> Unit) = viewModelScope.launchReporting(errors, Failure.ACTION) {
         onStarted(workoutRepository.repeatWorkout(sessionId))
     }
 }
@@ -148,6 +152,7 @@ class ExerciseHistoryViewModel(
     historyRepository: HistoryRepository,
     preferencesRepository: UserPreferencesRepository,
     private val recommendationRepository: RecommendationRepository,
+    private val errors: AppErrors,
 ) : ViewModel() {
     private val exerciseId = savedStateHandle.toRoute<ExerciseHistoryRoute>().exerciseId
     private val metric = MutableStateFlow(ExerciseMetric.ONE_REP_MAX)
@@ -180,9 +185,9 @@ class ExerciseHistoryViewModel(
         .flowOn(Dispatchers.Default)
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), ExerciseHistoryUiState())
 
-    fun apply(id: Long) = viewModelScope.launch { recommendationRepository.apply(id) }
+    fun apply(id: Long) = viewModelScope.launchReporting(errors) { recommendationRepository.apply(id) }
 
-    fun dismiss(id: Long) = viewModelScope.launch { recommendationRepository.dismiss(id) }
+    fun dismiss(id: Long) = viewModelScope.launchReporting(errors) { recommendationRepository.dismiss(id) }
 
     fun setMetric(value: ExerciseMetric) {
         metric.value = value

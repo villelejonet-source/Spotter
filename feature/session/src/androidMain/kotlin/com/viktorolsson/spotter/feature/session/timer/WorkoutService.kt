@@ -14,6 +14,7 @@ import android.util.Log
 import androidx.core.app.NotificationManagerCompat
 import androidx.core.app.ServiceCompat
 import androidx.core.content.ContextCompat
+import com.viktorolsson.spotter.core.data.AppErrors
 import com.viktorolsson.spotter.core.data.repository.RestTimerRepository
 import com.viktorolsson.spotter.core.data.repository.WorkoutRepository
 import kotlinx.coroutines.CoroutineScope
@@ -36,8 +37,10 @@ import kotlin.time.Duration
 class WorkoutService : Service() {
     private val workoutRepository: WorkoutRepository by inject()
     private val restTimerRepository: RestTimerRepository by inject()
+    private val errors: AppErrors by inject()
 
-    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
+    // A failure in the service is reported (AppErrors) instead of crashing the app.
+    private val scope by lazy { CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate + errors.handler) }
     private var observer: Job? = null
     private var wakeLock: PowerManager.WakeLock? = null
 

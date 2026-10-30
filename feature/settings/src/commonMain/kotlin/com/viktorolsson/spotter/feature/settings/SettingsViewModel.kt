@@ -1,5 +1,8 @@
 package com.viktorolsson.spotter.feature.settings
 
+import com.viktorolsson.spotter.core.data.AppErrors
+import com.viktorolsson.spotter.core.data.Failure
+import com.viktorolsson.spotter.core.data.launchReporting
 import com.viktorolsson.spotter.core.data.logWarn
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -28,6 +31,7 @@ class SettingsViewModel(
     private val preferencesRepository: UserPreferencesRepository,
     planRepository: PlanRepository,
     private val syncRepository: SyncRepository,
+    private val errors: AppErrors,
 ) : ViewModel() {
     val syncStatus: StateFlow<SyncStatus> = syncRepository.status
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), SyncStatus())
@@ -40,7 +44,7 @@ class SettingsViewModel(
         _message.value = null
     }
 
-    fun syncNow() = viewModelScope.launch { syncRepository.syncNow() }
+    fun syncNow() = viewModelScope.launchReporting(errors, Failure.ACTION) { syncRepository.syncNow() }
 
     fun signOut() = attempt(Res.string.backup_sign_out_failed) { syncRepository.signOut() }
 
@@ -65,13 +69,13 @@ class SettingsViewModel(
     val preferences: StateFlow<UserPreferences> = preferencesRepository.preferences
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), UserPreferences())
 
-    fun setThemeMode(mode: ThemeMode) = viewModelScope.launch { preferencesRepository.setThemeMode(mode) }
+    fun setThemeMode(mode: ThemeMode) = viewModelScope.launchReporting(errors) { preferencesRepository.setThemeMode(mode) }
 
-    fun setDynamicColor(enabled: Boolean) = viewModelScope.launch { preferencesRepository.setDynamicColor(enabled) }
+    fun setDynamicColor(enabled: Boolean) = viewModelScope.launchReporting(errors) { preferencesRepository.setDynamicColor(enabled) }
 
-    fun setWeightUnit(unit: WeightUnit) = viewModelScope.launch { preferencesRepository.setWeightUnit(unit) }
+    fun setWeightUnit(unit: WeightUnit) = viewModelScope.launchReporting(errors) { preferencesRepository.setWeightUnit(unit) }
 
-    fun setDefaultRest(seconds: Int) = viewModelScope.launch { preferencesRepository.setDefaultRestSeconds(seconds) }
+    fun setDefaultRest(seconds: Int) = viewModelScope.launchReporting(errors) { preferencesRepository.setDefaultRestSeconds(seconds) }
 
-    fun setEffortScale(scale: EffortScale) = viewModelScope.launch { preferencesRepository.setEffortScale(scale) }
+    fun setEffortScale(scale: EffortScale) = viewModelScope.launchReporting(errors) { preferencesRepository.setEffortScale(scale) }
 }

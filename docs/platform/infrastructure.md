@@ -107,20 +107,50 @@ needs the backend to be up.
 
 1. **Branch and pull request** for every change; `main` is protected and always deployable.
 2. **CI on every pull request** (`.github/workflows/ci.yml`; read-only `permissions`, every
-   action pinned to a commit SHA):
+   action pinned to a commit SHA). The required check `App` passes only when every job did:
    - Website: `npm audit` on production dependencies (visible, non-blocking), lint, type check,
      unit tests (including the payload-vs-Room-schema test), build.
-   - App: unit tests, Roborazzi screenshot tests against the committed goldens, `lintRelease`,
-     a debug build and a debug-signed `assembleRelease` (proves the R8 shrink step works). On
-     failure the screenshot diffs and lint reports are uploaded as a workflow artifact.
+   - Android checks: unit tests, Roborazzi screenshot tests against the committed goldens,
+     `lintRelease`, a debug build and a debug-signed `assembleRelease` (proves the R8 shrink
+     step works). On failure the reports are uploaded as a workflow artifact.
+   - Shared code on iOS: the shared modules' tests in the iOS simulator, then the Xcode app build.
+   - Database: every migration on an empty local database, every `supabase/tests/*.sql`, and
+     the website's generated types against the schema.
 3. **Preview**: Vercel builds every pull request against staging.
 4. **Database migrations**: see the next section. Applied to staging when a pull request merges
    and to production as an explicit step before deploying code that needs them. Later this can
    run from CI with a protected "production" environment that needs a manual approval.
 5. **Website release**: merging to `main` deploys production. Vercel keeps every deploy, so a bad
    release is rolled back in one click.
-6. **App release**: as in `docs/play-store/README.md`, plus staged rollouts in Play (10 % → 50 % →
-   100 %) once there are enough users for it to matter.
+6. **App release**: `/release`, as in `docs/play-store/README.md`. Every build goes to Play's
+   internal testing track first and gets the smoke test, then the same build is promoted to
+   production. Add staged rollouts (10 % → 50 % → 100 %) once there are enough users for it to
+   matter.
+
+### No over-the-air updates
+
+The app is native Kotlin, compiled for each platform, so there's no equivalent of EAS Update or
+CodePush. Both stores forbid downloading new code, and there's no JavaScript bundle to swap.
+Every app change, however small, ships as a store release. Only the website updates instantly,
+on merge. For an urgent app fix: a patch release (`/release patch`) to internal testing, smoke
+test, then production. Play usually reviews it within hours.
+
+### Feature flags: not yet
+
+Turning a risky feature off without a release would need a flags table in Supabase that the app
+reads on sync, defaults built in for offline use, and someone to clean up old flags. At this
+size, with one developer, a few users and internal testing before every production release,
+that costs more than it saves. The internal-testing track and a fast patch release cover the
+same risk.
+
+Revisit when any of these is true:
+- a feature needs to reach some users before others, such as trainers or an A/B test;
+- a change can't be tested on internal testing, because it depends on real users' data;
+- releases are frequent enough that a flag beats a patch.
+
+A sketch for then: a `public.feature_flags` table (name, enabled, min_version_code), readable
+by `authenticated` under RLS. The app caches it in DataStore on each sync and reads it through
+a `FeatureFlags` repository with safe defaults. The website reads the same table.
 
 ## Database migrations
 

@@ -22,13 +22,10 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.launch
-import kotlin.time.Clock
 import kotlin.time.Duration
-import kotlin.time.Instant
 
 /**
  * Runs while a workout is in progress. Shows the workout stopwatch in an ongoing
@@ -76,22 +73,25 @@ class WorkoutService : Service() {
                     stopSelf()
                     return@collectLatest
                 }
-                val remaining = rest?.let { (it.endsAt - Clock.System.now()) }
-                if (rest != null && remaining != null && remaining.isPositive()) {
-                    WorkoutNotifications.update(this, WorkoutNotifications.resting(this, rest))
-                    acquireWakeLock(remaining)
-                    delay(remaining.inWholeMilliseconds)
-                    // Alert before clearing: clearing re-emits and cancels this block.
-                    WorkoutNotifications.postRestFinished(this)
-                    if (!NotificationManagerCompat.from(this).areNotificationsEnabled()) vibrate()
+                if (rest == null) {
                     releaseWakeLock()
-                    restTimerRepository.stop()
-                } else {
-                    releaseWakeLock()
-                    // A rest that ran out while the app was dead ends quietly.
-                    if (rest != null) restTimerRepository.stop()
                     WorkoutNotifications.update(this, WorkoutNotifications.inProgress(this, session))
+                    return@collectLatest
                 }
+                // The shared timing (RestTimerRepository.runOut); the notification, wake lock
+                // and vibration are Android's. A rest that ran out while the app was dead ends quietly.
+                restTimerRepository.runOut(
+                    rest,
+                    onResting = { remaining ->
+                        WorkoutNotifications.update(this, WorkoutNotifications.resting(this, rest))
+                        acquireWakeLock(remaining)
+                    },
+                    onEnded = {
+                        WorkoutNotifications.postRestFinished(this)
+                        if (!NotificationManagerCompat.from(this).areNotificationsEnabled()) vibrate()
+                        releaseWakeLock()
+                    },
+                )
             }
     }
 

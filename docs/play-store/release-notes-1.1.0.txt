@@ -1,0 +1,8 @@
+<en-US>
+• Set edits save reliably: ticking a set right after typing no longer loses a value
+• Decimal commas work everywhere a number is typed ("62,5")
+• Just after midnight, deload weeks and scheduled workouts follow your phone's date
+• If something can't be saved, the app now tells you instead of closing
+• Backup and sync only ever download your own account's data
+• When it syncs, the app reports its version number (see the updated privacy policy)
+</en-US>

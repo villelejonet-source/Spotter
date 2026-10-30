@@ -129,12 +129,43 @@ jobs:
           path: ~/.konan
           key: ${{ steps.konan.outputs.cache-primary-key }}
 
+  # The database, built from scratch out of supabase/migrations/ on a local Supabase stack (never
+  # production): every migration must apply in order, every supabase/tests/*.sql must pass
+  # (including rls.sql: row-level security on every table, views that respect it, and so on), and
+  # the website's generated types must match the schema, so a migration that changes a column the
+  # website reads can't land without the types (and web/src/lib/supabase/schema-check.ts) following.
+  database:
+    name: Database
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      - uses: supabase/setup-cli@45a513f8c64c0bc8e0e3dfe572b5c95be85f6359 # v3.0.1
+        with:
+          # The same version that generated web/src/lib/supabase/database.types.ts; bump both together.
+          version: 2.122.0
+      - name: Apply every migration to an empty database
+        run: supabase db start
+      - name: SQL tests
+        run: |
+          for f in supabase/tests/*.sql; do
+            echo "::group::$f"
+            docker exec -i supabase_db_spotter psql -U postgres -d postgres -v ON_ERROR_STOP=1 -q -t < "$f"
+            echo "::endgroup::"
+          done
+      - name: Generated types are up to date
+        run: |
+          supabase gen types typescript --local --schema public > web/src/lib/supabase/database.types.ts
+          git diff --exit-code -- web/src/lib/supabase/database.types.ts || {
+            echo "::error::web/src/lib/supabase/database.types.ts is out of date: run 'npm --prefix web run db:types' with the local stack running and commit the result."
+            exit 1
+          }
+
   # The required check. `always()` makes it run (and fail) when a job above failed or was
   # cancelled; without it this job would be skipped, and a skipped check counts as passing.
   android:
     name: App
     if: always()
-    needs: [app, shared-ios]
+    needs: [app, shared-ios, database]
     runs-on: ubuntu-latest
     steps:
       - name: All app jobs passed

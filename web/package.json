@@ -11,7 +11,8 @@
     "lint": "eslint --max-warnings=0",
     "typecheck": "node scripts/copy-shared.mjs && tsc --noEmit",
     "pretest": "node scripts/copy-shared.mjs",
-    "test": "vitest run"
+    "test": "vitest run",
+    "db:types": "cd .. && supabase gen types typescript --local --schema public > web/src/lib/supabase/database.types.ts"
   },
   "dependencies": {
     "@supabase/ssr": "^0.12.7",

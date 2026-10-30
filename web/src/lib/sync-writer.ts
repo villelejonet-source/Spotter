@@ -29,13 +29,14 @@ import {
   type ProfileRow,
 } from "./model";
 
-export interface SyncRowInput {
+// A type, not an interface, so it counts as JSON for push_rows' generated argument type.
+export type SyncRowInput = {
   table_name: "plan" | "plan_day" | "plan_exercise" | "exercise" | "user_profile" | "body_weight_entry" | "scheduled_session";
   sync_id: string;
   payload: Record<string, string | number | null> | null;
   updated_at: number;
   deleted_at: number | null;
-}
+};
 
 // newSyncId lives in ./ids so client components can make ids without pulling in zod.
 export { newSyncId };

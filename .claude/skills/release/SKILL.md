@@ -31,6 +31,9 @@ Play Console steps and the **version table, which is the record of every build**
 On a branch `release/android-X.Y.Z`:
 
 - `app/build.gradle.kts`: new `versionCode` and `versionName`.
+- `CHANGELOG.md`: rename "Unreleased" to `## X.Y.Z (N) — <date>` (keep only what ships in the
+  Android app; leave web-only or iOS-only lines under a fresh, empty "Unreleased") and write the
+  release notes below from it.
 - `docs/play-store/release-notes-X.Y.Z.txt`, in the existing format:
   ```
   <en-US>

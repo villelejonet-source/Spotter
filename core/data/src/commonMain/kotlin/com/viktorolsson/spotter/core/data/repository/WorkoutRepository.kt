@@ -75,7 +75,7 @@ class WorkoutRepository(
         val day = planDao.getDay(planDayId) ?: error("No plan day $planDayId")
         val prefs = preferences.preferences.first()
         val unit = prefs.weightUnit
-        val deload = prefs.isDeload(clock.todayIn(TimeZone.UTC))
+        val deload = prefs.isDeload(clock.todayIn(TimeZone.currentSystemDefault()))
         val sessionId = dao.insertSession(
             WorkoutSessionEntity(
                 startedAt = clock.now(),

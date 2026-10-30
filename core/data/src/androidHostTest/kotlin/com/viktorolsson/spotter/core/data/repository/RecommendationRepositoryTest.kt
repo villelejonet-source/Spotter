@@ -22,10 +22,12 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.runTest
 import kotlinx.datetime.DateTimeUnit
 import kotlinx.datetime.TimeZone
+import kotlinx.datetime.minus
 import kotlinx.datetime.plus
 import kotlinx.datetime.todayIn
 import org.junit.After
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNotEquals
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
@@ -142,7 +144,7 @@ class RecommendationRepositoryTest {
     @Test
     fun deloadWeekLightensPlannedWorkoutsAndIsIgnoredByProgression() = runTest {
         stalledBenchWorkout(reps = 8)
-        prefs.setDeloadUntil(clock.todayIn(TimeZone.UTC).plus(6, DateTimeUnit.DAY))
+        prefs.setDeloadUntil(clock.todayIn(TimeZone.currentSystemDefault()).plus(6, DateTimeUnit.DAY))
         val deloadDay = plans.observeNextDay().first()!!
         val deloadSession = workouts.getSession(workouts.startPlannedWorkout(deloadDay.id))!!
         val bench = deloadSession.exercises.first { it.exercise.id == "barbell-bench-press" }
@@ -168,12 +170,42 @@ class RecommendationRepositoryTest {
         val deload = recommendations.observeActive().first().single { it.type == RecommendationType.DELOAD }
         recommendations.apply(deload.id)
         val until = prefs.preferences.first().deloadUntil!!
-        assertEquals(clock.todayIn(TimeZone.UTC).plus(6, DateTimeUnit.DAY), until)
+        assertEquals(clock.todayIn(TimeZone.currentSystemDefault()).plus(6, DateTimeUnit.DAY), until)
 
         // Once the week is over, another deload isn't suggested straight away.
         clock.advanceSeconds(8 * 86_400L)
         recommendations.refresh()
         assertTrue(recommendations.observeActive().first().none { it.type == RecommendationType.DELOAD })
+    }
+
+    /** Just after midnight in Sweden, a deload whose last day was yesterday is over. */
+    @Test
+    fun aDeloadThatEndedYesterdayIsOverAfterMidnight() = runTest {
+        inStockholm {
+            stalledBenchWorkout(reps = 8)
+            clock.advanceToHalfPastMidnightInStockholm()
+            val today = clock.todayIn(TimeZone.currentSystemDefault()) // a day ahead of the UTC date
+            prefs.setDeloadUntil(today.minus(1, DateTimeUnit.DAY))
+
+            val session = workouts.getSession(workouts.startPlannedWorkout(plans.observeNextDay().first()!!.id))!!
+            val bench = session.exercises.first { it.exercise.id == "barbell-bench-press" }
+            assertNotEquals(ProgressionReason.DELOAD, bench.progressionReason)
+        }
+    }
+
+    /** A deload applied just after midnight in Sweden runs a week from the phone's date. */
+    @Test
+    fun aDeloadAppliedAfterMidnightStartsOnThePhonesDate() = runTest {
+        inStockholm {
+            repeat(6) { stalledBenchWorkout(reps = 6 + it) }
+            clock.advanceToHalfPastMidnightInStockholm()
+            recommendations.refresh()
+            val deload = recommendations.observeActive().first().single { it.type == RecommendationType.DELOAD }
+            recommendations.apply(deload.id)
+
+            val today = clock.todayIn(TimeZone.currentSystemDefault())
+            assertEquals(today.plus(6, DateTimeUnit.DAY), prefs.preferences.first().deloadUntil)
+        }
     }
 
     @Test

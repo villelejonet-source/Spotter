@@ -128,7 +128,6 @@ The port lands as a series of pull requests; Android keeps working and shipping 
 
 ## Known follow-ups
 
-- The data layer's "today" (deload week, scheduled sessions, onboarding age) is computed in
-  **UTC**, as it was with `Clock.systemUTC()`, while training dates use the phone's time zone.
-  Phase 1 keeps that exactly; between midnight and 01:00/02:00 in Sweden "today" is still
-  yesterday. Worth fixing on its own, with tests around midnight.
+- ~~The data layer's "today" was computed in UTC~~: fixed, it's the phone's date everywhere now,
+  with tests at half past midnight in Stockholm (`ScheduleRepositoryTest`,
+  `RecommendationRepositoryTest`).

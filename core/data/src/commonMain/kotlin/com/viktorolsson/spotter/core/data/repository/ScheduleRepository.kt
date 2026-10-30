@@ -21,7 +21,8 @@ class ScheduleRepository(
 ) {
     /** Scheduled workouts from today through the next [days] - 1 days. */
     fun observeUpcoming(days: Long = 7): Flow<List<ScheduledWorkout>> {
-        val today = clock.todayIn(TimeZone.UTC)
+        // The phone's date, as on the Today screen; in UTC it's still yesterday after midnight here.
+        val today = clock.todayIn(TimeZone.currentSystemDefault())
         return dao.observeRange(today, today.plus(days - 1, DateTimeUnit.DAY)).map { rows -> rows.map(ScheduledSessionRow::toModel) }
     }
 

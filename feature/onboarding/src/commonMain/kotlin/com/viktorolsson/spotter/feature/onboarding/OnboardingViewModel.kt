@@ -255,7 +255,7 @@ class OnboardingViewModel(
                 PlanInput(
                     profile = profile,
                     library = library,
-                    today = clock.todayIn(TimeZone.UTC),
+                    today = clock.todayIn(TimeZone.currentSystemDefault()),
                     now = clock.now(),
                     knownLifts = state.answers.knownLifts(),
                     splitOverride = state.splitOverride,
@@ -268,7 +268,7 @@ class OnboardingViewModel(
     private fun Answers.toProfile(): UserProfile? = UserProfile(
         sex = sex ?: return null,
         heightCm = heightCmValue ?: return null,
-        birthDate = clock.todayIn(TimeZone.UTC).minus((ageYears ?: return null).toLong(), DateTimeUnit.YEAR),
+        birthDate = clock.todayIn(TimeZone.currentSystemDefault()).minus((ageYears ?: return null).toLong(), DateTimeUnit.YEAR),
         bodyWeightKg = weightKg ?: return null,
         units = unit,
         experience = experience ?: return null,
@@ -286,7 +286,7 @@ class OnboardingViewModel(
         return Answers(
             sex = sex,
             imperial = imperial,
-            age = birthDate.yearsUntil(clock.todayIn(TimeZone.UTC)).toString(),
+            age = birthDate.yearsUntil(clock.todayIn(TimeZone.currentSystemDefault())).toString(),
             heightCm = heightCm.roundToInt().toString(),
             heightFt = (totalInches / 12).toString(),
             heightIn = (totalInches % 12).toString(),

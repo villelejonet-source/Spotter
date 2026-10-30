@@ -47,6 +47,13 @@ const ADMIN_SECTION: Section = { label: "Admin", href: "/admin", icon: <AdminIco
 
 const sectionsFor = (admin: boolean) => (admin ? [...SECTIONS, ADMIN_SECTION] : SECTIONS);
 
+/** Every page the command palette can jump to: each section and its tabs, in nav order. */
+export function navPages(admin: boolean): { href: string; label: string; section: string }[] {
+  return sectionsFor(admin).flatMap((s) =>
+    s.tabs ? s.tabs.map((t) => ({ href: t.href, label: t.label, section: s.label })) : [{ href: s.href, label: s.label, section: s.label }],
+  );
+}
+
 const matches = (path: string, href: string) => (href === "/" ? path === "/" : path === href || path.startsWith(`${href}/`));
 
 const sectionOf = (path: string, sections = SECTIONS) => sections.find((s) => [s.href, ...(s.tabs ?? []).map((t) => t.href)].some((h) => matches(path, h)));
@@ -60,7 +67,7 @@ export function SidebarNav({ admin = false }: { admin?: boolean }) {
   const sections = sectionsFor(admin);
   const current = sectionOf(path, sections);
   return (
-    <nav aria-label="Main" className="flex flex-col gap-1">
+    <nav aria-label="Main" className="flex flex-col gap-0.5">
       {sections.map((s) => {
         const active = s === current;
         return (
@@ -69,11 +76,13 @@ export function SidebarNav({ admin = false }: { admin?: boolean }) {
             href={s.href}
             aria-current={currentFor(path, s, active)}
             className={clsx(
-              "flex items-center gap-3 rounded-full px-4 py-2.5 text-sm font-medium transition",
-              active ? "bg-primary-container text-on-primary-container" : "text-muted hover:bg-surface hover:text-foreground",
+              "relative flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition",
+              active
+                ? "bg-gradient-to-r from-primary-container to-transparent text-foreground before:absolute before:inset-y-2 before:-left-3 before:w-[3px] before:rounded-r before:bg-primary before:shadow-[0_0_12px_var(--glow)]"
+                : "text-muted hover:bg-surface hover:text-foreground",
             )}
           >
-            {s.icon}
+            <span className={clsx(active && "text-primary")}>{s.icon}</span>
             {s.label}
           </Link>
         );
@@ -90,7 +99,7 @@ export function MobileTabBar({ admin = false }: { admin?: boolean }) {
   return (
     <nav
       aria-label="Main"
-      className="fixed inset-x-0 bottom-0 z-40 border-t border-outline bg-background/95 backdrop-blur md:hidden"
+      className="fixed inset-x-0 bottom-0 z-40 border-t border-outline bg-raised/90 backdrop-blur-xl md:hidden"
       style={{ paddingBottom: "env(safe-area-inset-bottom)" }}
     >
       <div className={clsx("mx-auto grid max-w-lg", sections.length > 5 ? "grid-cols-6" : "grid-cols-5")}>
@@ -103,7 +112,7 @@ export function MobileTabBar({ admin = false }: { admin?: boolean }) {
               aria-current={currentFor(path, s, active)}
               className={clsx("flex min-h-16 flex-col items-center justify-center gap-1 text-xs font-medium", active ? "text-foreground" : "text-muted")}
             >
-              <span className={clsx("flex h-8 w-14 items-center justify-center rounded-full transition", active && "bg-primary-container text-on-primary-container")}>{s.icon}</span>
+              <span className={clsx("flex h-8 w-14 items-center justify-center rounded-lg transition", active && "bg-primary-container text-primary shadow-[0_0_16px_-4px_var(--glow)]")}>{s.icon}</span>
               {s.label}
             </Link>
           );
@@ -123,7 +132,7 @@ export function SectionTabs() {
   if (!tabs?.some((t) => t.href === path)) return null;
   return (
     <nav aria-label="Section" className="-mx-4 mb-6 overflow-x-auto px-4 md:mx-0 md:px-0">
-      <div className="flex w-max gap-1 rounded-full bg-surface-high p-1">
+      <div className="flex w-max gap-1 rounded-xl border border-outline bg-surface-high p-1">
         {tabs.map((t) => {
           const active = t.href === path;
           return (
@@ -132,8 +141,8 @@ export function SectionTabs() {
               href={t.href}
               aria-current={active ? "page" : undefined}
               className={clsx(
-                "whitespace-nowrap rounded-full px-4 py-1.5 text-sm font-medium transition",
-                active ? "bg-background text-foreground shadow-sm" : "text-muted hover:text-foreground",
+                "whitespace-nowrap rounded-lg px-4 py-1.5 text-sm font-medium transition",
+                active ? "bg-raised text-foreground shadow-sm ring-1 ring-outline" : "text-muted hover:text-foreground",
               )}
             >
               {t.label}
@@ -145,10 +154,10 @@ export function SectionTabs() {
   );
 }
 
-// Material Symbols (outlined), drawn at 24 dp like the app's navigation bar.
+// Material Symbols (outlined), the app's navigation icons.
 function Icon({ d }: { d: string }) {
   return (
-    <svg aria-hidden="true" viewBox="0 -960 960 960" className="h-6 w-6 shrink-0 fill-current">
+    <svg aria-hidden="true" viewBox="0 -960 960 960" className="h-5 w-5 shrink-0 fill-current">
       <path d={d} />
     </svg>
   );

@@ -1,72 +1,92 @@
 @import "tailwindcss";
 
 /*
- * The app's Material 3 colour scheme (core/ui theme/Color.kt), one token per role so a
- * token means the same thing in light and dark:
- *   --background        background / surface
- *   --surface-lowest    surfaceContainerLowest   inputs
- *   --surface-low       surfaceContainerLow      content cards (the app's card colour)
- *   --surface           surfaceContainer         dialogs, hover
- *   --surface-high      surfaceContainerHigh     stat tiles, chips, placeholders
- *   --muted             onSurfaceVariant         secondary text
- *   --outline           outlineVariant           dividers and card borders
- *   --outline-strong    outline                  input borders
+ * Spotter's web design system: dark-first, data-dense, with the app's rust/orange brand as a
+ * glowing accent. Token names are roles, the same in light and dark:
+ *   --background        page canvas (with the glow and grid from body below)
+ *   --surface-lowest    inputs
+ *   --surface-low       cards (translucent over the canvas; see .panel)
+ *   --surface           hover
+ *   --surface-high      stat tiles, chips, tracks, placeholders
+ *   --raised            opaque surfaces that float: dialogs, the mobile bars, the command palette
+ *   --muted             secondary text          --faint   tertiary text, axis labels
+ *   --outline           hairlines and card borders
+ *   --outline-strong    input borders, emphasised dividers
+ *   --glow              the accent's glow (active nav marker, primary button, highlights)
  */
 :root {
-  color-scheme: light dark;
-  --primary: #9a4521;
+  color-scheme: light;
+  --primary: #c2410c;
+  --primary-strong: #ea580c;
   --on-primary: #ffffff;
-  --primary-container: #ffdbcd;
-  --on-primary-container: #380d00;
-  --tertiary: #6a5e2f;
+  --primary-container: #ffedd5;
+  --on-primary-container: #7c2d12;
+  --tertiary: #8a6a12;
   --on-tertiary: #ffffff;
-  --tertiary-container: #f3e2a7;
-  --on-tertiary-container: #221b00;
-  --error: #ba1a1a;
+  --tertiary-container: #fbf0c9;
+  --on-tertiary-container: #4a3a05;
+  --good: #15803d;
+  --error: #b91c1c;
   --on-error: #ffffff;
-  --error-container: #ffdad6;
-  --on-error-container: #410002;
-  --background: #fff8f6;
-  --foreground: #231a16;
-  --muted: #53433e;
-  --outline: #d8c2ba;
-  --outline-strong: #85736c;
+  --error-container: #fee2e2;
+  --on-error-container: #7f1d1d;
+  --background: #faf8f6;
+  --foreground: #1c1512;
+  --muted: #6b5d56;
+  --faint: #9a8c85;
+  --outline: rgb(28 21 18 / 0.09);
+  --outline-strong: rgb(28 21 18 / 0.18);
   --surface-lowest: #ffffff;
-  --surface-low: #fff1ec;
-  --surface: #fceae4;
-  --surface-high: #f6e5de;
-  --scrim: rgb(0 0 0 / 0.4);
+  --surface-low: rgb(255 255 255 / 0.85);
+  --surface: rgb(28 21 18 / 0.045);
+  --surface-high: rgb(28 21 18 / 0.05);
+  --raised: #ffffff;
+  --highlight: rgb(255 255 255 / 0.9);
+  --glow: rgb(234 88 12 / 0.28);
+  --grid: rgb(28 21 18 / 0.035);
+  --halo: rgb(234 88 12 / 0.07);
+  --scrim: rgb(28 21 18 / 0.35);
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --primary: #ffb596;
-    --on-primary: #5b1a00;
-    --primary-container: #7b2e0c;
-    --on-primary-container: #ffdbcd;
-    --tertiary: #d6c68d;
-    --on-tertiary: #393005;
-    --tertiary-container: #51461a;
-    --on-tertiary-container: #f3e2a7;
-    --error: #ffb4ab;
-    --on-error: #690005;
-    --error-container: #93000a;
-    --on-error-container: #ffdad6;
-    --background: #1a110e;
-    --foreground: #f1dfd9;
-    --muted: #d8c2ba;
-    --outline: #53433e;
-    --outline-strong: #a08d86;
-    --surface-lowest: #140c09;
-    --surface-low: #231a16;
-    --surface: #271e1a;
-    --surface-high: #322824;
-    --scrim: rgb(0 0 0 / 0.6);
+    color-scheme: dark;
+    --primary: #ff7a45;
+    --primary-strong: #ff6b35;
+    --on-primary: #ffffff;
+    --primary-container: rgb(255 107 53 / 0.14);
+    --on-primary-container: #ffb38a;
+    --tertiary: #e8c56a;
+    --on-tertiary: #2a2105;
+    --tertiary-container: rgb(232 197 106 / 0.13);
+    --on-tertiary-container: #f3dc9a;
+    --good: #4ade80;
+    --error: #ff7b72;
+    --on-error: #2b0605;
+    --error-container: rgb(255 99 88 / 0.14);
+    --on-error-container: #ffb4ab;
+    --background: #0a0908;
+    --foreground: #f4ece8;
+    --muted: #a39790;
+    --faint: #6f6560;
+    --outline: rgb(255 255 255 / 0.075);
+    --outline-strong: rgb(255 255 255 / 0.15);
+    --surface-lowest: rgb(255 255 255 / 0.035);
+    --surface-low: rgb(255 255 255 / 0.03);
+    --surface: rgb(255 255 255 / 0.06);
+    --surface-high: rgb(255 255 255 / 0.055);
+    --raised: #15110f;
+    --highlight: rgb(255 255 255 / 0.06);
+    --glow: rgb(255 107 53 / 0.5);
+    --grid: rgb(255 255 255 / 0.035);
+    --halo: rgb(255 107 53 / 0.15);
+    --scrim: rgb(0 0 0 / 0.65);
   }
 }
 
 @theme inline {
   --color-primary: var(--primary);
+  --color-primary-strong: var(--primary-strong);
   --color-on-primary: var(--on-primary);
   --color-primary-container: var(--primary-container);
   --color-on-primary-container: var(--on-primary-container);
@@ -81,6 +101,9 @@
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --color-muted: var(--muted);
+  --color-faint: var(--faint);
+  --color-good: var(--good);
+  --color-raised: var(--raised);
   --color-outline: var(--outline);
   --color-outline-strong: var(--outline-strong);
   --color-surface-lowest: var(--surface-lowest);
@@ -89,11 +112,45 @@
   --color-surface-high: var(--surface-high);
   --color-scrim: var(--scrim);
   --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
 }
 
+/* The canvas: a soft accent glow top right and a faint grid, fixed while the page scrolls. */
 body {
-  background: var(--background);
+  background-color: var(--background);
+  background-image:
+    radial-gradient(900px 520px at 88% -12%, var(--halo), transparent 62%),
+    linear-gradient(var(--grid) 1px, transparent 1px),
+    linear-gradient(90deg, var(--grid) 1px, transparent 1px);
+  background-size: auto, 56px 56px, 56px 56px;
+  background-attachment: fixed;
   color: var(--foreground);
+}
+
+@layer components {
+  /* A content card: a hairline border, a faint top-lit gradient and an inner top highlight. */
+  .panel {
+    border: 1px solid var(--outline);
+    background-color: var(--surface-low);
+    background-image: linear-gradient(180deg, var(--surface), transparent 70%);
+    box-shadow: inset 0 1px 0 var(--highlight);
+  }
+
+  /* Small uppercase monospace labels: card titles, stat labels, eyebrows. */
+  .label {
+    font-family: var(--font-mono);
+    font-size: 0.6875rem;
+    font-weight: 500;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+  }
+
+  /* The one primary action per view: the accent with its glow. */
+  .btn-primary {
+    background-image: linear-gradient(180deg, var(--primary), var(--primary-strong));
+    color: var(--on-primary);
+    box-shadow: 0 8px 24px -10px var(--glow), inset 0 1px 0 rgb(255 255 255 / 0.22);
+  }
 }
 
 input,

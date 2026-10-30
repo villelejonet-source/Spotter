@@ -1,16 +1,18 @@
-// The website's design system: the same roles, spacing and names as the app's core/ui
-// components (cards 16 dp padding, one primary button, chips, section headers), so a page
-// here reads like a screen there. Everything is server-safe; Dialog lives in dialog.tsx.
+// The website's design system: dark-first panels, monospace data, the brand accent with a
+// glow (tokens and .panel / .label / .btn-primary in globals.css). The names and roles follow
+// the app's core/ui (cards, stat tiles, one primary button, chips), so a page here reads like a
+// screen there. Everything is server-safe; Dialog lives in dialog.tsx.
 import clsx from "clsx";
 import Link from "next/link";
 import { cloneElement, isValidElement, useId, type ComponentProps, type ReactElement, type ReactNode } from "react";
 
-export function PageHeader({ title, subtitle, actions }: { title: string; subtitle?: ReactNode; actions?: ReactNode }) {
+export function PageHeader({ title, subtitle, eyebrow, actions }: { title: string; subtitle?: ReactNode; eyebrow?: ReactNode; actions?: ReactNode }) {
   return (
-    <div className="mb-6 flex flex-wrap items-end justify-between gap-3">
-      <div>
-        <h1 className="text-2xl font-semibold tracking-tight">{title}</h1>
-        {subtitle && <div className="mt-1 text-sm text-muted">{subtitle}</div>}
+    <div className="mb-7 flex flex-wrap items-end justify-between gap-3">
+      <div className="min-w-0">
+        {eyebrow && <div className="label mb-2 text-on-primary-container">{eyebrow}</div>}
+        <h1 className="text-[1.75rem] font-semibold tracking-[-0.035em] md:text-[2.125rem]">{title}</h1>
+        {subtitle && <div className="mt-1.5 text-sm text-muted">{subtitle}</div>}
       </div>
       {actions && <div className="flex flex-wrap gap-2">{actions}</div>}
     </div>
@@ -26,16 +28,16 @@ export function BackLink({ href, children }: { href: string; children: ReactNode
   );
 }
 
-/** A content card (the app's surfaceContainerLow cards). */
+/** A content card: a translucent panel with a hairline border (the app's cards). */
 export function Card({ className, ...props }: ComponentProps<"div">) {
-  return <div className={clsx("rounded-2xl border border-outline bg-surface-low p-4", className)} {...props} />;
+  return <div className={clsx("panel relative rounded-2xl p-5", className)} {...props} />;
 }
 
 /** A card's section header, with an optional action on the right. */
 export function CardTitle({ children, action }: { children: ReactNode; action?: ReactNode }) {
   return (
     <div className="mb-3 flex items-center justify-between gap-2">
-      <h2 className="text-sm font-medium text-muted">{children}</h2>
+      <h2 className="label text-muted">{children}</h2>
       {action}
     </div>
   );
@@ -43,32 +45,54 @@ export function CardTitle({ children, action }: { children: ReactNode; action?: 
 
 /** A section heading between cards. */
 export function SectionTitle({ children }: { children: ReactNode }) {
-  return <h2 className="mb-2 text-sm font-medium text-muted">{children}</h2>;
+  return <h2 className="label mb-3 text-muted">{children}</h2>;
 }
 
-/** A number with its label (the app's StatTile, on surfaceContainerHigh). */
-export function Stat({ label, value, hint }: { label: string; value: ReactNode; hint?: ReactNode }) {
+/**
+ * A number with its label (the app's StatTile): a monospace figure, an optional [delta] badge
+ * beside the label, and an optional [spark] line drawn along the bottom of the tile.
+ */
+export function Stat({ label, value, hint, delta, spark }: { label: string; value: ReactNode; hint?: ReactNode; delta?: ReactNode; spark?: ReactNode }) {
   return (
-    <div className="rounded-2xl bg-surface-high p-4">
-      <div className="text-sm text-muted">{label}</div>
-      <div className="mt-1 text-3xl font-semibold tabular-nums">{value}</div>
+    <div className="panel relative overflow-hidden rounded-2xl p-4">
+      <div className="label flex items-center justify-between gap-2 text-muted">
+        <span>{label}</span>
+        {delta}
+      </div>
+      <div className="mt-2.5 font-mono text-[1.75rem] leading-tight font-medium tracking-[-0.04em] tabular-nums">{value}</div>
       {hint && <div className="mt-1 text-xs text-muted">{hint}</div>}
+      {spark && <div className="pointer-events-none absolute inset-x-0 bottom-0 h-11 opacity-90">{spark}</div>}
+      {spark && <div className="h-6" aria-hidden="true" />}
     </div>
   );
 }
 
+/** A change next to a stat's label: "+12%", "+2.5 kg". [tone] good is green, neutral is grey. */
+export function Delta({ children, tone = "good" }: { children: ReactNode; tone?: "good" | "neutral" }) {
+  return (
+    <span
+      className={clsx(
+        "rounded-full border px-1.5 py-px font-mono text-[0.6875rem] tracking-normal normal-case",
+        tone === "good" ? "border-good/25 bg-good/10 text-good" : "border-outline bg-surface-high text-muted",
+      )}
+    >
+      {children}
+    </span>
+  );
+}
+
 const buttonStyles = {
-  primary: "bg-primary text-on-primary hover:opacity-90",
-  secondary: "border border-outline-strong bg-transparent hover:bg-surface",
+  primary: "btn-primary hover:brightness-110",
+  secondary: "border border-outline-strong bg-surface-lowest hover:bg-surface",
   ghost: "hover:bg-surface",
-  danger: "border border-outline-strong text-error hover:bg-error-container hover:text-on-error-container",
+  danger: "border border-error/40 text-error hover:bg-error-container hover:text-on-error-container",
 };
 
 export type ButtonVariant = keyof typeof buttonStyles;
 
 export function buttonClass(variant: ButtonVariant = "secondary", className?: string) {
   return clsx(
-    "inline-flex min-h-10 items-center justify-center gap-1.5 rounded-full px-4 py-2 text-sm font-medium transition disabled:cursor-not-allowed disabled:opacity-50",
+    "inline-flex min-h-10 items-center justify-center gap-1.5 rounded-xl px-4 py-2 text-sm font-medium transition disabled:cursor-not-allowed disabled:opacity-50",
     buttonStyles[variant],
     className,
   );
@@ -90,7 +114,7 @@ export function IconButton({ label, className, type = "button", children, ...pro
       aria-label={label}
       title={label}
       className={clsx(
-        "inline-flex h-9 w-9 items-center justify-center rounded-full text-muted transition hover:bg-surface hover:text-foreground disabled:cursor-not-allowed disabled:opacity-30",
+        "inline-flex h-9 w-9 items-center justify-center rounded-lg text-muted transition hover:bg-surface hover:text-foreground disabled:cursor-not-allowed disabled:opacity-30",
         className,
       )}
       {...props}
@@ -106,7 +130,7 @@ export function IconLink({ label, className, children, ...props }: ComponentProp
     <Link
       aria-label={label}
       title={label}
-      className={clsx("inline-flex h-9 w-9 items-center justify-center rounded-full border border-outline-strong text-sm transition hover:bg-surface", className)}
+      className={clsx("inline-flex h-9 w-9 items-center justify-center rounded-lg border border-outline-strong text-sm transition hover:bg-surface", className)}
       {...props}
     >
       <span aria-hidden="true">{children}</span>
@@ -118,11 +142,11 @@ export function Badge({ children, tone = "neutral" }: { children: ReactNode; ton
   return (
     <span
       className={clsx(
-        "inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium",
-        tone === "primary" && "bg-primary-container text-on-primary-container",
-        tone === "tertiary" && "bg-tertiary-container text-on-tertiary-container",
-        tone === "error" && "bg-error-container text-on-error-container",
-        tone === "neutral" && "bg-surface-high text-muted",
+        "inline-flex items-center rounded-md border px-1.5 py-0.5 text-xs font-medium",
+        tone === "primary" && "border-primary/25 bg-primary-container text-on-primary-container",
+        tone === "tertiary" && "border-tertiary/25 bg-tertiary-container text-on-tertiary-container",
+        tone === "error" && "border-error/25 bg-error-container text-on-error-container",
+        tone === "neutral" && "border-outline bg-surface-high text-muted",
       )}
     >
       {children}
@@ -137,8 +161,8 @@ export function Chip({ on, className, type = "button", ...props }: ComponentProp
       type={type}
       aria-pressed={on}
       className={clsx(
-        "whitespace-nowrap rounded-full px-3 py-1.5 text-xs font-medium transition disabled:cursor-not-allowed disabled:opacity-40",
-        on ? "bg-primary-container text-on-primary-container" : "bg-surface-high text-muted hover:text-foreground",
+        "whitespace-nowrap rounded-lg border px-3 py-1.5 text-xs font-medium transition disabled:cursor-not-allowed disabled:opacity-40",
+        on ? "border-primary/40 bg-primary-container text-on-primary-container" : "border-outline bg-surface-high text-muted hover:text-foreground",
         className,
       )}
       {...props}
@@ -157,8 +181,8 @@ export function OutlinePill({ className, children, title }: { className?: string
 
 export function EmptyState({ title, children, action }: { title: string; children?: ReactNode; action?: ReactNode }) {
   return (
-    <Card className="py-10 text-center">
-      <div className="font-medium">{title}</div>
+    <Card className="py-12 text-center">
+      <div className="text-lg font-semibold tracking-tight">{title}</div>
       {children && <div className="mx-auto mt-2 max-w-md text-sm text-muted">{children}</div>}
       {action && <div className="mt-5 flex justify-center">{action}</div>}
     </Card>
@@ -185,7 +209,7 @@ export function InlineMessage({ tone, children, className }: { tone: "error" | "
 
 export function inputClasses({ compact = false }: { compact?: boolean } = {}) {
   return clsx(
-    "w-full rounded-lg border border-outline-strong outline-none transition focus:border-primary focus:ring-1 focus:ring-primary aria-[invalid=true]:border-error disabled:opacity-50",
+    "w-full rounded-lg border border-outline-strong outline-none transition focus:border-primary focus:ring-3 focus:ring-primary/20 aria-[invalid=true]:border-error disabled:opacity-50",
     compact ? "px-2 py-1 text-sm tabular-nums" : "px-3 py-2 text-sm",
   );
 }

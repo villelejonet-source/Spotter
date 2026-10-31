@@ -55,6 +55,9 @@ export const getSessionDetail = cache(async (syncId: string) => q.sessionDetail(
 /** A workout and every row that goes with it, for deleting (not cached: read right before the write). */
 export const getWorkoutForDelete = async (syncId: string) => q.workoutForDelete(await client(), syncId);
 
+/** Every workout's exercises: only the export needs them all. */
+export const getAllSessionExercises = cache(async () => q.allSessionExercises(await client()));
+
 /** Logged sets from finished workouts (or running ones too, for the export), filtered on the server. */
 export const getSetHistory = cache(async (exerciseId?: string, since?: number, includeRunning = false) =>
   q.setHistory(await client(), { exerciseId, since, includeRunning }),

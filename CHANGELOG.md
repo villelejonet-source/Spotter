@@ -43,6 +43,10 @@ into the new version's entry and writes the store notes from it. Versions are th
 ### Website
 - Saving the profile on the website no longer undoes a body weight you just logged on the same
   page (or a change synced from the phone): fields you didn't touch take the newest values.
+- The website's data export lists each workout's exercises in the order you did them, keeps
+  exercises with no sets logged, includes each exercise's notes, superset, rest and swap, and
+  now also exports your planned (scheduled) workouts. The CSV gains an exercise number and keeps
+  each exercise's sets together.
 - New timed holds in the plan editor progress like every other exercise (a few seconds longer
   each time) instead of defaulting to "None". "RIR autoregulation" is now labelled "Double
   progression (RIR)", which is what it does.

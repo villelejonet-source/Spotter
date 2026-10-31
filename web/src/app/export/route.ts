@@ -1,6 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { exerciseName } from "@/lib/catalog";
-import { getBodyWeight, getCatalog, getPersonalRecords, getPlans, getProfile, getSessions, getSetHistory } from "@/lib/data";
+import { getAllSessionExercises, getBodyWeight, getCatalog, getPersonalRecords, getPlans, getProfile, getScheduled, getSessions, getSetHistory } from "@/lib/data";
+import { exportCsvRows, exportWorkouts } from "@/lib/export";
 import { createClient } from "@/lib/supabase/server";
 
 /** Personal data on the wire: never cached by a browser or a proxy. */
@@ -17,54 +18,36 @@ export async function GET(request: NextRequest) {
   const iso = (ms: number | null) => (ms == null ? null : new Date(ms).toISOString());
 
   if (format === "csv") {
-    const [sessions, sets, catalog] = await Promise.all([getSessions(), getSetHistory(undefined, undefined, true), getCatalog()]);
-    const byId = new Map(sessions.map((s) => [s.sync_id, s]));
-    const rows = sets
-      .filter((s) => byId.has(s.session_id))
-      .sort((a, b) => byId.get(a.session_id)!.started_at - byId.get(b.session_id)!.started_at || a.position - b.position);
-    const header = ["workout_started", "workout", "exercise", "exercise_id", "set", "set_type", "weight_kg", "reps_or_seconds", "rir", "rpe", "completed", "notes"];
-    const lines = rows.map((s) => {
-      const w = byId.get(s.session_id)!;
-      return [iso(w.started_at), w.plan_day_name ?? "Free workout", exerciseName(catalog, s.exercise_id), s.exercise_id, s.position + 1, s.set_type, s.weight_kg, s.reps, s.rir, s.rpe, s.completed_at != null, s.notes]
+    const [sessions, exercises, sets, catalog] = await Promise.all([getSessions(), getAllSessionExercises(), getSetHistory(undefined, undefined, true), getCatalog()]);
+    const header = ["workout_started", "workout", "exercise_number", "exercise", "exercise_id", "set", "set_type", "weight_kg", "reps_or_seconds", "rir", "rpe", "completed", "notes"];
+    const lines = exportCsvRows(sessions, exercises, sets).map(({ session: w, exercisePosition, set: s }) =>
+      [iso(w.started_at), w.plan_day_name ?? "Free workout", exercisePosition + 1, exerciseName(catalog, s.exercise_id), s.exercise_id, s.position + 1, s.set_type, s.weight_kg, s.reps, s.rir, s.rpe, s.completed_at != null, s.notes]
         .map(csvCell)
-        .join(",");
-    });
+        .join(","),
+    );
     return new NextResponse([header.join(","), ...lines].join("\n"), {
       headers: { ...NO_STORE, "Content-Type": "text/csv; charset=utf-8", "Content-Disposition": `attachment; filename="spotter-sets-${stamp}.csv"` },
     });
   }
 
   // One wave: every query is independent and runs under the same RLS.
-  const [sessions, sets, catalog, profile, plans, records, bodyWeight] = await Promise.all([
+  const [sessions, exercises, sets, catalog, profile, plans, records, bodyWeight, scheduled] = await Promise.all([
     getSessions(),
+    getAllSessionExercises(),
     getSetHistory(undefined, undefined, true),
     getCatalog(),
     getProfile(),
     getPlans(),
     getPersonalRecords(),
     getBodyWeight(),
+    getScheduled(),
   ]);
-  const setsBySession = groupBy(sets, (s) => s.session_id);
   const body = {
     exportedAt: new Date().toISOString(),
     profile,
     plans,
-    workouts: sessions.map((w) => {
-      const own = setsBySession.get(w.sync_id) ?? [];
-      const exercises = groupBy(own, (s) => s.session_exercise_id);
-      return {
-        ...w,
-        started_at_iso: iso(w.started_at),
-        ended_at_iso: iso(w.ended_at),
-        exercises: [...exercises.values()].map((list) => ({
-          exercise_id: list[0].exercise_id,
-          exercise: exerciseName(catalog, list[0].exercise_id),
-          sets: list
-            .sort((a, b) => a.position - b.position)
-            .map((x) => ({ position: x.position, set_type: x.set_type, weight_kg: x.weight_kg, reps: x.reps, rir: x.rir, rpe: x.rpe, completed_at: iso(x.completed_at), notes: x.notes })),
-        })),
-      };
-    }),
+    workouts: exportWorkouts(sessions, exercises, sets, (id) => exerciseName(catalog, id)),
+    scheduledWorkouts: scheduled.map((s) => ({ ...s, date: new Date(s.epoch_day * 86_400_000).toISOString().slice(0, 10) })),
     personalRecords: records.map((r) => ({ ...r, exercise: exerciseName(catalog, r.exercise_id) })),
     bodyWeight: bodyWeight.map((b) => ({ ...b, date: new Date(b.epoch_day * 86_400_000).toISOString().slice(0, 10) })),
     customExercises: [...catalog.values()].filter((e) => e.isCustom),
@@ -73,18 +56,6 @@ export async function GET(request: NextRequest) {
   return new NextResponse(JSON.stringify(withoutUserId(body)), {
     headers: { ...NO_STORE, "Content-Type": "application/json", "Content-Disposition": `attachment; filename="spotter-export-${stamp}.json"` },
   });
-}
-
-/** Map.groupBy, which Node 20 (Vercel's default runtime) doesn't have; keeps insertion order. */
-function groupBy<T, K>(items: T[], key: (item: T) => K): Map<K, T[]> {
-  const groups = new Map<K, T[]>();
-  for (const item of items) {
-    const k = key(item);
-    const group = groups.get(k);
-    if (group) group.push(item);
-    else groups.set(k, [item]);
-  }
-  return groups;
 }
 
 /**

@@ -30,14 +30,11 @@ page. It's the Play listing's privacy-policy and account-deletion URL (`docs/pla
 
 ## Setup
 
-1. Apply every file in `supabase/migrations/` in order (currently `20261004000000_sync`,
-   `20261023000000_web_views`, `20261024000000_hardening_and_performance`,
-   `20261025000000_scheduled_sessions`, `20261026000000_audit_hardening`; the last adds
-   `v_exercise_usage`, which `/library` needs) with `supabase db push` (linked CLI) or
+1. Apply every file in `supabase/migrations/` in order with `supabase db push` (linked CLI) or
    the Supabase MCP's `apply_migration`, never by pasting into the SQL editor: pasting runs the
    SQL but leaves no entry in the migration history, so the next `db push` would try to run it
-   again. They're all safe to re-run. See "Database migrations" in
-   `docs/platform/infrastructure.md`, including how to repair the history on the current project.
+   again. See "Database migrations" in `docs/platform/infrastructure.md`, including how to
+   repair the history.
 2. In Supabase → Authentication → URL Configuration, add `http://localhost:3000/auth/callback`
    and the deployed URL's `/auth/callback` to the redirect URLs (production has
    `https://spotter.northstarsolutions.se/auth/callback`, and it's also the Site URL).

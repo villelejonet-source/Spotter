@@ -40,8 +40,9 @@ Every feature is built **once, in shared Kotlin, for both phones**. The layers, 
   by `core/model/fixtures/training-math.json`, which the Kotlin and web tests both check.
   Change the fixture first, then make both sides pass.
 - No `java.*` or `android.*` in `commonMain`. Dates are `kotlinx.datetime.LocalDate`, times
-  `kotlin.time.Instant`/`Duration`; tests use `kotlin.test`, and their names can't contain
-  `, . : ; / < > [ ]`.
+  `kotlin.time.Instant`/`Duration`; Android code that still needs `java.time` converts at the
+  edge (`toJavaLocalDate()`, `toJavaInstant()`). Tests use `kotlin.test`, and their names
+  can't contain `, . : ; / < > [ ]` (Kotlin/Native rejects them).
 
 ## Workflow for every task
 
@@ -62,7 +63,9 @@ fails for the right reason, then the fix that makes it pass. Say in the PR that 
 
 **Never, without asking first:**
 - change the database schema except through a new migration file;
-- apply a migration to production (there's no staging project);
+- apply a migration to production (there's no staging project), or run anything else that
+  writes to it. `.claude/settings.json` makes the Supabase MCP's write tools ask, but
+  `supabase db push` and the dashboard don't;
 - delete or overwrite user data (on the server, in a migration, or with a destructive sync change);
 - push to `main`, force-push, or bypass branch protection.
 
@@ -93,8 +96,8 @@ supabase stop
 ```
 
 CI (`.github/workflows/ci.yml`) runs all of this on every pull request: Website, Android checks,
-Shared code on iOS (tests plus the Xcode build) and Database. The required `App` check passes
-only when every job did. The web dev server is the `web` entry in `.claude/launch.json` (port 3000).
+Shared code on iOS (tests plus the Xcode build) and Database. The ruleset on `main` requires
+the `Website` and `App` checks, and `App` passes only when every job did. The web dev server is the `web` entry in `.claude/launch.json` (port 3000).
 
 **Strictness:**
 - Kotlin warnings are errors in every module (root `build.gradle.kts`).
@@ -141,8 +144,8 @@ new page or card follows these rules:
   once and each card awaits its own data inside its own `<Suspense>`. If the page must await
   something first (an empty-account check), start the cards' queries with `preload()`
   before it (see Today and Insights).
-- **Every route has a `loading.tsx`** shaped like the page, so a tap shows the new page
-  straight away.
+- **Every route that loads data has a `loading.tsx`** shaped like the page (a detail page
+  too, not just its section), so a tap shows the new page straight away.
 - **Writes go through `push()`** (`lib/push.ts`), which calls `revalidatePath`. The browser
   keeps visited pages for 30 s (`staleTimes` in `next.config.ts`), so a write path that skips
   `revalidatePath` would leave stale pages on screen.
@@ -150,9 +153,11 @@ new page or card follows these rules:
   whole page. Heavy libraries load with `next/dynamic` (the `components/charts.tsx`
   pattern). Check the route table from `next build`: a page's first-load JS should stay near
   the shared ~105 kB. Navigate with `<Link>` (it prefetches), not `<a>` or `router.push`
-  for plain links.
+  for plain links. `<a>` is right for a download (the export), and `router.push` after a form
+  submit or from the command palette.
 - **Cheap to scroll:** no `backdrop-filter` and no `background-attachment: fixed` on
-  anything that scrolls or sits over scrolling content on phones. Animate only `transform`
+  anything that scrolls or sits over scrolling content on phones. A modal dialog's
+  `::backdrop` and the desktop-only (`md:`) sidebar are the exceptions. Animate only `transform`
   and `opacity`.
 - **Phone first:** build at 375 px wide, then add `sm:`/`md:` for bigger screens. Nothing
   scrolls sideways except a deliberate `overflow-x-auto` strip; a wide table becomes stacked

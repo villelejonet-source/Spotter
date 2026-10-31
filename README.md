@@ -1,7 +1,8 @@
 # Spotter
 
 Offline-first gym app (Kotlin, Jetpack Compose, Material 3) for Android, being ported to iOS with
-Kotlin Multiplatform; see [docs/platform/ios-port.md](docs/platform/ios-port.md). See [PLAN.md](PLAN.md).
+Kotlin Multiplatform; see [docs/platform/ios-port.md](docs/platform/ios-port.md). What the app does and its
+training rules: [PLAN.md](PLAN.md). How code is written here: [CLAUDE.md](CLAUDE.md).
 
 ## Build and run
 
@@ -41,7 +42,7 @@ Or open the folder in Android Studio and run the `app` configuration.
 | `iosApp` | The iOS app (Xcode project, Swift shell); see [iosApp/README.md](iosApp/README.md) |
 | `build-logic` | Convention plugins (`spotter.kmp.feature`, `spotter.kmp.library`, …) |
 
-The exercise library lives in `core/data/catalog/exercises.json` (an asset on Android, a bundle resource on iOS). Bump `EXERCISE_CATALOG_VERSION` in `ExerciseSeeder` whenever it changes so installed apps re-seed. Room is at schema version 8; every Room migration must re-create the sync triggers via `SyncSchema.TriggerSpec`.
+The exercise library lives in `core/data/catalog/exercises.json` (an asset on Android, a bundle resource on iOS). Bump `EXERCISE_CATALOG_VERSION` in `SeedExercise.kt` whenever it changes so installed apps re-seed. Every Room migration must re-create the sync triggers via `SyncSchema.TriggerSpec`.
 
 ## Supabase (optional backup + sync, milestone 8)
 
@@ -50,19 +51,9 @@ between phones. Each synced row lives in `public.sync_rows` (one row per record,
 JSON, row-level security per user); SQLite triggers on the phone stamp changes and record
 deletions, and sync is last-write-wins per record.
 
-**Sign-in links use PKCE** (the 2026-10 audit, `docs/platform/audit-2026-10.md`). Every email
-carries both a link and a code: the **link** only works on the phone that asked for it, because
-the app keeps a secret (the PKCE verifier) that the link's one-time `code` is exchanged against;
-the **code** works anywhere you can type it. `SupabaseProvider` sets `flowType = FlowType.PKCE`
-and `SignInLinks.parse` accepts only `spotter://login?code=…`; a password-reset link is detected
-from the token's `amr` claim (`recovery`), falling back to the old `type=recovery` query. The
-session is kept in `EncryptedSharedPreferences` (`spotter_auth`). After a link sign-in into an
-account with no data, the first sync asks before uploading the phone's data. Before this, the
-link carried the session itself in the URL fragment and any app that opened a
-`spotter://login#…` link imported it, so a crafted link could sign a phone into someone else's
-account. Now that the website has a public domain, the next step is to make the link an https
-App Link (`android:autoVerify` plus `/.well-known/assetlinks.json` on the site) so only this app
-can claim it; see `docs/platform/infrastructure.md`.
+**Sign-in links use PKCE:** every email carries a link, which only works on the phone that
+asked for it, and a 6-digit code, which works anywhere. How it works, and the planned https App
+Links: `docs/platform/infrastructure.md`, "Sign-in links".
 
 **Units** (kg or lb) have one source of truth: the synced `user_profile.units` field. Changing
 the setting in the app writes it there; the website reads the same field.

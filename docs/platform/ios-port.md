@@ -119,12 +119,8 @@ The port lands as a series of pull requests; Android keeps working and shipping 
 
 ## Rules for shared code
 
-- No `java.*` / `android.*` in `commonMain`. Dates are `kotlinx.datetime.LocalDate`, instants
-  and durations `kotlin.time`. Android UI that still formats with `java.time` converts at the
-  edge (`toJavaLocalDate()`, `toJavaInstant()`).
-- Tests in `commonTest` use `kotlin.test` and must pass on both targets:
-  `./gradlew :core:model:allTests :core:engine:allTests`. Kotlin/Native rejects
-  `, . : ; / < > [ ]` in test names.
+In `CLAUDE.md`, "Architecture" (platform rules, `java.*`, dates, test names) and "Build and
+test" (the iOS test commands).
 
 ## Known follow-ups
 

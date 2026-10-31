@@ -1,9 +1,12 @@
-# Spotter (Android): implementation plan
+# Spotter: product plan
 
-_Approved 2026-10-03._
+_Approved 2026-10-03 as the Android plan; kept up to date as the product spec since. What the
+app does and the training rules live here; hosting, environments, versioning and the platform
+roadmap are in `docs/platform/infrastructure.md`, the iOS port in `docs/platform/ios-port.md`,
+and how code is written in `CLAUDE.md`._
 
 ## Context
-You want an Android-only, mobile-only gym app where logging a workout is quick and getting around is simple. It should:
+A gym app for Android and iOS, plus a website, where logging a workout is quick and getting around is simple. It should:
 - Run an onboarding questionnaire (profile and goals) and build a tailored plan from the answers.
 - Support full-body and split workouts.
 - Let you swap an exercise for a similar one when the equipment is busy or missing.
@@ -11,43 +14,26 @@ You want an Android-only, mobile-only gym app where logging a workout is quick a
 - Spot plateaus and suggest specific fixes.
 - Include a stopwatch and rest timer, plus dark and light mode.
 
-This is a new project and has nothing to do with the HubSpot Helper repo. It lives in its own folder, `~/private/dev/gym`, and on GitHub at `villelejonet-source/Spotter`.
-
-## Assumptions (defaults, easy to change)
-- **Stack:** native Kotlin with Jetpack Compose and Material 3. Android-only rules out the main reason to go cross-platform. Compose gives the best performance, a foreground-service timer, Material You dynamic color and dark mode for free.
-- **Offline-first, single user.** Room/SQLite on the device is always the source of truth, and the app works fully without an account or a connection. **Supabase** (decided 2026-10-03) adds optional sign-in and cloud backup/sync in milestone 8, after the core app works. Health data only leaves the device if the user signs in to back up.
-- **No accounts and no AI service.** Recommendations come from a deterministic rules engine that runs on the device, so the app is explainable, works offline and costs nothing.
-- Min SDK 26, target the latest SDK.
+## Principles
+- **Offline-first.** Room/SQLite on the phone is always the source of truth, and the app works fully without an account or a connection. Signing in (Supabase) is optional and adds cloud backup, sync between phones and the website. Health data only leaves the phone if the user signs in.
+- **No AI service.** Recommendations come from a deterministic rules engine that runs on the phone, so the app is explainable, works offline and costs nothing.
+- **Built once for both phones.** Kotlin Multiplatform and Compose Multiplatform: every screen and rule is shared by Android and iOS (`CLAUDE.md`, "Architecture").
+- Android min SDK 26, target the latest SDK.
 
 ## Tech stack
 | Concern | Choice |
 |---|---|
-| UI | Jetpack Compose, Material 3, dynamic color |
+| UI | Compose Multiplatform, Material 3; dynamic color on Android |
 | Architecture | MVVM + unidirectional data flow (ViewModel → `StateFlow<UiState>`) |
-| DI | Koin (Hilt until the iOS port, phase 4b) |
-| DB | Room (+ migrations), Kotlin coroutines/Flow |
+| DI | Koin |
+| DB | Room KMP (+ migrations), Kotlin coroutines/Flow |
 | Settings | DataStore (theme, units, rest defaults) |
-| Navigation | Navigation-Compose (type-safe routes) |
-| Charts | Vico (Compose-native charts) |
-| Timer | Foreground service + ongoing notification, vibration/sound on finish |
-| Tests | JUnit5 for the engine, Room in-memory tests, Compose UI tests, Paparazzi screenshots |
+| Navigation | Navigation Compose (type-safe routes) |
+| Charts | Vico (multiplatform) |
+| Timer | Android: foreground service + ongoing notification, vibration/sound on finish. iOS: in progress (`docs/platform/ios-port.md`, phase 5) |
+| Tests | `kotlin.test` for the engine and model (JVM and iOS), Room in-memory and view model tests, Roborazzi screenshots |
 
-## Module layout
-```
-app/                    navigation host, theme, DI wiring
-core/model              pure Kotlin domain models
-core/data               Room DB, DAOs, repositories, seed exercise library (JSON asset)
-core/engine             pure Kotlin: plan generator, progression, plateau detection, substitution
-core/ui                 design system: components, theme tokens, timer UI
-feature/onboarding      setup wizard
-feature/today           home / start workout
-feature/session         active workout logger + timers
-feature/history         calendar, per-workout, per-exercise history
-feature/progress        charts, PRs, recommendations
-feature/library         exercise browser + swap sheet
-feature/settings        profile, units, theme, backup
-```
-`core/engine` has no Android dependencies, so the whole recommendation brain can be unit-tested.
+The module layout is in `README.md`. `core/engine` has no platform dependencies, so the whole recommendation brain can be unit-tested.
 
 ## Navigation (keep it simple)
 A bottom bar with 4 tabs, designed for one-handed use:
@@ -169,7 +155,7 @@ These rules live in `core/engine` and run after each session:
 - A plan review shows on Today after 4 weeks and 8 sessions on the plan (or since the last review) when a main lift has stalled, or after 2 weeks when 2+ stall together. For each stalled lift it offers supporting exercises for the muscles around it (`SupportingLifts`: e.g. bench → incline press, triceps, shoulders) and a variation swap. Applying, or keeping the plan, starts the next 4-week window; "Later" hides it for a week.
 
 ## Theming
-Material 3 theme with light, dark and "follow system" settings, plus dynamic color on Android 12+ and a branded fallback palette. Both themes get contrast checks in the Paparazzi screenshot tests.
+Material 3 theme with light, dark and "follow system" settings, plus dynamic color on Android 12+ and a branded fallback palette. Both themes, and large text, get Roborazzi screenshot tests.
 
 ## v1 scope (confirmed)
 - kg/lb units
@@ -199,24 +185,21 @@ Material 3 theme with light, dark and "follow system" settings, plus dynamic col
 - Program templates (5/3/1, PHUL)
 - Sharing workouts
 
-**Privacy and safety:** no analytics. Health data stays on the device unless the user signs in to cloud backup (milestone 8), and then only in their own row-level-secured Supabase rows. Show a "consult a professional" note for limitations, and make no medical claims.
+**Privacy and safety:** no analytics or tracking services (the privacy policy, `docs/play-store/privacy-policy.md`, says exactly what is collected). Health data stays on the device unless the user signs in to cloud backup, and then only in their own row-level-secured Supabase rows. Show a "consult a professional" note for limitations, and make no medical claims.
 
-## Platform roadmap (beyond the app)
-The app stays offline-first and free of ads. Around it, Spotter grows into a small platform:
-
-1. **Spotter Web (in progress, `web/`):** Next.js site on Vercel, same Supabase account as the app. Dashboard, history, calendar, per-exercise progress, profile, and a plan editor whose changes sync to the phone (rows written through `push_rows` exactly as the app writes them). Reads go through typed views (`supabase/migrations/20261023000000_web_views.sql`). The app syncs when it comes to the foreground so web edits show up quickly.
-2. **Scheduled sessions (built, ships with the next app release):** a synced `scheduled_session` table (date, plan day or free workout, notes, linked workout; Room v7). Planned on the website's calendar (single days, or "plan weeks ahead" on chosen weekdays), shown on the app's Today tab, where starting one links the workout so it counts as done.
-3. **Personal trainers (foundation built, switched off):** `profiles` (display name; no fixed role, any account can be a trainer, a client or both) and `trainer_links` (trainer, client, status, invite code), written only through `create_trainer_invite`, `accept_trainer_invite` and `end_trainer_link`; a client has one trainer at a time and can end the link any time, a trainer any number of clients (`supabase/migrations/20261027000000_trainer_foundation.sql`). Reading synced rows goes through one check, `can_read_user()`, which is owner-only for now, and the app (from versionCode 7) and website always filter on the signed-in user's id, so trainer access can't leak client rows into a trainer's own data. Left: release versionCode 7 and keep trainers off old apps; a read path for trainers (typed tables or views); then allow an active link in `can_read_user()`; then the trainer UI on the web and in the app, and plan suggestions (a plan stored as JSON that the client accepts, which writes normal plan rows). Details in `docs/platform/infrastructure.md`, "Trainer foundation".
-4. **Freemium (low priority):** logging, history, plans, sync and the basic dashboard stay free. Candidates for paid: advanced analytics, program templates, and a recurring trainer tier for coaching many clients. Entitlements in one table, fed by Google Play Billing and Stripe webhooks; app and web both read it.
+## Platform roadmap
+The website, scheduled sessions, personal trainers, iOS and freemium: `docs/platform/infrastructure.md`, "Roadmap".
 
 ## Milestones
+_The original build order (October 2026), kept as a record; what shipped when is in `CHANGELOG.md`._
+
 1. **Foundation (week 1):** project setup, modules, theme and dark mode, navigation shell, Room schema, seeded exercise library.
 2. **Logging core (weeks 2–3):** empty workout, exercise picker, set logging, auto-save, rest timer service, stopwatch, finish summary.
 3. **Onboarding + plan generator (weeks 3–4):** wizard, engine (split, slots, parameters), plan screens, Today tab.
 4. **Swap + progression (week 5):** similarity scoring, swap sheet, progression rules, pre-filled targets.
 5. **History + progress (week 6):** per-workout and per-exercise history, charts, PRs, muscle balance.
 6. **Recommendations (week 7):** plateau detection, accessory mapping, deload, recommendation cards.
-7. **Polish (week 8):** accessibility, plate calculator, warm-ups, PR celebrations, screenshot tests, Play Store internal test track.
+7. **Polish (week 8):** accessibility, plate calculator, warm-ups, PR celebrations, screenshot tests, first Play Store release.
 8. **Cloud backup + sync (weeks 9–10):** optional Supabase sign-in, Postgres schema mirroring Room with row-level security per user, background push/pull sync (last-write-wins per row, soft deletes), restore on a new phone.
 
 ## Verification

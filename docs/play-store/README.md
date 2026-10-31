@@ -15,9 +15,9 @@ personal accounts.
 | 3 | 0.10.0 | First production release, live 2026-10-25 (Sweden only), replaced by 0.11.0 the same day. Also on the closed test (alpha), which is paused. Lacks timed holds from 0.9.1. |
 | 4 | 0.10.1 | Built from tag `v0.10.1`; never uploaded (superseded by 0.11.0). |
 | 5 | 0.11.0 | Audit release (`docs/platform/audit-2026-10.md`): PKCE sign-in links, sync and database hardening, one design system on app and web. Built from tag `v0.11.0`; live in production 2026-10-25 (submission 6, full rollout, published 17:07), replaced by 1.0.0 the same day. Release notes: `release-notes-0.11.0.txt`. |
-| 6 | 1.0.0 | First 1.x release, marking the production launch. Fixes typing in the exercise picker's search (letters dropped, cursor jumping). Built from tag `v1.0.0`; live in production since 2026-10-25 (full rollout). Release notes: `release-notes-1.0.0.txt`. |
+| 6 | 1.0.0 | First 1.x release, marking the production launch. Fixes typing in the exercise picker's search (letters dropped, cursor jumping). Built from tag `v1.0.0`; live in production 2026-10-25 (full rollout), replaced by 1.1.0 on 2026-10-31. Release notes: `release-notes-1.0.0.txt`. |
 | 7 | 1.0.1 | Sync pulls only the signed-in account's rows (needed before trainers can read client data), and a device check-in on sync (install id, versionCode, schema version) for `/admin`. Never uploaded; superseded by 1.1.0, which includes it. Release notes: `release-notes-1.0.1.txt`. |
-| 8 | 1.1.0 | 1.0.1's sync changes, plus: set edits no longer lost (#22), comma decimals and shared training math (#23), errors shown instead of crashes (#27), "today" in the phone's time zone (#29). Uploaded to production, in review since 2026-10-30; tag `android-v1.1.0` once it's live. Release notes: `release-notes-1.1.0.txt`. |
+| 8 | 1.1.0 | 1.0.1's sync changes, plus: set edits no longer lost (#22), comma decimals and shared training math (#23), errors shown instead of crashes (#27), "today" in the phone's time zone (#29). Built from `1dc101e` (tag `android-v1.1.0`); uploaded 2026-10-30, live in production since 2026-10-31. Release notes: `release-notes-1.1.0.txt`. |
 
 Tag each uploaded build so it can be rebuilt exactly: `git tag android-v1.0.1 <commit>` from
 1.0.1 on (room for `ios-v…` tags later); earlier builds use `vX.Y.Z`. The `/release` Claude

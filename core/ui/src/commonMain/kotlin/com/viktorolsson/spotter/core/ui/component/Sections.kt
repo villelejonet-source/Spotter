@@ -4,6 +4,7 @@ import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Card
 import androidx.compose.material3.contentColorFor
@@ -96,11 +97,15 @@ fun Modifier.topLit(): Modifier {
     return background(Brush.verticalGradient(0f to light, TOP_LIGHT_END to Color.Transparent))
 }
 
-/** A single number with its label, in a `surfaceContainerHigh` tile; several sit in a row. */
+/**
+ * A single number with its label, in a `surfaceContainerHigh` tile; several sit in a row. A
+ * long label wraps to two lines; give the row `Modifier.height(IntrinsicSize.Max)` so the
+ * tiles beside it grow to match.
+ */
 @Composable
 fun StatTile(label: String, value: String, modifier: Modifier = Modifier) {
     Card(
-        modifier = modifier,
+        modifier = modifier.fillMaxHeight(),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerHigh),
     ) {
         Column(Modifier.padding(Dimens.TilePadding), verticalArrangement = Arrangement.spacedBy(Spacing.xs)) {
@@ -108,7 +113,7 @@ fun StatTile(label: String, value: String, modifier: Modifier = Modifier) {
                 label.uppercaseLocal(),
                 style = SpotterTheme.type.label,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
-                maxLines = 1,
+                maxLines = 2,
                 overflow = TextOverflow.Ellipsis,
             )
             Text(value, style = SpotterTheme.type.numberMedium, color = MaterialTheme.colorScheme.onSurface)

@@ -1,5 +1,16 @@
 package com.viktorolsson.spotter.feature.progress
 
+import com.viktorolsson.spotter.core.ui.theme.SpotterTheme
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.CornerRadius
+import androidx.compose.material3.Icon
+import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material.icons.automirrored.rounded.KeyboardArrowRight
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -8,7 +19,6 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.text.KeyboardOptions
@@ -16,7 +26,6 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Insights
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.FilledTonalButton
-import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
@@ -30,7 +39,6 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.StrokeCap
 import org.jetbrains.compose.resources.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.input.KeyboardType
@@ -156,19 +164,25 @@ internal fun ProgressScreen(
                 item { SectionHeader(stringResource(Res.string.progress_lifts)) }
                 items(state.lifts, key = { it.exercise.id }) { lift ->
                     val openLabel = stringResource(Res.string.progress_open_exercise)
-                    Column(
+                    Row(
                         Modifier
                             .fillMaxWidth()
+                            .heightIn(min = Dimens.TouchTarget)
                             .clickable(onClickLabel = openLabel, role = Role.Button) { onOpenExercise(lift.exercise.id) }
                             .padding(vertical = Spacing.sm),
+                        verticalAlignment = Alignment.CenterVertically,
                     ) {
-                        Text(lift.exercise.name, style = MaterialTheme.typography.bodyLarge)
-                        Text(
-                            stringResource(Res.string.progress_lift_meta, formatSessionCount(lift.sessionCount), formatShortDate(lift.lastDone.localDate())),
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
+                        Column(Modifier.weight(1f)) {
+                            Text(lift.exercise.name, style = MaterialTheme.typography.bodyLarge)
+                            Text(
+                                stringResource(Res.string.progress_lift_meta, formatSessionCount(lift.sessionCount), formatShortDate(lift.lastDone.localDate())),
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                        }
+                        Icon(Icons.AutoMirrored.Rounded.KeyboardArrowRight, contentDescription = null, tint = SpotterTheme.colors.faint)
                     }
+                    HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
                 }
             }
         }
@@ -200,21 +214,37 @@ private fun BalanceCard(volume: List<MuscleVolume>) = ContentCard {
             VolumeStatus.IN_RANGE -> MaterialTheme.colorScheme.primary
             VolumeStatus.OVER -> MaterialTheme.colorScheme.tertiary
         }
-        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(Spacing.sm)) {
-            Text(stringResource(group.group.labelRes), style = MaterialTheme.typography.bodyMedium, modifier = Modifier.width(GROUP_LABEL_WIDTH))
-            LinearProgressIndicator(
-                progress = { (group.sets / group.targetHigh).toFloat().coerceIn(0f, 1f) },
-                color = color,
-                strokeCap = StrokeCap.Round,
-                modifier = Modifier.weight(1f),
-            )
-            Text(
-                stringResource(Res.string.progress_balance_row, formatSets(group.sets), group.targetLow, group.targetHigh),
-                style = MaterialTheme.typography.labelMedium,
-                color = color,
-                modifier = Modifier.width(RANGE_LABEL_WIDTH),
-            )
+        // Two lines, name and count over a full-width bar, so long names and large text fit.
+        Column(verticalArrangement = Arrangement.spacedBy(Spacing.xs)) {
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(Spacing.sm)) {
+                Text(stringResource(group.group.labelRes), style = MaterialTheme.typography.bodyMedium, modifier = Modifier.weight(1f))
+                Text(
+                    stringResource(Res.string.progress_balance_row, formatSets(group.sets), group.targetLow, group.targetHigh),
+                    style = MaterialTheme.typography.labelMedium,
+                    color = color,
+                )
+            }
+            BalanceBar(group.sets, group.targetLow, group.targetHigh, color, Modifier.fillMaxWidth())
         }
+    }
+}
+
+/**
+ * Sets against the weekly range, as on the website: the target range is a tinted band on the
+ * track, and the bar runs past it when a group is over.
+ */
+@Composable
+private fun BalanceBar(sets: Double, low: Int, high: Int, color: Color, modifier: Modifier) {
+    val track = MaterialTheme.colorScheme.surfaceContainerHighest
+    val zone = MaterialTheme.colorScheme.primary.copy(alpha = ZONE_ALPHA)
+    Canvas(modifier.height(BAR_HEIGHT)) {
+        val max = high * BAR_HEADROOM
+        val radius = CornerRadius(size.height / 2)
+        drawRoundRect(track, cornerRadius = radius)
+        val start = size.width * (low / max).toFloat()
+        drawRect(zone, topLeft = Offset(start, 0f), size = Size(size.width * ((high - low) / max).toFloat(), size.height))
+        val end = size.width * (sets / max).toFloat().coerceIn(0f, 1f)
+        if (end > 0f) drawRoundRect(color, size = Size(end.coerceAtLeast(size.height), size.height), cornerRadius = radius)
     }
 }
 
@@ -226,7 +256,7 @@ private fun BodyWeightCard(points: List<BodyWeightPoint>, unit: WeightUnit, onLo
         Column(Modifier.weight(1f)) {
             CardTitle(stringResource(Res.string.progress_body_weight))
             points.lastOrNull()?.let { latest ->
-                Text(formatWeight(latest.weightKg, unit), style = MaterialTheme.typography.headlineSmall)
+                Text(formatWeight(latest.weightKg, unit), style = SpotterTheme.type.numberLarge)
                 Text(
                     stringResource(Res.string.progress_weight_average, formatWeightOneDecimal(latest.sevenDayAverageKg, unit)),
                     style = MaterialTheme.typography.bodySmall,
@@ -286,5 +316,7 @@ internal fun LogWeightDialog(unit: WeightUnit, initial: String, onSave: (String)
     )
 }
 
-private val GROUP_LABEL_WIDTH = 96.dp
-private val RANGE_LABEL_WIDTH = 92.dp
+
+private const val ZONE_ALPHA = 0.16f
+private const val BAR_HEADROOM = 1.25
+private val BAR_HEIGHT = 8.dp

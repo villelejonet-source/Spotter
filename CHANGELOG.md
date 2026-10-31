@@ -35,6 +35,10 @@ into the new version's entry and writes the store notes from it. Versions are th
   in monospace digits, finished sets tinted with a glowing tick, and a short vibration when you
   tick or untick a set. The rest timer shows big digits under a glowing progress line, with larger
   −15 s, +15 s and Skip buttons.
+- Progress and History match the new look: charts draw a glowing line over a fading area with
+  monospace axis labels, muscle balance shows the target range as a band on each bar (and no longer
+  breaks long names like "Shoulders" with large text), records and workout stats use monospace
+  numbers, and the History calendar marks today with a ring.
 
 ### iOS (not released yet)
 - The whole app runs on iOS from the same shared code as Android (#13–#20).

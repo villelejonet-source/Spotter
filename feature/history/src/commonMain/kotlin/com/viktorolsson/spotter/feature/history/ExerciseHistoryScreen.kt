@@ -1,5 +1,8 @@
 package com.viktorolsson.spotter.feature.history
 
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -130,7 +133,10 @@ internal fun ExerciseHistoryScreen(
                             value?.let { ChartPoint(log.date.localDate(), unit.fromKg(it)) }
                         }
                     }
-                    Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow)) {
+                    Card(
+                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow),
+                        border = BorderStroke(Dimens.Hairline, MaterialTheme.colorScheme.outlineVariant),
+                    ) {
                         TrendChart(
                             primary = points,
                             evenlySpaced = true,
@@ -141,7 +147,7 @@ internal fun ExerciseHistoryScreen(
                     }
                 }
                 item {
-                    Row(horizontalArrangement = Arrangement.spacedBy(Spacing.sm)) {
+                    Row(Modifier.height(IntrinsicSize.Max), horizontalArrangement = Arrangement.spacedBy(Spacing.sm)) {
                         StatTile(
                             stringResource(Res.string.exercise_best_1rm),
                             state.bestOneRepMaxKg?.let { formatOneRepMax(it, unit) } ?: stringResource(Res.string.exercise_no_value),
@@ -157,7 +163,10 @@ internal fun ExerciseHistoryScreen(
                 }
                 if (state.repRecords.isNotEmpty()) {
                     item {
-                        Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow)) {
+                        Card(
+                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow),
+                        border = BorderStroke(Dimens.Hairline, MaterialTheme.colorScheme.outlineVariant),
+                    ) {
                             Column(Modifier.padding(Dimens.CardPadding), verticalArrangement = Arrangement.spacedBy(Spacing.xs)) {
                                 SectionHeader(stringResource(Res.string.exercise_rep_records))
                                 state.repRecords.take(REP_RECORD_ROWS).forEach { (weight, reps) ->

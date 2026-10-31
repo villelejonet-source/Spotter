@@ -1,6 +1,7 @@
 package com.viktorolsson.spotter.core.ui.component
 
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -27,6 +28,7 @@ import com.viktorolsson.spotter.core.ui.labelRes
 import com.viktorolsson.spotter.core.ui.localDate
 import com.viktorolsson.spotter.core.ui.theme.Dimens
 import com.viktorolsson.spotter.core.ui.theme.Spacing
+import com.viktorolsson.spotter.core.ui.theme.SpotterTheme
 import com.viktorolsson.spotter.core.ui.resources.Res
 import com.viktorolsson.spotter.core.ui.resources.*
 
@@ -47,16 +49,25 @@ fun RecordsCard(
     val container = if (celebrate) MaterialTheme.colorScheme.tertiaryContainer else MaterialTheme.colorScheme.surfaceContainerLow
     val onContainer = if (celebrate) MaterialTheme.colorScheme.onTertiaryContainer else MaterialTheme.colorScheme.onSurface
     val iconTint = if (celebrate) MaterialTheme.colorScheme.onTertiaryContainer else MaterialTheme.colorScheme.tertiary
-    Card(colors = CardDefaults.cardColors(containerColor = container), modifier = modifier.fillMaxWidth()) {
+    val border = if (celebrate) MaterialTheme.colorScheme.tertiary.copy(alpha = CELEBRATE_BORDER_ALPHA) else MaterialTheme.colorScheme.outlineVariant
+    Card(
+        colors = CardDefaults.cardColors(containerColor = container),
+        border = BorderStroke(Dimens.Hairline, border),
+        modifier = modifier.fillMaxWidth(),
+    ) {
         Column(Modifier.padding(Dimens.CardPadding), verticalArrangement = Arrangement.spacedBy(Spacing.sm)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Icon(Icons.Rounded.EmojiEvents, contentDescription = null, tint = iconTint)
-                Text(
-                    title,
-                    style = MaterialTheme.typography.titleMedium,
-                    color = onContainer,
-                    modifier = Modifier.padding(start = Spacing.sm).semantics { heading() },
-                )
+                if (celebrate) {
+                    Text(
+                        title,
+                        style = MaterialTheme.typography.titleMedium,
+                        color = onContainer,
+                        modifier = Modifier.padding(start = Spacing.sm).semantics { heading() },
+                    )
+                } else {
+                    CardTitle(title, Modifier.padding(start = Spacing.sm))
+                }
             }
             if (records.isEmpty() && emptyText != null) {
                 Text(emptyText, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
@@ -83,7 +94,7 @@ fun RecordsCard(
                     }
                     Text(
                         formatRecordValue(record, unit),
-                        style = if (celebrate) MaterialTheme.typography.bodyMedium else MaterialTheme.typography.titleSmall,
+                        style = if (celebrate) SpotterTheme.type.numberSmall else SpotterTheme.type.numberMedium,
                         color = onContainer,
                         modifier = Modifier.padding(start = Spacing.sm),
                     )
@@ -92,3 +103,5 @@ fun RecordsCard(
         }
     }
 }
+
+private const val CELEBRATE_BORDER_ALPHA = 0.3f

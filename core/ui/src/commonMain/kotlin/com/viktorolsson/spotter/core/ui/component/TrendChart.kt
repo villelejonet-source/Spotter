@@ -9,10 +9,16 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
 import com.patrykandpatrick.vico.compose.cartesian.CartesianChartHost
 import com.patrykandpatrick.vico.compose.cartesian.Zoom
 import com.patrykandpatrick.vico.compose.cartesian.axis.HorizontalAxis
+import com.patrykandpatrick.vico.compose.cartesian.axis.rememberAxisGuidelineComponent
+import com.patrykandpatrick.vico.compose.cartesian.axis.rememberAxisLabelComponent
+import com.patrykandpatrick.vico.compose.cartesian.axis.rememberAxisLineComponent
 import com.patrykandpatrick.vico.compose.cartesian.axis.VerticalAxis
 import com.patrykandpatrick.vico.compose.cartesian.data.CartesianChartModel
 import com.patrykandpatrick.vico.compose.cartesian.data.CartesianLayerRangeProvider
@@ -28,6 +34,8 @@ import com.patrykandpatrick.vico.compose.common.Fill
 import com.patrykandpatrick.vico.compose.common.ProvideVicoTheme
 import com.patrykandpatrick.vico.compose.m3.common.rememberM3VicoTheme
 import com.viktorolsson.spotter.core.ui.formatAxisDate
+import com.viktorolsson.spotter.core.ui.theme.Dimens
+import com.viktorolsson.spotter.core.ui.theme.SpotterTheme
 import com.viktorolsson.spotter.core.ui.localFormat
 import kotlinx.datetime.LocalDate
 import kotlin.math.ceil
@@ -39,6 +47,9 @@ data class ChartPoint(val date: LocalDate, val value: Double)
 private const val Y_LABELS = 4
 private val CHART_HEIGHT = 200.dp
 private val EMPTY_HEIGHT = 120.dp
+private val PRIMARY_STROKE = 2.5.dp
+private val SECONDARY_STROKE = 1.5.dp
+private const val AREA_ALPHA = 0.3f
 
 /**
  * A dated line chart that fits all points on screen, with the y-axis fitted to the
@@ -89,6 +100,12 @@ fun TrendChart(
     }
     val primaryColor = MaterialTheme.colorScheme.primary
     val secondaryColor = MaterialTheme.colorScheme.tertiary
+    // The website's charts: a glowing line over a fading area, monospace axis labels in the
+    // faint colour, and hairline guides.
+    val axisLabel = rememberAxisLabelComponent(style = SpotterTheme.type.label.copy(color = SpotterTheme.colors.faint, letterSpacing = TextUnit.Unspecified))
+    val hairline = Fill(MaterialTheme.colorScheme.outlineVariant)
+    val guideline = rememberAxisGuidelineComponent(fill = hairline, thickness = Dimens.Hairline)
+    val axisLine = rememberAxisLineComponent(fill = hairline, thickness = Dimens.Hairline)
     ProvideVicoTheme(rememberM3VicoTheme()) {
         CartesianChartHost(
             chart = rememberCartesianChart(
@@ -96,22 +113,34 @@ fun TrendChart(
                     lineProvider = LineCartesianLayer.LineProvider.series(
                         LineCartesianLayer.rememberLine(
                             fill = remember(primaryColor) { LineCartesianLayer.LineFill.single(Fill(primaryColor)) },
+                            stroke = remember { LineCartesianLayer.LineStroke.Continuous(PRIMARY_STROKE) },
                             areaFill = remember(primaryColor) {
-                                LineCartesianLayer.AreaFill.single(Fill(primaryColor.copy(alpha = 0.12f)))
+                                LineCartesianLayer.AreaFill.single(
+                                    Fill(Brush.verticalGradient(listOf(primaryColor.copy(alpha = AREA_ALPHA), Color.Transparent))),
+                                )
                             },
                         ),
                         LineCartesianLayer.rememberLine(
                             fill = remember(secondaryColor) { LineCartesianLayer.LineFill.single(Fill(secondaryColor)) },
+                            stroke = remember { LineCartesianLayer.LineStroke.Continuous(SECONDARY_STROKE) },
                         ),
                     ),
                     rangeProvider = rangeProvider,
                 ),
                 startAxis = VerticalAxis.rememberStart(
+                    line = null,
+                    label = axisLabel,
+                    tick = null,
+                    guideline = guideline,
                     valueFormatter = remember(formatValue) { CartesianValueFormatter { _, value, _ -> formatValue(value) } },
                     // A fixed label count reads well for both narrow (99–106) and wide ranges.
                     itemPlacer = remember { VerticalAxis.ItemPlacer.count(count = { Y_LABELS }) },
                 ),
                 bottomAxis = HorizontalAxis.rememberBottom(
+                    line = axisLine,
+                    label = axisLabel,
+                    tick = null,
+                    guideline = null,
                     valueFormatter = remember(dateFor) {
                         CartesianValueFormatter { _, value, _ -> formatAxisDate(dateFor(value)) }
                     },

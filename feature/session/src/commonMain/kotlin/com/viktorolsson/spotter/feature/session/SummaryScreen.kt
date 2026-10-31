@@ -1,5 +1,7 @@
 package com.viktorolsson.spotter.feature.session
 
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -140,7 +142,7 @@ internal fun SummaryScreen(summary: WorkoutSummary, unit: WeightUnit, records: L
                 }
             }
             item(key = "stats") {
-                Row(horizontalArrangement = Arrangement.spacedBy(Spacing.sm)) {
+                Row(Modifier.height(IntrinsicSize.Max), horizontalArrangement = Arrangement.spacedBy(Spacing.sm)) {
                     StatTile(stringResource(Res.string.summary_duration), formatClock(summary.duration), Modifier.weight(1f))
                     StatTile(stringResource(Res.string.summary_volume), formatTotal(summary.volumeKg, unit), Modifier.weight(1f))
                     StatTile(stringResource(Res.string.summary_sets), summary.completedSets.toString(), Modifier.weight(1f))

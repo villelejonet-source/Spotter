@@ -1,5 +1,10 @@
 package com.viktorolsson.spotter.feature.history
 
+import com.viktorolsson.spotter.core.ui.uppercaseLocal
+import com.viktorolsson.spotter.core.ui.theme.SpotterTheme
+import androidx.compose.ui.unit.dp
+import androidx.compose.foundation.border
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -155,7 +160,10 @@ private fun MonthCalendar(
         (List(leading) { null } + (1..month.numberOfDays).map { month.onDay(it) }).chunked(7)
     }
 
-    Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow)) {
+    Card(
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow),
+        border = BorderStroke(Dimens.Hairline, MaterialTheme.colorScheme.outlineVariant),
+    ) {
         Column(Modifier.padding(Spacing.md)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 IconButton(onClick = onPrevious) {
@@ -175,8 +183,8 @@ private fun MonthCalendar(
                 (0 until 7).map { DayOfWeek((firstDay.isoDayNumber - 1 + it) % 7 + 1) }.forEach { day ->
                     Text(
                         narrowDayName(day),
-                        style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        style = SpotterTheme.type.label,
+                        color = SpotterTheme.colors.faint,
                         textAlign = TextAlign.Center,
                         modifier = Modifier.weight(1f),
                     )
@@ -219,12 +227,13 @@ private fun DayCell(date: LocalDate, volumeKg: Double?, maxVolume: Double, unit:
             .fillMaxSize()
             .clip(MaterialTheme.shapes.small)
             .background(background)
+            .then(if (isToday) Modifier.border(TODAY_RING, scheme.primary, MaterialTheme.shapes.small) else Modifier)
             .semantics { contentDescription = description },
         contentAlignment = Alignment.Center,
     ) {
         Text(
             date.day.toString(),
-            style = MaterialTheme.typography.labelMedium,
+            style = SpotterTheme.type.numberSmall,
             fontWeight = if (isToday) FontWeight.Bold else FontWeight.Normal,
             color = foreground,
         )
@@ -237,9 +246,10 @@ private fun SessionCard(session: WorkoutSession, unit: WeightUnit, onClick: () -
     Card(
         onClick = onClick,
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow),
+        border = BorderStroke(Dimens.Hairline, MaterialTheme.colorScheme.outlineVariant),
         modifier = Modifier.fillMaxWidth(),
     ) {
-        Column(Modifier.padding(Dimens.CardPadding), verticalArrangement = Arrangement.spacedBy(Spacing.xs)) {
+        Column(Modifier.padding(horizontal = Dimens.CardPadding, vertical = Spacing.md), verticalArrangement = Arrangement.spacedBy(Spacing.xs)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text(
                     session.planDayName ?: stringResource(Res.string.history_workout),
@@ -247,8 +257,8 @@ private fun SessionCard(session: WorkoutSession, unit: WeightUnit, onClick: () -
                     modifier = Modifier.weight(1f),
                 )
                 Text(
-                    formatShortDate(session.startedAt.localDate()),
-                    style = MaterialTheme.typography.labelLarge,
+                    formatShortDate(session.startedAt.localDate()).uppercaseLocal(),
+                    style = SpotterTheme.type.label,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
@@ -259,12 +269,13 @@ private fun SessionCard(session: WorkoutSession, unit: WeightUnit, onClick: () -
                     formatSetCount(summary.completedSets),
                     formatTotal(summary.volumeKg, unit),
                 ),
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                style = SpotterTheme.type.numberSmall,
+                color = MaterialTheme.colorScheme.onSurface,
             )
             Text(
                 session.exercises.joinToString(" · ") { it.exercise.name },
                 style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
                 maxLines = 2,
                 overflow = TextOverflow.Ellipsis,
             )
@@ -272,3 +283,4 @@ private fun SessionCard(session: WorkoutSession, unit: WeightUnit, onClick: () -
     }
 }
 
+private val TODAY_RING = 1.5.dp

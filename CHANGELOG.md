@@ -16,7 +16,7 @@ into the new version's entry and writes the store notes from it. Versions are th
   stall together). It shows how each main lift has moved and suggests exercises for the muscles
   around a stalled one (for a stuck bench: incline press, close-grip bench, shoulder press) or a
   variation to swap in. Pick what you want and apply it, keep your plan, or come back later.
- in the app (History → the workout → the bin icon) or on the website
+- Delete a finished workout, in the app (History → the workout → the bin icon) or on the website
   (the workout's page → Delete workout). Its sets and any records set in it go too, on every
   device; a scheduled day it completed shows as not done again.
 

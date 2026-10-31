@@ -21,6 +21,7 @@ import com.viktorolsson.spotter.core.engine.WarmUps
 import com.viktorolsson.spotter.core.engine.WeightConversion
 import com.viktorolsson.spotter.core.model.PreviousSet
 import com.viktorolsson.spotter.core.model.SetType
+import com.viktorolsson.spotter.core.model.isLift
 import com.viktorolsson.spotter.core.model.WorkoutSession
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
@@ -131,7 +132,8 @@ class WorkoutRepository(
         dao.getRecentWorkingSets(exerciseId, sessions = 2)
             .groupBy { it.sessionId }
             .values
-            .map { sets -> sets.map { LoggedSet(it.set.weightKg, it.set.reps ?: 0, it.set.rir) } }
+            .map { sets -> sets.mapNotNull { it.set.toLift() } }
+            .filter { it.isNotEmpty() }
 
     /**
      * [recentHistory] for several exercises in two queries: the working sets of each
@@ -149,7 +151,8 @@ class WorkoutRepository(
         return wanted.mapValues { (exerciseId, sessionsOfExercise) ->
             sets.filter { it.exerciseId == exerciseId && it.sessionId in sessionsOfExercise }
                 .groupBy { it.sessionId }.values
-                .map { logged -> logged.map { LoggedSet(it.set.weightKg, it.set.reps ?: 0, it.set.rir) } }
+                .map { logged -> logged.mapNotNull { it.set.toLift() } }
+                .filter { it.isNotEmpty() }
         }
     }
 
@@ -360,7 +363,7 @@ class WorkoutRepository(
     suspend fun bestsBefore(exerciseId: String, before: Instant): ExerciseBests =
         PersonalRecords.bests(
             dao.getWorkingSetsBefore(exerciseId, before).groupBy { it.sessionId }.values
-                .map { sets -> sets.map { LoggedSet(it.set.weightKg, it.set.reps ?: 0, it.set.rir) } },
+                .map { sets -> sets.mapNotNull { it.set.toLift() } },
         )
 
     suspend fun deleteSet(setId: Long) = db.withTransaction {
@@ -430,7 +433,7 @@ class WorkoutRepository(
                 .mapNotNull { set -> set.reps?.let { reps -> LoggedSet(set.weightKg, reps, set.rir) } }
             val previous = previousByExercise[exerciseId].orEmpty()
                 .groupBy { it.sessionId }.values
-                .map { sets -> sets.map { LoggedSet(it.set.weightKg, it.set.reps ?: 0, it.set.rir) } }
+                .map { sets -> sets.mapNotNull { it.set.toLift() } }
             PersonalRecords.detect(logged, PersonalRecords.bests(previous)).map {
                 PersonalRecordEntity(
                     exerciseId = exerciseId,
@@ -509,3 +512,6 @@ class WorkoutRepository(
 }
 
 data class ActiveSession(val id: Long, val startedAt: Instant)
+
+/** A logged set as history for progression, records and plateaus; null when it lifted nothing (no reps). */
+internal fun SetEntryEntity.toLift(): LoggedSet? = reps?.takeIf { isLift(it) }?.let { LoggedSet(weightKg, it, rir) }

@@ -191,6 +191,23 @@ class WorkoutRepositoryTest {
         assertTrue(prefilled.none { it.isCompleted })
     }
 
+    /** A set ticked with no reps lifted nothing: it used to become the 1RM to beat. */
+    @Test
+    fun aSetTickedWithoutRepsSetsNoRecordBaseline() = runTest {
+        val first = repo.startEmptyWorkout()
+        repo.addExercises(first, listOf("barbell-bench-press"))
+        val sets = session(first).exercises.single().sets
+        repo.updateSetValues(sets[0].id, 80.0, 8, null)
+        repo.toggleSetCompleted(sets[0].id)
+        repo.updateSetValues(sets[1].id, 140.0, null, null)
+        repo.toggleSetCompleted(sets[1].id)
+        clock.advanceSeconds(3600)
+        repo.finishWorkout(first)
+
+        clock.advanceSeconds(86_400)
+        assertEquals(80.0 * (1 + 8 / 30.0), repo.bestsBefore("barbell-bench-press", clock.now()).estimatedOneRepMax!!, 1e-9)
+    }
+
     @Test
     fun addSetCopiesLastSetAndDeleteRenumbers() = runTest {
         val id = repo.startEmptyWorkout()

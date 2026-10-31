@@ -24,7 +24,6 @@
     { "text": "1 000", "result": "invalid" }
   ],
   "epley": [
-    { "weightKg": 100, "reps": 0, "oneRepMaxKg": 100 },
     { "weightKg": 100, "reps": 1, "oneRepMaxKg": 100 },
     { "weightKg": 100, "reps": 5, "oneRepMaxKg": 116.66667 },
     { "weightKg": 80, "reps": 8, "oneRepMaxKg": 101.33333 }
@@ -42,6 +41,18 @@
       "volumeKg": 1547.5,
       "oneRepMaxKg": 101.33333,
       "bestSet": { "weightKg": 82.5, "reps": 6 }
+    },
+    {
+      "name": "a failed set (0 reps) and one ticked without reps lifted nothing",
+      "exerciseId": "barbell-bench-press",
+      "sets": [
+        { "weightKg": 120, "reps": 0 },
+        { "weightKg": 140, "reps": null },
+        { "weightKg": 100, "reps": 5 }
+      ],
+      "volumeKg": 500,
+      "oneRepMaxKg": 116.66667,
+      "bestSet": { "weightKg": 100, "reps": 5 }
     },
     {
       "name": "bodyweight only",

@@ -95,7 +95,7 @@ data class WorkoutSummary(
                     ExerciseSummary(
                         exerciseName = ex.exercise.name,
                         completedSets = done.size,
-                        bestSet = done.filter { it.setType != SetType.WARMUP }
+                        bestSet = done.filter { it.setType != SetType.WARMUP && isLift(it.reps) }
                             .maxWithOrNull(bestSetOrder<WorkoutSet>({ it.weightKg }, { it.reps }))
                             ?.let { PreviousSet(it.weightKg, it.reps) },
                         timed = ex.exercise.isTimed,

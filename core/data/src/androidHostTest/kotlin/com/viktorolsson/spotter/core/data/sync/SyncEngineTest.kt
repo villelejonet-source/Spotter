@@ -56,6 +56,9 @@ class FakeRemote : SyncRemote {
     val checkIns = mutableListOf<Pair<String, DeviceCheckIn>>()
     var checkInFails = false
 
+    /** What [userId]'s backup holds now, deletion markers left out: what the website reads. */
+    fun live(userId: String): List<RemoteRow> = rows.filterKeys { it.first == userId }.values.filter { it.deletedAt == null }
+
     override suspend fun hasRows(userId: String) = rows.keys.any { it.first == userId }
 
     override suspend fun pull(userId: String, since: String?, offset: Int, limit: Int): List<RemoteRow> =

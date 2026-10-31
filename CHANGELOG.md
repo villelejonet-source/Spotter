@@ -12,6 +12,10 @@ into the new version's entry and writes the store notes from it. Versions are th
 - Restoring your backup on a new or reinstalled phone no longer leaves out workouts done on a
   plan, or a plan day, that you later deleted on the website. They come back as workouts that
   are no longer linked to that plan.
+- With Spotter on two phones, applying a suggestion ("add a set", a new rep range, a variation,
+  an extra exercise) now changes the right exercise in your plan on either phone. The two
+  phones also stop replacing each other's suggestion cards and no longer show the same card
+  twice.
 
 ### Website
 - The website fits phones better: editing a plan no longer scrolls sideways (each exercise's

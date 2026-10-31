@@ -157,7 +157,7 @@ internal fun SessionRoute(
                 viewModel.flushEdit()
                 keypad.focus(KeypadTarget(setId, field), fieldText(currentSession, currentPreferences, KeypadTarget(setId, field)))
             },
-            onWarmUps = viewModel::addWarmUps,
+            onWarmUps = viewModel::addWarmUpSet,
             onToggleSet = { exercise, setId ->
                 // Ticking a set off means it's logged: close the keypad too.
                 if (exercise.sets.none { it.id == setId && it.isCompleted }) keypad.focus(null, "")

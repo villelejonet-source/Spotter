@@ -157,11 +157,13 @@ internal fun ExerciseCard(
     modifier: Modifier = Modifier,
 ) {
     val timed = exercise.exercise.isTimed
-    // Only offered when a ramp would actually add sets (an empty-bar working weight has none).
+    // Offered one set at a time until the first working set is done, and only when a ramp
+    // would actually add sets (an empty-bar working weight has none).
     val canWarmUp = remember(exercise, preferences.weightUnit) {
+        val working = exercise.sets.filter { it.setType != SetType.WARMUP }
         exercise.exercise.mechanics == Mechanics.COMPOUND &&
-            exercise.sets.none { it.setType == SetType.WARMUP || it.isCompleted } &&
-            exercise.sets.firstOrNull { it.weightKg != null }?.weightKg
+            working.none { it.isCompleted } &&
+            working.firstOrNull { it.weightKg != null }?.weightKg
                 ?.let { WarmUps.generate(it, exercise.exercise, preferences.weightUnit).isNotEmpty() } == true
     }
     var menuOpen by remember { mutableStateOf(false) }

@@ -242,18 +242,28 @@ class WorkoutRepositoryTest {
     }
 
     @Test
-    fun warmUpsGoBeforeWorkingSetsOnce() = runTest {
+    fun eachWarmUpTapAddsOneSetBeforeTheWorkingSets() = runTest {
         val id = repo.startEmptyWorkout()
         repo.addExercises(id, listOf("barbell-bench-press"), defaultSetCount = 2)
         val exercise = session(id).exercises.single()
         exercise.sets.forEach { repo.updateSetValues(it.id, 100.0, 5, null) }
 
-        assertEquals(4, repo.addWarmUps(exercise.id, extended = false))
+        assertTrue(repo.addWarmUpSet(exercise.id, extended = false))
+        assertEquals(listOf(20.0, 100.0, 100.0), session(id).exercises.single().sets.map { it.weightKg })
+
+        repeat(4) { assertTrue(repo.addWarmUpSet(exercise.id, extended = false)) }
         val sets = session(id).exercises.single().sets
-        assertEquals(listOf(SetType.WARMUP, SetType.WARMUP, SetType.WARMUP, SetType.WARMUP, SetType.WORKING, SetType.WORKING), sets.map { it.setType })
-        assertEquals(listOf(20.0, 50.0, 70.0, 85.0, 100.0, 100.0), sets.map { it.weightKg })
-        assertEquals((0..5).toList(), sets.map { it.position })
-        assertEquals(0, repo.addWarmUps(exercise.id, extended = false))
+        assertEquals(List(5) { SetType.WARMUP } + List(2) { SetType.WORKING }, sets.map { it.setType })
+        // The ramp runs out after 85 kg, so the fifth tap repeats it.
+        assertEquals(listOf(20.0, 50.0, 70.0, 85.0, 85.0, 100.0, 100.0), sets.map { it.weightKg })
+        assertEquals((0..6).toList(), sets.map { it.position })
+    }
+
+    @Test
+    fun noWarmUpSetWithoutAWorkingWeight() = runTest {
+        val id = repo.startEmptyWorkout()
+        repo.addExercises(id, listOf("barbell-bench-press"), defaultSetCount = 1)
+        assertFalse(repo.addWarmUpSet(session(id).exercises.single().id, extended = false))
     }
 
     @Test

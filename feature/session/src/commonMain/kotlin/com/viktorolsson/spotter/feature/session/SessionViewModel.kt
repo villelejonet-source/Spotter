@@ -254,10 +254,10 @@ class SessionViewModel(
         if (records.isNotEmpty()) _prEvents.tryEmit(PrEvent(exercise.exercise.name, set.weightKg, reps, records, exercise.exercise.isTimed))
     }
 
-    /** Adds a warm-up ramp; lifters 50+ get a longer one. */
-    fun addWarmUps(exerciseId: Long) = launch {
+    /** Adds the next warm-up set of the ramp; lifters 50+ get a longer ramp. */
+    fun addWarmUpSet(exerciseId: Long) = launch {
         val age = profileRepository.get()?.birthDate?.let { it.yearsUntil(Clock.System.todayIn(TimeZone.currentSystemDefault())) }
-        workoutRepository.addWarmUps(exerciseId, extended = (age ?: 0) >= 50)
+        workoutRepository.addWarmUpSet(exerciseId, extended = (age ?: 0) >= 50)
     }
 
     /** The copy is the later action: a value still queued for this set is dropped, not written over it. */

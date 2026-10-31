@@ -126,7 +126,7 @@
     <string name="plates_none">Just the bar.</string>
     <string name="plates_not_exact">%1$s can't be loaded exactly; the closest is %2$s.</string>
     <string name="plates_not_bar">The plate calculator is for barbell exercises.</string>
-    <string name="warmup_add">Add warm-up sets</string>
+    <string name="warmup_add">Add warm-up set</string>
     <string name="pr_banner_title">New PR!</string>
     <string name="pr_banner_body">%1$s · %2$s · %3$s</string>
     <string name="pr_1rm">est. 1RM %1$s</string>

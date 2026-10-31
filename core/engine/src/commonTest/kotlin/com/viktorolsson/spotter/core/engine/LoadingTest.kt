@@ -48,6 +48,14 @@ class LoadingTest {
     }
 
     @Test
+    fun `next warm-up steps up the ramp then repeats the top step`() {
+        val steps = (0..5).map { WarmUps.next(it, 100.0, bench, WeightUnit.KG)?.weightKg }
+        assertEquals(listOf(20.0, 50.0, 70.0, 85.0, 85.0, 85.0), steps)
+        assertEquals(30.0, WarmUps.next(1, 100.0, bench, WeightUnit.KG, extended = true)?.weightKg)
+        assertEquals(null, WarmUps.next(0, 20.0, bench, WeightUnit.KG))
+    }
+
+    @Test
     fun `light working weights skip steps that would repeat or exceed`() {
         // 40 kg: bar 20 isn't < 50 % of 40, so no bar set; 20, 27.5, 32.5 remain.
         val sets = WarmUps.generate(40.0, bench, WeightUnit.KG)

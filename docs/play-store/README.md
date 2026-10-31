@@ -18,6 +18,7 @@ personal accounts.
 | 6 | 1.0.0 | First 1.x release, marking the production launch. Fixes typing in the exercise picker's search (letters dropped, cursor jumping). Built from tag `v1.0.0`; live in production 2026-10-25 (full rollout), replaced by 1.1.0 on 2026-10-31. Release notes: `release-notes-1.0.0.txt`. |
 | 7 | 1.0.1 | Sync pulls only the signed-in account's rows (needed before trainers can read client data), and a device check-in on sync (install id, versionCode, schema version) for `/admin`. Never uploaded; superseded by 1.1.0, which includes it. Release notes: `release-notes-1.0.1.txt`. |
 | 8 | 1.1.0 | 1.0.1's sync changes, plus: set edits no longer lost (#22), comma decimals and shared training math (#23), errors shown instead of crashes (#27), "today" in the phone's time zone (#29). Built from `1dc101e` (tag `android-v1.1.0`); uploaded 2026-10-30, live in production since 2026-10-31. Release notes: `release-notes-1.1.0.txt`. |
+| 9 | 1.2.0 | The app redesign (#39–#43), delete a finished workout (#33), warm-up sets one at a time, a mobility warm-up panel and a periodic plan review (#45), instant tab switching (#48). Not uploaded yet; tag `android-v1.2.0` when it is. Release notes: `release-notes-1.2.0.txt`. |
 
 Tag each uploaded build so it can be rebuilt exactly: `git tag android-v1.0.1 <commit>` from
 1.0.1 on (room for `ios-v…` tags later); earlier builds use `vX.Y.Z`. The `/release` Claude

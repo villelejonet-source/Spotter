@@ -8,21 +8,7 @@ into the new version's entry and writes the store notes from it. Versions are th
 
 ## Unreleased
 
-### Added
-- A warm-up panel at the top of every workout: tap it for 5–6 mobility drills picked for what
-  you're training (shoulder work on upper-body days, hips and ankles on leg days), and tick them
-  off as you go.
-- A plan review on Today every four weeks or so when a main lift has stalled (sooner if two
-  stall together). It shows how each main lift has moved and suggests exercises for the muscles
-  around a stalled one (for a stuck bench: incline press, close-grip bench, shoulder press) or a
-  variation to swap in. Pick what you want and apply it, keep your plan, or come back later.
-- Delete a finished workout, in the app (History → the workout → the bin icon) or on the website
-  (the workout's page → Delete workout). Its sets and any records set in it go too, on every
-  device; a scheduled day it completed shows as not done again.
-
-### Changed
-- "Add warm-up set" adds one set at a time, stepping up towards your working weight, and stays
-  until you finish your first working set, so you can add as many as you like.
+### Website
 - The website fits phones better: editing a plan no longer scrolls sideways (each exercise's
   fields stack under its name), the calendar shows dots in the month and lists the month's
   workouts below it, text fields no longer make iPhones zoom in, buttons, chips and links are
@@ -39,6 +25,30 @@ into the new version's entry and writes the store notes from it. Versions are th
   workout with this week's progress as a ring, a training heatmap, records and recent workouts.
 - The website's charts match: progress lines and body weight glow over a fading area, bar charts
   fade with the latest bar highlighted, and muscle balance shows its target range as a dashed band.
+
+### iOS (not released yet)
+- The whole app runs on iOS from the same shared code as Android (#13–#20).
+- Fixed a crash on iOS whenever the app logged a warning, such as a failed sync (#27).
+- Builds without cloud backup no longer show account buttons that couldn't work (#21).
+- The app has its icon on iOS too (it showed a blank placeholder).
+
+## 1.2.0 (9) — 2026-10-31
+
+### Added
+- A warm-up panel at the top of every workout: tap it for 5–6 mobility drills picked for what
+  you're training (shoulder work on upper-body days, hips and ankles on leg days), and tick them
+  off as you go.
+- A plan review on Today every four weeks or so when a main lift has stalled (sooner if two
+  stall together). It shows how each main lift has moved and suggests exercises for the muscles
+  around a stalled one (for a stuck bench: incline press, close-grip bench, shoulder press) or a
+  variation to swap in. Pick what you want and apply it, keep your plan, or come back later.
+- Delete a finished workout, in the app (History → the workout → the bin icon) or on the website
+  (the workout's page → Delete workout). Its sets and any records set in it go too, on every
+  device; a scheduled day it completed shows as not done again.
+
+### Changed
+- "Add warm-up set" adds one set at a time, stepping up towards your working weight, and stays
+  until you finish your first working set, so you can add as many as you like.
 - The app takes on the website's look: Spotter's own colours (a near-black dark mode with the
   orange accent, and a matching light mode), the Geist fonts with monospace numbers, outlined
   cards, a glowing main button and a new tab bar. Android's wallpaper colours (Material You) are
@@ -64,12 +74,6 @@ into the new version's entry and writes the store notes from it. Versions are th
 - Switching between the bottom tabs is instant. It used to fade for most of a second, so the
   previous tab showed behind the new one, and tapping quickly between two tabs could leave them
   stuck mid-fade for a moment (most visible on iPhone).
-
-### iOS (not released yet)
-- The whole app runs on iOS from the same shared code as Android (#13–#20).
-- Fixed a crash on iOS whenever the app logged a warning, such as a failed sync (#27).
-- Builds without cloud backup no longer show account buttons that couldn't work (#21).
-- The app has its icon on iOS too (it showed a blank placeholder).
 
 ## 1.1.0 (8) — 2026-10-30
 

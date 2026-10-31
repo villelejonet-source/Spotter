@@ -79,6 +79,8 @@ class SyncEngine(
     private val clock: Clock,
     /** The exercise catalog version this install has applied (ExerciseSeeder). */
     private val catalogVersion: suspend () -> Int = { 0 },
+    /** Rows per pull request and push batch. */
+    private val pageSize: Int = PAGE,
     /** What this install reports after each sync; null reports nothing. */
     private val device: suspend () -> DeviceCheckIn? = { null },
 ) {
@@ -112,13 +114,13 @@ class SyncEngine(
         // Pull page by page, applying each as it arrives so a large backup never sits in
         // memory. Rows whose parent is in a later page are retried once the pull is done.
         val since = cursor.pulledUpTo?.let(::withOverlap)
-        var offset = 0
+        var after: PageKey? = null
         var pulled = 0
         var newestServerTime: Instant? = null
         var newPulledUpTo = cursor.pulledUpTo
         val deferred = mutableListOf<SyncRow>()
         while (true) {
-            val page = remote.pull(userId, since, offset, PAGE)
+            val page = remote.pull(userId, since, after, pageSize)
             pulled += page.size
             page.forEach { row ->
                 val at = parse(row.serverUpdatedAt)
@@ -128,8 +130,8 @@ class SyncEngine(
                 }
             }
             deferred += store.applyAll(page.map { it.toSyncRow() }).deferred
-            if (page.size < PAGE) break
-            offset += PAGE
+            if (page.size < pageSize) break
+            after = page.last().let { PageKey(it.serverUpdatedAt, it.syncId) }
         }
         if (deferred.isNotEmpty()) {
             // A row whose parent still isn't here after every page was deleted elsewhere (or
@@ -148,7 +150,7 @@ class SyncEngine(
         // The server ignores the repeats.
         val pushStartedAt = clock.now().toEpochMilliseconds()
         val changes = store.changesSince(cursor.pushedUpTo - PUSH_OVERLAP_MS)
-        changes.chunked(PAGE).forEach { remote.push(it) }
+        changes.chunked(pageSize).forEach { remote.push(it) }
 
         cursors.save(SyncCursor(userId, newPulledUpTo, pushStartedAt, clock.now().toEpochMilliseconds(), catalog))
         checkIn()
@@ -175,7 +177,7 @@ class SyncEngine(
 
     private fun parse(serverTime: String): Instant = Instant.parse(serverTime)
 
-    private companion object {
+    companion object {
         const val PAGE = 500
         const val PUSH_OVERLAP_MS = 10_000L
         const val TAG = "SpotterSync"

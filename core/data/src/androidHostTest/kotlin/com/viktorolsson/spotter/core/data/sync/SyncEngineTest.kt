@@ -60,6 +60,16 @@ class FakeRemote : SyncRemote {
     val checkIns = mutableListOf<Pair<String, DeviceCheckIn>>()
     var checkInFails = false
 
+    /** Runs once, after the next page is served: another device writing mid-pull. */
+    var afterNextPage: (() -> Unit)? = null
+
+    /** Another device saves the oldest row again: the server moves it to the end. */
+    fun touchOldest() {
+        val (key, row) = rows.entries.minBy { Instant.parse(it.value.serverUpdatedAt) }
+        serverTime = serverTime + 1.milliseconds
+        rows[key] = row.copy(updatedAt = row.updatedAt + 1, serverUpdatedAt = serverTime.toString())
+    }
+
     /** Time passes on the server (beyond the pull's overlap window). */
     fun advance(by: kotlin.time.Duration) {
         serverTime += by
@@ -67,11 +77,18 @@ class FakeRemote : SyncRemote {
 
     override suspend fun hasRows(userId: String) = rows.keys.any { it.first == userId }
 
-    override suspend fun pull(userId: String, since: String?, offset: Int, limit: Int): List<RemoteRow> =
+    override suspend fun pull(userId: String, since: String?, after: PageKey?, limit: Int): List<RemoteRow> =
         rows.filterKeys { it.first == userId }.values
             .filter { since == null || Instant.parse(it.serverUpdatedAt) > Instant.parse(since) }
-            .sortedBy { Instant.parse(it.serverUpdatedAt) }
-            .drop(offset).take(limit)
+            .filter { row ->
+                after == null || Instant.parse(row.serverUpdatedAt).let { at ->
+                    val afterAt = Instant.parse(after.serverUpdatedAt)
+                    at > afterAt || (at == afterAt && row.syncId > after.syncId)
+                }
+            }
+            .sortedWith(compareBy({ Instant.parse(it.serverUpdatedAt) }, { it.syncId }))
+            .take(limit)
+            .also { afterNextPage?.invoke(); afterNextPage = null }
 
     override suspend fun push(rows: List<SyncRow>) {
         pushes++
@@ -97,7 +114,7 @@ class SyncEngineTest {
     private val devices = mutableListOf<Device>()
 
     /** One phone: its own database, repositories and sync engine. */
-    inner class Device(private val userId: String = USER, engineClock: Clock = Clock.System) {
+    inner class Device(private val userId: String = USER, engineClock: Clock = Clock.System, pageSize: Int = SyncEngine.PAGE) {
         val db: SpotterDatabase = testDatabase()
         val clock = MutableClock(Instant.parse("2026-10-03T10:00:00Z"))
         val prefs = testPreferences(db)
@@ -109,7 +126,9 @@ class SyncEngineTest {
         val checkIn = DeviceCheckIn("install-$userId", versionCode = 7, schemaVersion = 8)
         /** The exercise catalog this install has applied (ExerciseSeeder). */
         var catalogVersion = 1
-        val engine = SyncEngine(LocalSyncStore(db), remote, SyncCursorStore(prefsStore()), engineClock, catalogVersion = { catalogVersion }) { checkIn }
+        val engine = SyncEngine(
+            LocalSyncStore(db), remote, SyncCursorStore(prefsStore()), engineClock, catalogVersion = { catalogVersion }, pageSize = pageSize,
+        ) { checkIn }
 
         suspend fun seed() = db.exerciseDao().upsertAll(
             parseExerciseSeed(File("catalog/exercises.json").readText()).exercises.map(SeedExercise::toEntity),
@@ -127,8 +146,8 @@ class SyncEngineTest {
         File.createTempFile("sync", ".preferences_pb").apply { delete(); deleteOnExit() }
     }
 
-    private suspend fun device(userId: String = USER, engineClock: Clock = Clock.System) =
-        Device(userId, engineClock).also { it.seed(); devices += it }
+    private suspend fun device(userId: String = USER, engineClock: Clock = Clock.System, pageSize: Int = SyncEngine.PAGE) =
+        Device(userId, engineClock, pageSize).also { it.seed(); devices += it }
 
     @After
     fun tearDown() = devices.forEach { it.db.close() }
@@ -420,6 +439,23 @@ class SyncEngineTest {
         assertEquals(12, b.bodyWeight.observeTrend().first().size)
         assertEquals(a.plans.observeActivePlan().first()!!.days.size, b.plans.observeActivePlan().first()!!.days.size)
         assertEquals(1, b.sessions().size)
+    }
+
+    /**
+     * The pull pages through rows ordered by server time. Paged by offset, a row another
+     * device saved again mid-pull moved to the end and shifted the rest down, so the first
+     * row of the next page was never fetched.
+     */
+    @Test
+    fun aRowSavedElsewhereMidPullDoesNotHideAnother() = runTest {
+        val a = device()
+        repeat(12) { a.bodyWeight.log(LocalDate(2026, 1, 1).plus(it.toLong(), DateTimeUnit.DAY), 80.0 + it) }
+        a.sync()
+
+        val b = device(pageSize = 5)
+        remote.afterNextPage = { remote.touchOldest() }
+        b.sync()
+        assertEquals(12, b.bodyWeight.observeTrend().first().size)
     }
 
     @Test

@@ -37,6 +37,8 @@ into the new version's entry and writes the store notes from it. Versions are th
 - An exercise added on the website that your app doesn't know yet (the website gets new
   exercises before the app update does) now shows up on the phone once the app is updated,
   instead of never. The first sync after updating fetches the backup again to pick it up.
+- Restoring a large backup while another phone or the website saves changes no longer misses
+  a record now and then.
 
 ### Website
 - New timed holds in the plan editor progress like every other exercise (a few seconds longer

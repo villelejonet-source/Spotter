@@ -79,5 +79,14 @@ object WarmUps {
         return sets
     }
 
+    /**
+     * The warm-up set to add after [done] warm-ups: the next step of the ramp, lightest
+     * first, then the top step again once the ramp has run out. Null when there's no ramp.
+     */
+    fun next(done: Int, workingKg: Double, exercise: Exercise, unit: WeightUnit, extended: Boolean = false): SetTarget? {
+        val ramp = generate(workingKg, exercise, unit, extended)
+        return ramp.getOrNull(done) ?: ramp.lastOrNull()
+    }
+
     private const val EPS = 1e-6
 }

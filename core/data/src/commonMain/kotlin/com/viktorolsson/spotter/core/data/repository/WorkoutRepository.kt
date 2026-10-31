@@ -336,22 +336,22 @@ class WorkoutRepository(
     }
 
     /**
-     * Adds a warm-up ramp before the working sets, based on the first working set's
-     * weight. Does nothing if warm-ups are already there or the weight isn't set.
-     * Returns how many sets were added.
+     * Adds one warm-up set after the existing warm-ups: the next step of the ramp for the
+     * first working set's weight, or the top step again once the ramp has run out.
+     * Returns false when there's nothing to add (no weight set, or no ramp for it).
      */
-    suspend fun addWarmUps(sessionExerciseId: Long, extended: Boolean): Int = db.withTransaction {
-        val entry = dao.getSessionExercise(sessionExerciseId) ?: return@withTransaction 0
+    suspend fun addWarmUpSet(sessionExerciseId: Long, extended: Boolean): Boolean = db.withTransaction {
+        val entry = dao.getSessionExercise(sessionExerciseId) ?: return@withTransaction false
         val sets = dao.getSets(sessionExerciseId)
-        if (sets.any { it.setType == SetType.WARMUP }) return@withTransaction 0
-        val working = sets.firstOrNull { it.weightKg != null }?.weightKg ?: return@withTransaction 0
-        val exercise = exerciseDao.getById(entry.exerciseId)?.toModel() ?: return@withTransaction 0
+        val (warmUps, working) = sets.partition { it.setType == SetType.WARMUP }
+        val workingKg = working.firstOrNull { it.weightKg != null }?.weightKg ?: return@withTransaction false
+        val exercise = exerciseDao.getById(entry.exerciseId)?.toModel() ?: return@withTransaction false
         val unit = preferences.preferences.first().weightUnit
-        val ramp = WarmUps.generate(working, exercise, unit, extended)
-        if (ramp.isEmpty()) return@withTransaction 0
-        dao.updateSets(sets.map { it.copy(position = it.position + ramp.size) })
-        dao.insertSets(ramp.mapIndexed { i, t -> newSet(sessionExerciseId, i, t.weightKg, t.reps, SetType.WARMUP) })
-        ramp.size
+        val next = WarmUps.next(warmUps.size, workingKg, exercise, unit, extended) ?: return@withTransaction false
+        val position = warmUps.size
+        dao.updateSets(sets.filter { it.position >= position }.map { it.copy(position = it.position + 1) })
+        dao.insertSets(listOf(newSet(sessionExerciseId, position, next.weightKg, next.reps, SetType.WARMUP)))
+        true
     }
 
     /** Best results for [exerciseId] from sessions before [before]; the baseline for live PRs. */

@@ -1,0 +1,10 @@
+<en-US>
+• A new look: near-black dark mode with an orange accent, and a new tab bar
+• Today is a dashboard: your next workout, weekly progress and training days
+• Mobility warm-up drills at the top of every workout
+• Add warm-up sets one at a time, stepping up to your working weight
+• A plan review suggests exercises when a main lift stalls
+• Delete a finished workout from History
+• Bigger set rows, a clearer rest timer, and a buzz when you tick a set
+• Switching tabs is instant
+</en-US>

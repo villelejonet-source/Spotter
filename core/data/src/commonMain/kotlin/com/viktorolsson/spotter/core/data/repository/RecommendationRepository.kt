@@ -73,13 +73,21 @@ class RecommendationRepository(
             // One read of the recommendation table serves both the engine's context and the diff below.
             val existing = dao.getAll()
             val context = buildContext(existing) ?: return@withTransaction
-            val drafts = RecommendationEngine.evaluate(context)
+            val drafts = RecommendationEngine.evaluate(context).map { it.copy(payload = it.payload.copy(action = withSyncIds(it.payload.action))) }
             val now = clock.now()
-            val active = existing.filter { it.status == RecommendationStatus.ACTIVE }.associateBy { it.dedupKey }
+            // Two phones can each add the same card before they sync: every phone keeps the
+            // oldest, so they agree on which one stays.
+            val groups = existing.filter { it.status == RecommendationStatus.ACTIVE }.groupBy { it.dedupKey }.values
+                .map { it.sortedWith(compareBy({ rec -> rec.createdAt }, { rec -> rec.syncId })) }
+            val active = groups.associate { it.first().dedupKey to it.first() }
+            val duplicates = groups.flatMap { it.drop(1) }
             val byKey = drafts.associateBy(::keyOf)
-            // Cards whose problem went away, or whose best fix changed, are replaced.
-            val outdated = active.values.filter { rec -> byKey[rec.dedupKey]?.payload?.encode() != rec.payload }
-            if (outdated.isNotEmpty()) dao.delete(outdated.map { it.id })
+            // Cards whose problem went away, or whose best fix changed, are replaced. Row ids
+            // differ per phone, so a card synced from another phone is compared without them.
+            val outdated = active.values.filter { rec ->
+                byKey[rec.dedupKey]?.payload?.withoutRowIds() != RecommendationPayload.decode(rec.payload).withoutRowIds()
+            }
+            if (outdated.isNotEmpty() || duplicates.isNotEmpty()) dao.delete((outdated + duplicates).map { it.id })
             val coolingDown = existing
                 .filter { it.resolvedAt != null && (now - it.resolvedAt) < COOLDOWN }
                 .map { it.dedupKey }.toSet()
@@ -107,11 +115,25 @@ class RecommendationRepository(
     }
 
     /** Applies the suggestion to the plan (or starts a deload week) and marks it applied. */
-    suspend fun apply(id: Long) {
-        val rec = dao.get(id)?.toModel() ?: return
+    suspend fun apply(id: Long) = apply(id, remake = true)
+
+    private suspend fun apply(id: Long, remake: Boolean) {
+        val entity = dao.get(id) ?: return
+        val rec = entity.toModel()
+        val action = onThisPhone(rec.payload.action)
+        if (action == null) {
+            // The card's plan rows aren't here (deleted, not synced yet, or a card from before
+            // cards named rows by sync id). Make it again from this phone's plan, and apply the
+            // new card only if it's the same change the lifter saw.
+            dao.delete(listOf(id))
+            refresh()
+            val again = dao.getAll().firstOrNull { it.status == RecommendationStatus.ACTIVE && it.dedupKey == entity.dedupKey }
+            if (remake && again != null && RecommendationPayload.decode(again.payload).withoutIds() == rec.payload.withoutIds()) apply(again.id, remake = false)
+            return
+        }
         val unit = preferences.preferences.first().weightUnit
         db.withTransaction {
-            applyAction(rec.payload.action, unit)
+            applyAction(action, unit)
             dao.resolve(id, RecommendationStatus.APPLIED, clock.now())
         }
         refresh()
@@ -150,7 +172,7 @@ class RecommendationRepository(
                     RecommendationEntity(
                         type = if (choice.action is RecommendationAction.SwapVariation) RecommendationType.VARIATION else RecommendationType.ADD_ACCESSORY,
                         exerciseId = choice.exerciseId,
-                        payload = RecommendationPayload(choice.action, RecommendationEvidence(exerciseName = choice.exerciseName)).encode(),
+                        payload = RecommendationPayload(withSyncIds(choice.action), RecommendationEvidence(exerciseName = choice.exerciseName)).encode(),
                         createdAt = now,
                         status = RecommendationStatus.APPLIED,
                         resolvedAt = now,
@@ -233,7 +255,10 @@ class RecommendationRepository(
         val applied = all
             .filter { it.status == RecommendationStatus.APPLIED && it.type == RecommendationType.VARIATION }
             .mapNotNull { rec ->
-                val action = RecommendationPayload.decode(rec.payload).action as? RecommendationAction.SwapVariation
+                val swap = RecommendationPayload.decode(rec.payload).action as? RecommendationAction.SwapVariation
+                // A swap from before cards named rows by sync id keeps its row id (the engine
+                // also checks the slot's exercise).
+                val action = if (swap?.planExerciseSyncId == null) swap else onThisPhone(swap) as? RecommendationAction.SwapVariation
                 val on = rec.resolvedAt?.toLocalDateTime(zone)?.date
                 if (action != null && on != null) AppliedVariation(action, on) else null
             }
@@ -262,7 +287,7 @@ class RecommendationRepository(
      */
     private fun keyOf(draft: RecommendationDraft): String = when (val action = draft.payload.action) {
         is RecommendationAction.Deload -> "deload"
-        is RecommendationAction.SwapVariation if action.returning -> "return|${action.planExerciseId}"
+        is RecommendationAction.SwapVariation if action.returning -> "return|${action.planExerciseSyncId ?: action.planExerciseId}"
         else -> when (draft.type) {
             RecommendationType.INCREASE_FREQUENCY -> "frequency|${draft.payload.evidence.group}"
             else -> plateauKey(draft.exerciseId)
@@ -270,6 +295,61 @@ class RecommendationRepository(
     }
 
     private fun plateauKey(exerciseId: String?) = "plateau|$exerciseId"
+
+    /** [action] with the sync ids of the plan rows it names, so it means the same rows on every phone. */
+    private suspend fun withSyncIds(action: RecommendationAction): RecommendationAction = when (action) {
+        is RecommendationAction.AddExercise ->
+            action.copy(planDaySyncId = planDao.daySyncIds(listOf(action.planDayId)).firstOrNull()?.syncId)
+        is RecommendationAction.AddSets -> {
+            val syncIds = planDao.exerciseSyncIds(action.planExerciseIds).associate { it.id to it.syncId }
+            action.copy(planExerciseSyncIds = action.planExerciseIds.map { syncIds[it] ?: return action })
+        }
+        is RecommendationAction.ChangeRepRange ->
+            action.copy(planExerciseSyncId = planDao.exerciseSyncIds(listOf(action.planExerciseId)).firstOrNull()?.syncId)
+        is RecommendationAction.SwapVariation ->
+            action.copy(planExerciseSyncId = planDao.exerciseSyncIds(listOf(action.planExerciseId)).firstOrNull()?.syncId)
+        is RecommendationAction.Deload -> action
+    }
+
+    /** [action] with this phone's row ids, found by sync id; null when a row isn't here or the card has no sync ids. */
+    private suspend fun onThisPhone(action: RecommendationAction): RecommendationAction? = when (action) {
+        is RecommendationAction.AddExercise ->
+            action.planDaySyncId?.let { planDao.dayIds(listOf(it)).firstOrNull() }?.let { action.copy(planDayId = it.id) }
+        is RecommendationAction.AddSets -> {
+            val ids = planDao.exerciseIds(action.planExerciseSyncIds).associate { it.syncId to it.id }
+            val local = action.planExerciseSyncIds.map { ids[it] ?: return null }
+            if (local.isEmpty() || local.size != action.planExerciseIds.size) null else action.copy(planExerciseIds = local)
+        }
+        is RecommendationAction.ChangeRepRange ->
+            action.planExerciseSyncId?.let { planDao.exerciseIds(listOf(it)).firstOrNull() }?.let { action.copy(planExerciseId = it.id) }
+        is RecommendationAction.SwapVariation ->
+            action.planExerciseSyncId?.let { planDao.exerciseIds(listOf(it)).firstOrNull() }?.let { action.copy(planExerciseId = it.id) }
+        is RecommendationAction.Deload -> action
+    }
+
+    /** The card as every phone sees it: without this phone's row ids. */
+    private fun RecommendationPayload.withoutRowIds() = copy(
+        action = when (val a = action) {
+            is RecommendationAction.AddExercise -> a.copy(planDayId = 0)
+            is RecommendationAction.AddSets -> a.copy(planExerciseIds = emptyList())
+            is RecommendationAction.ChangeRepRange -> a.copy(planExerciseId = 0)
+            is RecommendationAction.SwapVariation -> a.copy(planExerciseId = 0)
+            is RecommendationAction.Deload -> a
+        },
+    )
+
+    /** The change the card shows, whichever rows it names. */
+    private fun RecommendationPayload.withoutIds() = withoutRowIds().let {
+        it.copy(
+            action = when (val a = it.action) {
+                is RecommendationAction.AddExercise -> a.copy(planDaySyncId = null)
+                is RecommendationAction.AddSets -> a.copy(planExerciseSyncIds = emptyList())
+                is RecommendationAction.ChangeRepRange -> a.copy(planExerciseSyncId = null)
+                is RecommendationAction.SwapVariation -> a.copy(planExerciseSyncId = null)
+                is RecommendationAction.Deload -> a
+            },
+        )
+    }
 
     private companion object {
         val COOLDOWN: Duration = 28.days

@@ -28,6 +28,12 @@ data class RecommendationPayload(
     }
 }
 
+/**
+ * Plan rows are named twice: by this phone's row id (`planDayId`, `planExerciseId`), which
+ * means another row on any other phone, and by sync id (`planDaySyncId`, …), the same row on
+ * every phone. Cards sync, so a card is applied through its sync ids; the row ids stay for
+ * app versions up to 1.2.0, which read only those.
+ */
 @Serializable
 sealed interface RecommendationAction {
     /** Adds an exercise to a plan day (weak-point accessory, or more frequency for a muscle). */
@@ -43,12 +49,17 @@ sealed interface RecommendationAction {
         val repMax: Int,
         val targetRir: Int?,
         val restSeconds: Int,
+        val planDaySyncId: String? = null,
     ) : RecommendationAction
 
     /** One more set on each listed plan exercise. */
     @Serializable
     @SerialName("add_sets")
-    data class AddSets(val planExerciseIds: List<Long>, val exerciseNames: List<String>) : RecommendationAction
+    data class AddSets(
+        val planExerciseIds: List<Long>,
+        val exerciseNames: List<String>,
+        val planExerciseSyncIds: List<String> = emptyList(),
+    ) : RecommendationAction
 
     @Serializable
     @SerialName("change_rep_range")
@@ -60,6 +71,7 @@ sealed interface RecommendationAction {
         val sets: Int,
         val repMin: Int,
         val repMax: Int,
+        val planExerciseSyncId: String? = null,
     ) : RecommendationAction
 
     /** Replaces a plan exercise with a variation; [returning] marks the swap back afterwards. */
@@ -73,6 +85,7 @@ sealed interface RecommendationAction {
         val toName: String,
         val weeks: Int,
         val returning: Boolean = false,
+        val planExerciseSyncId: String? = null,
     ) : RecommendationAction
 
     /** A lighter week: fewer sets and ~10 % less weight in planned workouts. */

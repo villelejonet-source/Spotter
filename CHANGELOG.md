@@ -24,6 +24,8 @@ into the new version's entry and writes the store notes from it. Versions are th
 - A set ticked with 0 reps, or with the reps left blank, no longer counts as a lift: it isn't
   the best set, doesn't give a 1RM or a record, doesn't block later records, and doesn't raise
   the next workout's weight. The website's exercise progress skips it too.
+- A change made at the very moment a sync started could be left out of the backup until it was
+  edited again. Now it goes with the next sync.
 
 ### Website
 - New timed holds in the plan editor progress like every other exercise (a few seconds longer

@@ -16,13 +16,16 @@ into the new version's entry and writes the store notes from it. Versions are th
   stall together). It shows how each main lift has moved and suggests exercises for the muscles
   around a stalled one (for a stuck bench: incline press, close-grip bench, shoulder press) or a
   variation to swap in. Pick what you want and apply it, keep your plan, or come back later.
- in the app (History → the workout → the bin icon) or on the website
+- Delete a finished workout, in the app (History → the workout → the bin icon) or on the website
   (the workout's page → Delete workout). Its sets and any records set in it go too, on every
   device; a scheduled day it completed shows as not done again.
 
 ### Changed
 - "Add warm-up set" adds one set at a time, stepping up towards your working weight, and stays
   until you finish your first working set, so you can add as many as you like.
+- The website switches between pages faster: a page you've just visited opens instantly instead
+  of loading again, Today and Insights fetch all their cards at once, every section shows its
+  outline the moment you tap it, and scrolling on phones is smoother.
 - The website has a new look: dark-first with a glowing orange accent, monospace numbers, a new
   sidebar, and a "Jump to…" command palette (⌘K) to reach any page or action. Light mode
   follows your system setting.

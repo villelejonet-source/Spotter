@@ -127,6 +127,41 @@ Fix the cause. If that's impossible, suppress the single spot with a comment say
 - After a schema change, regenerate `web/src/lib/supabase/database.types.ts`. CI fails when
   it's stale, and `schema-check.ts` fails the type check when a column the website reads changed.
 
+## Website: fast by default, phone first
+
+Most visits are on a phone, and every page is rendered on the server per request, so each
+new page or card follows these rules:
+
+- **Data:** read through `web/src/lib/data.ts` only (each query wrapped in `cache()`, with
+  primitive arguments). Filter, window and limit on the server, select only the columns
+  shown, and never load a whole history to filter it in JavaScript. Windows start on
+  `weekStart`/`windowStart`, not a raw `Date.now()`, so the same query from two cards
+  shares one fetch.
+- **No waterfalls:** independent queries go in one `Promise.all`. The page shell renders at
+  once and each card awaits its own data inside its own `<Suspense>`. If the page must await
+  something first (an empty-account check), start the cards' queries with `preload()`
+  before it (see Today and Insights).
+- **Every route has a `loading.tsx`** shaped like the page, so a tap shows the new page
+  straight away.
+- **Writes go through `push()`** (`lib/push.ts`), which calls `revalidatePath`. The browser
+  keeps visited pages for 30 s (`staleTimes` in `next.config.ts`), so a write path that skips
+  `revalidatePath` would leave stale pages on screen.
+- **Client JavaScript stays small:** `"use client"` only on the interactive leaf, never on a
+  whole page. Heavy libraries load with `next/dynamic` (the `components/charts.tsx`
+  pattern). Check the route table from `next build`: a page's first-load JS should stay near
+  the shared ~105 kB. Navigate with `<Link>` (it prefetches), not `<a>` or `router.push`
+  for plain links.
+- **Cheap to scroll:** no `backdrop-filter` and no `background-attachment: fixed` on
+  anything that scrolls or sits over scrolling content on phones. Animate only `transform`
+  and `opacity`.
+- **Phone first:** build at 375 px wide, then add `sm:`/`md:` for bigger screens. Nothing
+  scrolls sideways except a deliberate `overflow-x-auto` strip. Tap targets are at least
+  44 px tall. Form fields use 16 px text on phones, because iOS zooms into smaller text.
+  Keep the bottom tab bar's space clear (`pb-28` on `main`).
+- **Measure, don't guess:** for anything affecting speed, time a production build
+  (`npm --prefix web run build && npm --prefix web start`), not `next dev`, and put the
+  before/after in the PR.
+
 ## Conventions that bite
 
 - **Strings:** wording shared with the website changes in the app's strings and

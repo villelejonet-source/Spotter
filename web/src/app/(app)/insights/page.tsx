@@ -5,7 +5,7 @@ import { BarChartView } from "@/components/charts";
 import { TrainingHeatmap, heatmapStart } from "@/components/training-heatmap";
 import { Card, CardTitle, EmptyState, PageHeader, Stat } from "@/components/ui";
 import { exerciseName } from "@/lib/catalog";
-import { getCatalog, getFinishedSessionCount, getPersonalRecords, getProfile, getRecordCount, getSessionTimes, getSetHistory, getUnit } from "@/lib/data";
+import { getCatalog, getFinishedSessionCount, getPersonalRecords, getProfile, getRecordCount, getSessionTimes, getSetHistory, getUnit, preload } from "@/lib/data";
 import { formatDateValueMonthShort, formatFullDate } from "@/lib/dates";
 import { GOAL_LABELS, label, PR_LABELS } from "@/lib/labels";
 import { formatDuration, formatRecord, volumeTarget } from "@/lib/model";
@@ -14,9 +14,12 @@ import { DAY_MS, finished, localDate, muscleVolume, WEEK_MS, weeklyTotals, worko
 export const metadata = { title: "Insights" };
 
 const HEATMAP_WEEKS = 53;
+const LATEST_RECORDS = { limit: 8 };
 
 /** Training balance, consistency and records; the page shell shows first and each card streams in. */
 export default async function InsightsPage() {
+  // The cards' queries start now, alongside the empty-account check, instead of after it.
+  preload(getSessionTimes(heatmapStart(HEATMAP_WEEKS)), getRecordCount(), getCatalog(), getPersonalRecords(LATEST_RECORDS));
   const [count, profile] = await Promise.all([getFinishedSessionCount(), getProfile()]);
   if (count === 0) {
     return (
@@ -162,7 +165,7 @@ async function RecordsPerMonth() {
 }
 
 async function LatestRecords() {
-  const [records, catalog, unit] = await Promise.all([getPersonalRecords({ limit: 8 }), getCatalog(), getUnit()]);
+  const [records, catalog, unit] = await Promise.all([getPersonalRecords(LATEST_RECORDS), getCatalog(), getUnit()]);
   return (
     <>
       <CardTitle>Recent PRs</CardTitle>

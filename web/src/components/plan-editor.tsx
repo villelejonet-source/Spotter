@@ -310,7 +310,7 @@ export function PlanEditor({
         </Button>
       </div>
 
-      <div className="sticky bottom-14 -mx-4 flex items-center justify-end gap-3 border-t border-outline bg-background/95 px-4 py-3 backdrop-blur md:bottom-0 md:-mx-10 md:px-10">
+      <div className="sticky bottom-14 -mx-4 flex items-center justify-end gap-3 border-t border-outline bg-background/95 px-4 py-3 md:bottom-0 md:-mx-10 md:px-10">
         {error ? (
           <InlineMessage tone="error" className="mr-auto">
             {error}

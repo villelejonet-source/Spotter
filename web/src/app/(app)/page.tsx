@@ -6,7 +6,7 @@ import { Sparkline } from "@/components/sparkline";
 import { TrainingHeatmap, heatmapStart } from "@/components/training-heatmap";
 import { Badge, Card, CardTitle, Delta, EmptyState, LinkButton, PageHeader, Stat } from "@/components/ui";
 import { exerciseName } from "@/lib/catalog";
-import { getActivePlan, getCatalog, getFinishedSessionCount, getPersonalRecords, getPlanDay, getProfile, getScheduled, getSessionTimes, getSessions, getUnit } from "@/lib/data";
+import { getActivePlan, getCatalog, getFinishedSessionCount, getPersonalRecords, getPlanDay, getProfile, getScheduled, getSessionTimes, getSessions, getUnit, preload } from "@/lib/data";
 import { formatDateValue, formatFullDate, formatRelative } from "@/lib/dates";
 import { APP_BACKUP_PATH, FREE_WORKOUT, PR_LABELS, WORKOUT } from "@/lib/labels";
 import { formatDuration, formatRecord, formatTarget, formatVolume, toUnit } from "@/lib/model";
@@ -31,6 +31,16 @@ const rangeOf = (key: string | undefined) => RANGES.find((r) => r.key === key) ?
  * volume and what's new. Each card loads on its own.
  */
 export default async function TodayPage({ searchParams }: { searchParams: Promise<{ range?: string }> }) {
+  // The cards' queries start now, alongside the empty-account check, instead of after it.
+  preload(
+    recentSessions(),
+    getProfile(),
+    getCatalog(),
+    getScheduled(nextScheduled()),
+    getSessionTimes(heatmapStart(HEATMAP_WEEKS)),
+    getSessions(RECENT),
+    getPersonalRecords(RECENT),
+  );
   const [count, activePlan] = await Promise.all([getFinishedSessionCount(), getActivePlan()]);
 
   if (count === 0 && !activePlan) {
@@ -95,6 +105,10 @@ export default async function TodayPage({ searchParams }: { searchParams: Promis
 }
 
 const recentSessions = () => getSessions({ since: windowStart(WEEKS) });
+/** The first open workout on the calendar from today on. */
+const nextScheduled = () => ({ fromDay: localDate(Date.now()) / DAY_MS, open: true, limit: 1 });
+/** How many recent workouts and records the cards list. */
+const RECENT = { limit: 5 };
 
 async function WeekStats({ total }: { total: number }) {
   const [sessions, profile, unit] = await Promise.all([recentSessions(), getProfile(), getUnit()]);
@@ -211,7 +225,7 @@ async function NextWorkout() {
   const todayDay = localDate(Date.now()) / DAY_MS;
   const [activePlan, [planned], sessions, catalog, profile] = await Promise.all([
     getActivePlan(),
-    getScheduled({ fromDay: todayDay, open: true, limit: 1 }),
+    getScheduled(nextScheduled()),
     recentSessions(),
     getCatalog(),
     getProfile(),
@@ -276,7 +290,7 @@ async function NextWorkout() {
 }
 
 async function RecentWorkouts() {
-  const [sessions, unit] = await Promise.all([getSessions({ limit: 5 }), getUnit()]);
+  const [sessions, unit] = await Promise.all([getSessions(RECENT), getUnit()]);
   const last = finished(sessions)[0];
   return (
     <>
@@ -317,7 +331,7 @@ async function RecentWorkouts() {
 }
 
 async function RecentRecords() {
-  const [records, catalog, unit] = await Promise.all([getPersonalRecords({ limit: 5 }), getCatalog(), getUnit()]);
+  const [records, catalog, unit] = await Promise.all([getPersonalRecords(RECENT), getCatalog(), getUnit()]);
   return (
     <>
       <CardTitle

@@ -16,6 +16,8 @@ import com.viktorolsson.spotter.core.data.sync.SyncRepository
 import com.viktorolsson.spotter.core.engine.DetectedRecord
 import com.viktorolsson.spotter.core.engine.ExerciseBests
 import com.viktorolsson.spotter.core.engine.LoggedSet
+import com.viktorolsson.spotter.core.engine.MobilityDrill
+import com.viktorolsson.spotter.core.engine.MobilityWarmUp
 import com.viktorolsson.spotter.core.engine.PersonalRecords
 import com.viktorolsson.spotter.core.model.Equipment
 import com.viktorolsson.spotter.core.model.Exercise
@@ -103,6 +105,8 @@ data class SessionUiState(
     val previous: Map<String, List<PreviousSet>> = emptyMap(),
     val preferences: UserPreferences = UserPreferences(),
     val restTimer: RestTimer? = null,
+    /** Mobility drills for the warm-up panel, chosen from what the session trains. */
+    val warmUp: List<MobilityDrill> = emptyList(),
 )
 
 @OptIn(ExperimentalCoroutinesApi::class)
@@ -176,7 +180,10 @@ class SessionViewModel(
         val shown = if (hidden.isEmpty() || session == null) session else session.copy(
             exercises = session.exercises.map { ex -> ex.copy(sets = ex.sets.filter { it.id !in hidden }) },
         )
-        SessionUiState(loading = false, session = shown, previous = previous, preferences = prefs, restTimer = rest)
+        val warmUp = MobilityWarmUp.forSession(
+            shown?.exercises.orEmpty().map { ex -> ex.exercise to ex.sets.count { it.setType != SetType.WARMUP } },
+        )
+        SessionUiState(loading = false, session = shown, previous = previous, preferences = prefs, restTimer = rest, warmUp = warmUp)
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), SessionUiState())
 
     private val prefs get() = uiState.value.preferences
@@ -253,6 +260,12 @@ class SessionViewModel(
             .filter { it.type != PersonalRecordType.VOLUME }
         if (records.isNotEmpty()) _prEvents.tryEmit(PrEvent(exercise.exercise.name, set.weightKg, reps, records, exercise.exercise.isTimed))
     }
+
+    private val _warmUpDone = MutableStateFlow<Set<MobilityDrill>>(emptySet())
+    /** Warm-up drills ticked off; kept for this screen only, never logged. */
+    val warmUpDone: StateFlow<Set<MobilityDrill>> = _warmUpDone.asStateFlow()
+
+    fun toggleDrill(drill: MobilityDrill) = _warmUpDone.update { if (drill in it) it - drill else it + drill }
 
     /** Adds the next warm-up set of the ramp; lifters 50+ get a longer ramp. */
     fun addWarmUpSet(exerciseId: Long) = launch {

@@ -21,6 +21,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
+import com.viktorolsson.spotter.core.engine.MobilityDrill
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.StandardTestDispatcher
@@ -33,6 +34,7 @@ import kotlinx.coroutines.test.setMain
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
+import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -81,6 +83,25 @@ class SessionViewModelTest {
      * not the ones in the database, so it undid a value the screen hadn't caught up with yet
      * (the next set filled in by a tick, a copied set, a sync).
      */
+    @Test
+    fun theWarmUpFollowsTheSessionAndTicksToggle() = runTest(main) {
+        graph.seeder.seedIfNeeded()
+        val id = graph.workouts.startEmptyWorkout()
+        graph.workouts.addExercises(id, listOf("back-squat"))
+        val vm = viewModel(id)
+        val legs = vm.uiState.first { it.session?.exercises?.isNotEmpty() == true }.warmUp
+        assertTrue(MobilityDrill.ANKLE_ROCK in legs)
+
+        graph.workouts.addExercises(id, listOf("overhead-press", "lat-pulldown", "dumbbell-lateral-raise"))
+        val mixed = vm.uiState.first { it.session?.exercises?.size == 4 }.warmUp
+        assertTrue(MobilityDrill.WALL_SLIDE in mixed)
+
+        vm.toggleDrill(MobilityDrill.WALL_SLIDE)
+        assertEquals(setOf(MobilityDrill.WALL_SLIDE), vm.warmUpDone.value)
+        vm.toggleDrill(MobilityDrill.WALL_SLIDE)
+        assertTrue(vm.warmUpDone.value.isEmpty())
+    }
+
     @Test
     fun aTypedWeightKeepsRepsTheScreenHasNotShownYet() = runTest(main) {
         graph.seeder.seedIfNeeded()

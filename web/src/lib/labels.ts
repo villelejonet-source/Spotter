@@ -70,7 +70,8 @@ export const SPLIT_LABELS: Record<SplitType, string> = {
 export const PROGRESSION_RULE_LABELS: Record<ProgressionRule, string> = {
   DOUBLE_PROGRESSION: "Double progression",
   LINEAR: "Linear",
-  RIR_AUTOREGULATION: "RIR autoregulation",
+  // The app treats it as double progression, whose RIR checks every rule has.
+  RIR_AUTOREGULATION: "Double progression (RIR)",
   NONE: "None",
 };
 

@@ -12,6 +12,16 @@ import { requireUser } from "./supabase/server";
 
 export type { PlanTree, ProgressSetRow, SessionDetail, SetWithExercise } from "./queries";
 
+/**
+ * Starts queries that a page's Suspense sections will await, so they run alongside whatever
+ * the page awaits first rather than after it. Pass the same calls the sections make: cache()
+ * hands them the promise already in flight. A failure still reaches the section that awaits
+ * it; here it's only kept from counting as unhandled when no section does.
+ */
+export function preload(...queries: Promise<unknown>[]): void {
+  for (const q of queries) q.catch(() => {});
+}
+
 /** Signed out: redirects to /login (requireUser). */
 const client = cache(async () => {
   const { supabase, user } = await requireUser();

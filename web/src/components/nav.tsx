@@ -99,7 +99,7 @@ export function MobileTabBar({ admin = false }: { admin?: boolean }) {
   return (
     <nav
       aria-label="Main"
-      className="fixed inset-x-0 bottom-0 z-40 border-t border-outline bg-raised/90 backdrop-blur-xl md:hidden"
+      className="fixed inset-x-0 bottom-0 z-40 border-t border-outline bg-raised/95 md:hidden"
       style={{ paddingBottom: "env(safe-area-inset-bottom)" }}
     >
       <div className={clsx("mx-auto grid max-w-lg", sections.length > 5 ? "grid-cols-6" : "grid-cols-5")}>

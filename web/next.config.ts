@@ -30,6 +30,14 @@ const csp = [
 
 const nextConfig: NextConfig = {
   poweredByHeader: false,
+  experimental: {
+    // The browser keeps pages it has shown or prefetched, so switching back to a tab is
+    // instant instead of re-running every query (Next's default for dynamic pages is 0 s).
+    // Safe because every write goes through push(), whose revalidatePath clears this cache,
+    // and signing in or out changes cookies, which clears it too. Rows synced from the phone
+    // show up within `dynamic` seconds, or on a reload.
+    staleTimes: { dynamic: 30, static: 300 },
+  },
   async headers() {
     return [
       {

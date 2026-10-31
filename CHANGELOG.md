@@ -23,6 +23,9 @@ into the new version's entry and writes the store notes from it. Versions are th
 ### Changed
 - "Add warm-up set" adds one set at a time, stepping up towards your working weight, and stays
   until you finish your first working set, so you can add as many as you like.
+- The website switches between pages faster: a page you've just visited opens instantly instead
+  of loading again, Today and Insights fetch all their cards at once, every section shows its
+  outline the moment you tap it, and scrolling on phones is smoother.
 - The website has a new look: dark-first with a glowing orange accent, monospace numbers, a new
   sidebar, and a "Jump to…" command palette (⌘K) to reach any page or action. Light mode
   follows your system setting.

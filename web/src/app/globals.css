@@ -115,16 +115,28 @@
   --font-mono: var(--font-geist-mono);
 }
 
-/* The canvas: a soft accent glow top right and a faint grid, fixed while the page scrolls. */
+/*
+ * The canvas: a soft accent glow top right and a faint grid, fixed while the page scrolls.
+ * It's a fixed layer of its own rather than `background-attachment: fixed`, which repaints the
+ * whole screen on every scrolled frame on Android (and is ignored by iOS Safari); a fixed
+ * layer is drawn once and only moved by the compositor.
+ */
 body {
   background-color: var(--background);
+  color: var(--foreground);
+}
+
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
   background-image:
     radial-gradient(900px 520px at 88% -12%, var(--halo), transparent 62%),
     linear-gradient(var(--grid) 1px, transparent 1px),
     linear-gradient(90deg, var(--grid) 1px, transparent 1px);
   background-size: auto, 56px 56px, 56px 56px;
-  background-attachment: fixed;
-  color: var(--foreground);
 }
 
 @layer components {

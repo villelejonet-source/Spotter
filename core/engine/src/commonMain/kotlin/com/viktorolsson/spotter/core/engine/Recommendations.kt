@@ -28,10 +28,23 @@ import kotlinx.datetime.until
 data class ExerciseExposure(val date: LocalDate, val sets: List<LoggedSet>) {
     private val lifts get() = sets.filter { isLift(it.reps) }
 
-    /** Best estimated 1RM, or most reps for bodyweight work. */
+    /** Any set with weight: then [score] is in kg, otherwise in reps. */
+    val weighted: Boolean get() = lifts.any { it.weightKg != null }
+
+    /** Best estimated 1RM, or most reps for bodyweight work. Compare only like with like ([comparable]). */
     val score: Double
         get() = lifts.maxOfOrNull { set -> set.weightKg?.let { epley(it, set.reps) } ?: set.reps.toDouble() } ?: 0.0
     val bestSet: LoggedSet? get() = lifts.maxWithOrNull(bestSetOrder({ it.weightKg }, { it.reps }))
+}
+
+/**
+ * The latest sessions whose scores can be compared: those since the lift last moved between
+ * bodyweight and added weight. Reps and a 1RM in kg don't compare, so going from 12
+ * bodyweight pull-ups to +5 kg × 8 is a new start, not a drop.
+ */
+internal fun List<ExerciseExposure>.comparable(): List<ExerciseExposure> {
+    val weighted = lastOrNull()?.weighted ?: return this
+    return takeLastWhile { it.weighted == weighted }
 }
 
 /** An exercise in the active plan, with where it lives so actions can change it. */
@@ -155,7 +168,8 @@ object RecommendationEngine {
      * 3+ sessions over 3+ weeks, or the progression target was missed twice in a row.
      * A lift set to no progression is held on purpose, so it never stalls.
      */
-    fun detectPlateau(slot: PlanSlot, exposures: List<ExerciseExposure>): Plateau? {
+    fun detectPlateau(slot: PlanSlot, history: List<ExerciseExposure>): Plateau? {
+        val exposures = history.comparable()
         if (exposures.size < 2 || slot.rule == ProgressionRule.NONE) return null
         var bestSoFar = exposures.first().score
         var lastImprovement = 0
@@ -325,7 +339,7 @@ object RecommendationEngine {
      */
     private fun deload(ctx: RecommendationContext, plateaus: List<Plateau>): RecommendationDraft? {
         val falling = ctx.plan.distinctBy { it.exercise.id }.filter { slot ->
-            val exposures = ctx.history[slot.exercise.id].orEmpty()
+            val exposures = ctx.history[slot.exercise.id].orEmpty().comparable()
             exposures.size >= 3 && exposures.last().score < exposures[exposures.size - 2].score * 0.975
         }
         val nearFailure = ctx.recentRir.size >= 4 && ctx.recentRir.average() <= 0.5

@@ -2,6 +2,7 @@ import { readdirSync, readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { describe, expect, it } from "vitest";
 import {
+  mergeDraft,
   deleteWorkoutRows,
   activatePlanRows,
   bodyWeightSchema,
@@ -411,5 +412,23 @@ describe("deleteWorkoutRows", () => {
     expect(order[0]).toBe("scheduled_session");
     expect(order.lastIndexOf("set_entry")).toBeLessThan(order.indexOf("session_exercise"));
     expect(order.lastIndexOf("session_exercise")).toBeLessThan(order.indexOf("workout_session"));
+  });
+});
+
+describe("mergeDraft", () => {
+  const base = { goal: "HYPERTROPHY", body_weight_kg: 80, equipment: ["BARBELL"] };
+
+  // The profile page's weight log also saves the profile (the newest weight). The form used to
+  // keep its own, older weight and save it back over the new one.
+  it("takes newer values for fields the form didn't change, and keeps the ones it did", () => {
+    const edited = { ...base, goal: "STRENGTH" };
+    const latest = { ...base, body_weight_kg: 81 };
+    expect(mergeDraft(edited, base, latest)).toEqual({ goal: "STRENGTH", body_weight_kg: 81, equipment: ["BARBELL"] });
+  });
+
+  it("keeps an edit to a field that also changed elsewhere, and compares lists by value", () => {
+    const edited = { ...base, body_weight_kg: 79, equipment: ["BARBELL"] };
+    const latest = { ...base, body_weight_kg: 81, equipment: ["BARBELL", "DUMBBELL"] };
+    expect(mergeDraft(edited, base, latest)).toEqual({ goal: "HYPERTROPHY", body_weight_kg: 79, equipment: ["BARBELL", "DUMBBELL"] });
   });
 });

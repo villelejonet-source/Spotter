@@ -41,6 +41,8 @@ into the new version's entry and writes the store notes from it. Versions are th
   a record now and then.
 
 ### Website
+- Saving the profile on the website no longer undoes a body weight you just logged on the same
+  page (or a change synced from the phone): fields you didn't touch take the newest values.
 - New timed holds in the plan editor progress like every other exercise (a few seconds longer
   each time) instead of defaulting to "None". "RIR autoregulation" is now labelled "Double
   progression (RIR)", which is what it does.

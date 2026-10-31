@@ -352,6 +352,20 @@ export const profileSchema = z.object({
 });
 export type ProfileDraft = z.infer<typeof profileSchema>;
 
+/**
+ * A form's draft brought up to date with [latest] from the server: fields still as they were
+ * in [base] (what the form started from) take the newer value; fields the user changed keep
+ * their edit. Lists are compared by value.
+ */
+export function mergeDraft<T extends Record<string, unknown>>(edited: T, base: T, latest: T): T {
+  const same = (a: unknown, b: unknown) => JSON.stringify(a) === JSON.stringify(b);
+  const merged = { ...latest };
+  for (const key of Object.keys(edited) as (keyof T)[]) {
+    if (!same(edited[key], base[key])) merged[key] = edited[key];
+  }
+  return merged;
+}
+
 /** The editable form of a profile as the views return it. */
 export function profileDraftFrom(p: ProfileRow): ProfileDraft {
   const list = <T extends string>(v: string) => (v ? (v.split(",") as T[]) : []);

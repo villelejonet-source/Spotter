@@ -23,6 +23,11 @@ into the new version's entry and writes the store notes from it. Versions are th
 ### Changed
 - "Add warm-up set" adds one set at a time, stepping up towards your working weight, and stays
   until you finish your first working set, so you can add as many as you like.
+- The website fits phones better: editing a plan no longer scrolls sideways (each exercise's
+  fields stack under its name), the calendar shows dots in the month and lists the month's
+  workouts below it, text fields no longer make iPhones zoom in, buttons, chips and links are
+  easier to tap, lists and tables use more of the screen's width, and the bars stay clear of
+  the iPhone's home indicator.
 - The website switches between pages faster: a page you've just visited opens instantly instead
   of loading again, Today and Insights fetch all their cards at once, every section shows its
   outline the moment you tap it, and scrolling on phones is smoother.

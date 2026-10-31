@@ -124,6 +124,8 @@
 body {
   background-color: var(--background);
   color: var(--foreground);
+  /* Clear of the notch in landscape (viewport-fit=cover, app/layout.tsx). */
+  padding-inline: env(safe-area-inset-left) env(safe-area-inset-right);
 }
 
 body::before {
@@ -146,6 +148,19 @@ body::before {
     background-color: var(--surface-low);
     background-image: linear-gradient(180deg, var(--surface), transparent 70%);
     box-shadow: inset 0 1px 0 var(--highlight);
+  }
+
+  /*
+   * A small link or button whose touch area grows to about 44 px without moving anything:
+   * card actions ("All", "Edit plan"), the back link. Only where nothing else is within 10 px.
+   */
+  .tap {
+    position: relative;
+  }
+  .tap::after {
+    content: "";
+    position: absolute;
+    inset: -10px -8px;
   }
 
   /* Small uppercase monospace labels: card titles, stat labels, eyebrows. */

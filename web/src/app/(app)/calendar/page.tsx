@@ -88,6 +88,14 @@ export default async function CalendarPage({ searchParams }: { searchParams: Pro
     const d = localDate(s.started_at);
     return d >= first && d < first + daysInMonth * DAY_MS && s.ended_at != null;
   });
+  // The month as a list, for phones, where the grid only has room for dots.
+  const monthEntries = Array.from({ length: daysInMonth }, (_, d) => first + d * DAY_MS).flatMap((date) => {
+    const key = dateValueKey(date);
+    return [
+      ...(byDay.get(key) ?? []).map((entry) => ({ date, done: true as const, entry })),
+      ...(plannedByDay.get(key) ?? []).map((entry) => ({ date, done: false as const, entry })),
+    ];
+  });
   const nextDay = activePlan ? nextPlanDay(activePlan.days, recent) : null;
   const planOptions: PlanOption[] = plans.map((p) => ({ name: p.name, active: p.is_active, days: p.days.map((d) => ({ id: d.sync_id, name: d.name })) }));
   const selectedKey = selected != null ? dateValueKey(selected) : null;
@@ -139,7 +147,7 @@ export default async function CalendarPage({ searchParams }: { searchParams: Pro
                 <li
                   key={key}
                   className={clsx(
-                    "relative min-h-20 rounded-lg border p-1 text-left sm:min-h-24 sm:p-1.5",
+                    "relative min-h-12 rounded-lg border p-1 text-left sm:min-h-24 sm:p-1.5",
                     inMonth ? "border-outline" : "border-transparent opacity-40",
                     date === today && "ring-2 ring-primary",
                     key === selectedKey && "bg-surface-high",
@@ -155,7 +163,16 @@ export default async function CalendarPage({ searchParams }: { searchParams: Pro
                   <div className={clsx("relative text-xs", date === today ? "font-semibold text-primary" : "text-muted")} aria-hidden="true">
                     {new Date(date).getUTCDate()}
                   </div>
-                  <div className="relative mt-1 space-y-1">
+                  {/* Phones: a dot per workout (full names in "This month" below); wider screens: the names. */}
+                  <div className="relative mt-1 flex flex-wrap gap-1 sm:hidden" aria-hidden="true">
+                    {done.map((s) => (
+                      <span key={s.sync_id} className={clsx("h-2 w-2 rounded-full", colour(s.plan_day_id).split(" ")[0])} />
+                    ))}
+                    {planned.map((s) => (
+                      <span key={s.sync_id} className={clsx("h-2 w-2 rounded-full border border-dashed", past ? "border-outline-strong" : plannedColour(s.plan_day_id).split(" ")[0])} />
+                    ))}
+                  </div>
+                  <div className="relative mt-1 hidden space-y-1 sm:block">
                     {done.map((s) => (
                       <Link
                         key={s.sync_id}
@@ -201,7 +218,7 @@ export default async function CalendarPage({ searchParams }: { searchParams: Pro
             <Card>
               <CardTitle
                 action={
-                  <Link href={`/calendar?month=${monthParam(first)}`} className="rounded-md text-sm text-muted hover:text-foreground">
+                  <Link href={`/calendar?month=${monthParam(first)}`} className="tap rounded-md text-sm text-muted hover:text-foreground">
                     Close
                   </Link>
                 }
@@ -229,6 +246,39 @@ export default async function CalendarPage({ searchParams }: { searchParams: Pro
             </Card>
           )}
 
+          <Card className="sm:hidden">
+            <CardTitle>This month</CardTitle>
+            {monthEntries.length ? (
+              <ul className="-my-1 divide-y divide-outline text-sm">
+                {monthEntries.map(({ date, done, entry }) => (
+                  <li key={entry.sync_id}>
+                    <Link
+                      href={done ? `/history/${entry.sync_id}` : `/calendar?month=${monthParam(first)}&day=${dateValueKey(date)}`}
+                      className="-mx-2 flex min-h-11 items-center gap-3 rounded-lg px-2 py-2 hover:bg-surface"
+                    >
+                      <span
+                        className={clsx(
+                          "h-2.5 w-2.5 shrink-0 rounded-full",
+                          done ? colour(entry.plan_day_id).split(" ")[0] : clsx("border border-dashed", date < today ? "border-outline-strong" : plannedColour(entry.plan_day_id).split(" ")[0]),
+                        )}
+                        aria-hidden="true"
+                      />
+                      <span className={clsx("min-w-0 flex-1 truncate font-medium", !done && date < today && "text-muted line-through")}>
+                        {done ? (entry.plan_day_name ?? WORKOUT) : titleOf(entry.plan_day_id)}
+                      </span>
+                      <span className="shrink-0 text-xs text-muted">
+                        {done ? "" : date < today ? "Missed · " : "Planned · "}
+                        {formatDateValue(date)}
+                      </span>
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <p className="text-sm text-muted">Nothing done or planned this month. Pick a day to plan a workout.</p>
+            )}
+          </Card>
+
           <Card>
             <CardTitle>Next workout</CardTitle>
             {nextPlanned ? (
@@ -253,7 +303,7 @@ export default async function CalendarPage({ searchParams }: { searchParams: Pro
             ) : (
               <p className="text-sm text-muted">
                 No plan yet.{" "}
-                <Link className="rounded-md text-primary" href="/plans/new">
+                <Link className="tap rounded-md text-primary" href="/plans/new">
                   Create a plan
                 </Link>
               </p>

@@ -61,7 +61,7 @@ export default async function SessionPage({ params }: { params: Promise<{ id: st
             <Card key={e.sync_id}>
               <div className="mb-3 flex items-start justify-between gap-2">
                 <div className="min-w-0">
-                  <Link href={`/progress/${e.exercise_id}`} className="rounded-md font-medium hover:text-primary">
+                  <Link href={`/progress/${e.exercise_id}`} className="tap rounded-md font-medium hover:text-primary">
                     {exerciseName(catalog, e.exercise_id)}
                   </Link>
                   {e.substituted_from_exercise_id && <div className="text-xs text-muted">Swapped from {exerciseName(catalog, e.substituted_from_exercise_id)}</div>}

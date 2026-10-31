@@ -141,7 +141,7 @@ export function SectionTabs() {
               href={t.href}
               aria-current={active ? "page" : undefined}
               className={clsx(
-                "whitespace-nowrap rounded-lg px-4 py-1.5 text-sm font-medium transition",
+                "whitespace-nowrap rounded-lg px-4 py-2.5 text-sm font-medium transition sm:py-1.5",
                 active ? "bg-raised text-foreground shadow-sm ring-1 ring-outline" : "text-muted hover:text-foreground",
               )}
             >

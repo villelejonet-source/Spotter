@@ -163,7 +163,7 @@ async function WeeklyVolume({ searchParams }: { searchParams: Promise<{ range?: 
               href={r.key === RANGES[1].key ? "/" : `/?range=${r.key}`}
               scroll={false}
               aria-current={r.key === range.key ? "true" : undefined}
-              className={clsx("rounded-md px-2.5 py-1 transition", r.key === range.key ? "bg-surface text-foreground" : "text-muted hover:text-foreground")}
+              className={clsx("rounded-md px-3 py-2.5 transition sm:px-2.5 sm:py-1", r.key === range.key ? "bg-surface text-foreground" : "text-muted hover:text-foreground")}
             >
               {r.label}
             </Link>
@@ -241,7 +241,7 @@ async function NextWorkout() {
       <CardTitle
         action={
           activePlan && (
-            <Link className="rounded-md text-sm text-primary" href={`/plans/${activePlan.sync_id}`}>
+            <Link className="tap rounded-md text-sm text-primary" href={`/plans/${activePlan.sync_id}`}>
               Edit plan
             </Link>
           )
@@ -280,7 +280,7 @@ async function NextWorkout() {
       ) : (
         <div className="text-sm text-muted">
           No plan yet.{" "}
-          <Link className="rounded-md text-primary" href="/plans/new">
+          <Link className="tap rounded-md text-primary" href="/plans/new">
             Create a plan
           </Link>
         </div>
@@ -296,7 +296,7 @@ async function RecentWorkouts() {
     <>
       <CardTitle
         action={
-          <Link className="rounded-md text-sm text-primary" href="/history">
+          <Link className="tap rounded-md text-sm text-primary" href="/history">
             All
           </Link>
         }
@@ -336,7 +336,7 @@ async function RecentRecords() {
     <>
       <CardTitle
         action={
-          <Link className="rounded-md text-sm text-primary" href="/progress">
+          <Link className="tap rounded-md text-sm text-primary" href="/progress">
             Progress
           </Link>
         }

@@ -155,9 +155,13 @@ new page or card follows these rules:
   anything that scrolls or sits over scrolling content on phones. Animate only `transform`
   and `opacity`.
 - **Phone first:** build at 375 px wide, then add `sm:`/`md:` for bigger screens. Nothing
-  scrolls sideways except a deliberate `overflow-x-auto` strip. Tap targets are at least
-  44 px tall. Form fields use 16 px text on phones, because iOS zooms into smaller text.
-  Keep the bottom tab bar's space clear (`pb-28` on `main`).
+  scrolls sideways except a deliberate `overflow-x-auto` strip; a wide table becomes stacked
+  rows on phones (the plan editor). Tap targets are about 44 px: buttons and chips are tall
+  enough on phones, and a small text link gets the `tap` class. Form fields use
+  `inputClasses` from `components/ui.tsx`, which gives 16 px text on phones, because iOS
+  zooms into smaller text. A `Card` given `p-*` uses that padding instead of its own. Keep
+  clear of the bottom tab bar (`pb-28` on `main`; a sticky bar sits at
+  `bottom-[calc(4rem+env(safe-area-inset-bottom))]`).
 - **Measure, don't guess:** for anything affecting speed, time a production build
   (`npm --prefix web run build && npm --prefix web start`), not `next dev`, and put the
   before/after in the PR.

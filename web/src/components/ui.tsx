@@ -22,15 +22,28 @@ export function PageHeader({ title, subtitle, eyebrow, actions }: { title: strin
 /** Back to the parent page: the app's top-bar back arrow. */
 export function BackLink({ href, children }: { href: string; children: ReactNode }) {
   return (
-    <Link href={href} className="mb-2 inline-flex items-center gap-1 rounded-md text-sm text-muted hover:text-foreground">
+    <Link href={href} className="tap mb-2 inline-flex items-center gap-1 rounded-md text-sm text-muted hover:text-foreground">
       <span aria-hidden="true">←</span> {children}
     </Link>
   );
 }
 
-/** A content card: a translucent panel with a hairline border (the app's cards). */
+/** An all-sides padding class (p-0, sm:p-4), as opposed to px-/py- for one axis. */
+const OWN_PADDING = /(?:^|\s)(?:[a-z]+:)*p-\S/;
+
+/**
+ * The classes of a content card: a translucent panel with a hairline border (the app's cards). Padded a
+ * little less on phones. A card given its own all-sides padding (p-2) drops the default:
+ * clsx doesn't merge classes, and Tailwind emits .p-5 after .p-0 to .p-4, so the default
+ * would otherwise win.
+ */
+export function cardClass(className?: string): string {
+  return clsx("panel relative rounded-2xl", !OWN_PADDING.test(className ?? "") && "p-4 sm:p-5", className);
+}
+
+/** A content card (the app's cards); see cardClass for its padding. */
 export function Card({ className, ...props }: ComponentProps<"div">) {
-  return <div className={clsx("panel relative rounded-2xl p-5", className)} {...props} />;
+  return <div className={cardClass(className)} {...props} />;
 }
 
 /** A card's section header, with an optional action on the right. */
@@ -161,7 +174,7 @@ export function Chip({ on, className, type = "button", ...props }: ComponentProp
       type={type}
       aria-pressed={on}
       className={clsx(
-        "whitespace-nowrap rounded-lg border px-3 py-1.5 text-xs font-medium transition disabled:cursor-not-allowed disabled:opacity-40",
+        "whitespace-nowrap rounded-lg border px-3 py-2.5 text-xs font-medium transition disabled:cursor-not-allowed disabled:opacity-40 sm:py-1.5",
         on ? "border-primary/40 bg-primary-container text-on-primary-container" : "border-outline bg-surface-high text-muted hover:text-foreground",
         className,
       )}
@@ -210,7 +223,8 @@ export function InlineMessage({ tone, children, className }: { tone: "error" | "
 export function inputClasses({ compact = false }: { compact?: boolean } = {}) {
   return clsx(
     "w-full rounded-lg border border-outline-strong outline-none transition focus:border-primary focus:ring-3 focus:ring-primary/20 aria-[invalid=true]:border-error disabled:opacity-50",
-    compact ? "px-2 py-1 font-mono text-[0.8125rem] tabular-nums" : "px-3 py-2 text-sm",
+    // 16 px text on phones: iOS Safari zooms the page into any field with smaller text.
+    compact ? "px-2 py-1.5 font-mono text-base tabular-nums sm:py-1 sm:text-[0.8125rem]" : "px-3 py-2.5 text-base sm:py-2 sm:text-sm",
   );
 }
 

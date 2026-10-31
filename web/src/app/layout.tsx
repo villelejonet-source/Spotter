@@ -19,6 +19,9 @@ export const metadata: Metadata = {
 };
 
 export const viewport: Viewport = {
+  // Draw under the iPhone's notch and home indicator; the safe-area insets (globals.css, the
+  // phone bars) keep content clear of them. Without "cover" those insets are always 0.
+  viewportFit: "cover",
   themeColor: [
     { media: "(prefers-color-scheme: light)", color: "#faf8f6" },
     { media: "(prefers-color-scheme: dark)", color: "#0a0908" },

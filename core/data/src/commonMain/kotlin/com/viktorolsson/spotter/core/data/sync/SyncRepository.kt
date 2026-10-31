@@ -53,8 +53,9 @@ class SyncRepository(
     private val scope: CoroutineScope,
     private val clock: Clock,
     device: DeviceIdentity,
+    catalogVersion: suspend () -> Int,
 ) {
-    private val engine = SyncEngine(store, remote, cursors, clock, device::checkIn)
+    private val engine = SyncEngine(store, remote, cursors, clock, catalogVersion, device::checkIn)
     private val mutex = Mutex()
     private val running = MutableStateFlow(false)
     private val error = MutableStateFlow<SyncError?>(null)

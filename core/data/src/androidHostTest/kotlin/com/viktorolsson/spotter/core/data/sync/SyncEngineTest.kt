@@ -6,6 +6,8 @@ import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.viktorolsson.spotter.core.data.db.SpotterDatabase
 import com.viktorolsson.spotter.core.data.db.toModel
+import com.viktorolsson.spotter.core.model.ProgressionRule
+import com.viktorolsson.spotter.core.data.db.entity.PlanExerciseEntity
 import com.viktorolsson.spotter.core.data.repository.BodyWeightRepository
 import com.viktorolsson.spotter.core.data.repository.ExerciseRepository
 import com.viktorolsson.spotter.core.data.repository.MutableClock
@@ -40,6 +42,7 @@ import org.junit.Test
 import org.junit.runner.RunWith
 import java.io.File
 import kotlin.time.Clock
+import kotlin.time.Duration.Companion.days
 import kotlin.time.Duration.Companion.milliseconds
 import kotlin.time.Duration.Companion.seconds
 import kotlin.time.Instant
@@ -56,6 +59,11 @@ class FakeRemote : SyncRemote {
     var signedIn = "user-1"
     val checkIns = mutableListOf<Pair<String, DeviceCheckIn>>()
     var checkInFails = false
+
+    /** Time passes on the server (beyond the pull's overlap window). */
+    fun advance(by: kotlin.time.Duration) {
+        serverTime += by
+    }
 
     override suspend fun hasRows(userId: String) = rows.keys.any { it.first == userId }
 
@@ -99,7 +107,9 @@ class SyncEngineTest {
         val exercises = ExerciseRepository(db.exerciseDao())
         val bodyWeight = BodyWeightRepository(db, db.userProfileDao())
         val checkIn = DeviceCheckIn("install-$userId", versionCode = 7, schemaVersion = 8)
-        val engine = SyncEngine(LocalSyncStore(db), remote, SyncCursorStore(prefsStore()), engineClock) { checkIn }
+        /** The exercise catalog this install has applied (ExerciseSeeder). */
+        var catalogVersion = 1
+        val engine = SyncEngine(LocalSyncStore(db), remote, SyncCursorStore(prefsStore()), engineClock, catalogVersion = { catalogVersion }) { checkIn }
 
         suspend fun seed() = db.exerciseDao().upsertAll(
             parseExerciseSeed(File("catalog/exercises.json").readText()).exercises.map(SeedExercise::toEntity),
@@ -278,6 +288,39 @@ class SyncEngineTest {
         val b = device()
         b.sync()
         assertEquals(85.0 to 5, b.firstSet().let { it.weightKg to it.reps })
+    }
+
+    /**
+     * The website can use an exercise from a newer catalog than this phone's (it ships on
+     * every push, the app after store review). The phone can't store a plan row using it, and
+     * used to skip it for good: the pull cursor moved past it. Once an app update brings that
+     * catalog, the next sync pulls everything again.
+     */
+    @Test
+    fun aRowForAnExerciseFromANewerCatalogArrivesOnceTheAppHasIt() = runTest {
+        val a = device()
+        a.planFor(profile)
+        val day = a.plans.observeActivePlan().first()!!.days.first()
+        a.db.planDao().insertExercises(
+            listOf(PlanExerciseEntity(planDayId = day.id, exerciseId = "pec-deck", position = 99, sets = 3, repMin = 8, repMax = 12, targetRir = 2, restSeconds = 90, progressionRule = ProgressionRule.DOUBLE_PROGRESSION, supersetGroup = null)),
+        )
+        a.sync()
+
+        val b = device()
+        b.db.sql.execSQL("DELETE FROM exercise WHERE id = 'pec-deck'") // an older catalog
+        b.sync()
+        // Days go by with other changes, so the pull cursor moves well past the skipped row.
+        remote.advance(1.days)
+        a.bodyWeight.log(LocalDate(2026, 10, 2), 82.0)
+        a.sync()
+        b.sync()
+        fun Device.hasPecDeck() = db.sql.query("SELECT COUNT(*) FROM plan_exercise WHERE exerciseId = 'pec-deck'").use { it.moveToFirst(); it.getInt(0) } == 1
+        assertTrue(!b.hasPecDeck())
+
+        b.seed() // the app update's catalog
+        b.catalogVersion = 2
+        b.sync()
+        assertTrue(b.hasPecDeck())
     }
 
     /** Deleting a finished workout on one phone removes it, and the records set in it, on the other. */

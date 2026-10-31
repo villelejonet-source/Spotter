@@ -86,7 +86,7 @@ class DataGraph(
     val sync by lazy {
         SyncRepository(
             accounts, SupabaseSyncRemote(supabase), LocalSyncStore(database), SyncCursorStore(dataStore),
-            preferences, userProfiles, syncScheduler, scope, clock, deviceIdentity,
+            preferences, userProfiles, syncScheduler, scope, clock, deviceIdentity, seeder::appliedVersion,
         )
     }
 

@@ -34,6 +34,9 @@ into the new version's entry and writes the store notes from it. Versions are th
 - Today keeps up with the date when the app stays open overnight: this week's workouts, the
   streak, the heatmap and today's planned workout move on to the new day instead of staying on
   the day the app was opened.
+- An exercise added on the website that your app doesn't know yet (the website gets new
+  exercises before the app update does) now shows up on the phone once the app is updated,
+  instead of never. The first sync after updating fetches the backup again to pick it up.
 
 ### Website
 - New timed holds in the plan editor progress like every other exercise (a few seconds longer

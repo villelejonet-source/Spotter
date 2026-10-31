@@ -3,6 +3,7 @@ package com.viktorolsson.spotter.core.data.sync
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.edit
+import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.longPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import com.viktorolsson.spotter.core.data.logWarn
@@ -23,11 +24,13 @@ data class SyncCursor(
     val pushedUpTo: Long = 0,
     /** Last successful sync (ms), 0 if never. */
     val lastSyncedAt: Long = 0,
+    /** The exercise catalog version the last pull was stored with. */
+    val pulledWithCatalog: Int = 0,
 )
 
 class SyncCursorStore(private val dataStore: DataStore<Preferences>) {
     val cursor: Flow<SyncCursor> = dataStore.data.map { p ->
-        SyncCursor(p[USER], p[PULLED], p[PUSHED] ?: 0, p[LAST] ?: 0)
+        SyncCursor(p[USER], p[PULLED], p[PUSHED] ?: 0, p[LAST] ?: 0, p[CATALOG] ?: 0)
     }
 
     suspend fun get(): SyncCursor = cursor.first()
@@ -38,6 +41,7 @@ class SyncCursorStore(private val dataStore: DataStore<Preferences>) {
             cursor.pulledUpTo?.let { p[PULLED] = it } ?: p.remove(PULLED)
             p[PUSHED] = cursor.pushedUpTo
             p[LAST] = cursor.lastSyncedAt
+            p[CATALOG] = cursor.pulledWithCatalog
         }
     }
 
@@ -48,6 +52,7 @@ class SyncCursorStore(private val dataStore: DataStore<Preferences>) {
         val PULLED = stringPreferencesKey("sync_pulled_up_to")
         val PUSHED = longPreferencesKey("sync_pushed_up_to")
         val LAST = longPreferencesKey("sync_last_synced_at")
+        val CATALOG = intPreferencesKey("sync_pulled_with_catalog")
     }
 }
 
@@ -72,6 +77,8 @@ class SyncEngine(
     private val remote: SyncRemote,
     private val cursors: SyncCursorStore,
     private val clock: Clock,
+    /** The exercise catalog version this install has applied (ExerciseSeeder). */
+    private val catalogVersion: suspend () -> Int = { 0 },
     /** What this install reports after each sync; null reports nothing. */
     private val device: suspend () -> DeviceCheckIn? = { null },
 ) {
@@ -83,6 +90,11 @@ class SyncEngine(
     suspend fun sync(userId: String, choice: FirstSyncChoice? = null, fromLink: Boolean = false): SyncOutcome {
         var cursor = cursors.get().takeIf { it.userId == userId } ?: SyncCursor(userId = userId)
         val firstSync = cursor.lastSyncedAt == 0L
+        // A pulled row using an exercise this phone's catalog didn't have yet was skipped
+        // (LocalSyncStore). Once a newer catalog is in, pull everything again to fetch it;
+        // rows already here are left alone (last-write-wins).
+        val catalog = catalogVersion()
+        if (cursor.pulledWithCatalog < catalog) cursor = cursor.copy(pulledUpTo = null)
 
         if (firstSync) {
             val backupExists = remote.hasRows(userId)
@@ -138,7 +150,7 @@ class SyncEngine(
         val changes = store.changesSince(cursor.pushedUpTo - PUSH_OVERLAP_MS)
         changes.chunked(PAGE).forEach { remote.push(it) }
 
-        cursors.save(SyncCursor(userId, newPulledUpTo, pushStartedAt, clock.now().toEpochMilliseconds()))
+        cursors.save(SyncCursor(userId, newPulledUpTo, pushStartedAt, clock.now().toEpochMilliseconds(), catalog))
         checkIn()
         return SyncOutcome.Done(pulled = pulled, pushed = changes.count { it.updatedAt > cursor.pushedUpTo })
     }

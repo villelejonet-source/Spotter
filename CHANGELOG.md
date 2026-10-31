@@ -31,6 +31,9 @@ into the new version's entry and writes the store notes from it. Versions are th
 - Adding weight to a bodyweight exercise (pull-ups, dips) no longer looks like a drop in
   strength: it doesn't count as a plateau, can't trigger a deload, and the plan review doesn't
   show the lift as weaker.
+- Today keeps up with the date when the app stays open overnight: this week's workouts, the
+  streak, the heatmap and today's planned workout move on to the new day instead of staying on
+  the day the app was opened.
 
 ### Website
 - New timed holds in the plan editor progress like every other exercise (a few seconds longer

@@ -13,6 +13,19 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Surface
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import com.viktorolsson.spotter.core.engine.LiftTrend
+import com.viktorolsson.spotter.core.engine.LoggedSet
+import com.viktorolsson.spotter.core.engine.PlanReview
+import com.viktorolsson.spotter.core.engine.PlanSlot
+import com.viktorolsson.spotter.core.engine.Plateau
+import com.viktorolsson.spotter.core.engine.StalledLift
+import com.viktorolsson.spotter.core.engine.SupportReason
+import com.viktorolsson.spotter.core.engine.SupportingExercise
+import com.viktorolsson.spotter.core.model.Mechanics
+import com.viktorolsson.spotter.core.model.MovementPattern
+import com.viktorolsson.spotter.core.model.Muscle
+import com.viktorolsson.spotter.core.model.ProgressionRule
+import com.viktorolsson.spotter.core.model.RecommendationAction
 import com.viktorolsson.spotter.core.model.ScheduledWorkout
 import com.viktorolsson.spotter.core.model.TrainedDay
 import com.viktorolsson.spotter.core.model.WeightUnit
@@ -65,15 +78,71 @@ class TodayScreenshotTest {
     private fun next(dashboard: Dashboard? = this.dashboard) =
         TodayUiState(loading = false, today = today, hasPlan = true, nextDay = lowerA, dashboard = dashboard)
 
-    private fun capture(name: String, dark: Boolean, state: TodayUiState, dynamic: Boolean = false, fontScale: Float = 1f) =
+    private fun capture(
+        name: String,
+        dark: Boolean,
+        state: TodayUiState,
+        dynamic: Boolean = false,
+        fontScale: Float = 1f,
+        review: PlanReview? = null,
+    ) =
         captureRoboImage(
             "src/test/screenshots/$name.png",
             roborazziComposeOptions = RoborazziComposeOptions { fontScale(fontScale) },
         ) {
             SpotterTheme(darkTheme = dark, dynamicColor = dynamic) {
-                TodayScreen(state, onResume = {}, onStartNext = {}, onEmptyWorkout = {}, onOpenPlan = {}, onBuildPlan = {})
+                TodayScreen(state, review = review, onResume = {}, onStartNext = {}, onEmptyWorkout = {}, onOpenPlan = {}, onBuildPlan = {})
             }
         }
+
+    /** Bench stalled at 80 × 6 for four weeks, with three helpers and a variation to pick from. */
+    private val review = run {
+        val bench = PreviewData.exercise()
+        val row = PreviewData.exercise("barbell-row", "Barbell Row", MovementPattern.HORIZONTAL_PULL, primary = listOf(Muscle.UPPER_BACK))
+        val slot = PlanSlot(1, 1, "Upper A", bench, 3, 6, 10, 1, ProgressionRule.DOUBLE_PROGRESSION)
+        fun add(id: String, name: String, reason: SupportReason, mechanics: Mechanics = Mechanics.COMPOUND) =
+            SupportingExercise(PreviewData.exercise(id, name, mechanics = mechanics), reason) to
+                RecommendationAction.AddExercise(1, "Upper A", id, name, 3, 6, 10, 2, 120)
+        PlanReview(
+            since = today.minus(28, DateTimeUnit.DAY),
+            sessions = 11,
+            trends = listOf(LiftTrend(bench, 98.0, 98.4), LiftTrend(row, 80.0, 86.0)),
+            stalled = listOf(
+                StalledLift(
+                    Plateau(slot, LoggedSet(80.0, 6), sessions = 4, weeks = 4, missedTwice = false, historyDays = 28),
+                    listOf(
+                        add("incline-barbell-bench-press", "Incline Barbell Bench Press", SupportReason.UPPER_CHEST),
+                        add("close-grip-bench-press", "Close-Grip Bench Press", SupportReason.TRICEPS),
+                        add("seated-dumbbell-shoulder-press", "Seated Dumbbell Shoulder Press", SupportReason.SHOULDERS),
+                    ),
+                    RecommendationAction.SwapVariation(1, bench.id, bench.name, "paused-bench-press", "Paused Bench Press", 5),
+                ),
+            ),
+        )
+    }
+
+    @Test
+    fun planReviewCard_light() = capture("today_review_card_light", false, next(), review = review)
+
+    private fun captureSheet(name: String, dark: Boolean, fontScale: Float = 1f) = captureRoboImage(
+        "src/test/screenshots/$name.png",
+        roborazziComposeOptions = RoborazziComposeOptions { fontScale(fontScale) },
+    ) {
+        SpotterTheme(darkTheme = dark) {
+            Surface {
+                PlanReviewContent(review, WeightUnit.KG, onApply = {}, onKeep = {}, initiallyPicked = setOf("barbell-bench-press|close-grip-bench-press"))
+            }
+        }
+    }
+
+    @Test
+    fun planReviewSheet_light() = captureSheet("today_review_sheet_light", false)
+
+    @Test
+    fun planReviewSheet_dark() = captureSheet("today_review_sheet_dark", true)
+
+    @Test
+    fun planReviewSheet_largeFont() = captureSheet("today_review_sheet_font_1_6", false, fontScale = 1.6f)
 
     @Test
     fun nextWorkout_light() = capture("today_next_light", false, next())

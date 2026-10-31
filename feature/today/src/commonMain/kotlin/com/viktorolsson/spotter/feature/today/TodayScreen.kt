@@ -32,6 +32,9 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawBehind
@@ -45,7 +48,9 @@ import androidx.compose.ui.unit.dp
 import org.koin.compose.viewmodel.koinViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.viktorolsson.spotter.core.engine.PlanGenerator
+import com.viktorolsson.spotter.core.engine.PlanReview
 import com.viktorolsson.spotter.core.model.PlanDay
+import com.viktorolsson.spotter.core.model.WeightUnit
 import com.viktorolsson.spotter.core.model.ScheduledWorkout
 import com.viktorolsson.spotter.core.model.formatChange
 import com.viktorolsson.spotter.core.model.isTimed
@@ -111,19 +116,37 @@ internal fun TodayRoute(
     viewModel: TodayViewModel = koinViewModel(),
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val review by viewModel.review.collectAsStateWithLifecycle()
+    var reviewing by rememberSaveable { mutableStateOf(false) }
     TodayScreen(
         uiState = uiState,
+        review = review,
+        onReviewLater = viewModel::snoozeReview,
+        onReviewOpen = { reviewing = true },
         onResume = { uiState.activeSessionId?.let(onOpenSession) },
         onStartNext = { viewModel.startNext(onOpenSession) },
         onEmptyWorkout = { viewModel.startEmptyWorkout(onOpenSession) },
         onOpenPlan = onOpenPlan,
         onBuildPlan = onBuildPlan,
     )
+    val open = review
+    if (reviewing && open != null) {
+        PlanReviewSheet(
+            review = open,
+            unit = uiState.dashboard?.unit ?: WeightUnit.KG,
+            onApply = { reviewing = false; viewModel.applyReview(it) },
+            onKeep = { reviewing = false; viewModel.keepPlan() },
+            onDismiss = { reviewing = false },
+        )
+    }
 }
 
 @Composable
 internal fun TodayScreen(
     uiState: TodayUiState,
+    review: PlanReview? = null,
+    onReviewLater: () -> Unit = {},
+    onReviewOpen: () -> Unit = {},
     onResume: () -> Unit,
     onStartNext: () -> Unit,
     onEmptyWorkout: () -> Unit,
@@ -163,6 +186,7 @@ internal fun TodayScreen(
         ) {
             val dashboard = uiState.dashboard
             uiState.deloadUntil?.let { until -> DeloadCard(until) }
+            if (review != null && uiState.today != null) PlanReviewCard(review, uiState.today, onReviewLater, onReviewOpen)
             if (uiState.scheduledTodayDone) DoneCard()
             when {
                 scheduled != null && uiState.scheduledDay != null ->

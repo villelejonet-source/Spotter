@@ -12,6 +12,8 @@ import com.viktorolsson.spotter.core.data.db.withTransaction
 import com.viktorolsson.spotter.core.engine.AppliedVariation
 import com.viktorolsson.spotter.core.engine.ExerciseExposure
 import com.viktorolsson.spotter.core.engine.LoggedSet
+import com.viktorolsson.spotter.core.engine.PlanReview
+import com.viktorolsson.spotter.core.engine.PlanReviewEngine
 import com.viktorolsson.spotter.core.engine.PlanSlot
 import com.viktorolsson.spotter.core.engine.RecommendationContext
 import com.viktorolsson.spotter.core.engine.RecommendationDraft
@@ -21,12 +23,17 @@ import com.viktorolsson.spotter.core.model.Equipment
 import com.viktorolsson.spotter.core.model.ProgressionRule
 import com.viktorolsson.spotter.core.model.Recommendation
 import com.viktorolsson.spotter.core.model.RecommendationAction
+import com.viktorolsson.spotter.core.model.RecommendationEvidence
 import com.viktorolsson.spotter.core.model.RecommendationPayload
 import com.viktorolsson.spotter.core.model.RecommendationStatus
 import com.viktorolsson.spotter.core.model.RecommendationType
+import com.viktorolsson.spotter.core.model.WeightUnit
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.mapLatest
 import kotlinx.datetime.DateTimeUnit
 import kotlinx.datetime.LocalDate
 import kotlinx.datetime.TimeZone
@@ -36,6 +43,9 @@ import kotlinx.datetime.todayIn
 import kotlin.time.Clock
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.days
+
+/** A change picked in the plan review, for the stalled lift [exerciseId]. */
+data class PlanReviewChoice(val exerciseId: String, val exerciseName: String, val action: RecommendationAction)
 
 /**
  * Runs the recommendation engine over the active plan and history after each workout,
@@ -101,39 +111,97 @@ class RecommendationRepository(
         val rec = dao.get(id)?.toModel() ?: return
         val unit = preferences.preferences.first().weightUnit
         db.withTransaction {
-            when (val action = rec.payload.action) {
-                is RecommendationAction.AddExercise -> planDao.insertExercises(
-                    listOf(
-                        PlanExerciseEntity(
-                            planDayId = action.planDayId,
-                            exerciseId = action.exerciseId,
-                            position = planDao.nextExercisePosition(action.planDayId),
-                            sets = action.sets,
-                            repMin = action.repMin,
-                            repMax = action.repMax,
-                            targetRir = action.targetRir,
-                            restSeconds = action.restSeconds,
-                            progressionRule = ProgressionRule.DOUBLE_PROGRESSION,
-                            supersetGroup = null,
-                        ),
-                    ),
-                )
-                is RecommendationAction.AddSets -> planDao.addOneSet(action.planExerciseIds)
-                is RecommendationAction.ChangeRepRange ->
-                    planDao.setRepRange(action.planExerciseId, action.sets, action.repMin, action.repMax)
-                is RecommendationAction.SwapVariation -> {
-                    val from = exerciseDao.getById(action.fromExerciseId)?.toModel()
-                    val to = exerciseDao.getById(action.toExerciseId)?.toModel()
-                    val lastKg = workoutDao.getRecentWorkingSets(action.fromExerciseId, sessions = 1).mapNotNull { it.set.weightKg }.maxOrNull()
-                    val start = if (from != null && to != null && lastKg != null) WeightConversion.convert(from, lastKg, to, unit) else null
-                    planDao.replaceExercise(action.planExerciseId, action.toExerciseId, start)
-                }
-                is RecommendationAction.Deload ->
-                    preferences.setDeloadUntil(clock.todayIn(TimeZone.currentSystemDefault()).plus(action.days - 1L, DateTimeUnit.DAY))
-            }
+            applyAction(rec.payload.action, unit)
             dao.resolve(id, RecommendationStatus.APPLIED, clock.now())
         }
         refresh()
+    }
+
+    /**
+     * The plan review, when one is due: every few weeks from the plan's start or the last
+     * review, sooner when several main lifts stall. Re-checked as workouts finish, the plan
+     * changes or the review is answered.
+     */
+    @OptIn(ExperimentalCoroutinesApi::class)
+    fun observePlanReview(): Flow<PlanReview?> =
+        combine(preferences.preferences, workoutDao.observeFinishedCount(), planDao.observeActivePlan()) { prefs, _, plan ->
+            Triple(prefs.planReviewedOn, prefs.planReviewSnoozedUntil, plan)
+        }.mapLatest { (reviewedOn, snoozedUntil, plan) ->
+            plan ?: return@mapLatest null
+            val context = buildContext(dao.getAll()) ?: return@mapLatest null
+            val started = plan.plan.createdAt.toLocalDateTime(TimeZone.currentSystemDefault()).date
+            PlanReviewEngine.review(context, since = maxOf(started, reviewedOn ?: started), snoozedUntil = snoozedUntil)
+        }
+
+    /**
+     * Applies what the lifter picked in the review, in one go. Each change is stored as an
+     * applied recommendation for its stalled lift, so the single cards don't suggest the
+     * same lift again during the cooldown, and a variation is offered back when it ends.
+     */
+    suspend fun applyPlanReview(choices: List<PlanReviewChoice>) {
+        val unit = preferences.preferences.first().weightUnit
+        val now = clock.now()
+        db.withTransaction {
+            choices.forEach { applyAction(it.action, unit) }
+            val keys = choices.map { plateauKey(it.exerciseId) }.toSet()
+            dao.delete(dao.getAll().filter { it.status == RecommendationStatus.ACTIVE && it.dedupKey in keys }.map { it.id })
+            dao.insert(
+                choices.map { choice ->
+                    RecommendationEntity(
+                        type = if (choice.action is RecommendationAction.SwapVariation) RecommendationType.VARIATION else RecommendationType.ADD_ACCESSORY,
+                        exerciseId = choice.exerciseId,
+                        payload = RecommendationPayload(choice.action, RecommendationEvidence(exerciseName = choice.exerciseName)).encode(),
+                        createdAt = now,
+                        status = RecommendationStatus.APPLIED,
+                        resolvedAt = now,
+                        dedupKey = plateauKey(choice.exerciseId),
+                    )
+                },
+            )
+        }
+        preferences.setPlanReviewed(clock.todayIn(TimeZone.currentSystemDefault()))
+        refresh()
+    }
+
+    /** "Keep my plan": nothing changes, and the next review is a few weeks away. */
+    suspend fun keepPlan() = preferences.setPlanReviewed(clock.todayIn(TimeZone.currentSystemDefault()))
+
+    /** "Later": the review comes back in a week. */
+    suspend fun snoozePlanReview() = preferences.snoozePlanReview(
+        clock.todayIn(TimeZone.currentSystemDefault()).plus(PlanReviewEngine.SNOOZE_DAYS - 1L, DateTimeUnit.DAY),
+    )
+
+    private suspend fun applyAction(action: RecommendationAction, unit: WeightUnit) {
+        when (action) {
+            is RecommendationAction.AddExercise -> planDao.insertExercises(
+                listOf(
+                    PlanExerciseEntity(
+                        planDayId = action.planDayId,
+                        exerciseId = action.exerciseId,
+                        position = planDao.nextExercisePosition(action.planDayId),
+                        sets = action.sets,
+                        repMin = action.repMin,
+                        repMax = action.repMax,
+                        targetRir = action.targetRir,
+                        restSeconds = action.restSeconds,
+                        progressionRule = ProgressionRule.DOUBLE_PROGRESSION,
+                        supersetGroup = null,
+                    ),
+                ),
+            )
+            is RecommendationAction.AddSets -> planDao.addOneSet(action.planExerciseIds)
+            is RecommendationAction.ChangeRepRange ->
+                planDao.setRepRange(action.planExerciseId, action.sets, action.repMin, action.repMax)
+            is RecommendationAction.SwapVariation -> {
+                val from = exerciseDao.getById(action.fromExerciseId)?.toModel()
+                val to = exerciseDao.getById(action.toExerciseId)?.toModel()
+                val lastKg = workoutDao.getRecentWorkingSets(action.fromExerciseId, sessions = 1).mapNotNull { it.set.weightKg }.maxOrNull()
+                val start = if (from != null && to != null && lastKg != null) WeightConversion.convert(from, lastKg, to, unit) else null
+                planDao.replaceExercise(action.planExerciseId, action.toExerciseId, start)
+            }
+            is RecommendationAction.Deload ->
+                preferences.setDeloadUntil(clock.todayIn(TimeZone.currentSystemDefault()).plus(action.days - 1L, DateTimeUnit.DAY))
+        }
     }
 
     private suspend fun buildContext(all: List<RecommendationEntity>): RecommendationContext? {
@@ -197,9 +265,11 @@ class RecommendationRepository(
         is RecommendationAction.SwapVariation if action.returning -> "return|${action.planExerciseId}"
         else -> when (draft.type) {
             RecommendationType.INCREASE_FREQUENCY -> "frequency|${draft.payload.evidence.group}"
-            else -> "plateau|${draft.exerciseId}"
+            else -> plateauKey(draft.exerciseId)
         }
     }
+
+    private fun plateauKey(exerciseId: String?) = "plateau|$exerciseId"
 
     private companion object {
         val COOLDOWN: Duration = 28.days

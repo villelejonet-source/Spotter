@@ -7,6 +7,7 @@ kotlin {
     sourceSets {
         commonMain.dependencies {
             implementation(project(":core:engine"))
+            implementation(libs.compose.mp.material.icons.extended)
         }
     }
 }

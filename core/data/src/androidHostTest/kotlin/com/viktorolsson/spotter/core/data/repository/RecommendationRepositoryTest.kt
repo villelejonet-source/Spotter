@@ -28,6 +28,8 @@ import kotlinx.datetime.todayIn
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotEquals
+import org.junit.Assert.assertNotNull
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
@@ -95,6 +97,39 @@ class RecommendationRepositoryTest {
         clock.advanceSeconds(3600)
         workouts.finishWorkout(session.id)
         clock.advanceSeconds(7 * 86_400L - 3600)
+    }
+
+    @Test
+    fun aPlanReviewComesAfterFourWeeksAndApplyingItChangesThePlanOnce() = runTest {
+        repeat(4) { stalledBenchWorkout(extraChestSets = 8) }
+        assertNull(recommendations.observePlanReview().first()) // 4 sessions: too few
+        repeat(4) { stalledBenchWorkout(extraChestSets = 8) }
+        val review = recommendations.observePlanReview().first()!!
+        val bench = review.stalled.single { it.plateau.slot.exercise.id == "barbell-bench-press" }
+        val picks = bench.supports.map { it.second }.filter { it.exerciseId in setOf("incline-barbell-bench-press", "close-grip-bench-press") }
+        assertEquals(2, picks.size)
+
+        recommendations.applyPlanReview(picks.map { PlanReviewChoice("barbell-bench-press", "Barbell Bench Press", it) })
+        val day = plans.observeActivePlan().first()!!.days.first { it.id == picks.first().planDayId }
+        assertEquals(listOf("incline-barbell-bench-press", "close-grip-bench-press"), day.exercises.takeLast(2).map { it.exercise.id })
+        // Reviewed today: no new review, and no single card for bench during the cooldown.
+        assertNull(recommendations.observePlanReview().first())
+        assertTrue(recommendations.observeActive().first().none { it.exerciseId == "barbell-bench-press" })
+    }
+
+    @Test
+    fun laterHidesThePlanReviewForAWeek() = runTest {
+        repeat(8) { stalledBenchWorkout(extraChestSets = 8) }
+        assertNotNull(recommendations.observePlanReview().first())
+        recommendations.snoozePlanReview()
+        assertNull(recommendations.observePlanReview().first())
+        clock.advanceSeconds(6 * 86_400L)
+        assertNull(recommendations.observePlanReview().first())
+        clock.advanceSeconds(86_400L)
+        assertNotNull(recommendations.observePlanReview().first())
+
+        recommendations.keepPlan()
+        assertNull(recommendations.observePlanReview().first())
     }
 
     @Test

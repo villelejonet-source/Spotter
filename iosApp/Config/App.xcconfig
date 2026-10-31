@@ -7,7 +7,7 @@
 // Version numbers, in one place for every configuration. MARKETING_VERSION follows Android's
 // versionName (app/build.gradle.kts); CURRENT_PROJECT_VERSION is iOS's own build number and
 // only goes up. /release bumps both.
-MARKETING_VERSION = 1.1.0
+MARKETING_VERSION = 1.2.0
 CURRENT_PROJECT_VERSION = 1
 
 // The home-screen icon: Spotter/Assets.xcassets/AppIcon, one 1024 px image rendered from

@@ -39,6 +39,11 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.graphics.lerp
 import org.jetbrains.compose.resources.stringResource
 import androidx.compose.ui.semantics.Role
@@ -58,6 +63,7 @@ import com.viktorolsson.spotter.core.model.format
 import com.viktorolsson.spotter.core.ui.formatSet
 import com.viktorolsson.spotter.core.ui.theme.Dimens
 import com.viktorolsson.spotter.core.ui.theme.Spacing
+import com.viktorolsson.spotter.core.ui.theme.SpotterTheme
 import com.viktorolsson.spotter.core.ui.resources.Res as CoreRes
 import com.viktorolsson.spotter.core.ui.resources.action_delete
 import org.jetbrains.compose.resources.stringResource
@@ -126,12 +132,12 @@ internal fun SetRow(
             }
         },
     ) {
-        // A done row is tinted towards the secondary container. Opaque on purpose: the row sits
-        // on the swipe-to-delete background, whose error colour would bleed through any alpha
-        // (which is what made done rows look red in dark).
+        // A done row is tinted towards the accent. Opaque on purpose: the row sits on the
+        // swipe-to-delete background, whose error colour would bleed through any alpha (which
+        // is what made done rows look red in dark).
         val scheme = MaterialTheme.colorScheme
         val rowColor by animateColorAsState(
-            if (set.isCompleted) lerp(scheme.surfaceContainerLow, scheme.secondaryContainer, 0.6f) else scheme.surfaceContainerLow,
+            if (set.isCompleted) lerp(scheme.surfaceContainerLow, scheme.primaryContainer, DONE_TINT) else scheme.surfaceContainerLow,
             label = "setRow",
         )
         Row(
@@ -200,6 +206,7 @@ private fun PreviousCell(previous: PreviousSet?, unit: WeightUnit, timed: Boolea
     val description = previous?.let { stringResource(Res.string.a11y_previous, formatSet(it.weightKg, it.reps, unit, timed)) }
         ?: stringResource(Res.string.a11y_no_previous)
     val copyLabel = stringResource(Res.string.a11y_copy_previous)
+    // Proportional digits on purpose: this column is the narrowest, and monospace cuts "57.5 × 10".
     Text(
         text,
         style = MaterialTheme.typography.bodyMedium,
@@ -246,8 +253,8 @@ private fun FieldBox(
         Box(contentAlignment = Alignment.Center) {
             Text(
                 text.ifEmpty { placeholder },
-                style = MaterialTheme.typography.titleMedium,
-                color = if (text.isEmpty()) MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f) else MaterialTheme.colorScheme.onSurface,
+                style = SpotterTheme.type.numberMedium,
+                color = if (text.isEmpty()) SpotterTheme.colors.faint else MaterialTheme.colorScheme.onSurface,
                 maxLines = 1,
             )
         }
@@ -279,8 +286,8 @@ private fun SetLabel(
     Box(Modifier.width(SetColumnWidth)) {
         Text(
             if (set.notes != null) stringResource(Res.string.set_label_with_note, shortLabel) else shortLabel,
-            style = MaterialTheme.typography.titleSmall,
-            fontWeight = FontWeight.Bold,
+            style = SpotterTheme.type.numberSmall,
+            fontWeight = FontWeight.SemiBold,
             color = color,
             textAlign = TextAlign.Center,
             modifier = Modifier
@@ -312,23 +319,43 @@ private fun SetLabel(
     }
 }
 
-/** The tick; a checkbox for screen readers. */
+/**
+ * The tick; a checkbox for screen readers. Ticking gives a short vibration, so it can be felt
+ * without looking; a done tick glows like the primary button.
+ */
 @Composable
 private fun CheckButton(completed: Boolean, enabled: Boolean, setLabel: String, onToggle: () -> Unit) {
     val description = stringResource(Res.string.a11y_complete_set, setLabel)
+    val haptics = LocalHapticFeedback.current
+    val shape = MaterialTheme.shapes.small
+    val fill = if (completed) {
+        Modifier
+            .shadow(Dimens.GlowElevation / 2, shape, ambientColor = SpotterTheme.colors.glow, spotColor = SpotterTheme.colors.glow)
+            .background(Brush.verticalGradient(listOf(MaterialTheme.colorScheme.primary, SpotterTheme.colors.primaryStrong)), shape)
+    } else {
+        Modifier
+    }
     Box(
         Modifier
             .width(CheckColumnWidth)
             .height(Dimens.TouchTarget)
             .clip(MaterialTheme.shapes.medium)
-            .toggleable(value = completed, enabled = enabled, role = Role.Checkbox, onValueChange = { onToggle() })
+            .toggleable(
+                value = completed,
+                enabled = enabled,
+                role = Role.Checkbox,
+                onValueChange = {
+                    haptics.performHapticFeedback(if (completed) HapticFeedbackType.ToggleOff else HapticFeedbackType.ToggleOn)
+                    onToggle()
+                },
+            )
             .semantics { contentDescription = description },
         contentAlignment = Alignment.Center,
     ) {
         Surface(
-            shape = MaterialTheme.shapes.small,
-            color = if (completed) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceContainerHighest,
-            modifier = Modifier.size(CHECK_SIZE),
+            shape = shape,
+            color = if (completed) Color.Transparent else MaterialTheme.colorScheme.surfaceContainerHighest,
+            modifier = Modifier.size(CHECK_SIZE).then(fill),
         ) {
             Box(contentAlignment = Alignment.Center) {
                 Icon(
@@ -345,4 +372,5 @@ private fun CheckButton(completed: Boolean, enabled: Boolean, setLabel: String, 
     }
 }
 
-private val CHECK_SIZE = 38.dp
+private val CHECK_SIZE = 40.dp
+private const val DONE_TINT = 0.7f

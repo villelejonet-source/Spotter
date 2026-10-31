@@ -1,5 +1,6 @@
 package com.viktorolsson.spotter.feature.session
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -48,6 +49,7 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.em
 import com.viktorolsson.spotter.core.engine.WarmUps
 import com.viktorolsson.spotter.core.model.EffortScale
 import com.viktorolsson.spotter.core.model.Mechanics
@@ -67,6 +69,7 @@ import com.viktorolsson.spotter.core.ui.formatTarget
 import com.viktorolsson.spotter.core.ui.label
 import com.viktorolsson.spotter.core.ui.theme.Dimens
 import com.viktorolsson.spotter.core.ui.theme.Spacing
+import com.viktorolsson.spotter.core.ui.theme.SpotterTheme
 import com.viktorolsson.spotter.feature.session.resources.Res
 import com.viktorolsson.spotter.feature.session.resources.a11y_change_rest
 import com.viktorolsson.spotter.feature.session.resources.a11y_exercise_info
@@ -171,6 +174,7 @@ internal fun ExerciseCard(
     Card(
         modifier = modifier.fillMaxWidth(),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow),
+        border = BorderStroke(Dimens.Hairline, MaterialTheme.colorScheme.outlineVariant),
     ) {
         Column(Modifier.padding(vertical = Spacing.sm)) {
             Row(
@@ -393,12 +397,15 @@ private fun SetHeader(preferences: UserPreferences, timed: Boolean) {
 private fun RowScope.HeaderCell(text: String, modifier: Modifier) {
     Text(
         text.uppercaseLocal(),
-        style = MaterialTheme.typography.labelSmall,
-        color = MaterialTheme.colorScheme.onSurfaceVariant,
+        // Tracked in less than other labels: the columns are narrow.
+        style = SpotterTheme.type.label.copy(letterSpacing = HEADER_TRACKING),
+        color = SpotterTheme.colors.faint,
         textAlign = TextAlign.Center,
+        overflow = TextOverflow.Ellipsis,
         maxLines = 1,
         modifier = modifier,
     )
 }
 
 private val CHIP_ICON_SIZE = 18.dp
+private val HEADER_TRACKING = 0.04.em

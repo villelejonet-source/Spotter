@@ -79,9 +79,12 @@ object Progression {
     }
 
     /** Linear progression works at one fixed rep target inside the range. */
-    private fun targetReps(input: ProgressionInput): Int = when (input.rule) {
-        ProgressionRule.LINEAR -> input.repMin + (input.repMax - input.repMin) / 2
-        else -> input.repMin
+    private fun targetReps(input: ProgressionInput): Int = firstReps(input.rule, input.repMin, input.repMax)
+
+    /** The reps a session at a new weight aims for: mid-range for linear, the bottom otherwise. */
+    fun firstReps(rule: ProgressionRule, repMin: Int, repMax: Int): Int = when (rule) {
+        ProgressionRule.LINEAR -> repMin + (repMax - repMin) / 2
+        else -> repMin
     }
 
     private fun hitTarget(input: ProgressionInput, sets: List<LoggedSet>): Boolean {

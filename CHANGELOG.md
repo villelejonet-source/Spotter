@@ -42,6 +42,11 @@ into the new version's entry and writes the store notes from it. Versions are th
 - Starting a plan day, or repeating a past workout, while another workout is in progress now
   asks first ("A workout is in progress") with a button to go to it, instead of silently opening
   the running workout.
+- New plans give main lifts on linear progression a first weight that fits the reps they ask
+  for, instead of one a few percent too heavy.
+- Warm-ups and weight rounding never go below the empty bar: 10 kg for an EZ bar, 25 kg for a
+  trap bar.
+- Weights like 1.005 now round up to 1.01 when shown.
 
 ### Website
 - Saving the profile on the website no longer undoes a body weight you just logged on the same

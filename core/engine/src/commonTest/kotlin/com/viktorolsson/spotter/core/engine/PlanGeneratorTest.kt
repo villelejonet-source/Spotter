@@ -166,6 +166,18 @@ class PlanGeneratorTest {
         }
     }
 
+    /** Linear lifts start mid-range: their first weight has to be sized for those reps, not the bottom of the range. */
+    @Test
+    fun `linear main lifts start at a weight for the reps they're prescribed`() {
+        val known = KnownLifts(bench = LiftResult(weightKg = 100.0, reps = 5))
+        val newLifter = profile(sex = Sex.MALE, weightKg = 85.0, heightCm = 182.0, experience = ExperienceLevel.NEW)
+        val main = generate(newLifter, known).allExercises.first { it.progressionRule == ProgressionRule.LINEAR && it.startingWeightKg != null }
+        assertTrue(main.repMax > main.repMin, "${main.exercise.id} has a range")
+        val firstReps = main.repMin + (main.repMax - main.repMin) / 2
+        val expected = StartingWeights(newLifter, known, ageYears = 30).estimateKg(main.exercise, firstReps, main.targetRir!!)
+        assertEquals(expected, main.startingWeightKg, main.exercise.id)
+    }
+
     @Test
     fun `starting weights come from known lifts - rounded down to plates`() {
         val known = KnownLifts(bench = LiftResult(weightKg = 100.0, reps = 5))

@@ -26,7 +26,8 @@ fun WeightUnit.format(kg: Double): String = formatTwoDecimals(fromKg(kg))
 
 /** [value] rounded half-up to two decimals, without trailing zeros or exponent: 102.06, 82.5, 80. */
 internal fun formatTwoDecimals(value: Double): String {
-    val hundredths = floor(abs(value) * 100 + 0.5).toLong()
+    // The tiny nudge rounds halves up even when binary floating point stores them a hair low (1.005).
+    val hundredths = floor(abs(value) * 100 + 0.5 + 1e-7).toLong()
     val sign = if (value < 0 && hundredths != 0L) "-" else ""
     val whole = hundredths / 100
     val fraction = (hundredths % 100).toString().padStart(2, '0').trimEnd('0')

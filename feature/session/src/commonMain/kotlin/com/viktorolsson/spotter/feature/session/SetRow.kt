@@ -97,6 +97,13 @@ import com.viktorolsson.spotter.feature.session.resources.set_warmup_short
  * optional effort (RIR or RPE), and the tick. Values are edited with the in-app [Keypad]; the focused
  * field shows what's being typed.
  */
+/**
+ * A set can be ticked once it has reps, including reps just typed on the keypad and not saved
+ * yet (ticking saves them first).
+ */
+internal fun canTick(set: WorkoutSet, focusedField: SetField?, buffer: String): Boolean =
+    set.isCompleted || set.reps != null || (focusedField == SetField.REPS && buffer.isNotBlank())
+
 @Composable
 internal fun SetRow(
     set: WorkoutSet,
@@ -182,7 +189,7 @@ internal fun SetRow(
             }
             CheckButton(
                 completed = set.isCompleted,
-                enabled = set.isCompleted || set.reps != null,
+                enabled = canTick(set, focusedField, buffer),
                 setLabel = setNumber,
                 onToggle = onToggle,
             )

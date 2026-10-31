@@ -52,6 +52,13 @@ into the new version's entry and writes the store notes from it. Versions are th
 - Tapping Finish twice no longer records the workout's personal records twice.
 - If restoring a backup stops partway (the connection drops), the next sync carries on with the
   restore instead of asking whether to use the backup or merge.
+- During a workout:
+  - typing an effort outside the scale (RPE 11, or the "1" on the way to typing 10) no longer
+    clears the effort already saved;
+  - a set can be ticked straight after typing its reps;
+  - "copy previous" closes the keypad, so it no longer shows the old typed value;
+  - the swap sheet never shows the previous exercise's alternatives;
+  - a save that fails while typing shows "Couldn't save" instead of closing the app.
 
 ### Website
 - Saving the profile on the website no longer undoes a body weight you just logged on the same

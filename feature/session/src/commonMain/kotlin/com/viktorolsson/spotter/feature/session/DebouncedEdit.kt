@@ -1,5 +1,6 @@
 package com.viktorolsson.spotter.feature.session
 
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.NonCancellable
@@ -12,11 +13,13 @@ import kotlinx.coroutines.withContext
 /**
  * The latest keypad edit, handed to [write] after [delayMs] without a newer one
  * (or straight away on [commit]). Only the latest edit is kept, and writes never overlap:
- * [commit] returns only once any write already running has finished.
+ * [commit] returns only once any write already running has finished. A write after the
+ * pause that fails goes to [onFailure]; one from [commit] fails its caller.
  */
 internal class DebouncedEdit<T : Any>(
     private val scope: CoroutineScope,
     private val delayMs: Long,
+    private val onFailure: (Throwable) -> Unit,
     private val write: suspend (T) -> Unit,
 ) {
     /** The edit not yet handed to [write], if any. */
@@ -33,7 +36,13 @@ internal class DebouncedEdit<T : Any>(
             delay(delayMs)
             // commit() cancels [job]: let go of it first, or the write cancels itself mid-way.
             job = null
-            commit()
+            try {
+                commit()
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Throwable) {
+                onFailure(e)
+            }
         }
     }
 

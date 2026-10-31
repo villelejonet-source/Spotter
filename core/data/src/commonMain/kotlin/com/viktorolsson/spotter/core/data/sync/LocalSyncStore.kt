@@ -44,20 +44,26 @@ class LocalSyncStore(private val database: SpotterDatabase) {
     private val keepsLocalId = setOf("exercise", "user_profile")
     private val order = SyncSchema.tables.map { it.name }
 
-    /** Column → parent table, for foreign keys to tables keyed locally by an autoincrement id. */
-    private var foreignKeys: Map<String, Map<String, String>>? = null
+    /** A foreign key to a table keyed locally by an autoincrement id; [unlinks] when its parent goes (`SET NULL`). */
+    private data class ForeignKey(val parent: String, val unlinks: Boolean)
+
+    /** Column → foreign key, per synced table. */
+    private var foreignKeys: Map<String, Map<String, ForeignKey>>? = null
 
     /** Each synced table's columns, so fields from newer app versions or the website are skipped. */
     private var columns: Map<String, Set<String>>? = null
 
-    private suspend fun Sql.foreignKeys(): Map<String, Map<String, String>> = foreignKeys ?: order.associateWith { table ->
+    private suspend fun Sql.foreignKeys(): Map<String, Map<String, ForeignKey>> = foreignKeys ?: order.associateWith { table ->
         query("PRAGMA foreign_key_list($table)") { st ->
             val tableColumn = st.columnIndex("table")
             val fromColumn = st.columnIndex("from")
+            val onDeleteColumn = st.columnIndex("on_delete")
             buildMap {
                 while (st.step()) {
                     val parent = st.getText(tableColumn)
-                    if (parent in order && parent !in keepsLocalId) put(st.getText(fromColumn), parent)
+                    if (parent in order && parent !in keepsLocalId) {
+                        put(st.getText(fromColumn), ForeignKey(parent, unlinks = st.getText(onDeleteColumn) == "SET NULL"))
+                    }
                 }
             }
         }
@@ -96,7 +102,7 @@ class LocalSyncStore(private val database: SpotterDatabase) {
                         val name = st.getColumnName(i)
                         if (name == "syncId" || name == "updatedAt") continue
                         if (name == "id" && table.name !in keepsLocalId) continue
-                        val parent = fks[name]
+                        val parent = fks[name]?.parent
                         if (parent != null && !st.isNull(i)) {
                             val localId = st.getLong(i)
                             refs += Triple(name, parent, localId)
@@ -142,9 +148,12 @@ class LocalSyncStore(private val database: SpotterDatabase) {
      * way a row moved to a new parent in the same batch as its old parent's deletion is
      * already under the new parent when the old one's cascade runs. Rows whose parent
      * isn't here are returned as deferred, so a caller applying page by page can retry
-     * them once later pages are in.
+     * them once later pages are in. On that last try ([unlinkMissing]), a missing parent the
+     * row only refers to (a workout's plan day, deleted since) is dropped from the row
+     * instead, as deleting it here would have done; a row that belongs to its parent stays
+     * deferred.
      */
-    suspend fun applyAll(rows: List<SyncRow>): ApplyResult {
+    suspend fun applyAll(rows: List<SyncRow>, unlinkMissing: Boolean = false): ApplyResult {
         if (rows.isEmpty()) return ApplyResult(0, emptyList())
         var changed = 0
         val deferred = mutableListOf<SyncRow>()
@@ -153,7 +162,7 @@ class LocalSyncStore(private val database: SpotterDatabase) {
             val (deletes, upserts) = rows.partition { it.deletedAt != null }
             upserts.sortedBy { order.indexOf(it.tableName) }.forEach { row ->
                 if (row.tableName !in order) return@forEach skipped(row, "unknown table")
-                when (upsert(row)) {
+                when (upsert(row, unlinkMissing)) {
                     Upsert.APPLIED -> changed++
                     Upsert.PARENT_MISSING -> deferred += row
                     Upsert.SKIPPED -> Unit
@@ -227,7 +236,7 @@ class LocalSyncStore(private val database: SpotterDatabase) {
 
     private enum class Upsert { APPLIED, SKIPPED, PARENT_MISSING }
 
-    private suspend fun Sql.upsert(row: SyncRow): Upsert {
+    private suspend fun Sql.upsert(row: SyncRow, unlinkMissing: Boolean): Upsert {
         val payload = row.payload ?: return Upsert.SKIPPED
         val local = localVersion(row.tableName, row.syncId)
         if (local != null && local >= row.updatedAt) return Upsert.SKIPPED
@@ -247,10 +256,14 @@ class LocalSyncStore(private val database: SpotterDatabase) {
             // Local primary keys are never taken from a payload: autoincrement tables assign
             // their own, and the profile is always the singleton row.
             if (name == "id" && row.tableName != "exercise") continue
-            val parent = fks[name]
-            if (parent != null && element is JsonPrimitive && element.isString) {
-                val localId = query("SELECT id FROM $parent WHERE syncId = ?", element.content) { if (it.step()) it.getLong(0) else null }
-                    ?: return Upsert.PARENT_MISSING.also { logDebug(TAG, "Deferred ${row.tableName}/${row.syncId}: parent $parent not here yet") }
+            val fk = fks[name]
+            if (fk != null && element is JsonPrimitive && element.isString) {
+                val localId = query("SELECT id FROM ${fk.parent} WHERE syncId = ?", element.content) { if (it.step()) it.getLong(0) else null }
+                if (localId == null && !(unlinkMissing && fk.unlinks)) {
+                    logDebug(TAG, "Deferred ${row.tableName}/${row.syncId}: parent ${fk.parent} not here yet")
+                    return Upsert.PARENT_MISSING
+                }
+                if (localId == null) logDebug(TAG, "Unlinked ${row.tableName}/${row.syncId}: parent ${fk.parent} is gone")
                 values[name] = localId
             } else {
                 values[name] = element.sqlValue()

@@ -119,9 +119,10 @@ class SyncEngine(
             offset += PAGE
         }
         if (deferred.isNotEmpty()) {
-            // A row whose parent still isn't here after every page (deleted on another phone,
-            // or pushed without it) can't be stored. Rare, but it's data that won't show here.
-            val dropped = store.applyAll(deferred).deferred
+            // A row whose parent still isn't here after every page was deleted elsewhere (or
+            // pushed without it). One that only refers to it (a workout done on a plan day the
+            // website deleted) is kept, unlinked; one that belongs to it can't be stored.
+            val dropped = store.applyAll(deferred, unlinkMissing = true).deferred
             if (dropped.isNotEmpty()) {
                 logWarn(TAG, "Dropped ${dropped.size} pulled rows with no parent: ${dropped.groupingBy { it.tableName }.eachCount()}")
             }

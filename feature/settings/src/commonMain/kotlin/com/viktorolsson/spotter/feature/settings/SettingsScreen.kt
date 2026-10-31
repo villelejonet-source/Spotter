@@ -1,5 +1,6 @@
 package com.viktorolsson.spotter.feature.settings
 
+import com.viktorolsson.spotter.core.ui.component.ContentCard
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -170,91 +171,99 @@ internal fun SettingsScreen(
             verticalArrangement = Arrangement.spacedBy(Dimens.SectionGap),
         ) {
             SectionHeader(stringResource(Res.string.settings_section_plan), Modifier.padding(top = Spacing.sm))
-            Text(
-                planName ?: stringResource(Res.string.settings_no_plan),
-                style = MaterialTheme.typography.titleMedium,
-            )
-            Text(
-                stringResource(Res.string.settings_rebuild_summary),
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-            Row(horizontalArrangement = Arrangement.spacedBy(Spacing.sm)) {
-                if (planName != null) {
-                    OutlinedButton(onClick = onOpenPlan) { Text(stringResource(Res.string.settings_view_plan)) }
-                    OutlinedButton(onClick = onRebuildPlan) { Text(stringResource(Res.string.settings_rebuild_plan)) }
-                } else {
-                    Button(onClick = onRebuildPlan) { Text(stringResource(Res.string.settings_build_plan)) }
+            ContentCard(Modifier.fillMaxWidth()) {
+                Text(
+                    planName ?: stringResource(Res.string.settings_no_plan),
+                    style = MaterialTheme.typography.titleMedium,
+                )
+                Text(
+                    stringResource(Res.string.settings_rebuild_summary),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                Row(horizontalArrangement = Arrangement.spacedBy(Spacing.sm)) {
+                    if (planName != null) {
+                        OutlinedButton(onClick = onOpenPlan) { Text(stringResource(Res.string.settings_view_plan)) }
+                        OutlinedButton(onClick = onRebuildPlan) { Text(stringResource(Res.string.settings_rebuild_plan)) }
+                    } else {
+                        Button(onClick = onRebuildPlan) { Text(stringResource(Res.string.settings_build_plan)) }
+                    }
                 }
             }
 
             if (syncStatus.available) BackupSection(syncStatus, sync)
 
             SectionHeader(stringResource(Res.string.settings_section_appearance), Modifier.padding(top = Spacing.sm))
-            Text(stringResource(Res.string.settings_theme), style = MaterialTheme.typography.bodyLarge)
-            SegmentedChoice(
-                options = listOf(
-                    ThemeMode.SYSTEM to stringResource(Res.string.settings_theme_system),
-                    ThemeMode.LIGHT to stringResource(Res.string.settings_theme_light),
-                    ThemeMode.DARK to stringResource(Res.string.settings_theme_dark),
-                ),
-                selected = preferences.themeMode,
-                onSelect = onThemeModeChange,
-            )
-            if (supportsDynamicColor) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Column(Modifier.weight(1f)) {
-                        Text(stringResource(Res.string.settings_dynamic_color), style = MaterialTheme.typography.bodyLarge)
-                        Text(
-                            stringResource(Res.string.settings_dynamic_color_summary),
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
+            ContentCard(Modifier.fillMaxWidth()) {
+                Text(stringResource(Res.string.settings_theme), style = MaterialTheme.typography.bodyLarge)
+                SegmentedChoice(
+                    options = listOf(
+                        ThemeMode.SYSTEM to stringResource(Res.string.settings_theme_system),
+                        ThemeMode.LIGHT to stringResource(Res.string.settings_theme_light),
+                        ThemeMode.DARK to stringResource(Res.string.settings_theme_dark),
+                    ),
+                    selected = preferences.themeMode,
+                    onSelect = onThemeModeChange,
+                )
+                if (supportsDynamicColor) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Column(Modifier.weight(1f)) {
+                            Text(stringResource(Res.string.settings_dynamic_color), style = MaterialTheme.typography.bodyLarge)
+                            Text(
+                                stringResource(Res.string.settings_dynamic_color_summary),
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                        }
+                        Switch(checked = preferences.dynamicColor, onCheckedChange = onDynamicColorChange)
                     }
-                    Switch(checked = preferences.dynamicColor, onCheckedChange = onDynamicColorChange)
                 }
             }
 
             SectionHeader(stringResource(Res.string.settings_section_units), Modifier.padding(top = Spacing.sm))
-            Text(stringResource(Res.string.settings_weight_unit), style = MaterialTheme.typography.bodyLarge)
-            SegmentedChoice(
-                options = listOf(
-                    WeightUnit.KG to stringResource(Res.string.settings_unit_kg),
-                    WeightUnit.LB to stringResource(Res.string.settings_unit_lb),
-                ),
-                selected = preferences.weightUnit,
-                onSelect = onWeightUnitChange,
-            )
+            ContentCard(Modifier.fillMaxWidth()) {
+                Text(stringResource(Res.string.settings_weight_unit), style = MaterialTheme.typography.bodyLarge)
+                SegmentedChoice(
+                    options = listOf(
+                        WeightUnit.KG to stringResource(Res.string.settings_unit_kg),
+                        WeightUnit.LB to stringResource(Res.string.settings_unit_lb),
+                    ),
+                    selected = preferences.weightUnit,
+                    onSelect = onWeightUnitChange,
+                )
+            }
 
             SectionHeader(stringResource(Res.string.settings_section_workout), Modifier.padding(top = Spacing.sm))
-            SettingRow(
-                title = stringResource(Res.string.settings_default_rest),
-                summary = stringResource(Res.string.settings_default_rest_summary),
-                modifier = Modifier.clickable(onClickLabel = stringResource(Res.string.settings_default_rest_change), role = Role.Button) { pickingRest = true },
-            ) {
-                Text(formatClock(preferences.defaultRestSeconds.toLong()), style = MaterialTheme.typography.titleMedium)
+            ContentCard(Modifier.fillMaxWidth()) {
+                SettingRow(
+                    title = stringResource(Res.string.settings_default_rest),
+                    summary = stringResource(Res.string.settings_default_rest_summary),
+                    modifier = Modifier.clickable(onClickLabel = stringResource(Res.string.settings_default_rest_change), role = Role.Button) { pickingRest = true },
+                ) {
+                    Text(formatClock(preferences.defaultRestSeconds.toLong()), style = SpotterTheme.type.numberMedium)
+                }
+                Text(stringResource(Res.string.settings_effort_scale), style = MaterialTheme.typography.bodyLarge)
+                Text(
+                    stringResource(
+                        when (preferences.effortScale) {
+                            EffortScale.OFF -> Res.string.settings_effort_off_summary
+                            EffortScale.RIR -> Res.string.settings_effort_rir_summary
+                            EffortScale.RPE -> Res.string.settings_effort_rpe_summary
+                        },
+                    ),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                SegmentedChoice(
+                    options = listOf(
+                        EffortScale.OFF to stringResource(Res.string.settings_effort_off),
+                        EffortScale.RIR to stringResource(Res.string.settings_effort_rir),
+                        EffortScale.RPE to stringResource(Res.string.settings_effort_rpe),
+                    ),
+                    selected = preferences.effortScale,
+                    onSelect = onEffortScaleChange,
+                )
             }
-            Text(stringResource(Res.string.settings_effort_scale), style = MaterialTheme.typography.bodyLarge)
-            Text(
-                stringResource(
-                    when (preferences.effortScale) {
-                        EffortScale.OFF -> Res.string.settings_effort_off_summary
-                        EffortScale.RIR -> Res.string.settings_effort_rir_summary
-                        EffortScale.RPE -> Res.string.settings_effort_rpe_summary
-                    },
-                ),
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-            SegmentedChoice(
-                options = listOf(
-                    EffortScale.OFF to stringResource(Res.string.settings_effort_off),
-                    EffortScale.RIR to stringResource(Res.string.settings_effort_rir),
-                    EffortScale.RPE to stringResource(Res.string.settings_effort_rpe),
-                ),
-                selected = preferences.effortScale,
-                onSelect = onEffortScaleChange,
-            )
 
             Text(
                 stringResource(Res.string.settings_privacy_note),
@@ -289,6 +298,30 @@ private fun BackupSection(status: SyncStatus, actions: SyncActions) {
     var confirmSignOut by rememberSaveable { mutableStateOf(false) }
     var confirmDelete by rememberSaveable { mutableStateOf(false) }
     SectionHeader(stringResource(Res.string.backup_section), Modifier.padding(top = Spacing.sm))
+    ContentCard(Modifier.fillMaxWidth()) { BackupContent(status, actions, onSignOut = { confirmSignOut = true }, onDelete = { confirmDelete = true }) }
+    if (confirmSignOut) {
+        ConfirmDialog(
+            title = stringResource(Res.string.backup_sign_out_title),
+            text = stringResource(Res.string.backup_sign_out_body),
+            confirmText = stringResource(Res.string.backup_sign_out),
+            onConfirm = { confirmSignOut = false; actions.onSignOut() },
+            onDismiss = { confirmSignOut = false },
+        )
+    }
+    if (confirmDelete) {
+        ConfirmDialog(
+            title = stringResource(Res.string.backup_delete_title),
+            text = stringResource(Res.string.backup_delete_body),
+            confirmText = stringResource(Res.string.backup_delete_confirm),
+            onConfirm = { confirmDelete = false; actions.onDeleteAccount() },
+            onDismiss = { confirmDelete = false },
+            destructive = true,
+        )
+    }
+}
+
+@Composable
+private fun BackupContent(status: SyncStatus, actions: SyncActions, onSignOut: () -> Unit, onDelete: () -> Unit) {
     val account = status.account
     if (account == null) {
         Text(
@@ -316,30 +349,11 @@ private fun BackupSection(status: SyncStatus, actions: SyncActions) {
     )
     Row(horizontalArrangement = Arrangement.spacedBy(Spacing.sm)) {
         OutlinedButton(onClick = actions.onSyncNow, enabled = !status.syncing) { Text(stringResource(Res.string.backup_sync_now)) }
-        OutlinedButton(onClick = { confirmSignOut = true }) { Text(stringResource(Res.string.backup_sign_out)) }
+        OutlinedButton(onClick = onSignOut) { Text(stringResource(Res.string.backup_sign_out)) }
     }
     TextButton(onClick = actions.onChangePassword) { Text(stringResource(Res.string.backup_change_password)) }
-    TextButton(onClick = { confirmDelete = true }) {
+    TextButton(onClick = onDelete) {
         Text(stringResource(Res.string.backup_delete), color = MaterialTheme.colorScheme.error)
-    }
-    if (confirmSignOut) {
-        ConfirmDialog(
-            title = stringResource(Res.string.backup_sign_out_title),
-            text = stringResource(Res.string.backup_sign_out_body),
-            confirmText = stringResource(Res.string.backup_sign_out),
-            onConfirm = { confirmSignOut = false; actions.onSignOut() },
-            onDismiss = { confirmSignOut = false },
-        )
-    }
-    if (confirmDelete) {
-        ConfirmDialog(
-            title = stringResource(Res.string.backup_delete_title),
-            text = stringResource(Res.string.backup_delete_body),
-            confirmText = stringResource(Res.string.backup_delete_confirm),
-            onConfirm = { confirmDelete = false; actions.onDeleteAccount() },
-            onDismiss = { confirmDelete = false },
-            destructive = true,
-        )
     }
 }
 

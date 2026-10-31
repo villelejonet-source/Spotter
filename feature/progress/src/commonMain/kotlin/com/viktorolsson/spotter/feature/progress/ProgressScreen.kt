@@ -285,6 +285,7 @@ internal fun LogWeightDialog(unit: WeightUnit, initial: String, onSave: (String)
         title = { Text(stringResource(Res.string.progress_log_weight)) },
         text = {
             OutlinedTextField(
+                shape = MaterialTheme.shapes.small,
                 value = text,
                 onValueChange = { v ->
                     text = v.filter { it.isDigit() || it == '.' || it == ',' }.take(6)

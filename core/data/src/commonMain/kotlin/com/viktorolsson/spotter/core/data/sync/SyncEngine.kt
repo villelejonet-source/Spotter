@@ -2,6 +2,7 @@ package com.viktorolsson.spotter.core.data.sync
 
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
+import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.longPreferencesKey
@@ -26,11 +27,13 @@ data class SyncCursor(
     val lastSyncedAt: Long = 0,
     /** The exercise catalog version the last pull was stored with. */
     val pulledWithCatalog: Int = 0,
+    /** A restore wiped this phone's data and hasn't finished yet: the next sync carries on with it. */
+    val restoring: Boolean = false,
 )
 
 class SyncCursorStore(private val dataStore: DataStore<Preferences>) {
     val cursor: Flow<SyncCursor> = dataStore.data.map { p ->
-        SyncCursor(p[USER], p[PULLED], p[PUSHED] ?: 0, p[LAST] ?: 0, p[CATALOG] ?: 0)
+        SyncCursor(p[USER], p[PULLED], p[PUSHED] ?: 0, p[LAST] ?: 0, p[CATALOG] ?: 0, p[RESTORING] ?: false)
     }
 
     suspend fun get(): SyncCursor = cursor.first()
@@ -42,6 +45,7 @@ class SyncCursorStore(private val dataStore: DataStore<Preferences>) {
             p[PUSHED] = cursor.pushedUpTo
             p[LAST] = cursor.lastSyncedAt
             p[CATALOG] = cursor.pulledWithCatalog
+            p[RESTORING] = cursor.restoring
         }
     }
 
@@ -53,6 +57,7 @@ class SyncCursorStore(private val dataStore: DataStore<Preferences>) {
         val PUSHED = longPreferencesKey("sync_pushed_up_to")
         val LAST = longPreferencesKey("sync_last_synced_at")
         val CATALOG = intPreferencesKey("sync_pulled_with_catalog")
+        val RESTORING = booleanPreferencesKey("sync_restoring")
     }
 }
 
@@ -89,8 +94,10 @@ class SyncEngine(
      * credentials. The first sync then never uploads this phone's data to an empty
      * account without an explicit [choice] (any choice means "go ahead").
      */
-    suspend fun sync(userId: String, choice: FirstSyncChoice? = null, fromLink: Boolean = false): SyncOutcome {
+    suspend fun sync(userId: String, requested: FirstSyncChoice? = null, fromLink: Boolean = false): SyncOutcome {
         var cursor = cursors.get().takeIf { it.userId == userId } ?: SyncCursor(userId = userId)
+        // A restore that stopped partway carries on: what's here came from the backup itself.
+        val choice = if (cursor.restoring) FirstSyncChoice.USE_BACKUP else requested
         val firstSync = cursor.lastSyncedAt == 0L
         // A pulled row using an exercise this phone's catalog didn't have yet was skipped
         // (LocalSyncStore). Once a newer catalog is in, pull everything again to fetch it;
@@ -105,7 +112,10 @@ class SyncEngine(
                 backupExists && phoneHasData && choice == null -> return SyncOutcome.NeedsChoice(fromLink = false)
                 !backupExists && phoneHasData && fromLink && choice == null -> return SyncOutcome.NeedsChoice(fromLink = true)
                 // Restore: drop this phone's own data first (often just a fresh onboarding plan).
-                backupExists && (!phoneHasData || choice == FirstSyncChoice.USE_BACKUP) -> store.wipe()
+                backupExists && (!phoneHasData || choice == FirstSyncChoice.USE_BACKUP) -> {
+                    store.wipe()
+                    cursors.save(cursor.copy(restoring = true))
+                }
             }
             // Everything local counts as unpushed the first time.
             cursor = cursor.copy(pushedUpTo = 0, pulledUpTo = null)
@@ -152,7 +162,10 @@ class SyncEngine(
         val changes = store.changesSince(cursor.pushedUpTo - PUSH_OVERLAP_MS)
         changes.chunked(pageSize).forEach { remote.push(it) }
 
-        cursors.save(SyncCursor(userId, newPulledUpTo, pushStartedAt, clock.now().toEpochMilliseconds(), catalog))
+        // Rows stamped a little ahead of the clock (the update trigger adds 1 ms to a row
+        // changed twice in one millisecond) are behind the cursor too, so they aren't new next time.
+        val pushedUpTo = maxOf(pushStartedAt, changes.maxOfOrNull { it.updatedAt } ?: 0)
+        cursors.save(SyncCursor(userId, newPulledUpTo, pushedUpTo, clock.now().toEpochMilliseconds(), catalog))
         checkIn()
         return SyncOutcome.Done(pulled = pulled, pushed = changes.count { it.updatedAt > cursor.pushedUpTo })
     }

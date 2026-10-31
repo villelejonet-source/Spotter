@@ -60,6 +60,14 @@ class FakeRemote : SyncRemote {
     val checkIns = mutableListOf<Pair<String, DeviceCheckIn>>()
     var checkInFails = false
 
+    /** Pulls fail once this many more pages have been served; null: they don't. */
+    var failFromPage: Int? = null
+        set(value) {
+            field = value
+            pagesServed = 0
+        }
+    private var pagesServed = 0
+
     /** Runs once, after the next page is served: another device writing mid-pull. */
     var afterNextPage: (() -> Unit)? = null
 
@@ -77,8 +85,9 @@ class FakeRemote : SyncRemote {
 
     override suspend fun hasRows(userId: String) = rows.keys.any { it.first == userId }
 
-    override suspend fun pull(userId: String, since: String?, after: PageKey?, limit: Int): List<RemoteRow> =
-        rows.filterKeys { it.first == userId }.values
+    override suspend fun pull(userId: String, since: String?, after: PageKey?, limit: Int): List<RemoteRow> {
+        failFromPage?.let { if (pagesServed++ >= it) throw java.io.IOException("connection lost") }
+        return rows.filterKeys { it.first == userId }.values
             .filter { since == null || Instant.parse(it.serverUpdatedAt) > Instant.parse(since) }
             .filter { row ->
                 after == null || Instant.parse(row.serverUpdatedAt).let { at ->
@@ -89,6 +98,7 @@ class FakeRemote : SyncRemote {
             .sortedWith(compareBy({ Instant.parse(it.serverUpdatedAt) }, { it.syncId }))
             .take(limit)
             .also { afterNextPage?.invoke(); afterNextPage = null }
+    }
 
     override suspend fun push(rows: List<SyncRow>) {
         pushes++
@@ -456,6 +466,31 @@ class SyncEngineTest {
         remote.afterNextPage = { remote.touchOldest() }
         b.sync()
         assertEquals(12, b.bodyWeight.observeTrend().first().size)
+    }
+
+    /**
+     * A restore that stops partway (the connection drops) left some of the backup on the
+     * phone and no finished first sync, so the next sync asked "use the backup or merge?"
+     * about data that came from the backup. It carries on with the restore instead.
+     */
+    @Test
+    fun aRestoreThatStopsPartwayCarriesOnWithoutAsking() = runTest {
+        val a = device()
+        a.planFor(profile)
+        repeat(12) { a.bodyWeight.log(LocalDate(2026, 1, 1).plus(it.toLong(), DateTimeUnit.DAY), 80.0 + it) }
+        a.logWorkout()
+        a.sync()
+
+        val b = device(pageSize = 5)
+        b.planFor(profile) // its own onboarding plan: the restore replaces it
+        remote.failFromPage = 5 // past the plan rows, before the workout
+        assertTrue(runCatching { b.sync(FirstSyncChoice.USE_BACKUP) }.isFailure)
+        assertTrue(b.sessions().isEmpty())
+        remote.failFromPage = null
+
+        assertEquals(SyncOutcome.Done::class, b.sync()::class)
+        assertEquals(12, b.bodyWeight.observeTrend().first().size)
+        assertEquals(1, b.sessions().size)
     }
 
     @Test

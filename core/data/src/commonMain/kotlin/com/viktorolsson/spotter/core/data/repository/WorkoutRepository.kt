@@ -416,9 +416,11 @@ class WorkoutRepository(
 
     /**
      * Ends the session, dropping sets that were never ticked and exercises left with no
-     * sets, then records any personal records it set.
+     * sets, then records any personal records it set. A session already finished (a double
+     * tap on Finish) is left as it is.
      */
     suspend fun finishWorkout(sessionId: Long) = db.withTransaction {
+        if (dao.isSessionFinished(sessionId) != false) return@withTransaction
         dao.deleteIncompleteSets(sessionId)
         dao.deleteExercisesWithoutSets(sessionId)
         val now = clock.now()

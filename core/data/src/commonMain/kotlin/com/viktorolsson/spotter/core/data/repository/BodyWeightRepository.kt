@@ -23,7 +23,8 @@ class BodyWeightRepository(
     /** One entry per day (logging again replaces it); the latest also updates the profile. */
     suspend fun log(date: LocalDate, weightKg: Double) = db.withTransaction {
         val existing = dao.getBodyWeight(date)
-        dao.upsertBodyWeight(BodyWeightEntryEntity(id = existing?.id ?: 0, date = date, weightKg = weightKg))
+        // Logging the day again changes its entry, keeping its sync id (a new one would leave the old on the server).
+        dao.upsertBodyWeight(existing?.copy(weightKg = weightKg) ?: BodyWeightEntryEntity(date = date, weightKg = weightKg))
         val latest = dao.getLatestBodyWeight()
         val profile = dao.get()
         if (profile != null && latest != null && profile.bodyWeightKg != latest.weightKg) dao.upsert(profile.copy(bodyWeightKg = latest.weightKg))

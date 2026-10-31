@@ -47,6 +47,11 @@ into the new version's entry and writes the store notes from it. Versions are th
 - Warm-ups and weight rounding never go below the empty bar: 10 kg for an EZ bar, 25 kg for a
   trap bar.
 - Weights like 1.005 now round up to 1.01 when shown.
+- Logging body weight again for the same day no longer leaves the earlier entry behind in the
+  backup.
+- Tapping Finish twice no longer records the workout's personal records twice.
+- If restoring a backup stops partway (the connection drops), the next sync carries on with the
+  restore instead of asking whether to use the backup or merge.
 
 ### Website
 - Saving the profile on the website no longer undoes a body weight you just logged on the same

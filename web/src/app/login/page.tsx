@@ -136,7 +136,7 @@ function Login() {
           <input type="password" required autoComplete="current-password" value={password} onChange={(e) => setPassword(e.target.value)} className={inputClass} />
         </Field>
         <div className="text-right">
-          <Link href={`/forgot-password${email ? `?email=${encodeURIComponent(email)}` : ""}`} className="rounded-md text-sm text-muted hover:text-foreground">
+          <Link href={`/forgot-password${email ? `?email=${encodeURIComponent(email)}` : ""}`} className="tap rounded-md text-sm text-muted hover:text-foreground">
             Forgot password?
           </Link>
         </div>

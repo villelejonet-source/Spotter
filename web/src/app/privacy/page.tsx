@@ -11,7 +11,7 @@ export const metadata = { title: "Privacy policy" };
 export default function PrivacyPage() {
   return (
     <main className="mx-auto max-w-2xl px-4 py-10">
-      <Link href="/" className="rounded-md text-sm font-semibold text-primary">
+      <Link href="/" className="tap rounded-md text-sm font-semibold text-primary">
         Spotter
       </Link>
       <Card className="mt-4 p-6 sm:p-8">

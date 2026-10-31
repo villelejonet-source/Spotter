@@ -17,7 +17,12 @@ export default async function AppLayout({ children }: { children: React.ReactNod
 
   return (
     <div className="mx-auto flex min-h-screen max-w-7xl flex-col md:flex-row">
-      <header className="sticky top-0 z-30 flex h-14 items-center border-b border-outline bg-raised/95 px-4 md:hidden">{brand}</header>
+      <header
+        className="sticky top-0 z-30 flex min-h-14 items-center border-b border-outline bg-raised/95 px-4 md:hidden"
+        style={{ paddingTop: "env(safe-area-inset-top)" }}
+      >
+        {brand}
+      </header>
       <aside className="hidden md:sticky md:top-0 md:flex md:h-screen md:w-60 md:shrink-0 md:flex-col md:border-r md:border-outline md:bg-raised/40 md:px-3 md:py-6 md:backdrop-blur-xl">
         <div className="mb-6 px-3">{brand}</div>
         <div className="mb-5">

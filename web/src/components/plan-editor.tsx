@@ -2,7 +2,7 @@
 
 import clsx from "clsx";
 import { useRouter } from "next/navigation";
-import { useEffect, useMemo, useState, useTransition } from "react";
+import { useEffect, useMemo, useState, useTransition, type ReactNode } from "react";
 import { savePlan } from "@/app/actions/plans";
 import { newSyncId } from "@/lib/ids";
 import { BODYWEIGHT, EFFORT_LABEL, EQUIPMENT_LABELS, GOAL_LABELS, label, MUSCLE_LABELS, PROGRESSION_RULE_LABELS, SPLIT_LABELS } from "@/lib/labels";
@@ -20,6 +20,21 @@ export interface ExerciseOption {
 }
 
 const compact = inputClasses({ compact: true });
+
+/** An exercise's row on wide screens (xl): the name, each field, then the buttons. */
+const EXERCISE_GRID = "xl:grid-cols-[minmax(8rem,1fr)_3.5rem_7.5rem_3.5rem_4.5rem_4.5rem_4.5rem_10rem_6.5rem] xl:items-center xl:gap-y-0";
+
+/** One field of an exercise, captioned on phones; wide screens have the header row instead. */
+function ExerciseField({ caption, className, children }: { caption: string; className?: string; children: ReactNode }) {
+  return (
+    <div className={clsx("min-w-0", className)}>
+      <div className="mb-1 text-xs text-muted xl:hidden" aria-hidden="true">
+        {caption}
+      </div>
+      {children}
+    </div>
+  );
+}
 
 function move<T>(list: T[], from: number, to: number): T[] {
   if (to < 0 || to >= list.length) return list;
@@ -185,117 +200,95 @@ export function PlanEditor({
           </div>
 
           {day.exercises.length > 0 && (
-            <div className="overflow-x-auto">
-              <table className="w-full min-w-[760px] text-sm">
-                <thead className="text-left text-xs text-muted">
-                  <tr>
-                    <th scope="col" className="px-4 py-2 font-normal">
-                      Exercise
-                    </th>
-                    <th scope="col" className="w-16 px-1 py-2 font-normal">
-                      Sets
-                    </th>
-                    <th scope="col" className="w-32 px-1 py-2 font-normal">
-                      Reps / s
-                    </th>
-                    <th scope="col" className="w-16 px-1 py-2 font-normal">
-                      <abbr title="Target reps in reserve" className="no-underline">
-                        {EFFORT_LABEL}
-                      </abbr>
-                    </th>
-                    <th scope="col" className="w-20 px-1 py-2 font-normal">
-                      Rest (s)
-                    </th>
-                    <th scope="col" className="w-20 px-1 py-2 font-normal">
-                      Start ({unitLabel(unit)})
-                    </th>
-                    <th scope="col" className="w-20 px-1 py-2 font-normal">
-                      <abbr title="Exercises with the same number are done as a superset" className="no-underline">
-                        Superset
-                      </abbr>
-                    </th>
-                    <th scope="col" className="w-40 px-1 py-2 font-normal">
-                      Progression
-                    </th>
-                    <th scope="col" className="w-28 px-2 py-2">
-                      <span className="sr-only">Reorder or remove</span>
-                    </th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-outline">
-                  {day.exercises.map((e, i) => {
-                    const name = nameOf(e.exercise_id);
-                    const timed = isTimed(e.exercise_id);
-                    return (
-                      <tr key={e.sync_id}>
-                        <td className="px-4 py-2">
+            <>
+              <div className={clsx("hidden px-4 py-2 text-xs text-muted xl:grid", EXERCISE_GRID)} aria-hidden="true">
+                <span>Exercise</span>
+                <span>Sets</span>
+                <span>Reps / s</span>
+                <abbr title="Target reps in reserve" className="no-underline">
+                  {EFFORT_LABEL}
+                </abbr>
+                <span>Rest (s)</span>
+                <span>Start ({unitLabel(unit)})</span>
+                <abbr title="Exercises with the same number are done as a superset" className="no-underline">
+                  Superset
+                </abbr>
+                <span>Progression</span>
+              </div>
+              <ul className="divide-y divide-outline border-t border-outline text-sm xl:border-t-0">
+                {day.exercises.map((e, i) => {
+                  const name = nameOf(e.exercise_id);
+                  const timed = isTimed(e.exercise_id);
+                  return (
+                    <li key={e.sync_id} className={clsx("grid grid-cols-4 gap-x-2 gap-y-3 px-4 py-3 xl:py-2", EXERCISE_GRID)}>
+                      {/* One row on wide screens; on phones the name and buttons, then the fields in a grid below. */}
+                      <div className="col-span-4 flex items-start justify-between gap-2 xl:contents">
+                        <div className="min-w-0">
                           <div className="font-medium">{name}</div>
                           <div className="text-xs text-muted">{byId.get(e.exercise_id)?.primary.map((m) => label(MUSCLE_LABELS, m)).join(", ")}</div>
-                        </td>
-                        <td className="px-1 py-2">
-                          <input type="number" min={1} max={20} className={compact} aria-label={`Sets for ${name}`} value={e.sets} onChange={(x) => setExercise(dayIndex, i, { sets: Number(x.target.value) })} />
-                        </td>
-                        <td className="px-1 py-2">
-                          <div className="flex items-center gap-1">
-                            <input type="number" min={1} max={300} className={compact} aria-label={`${timed ? "Seconds" : "Reps"} from, for ${name}`} value={e.rep_min} onChange={(x) => setExercise(dayIndex, i, { rep_min: Number(x.target.value) })} />
-                            <span className="text-muted" aria-hidden="true">
-                              –
-                            </span>
-                            <input type="number" min={1} max={300} className={compact} aria-label={`${timed ? "Seconds" : "Reps"} to, for ${name}`} value={e.rep_max} onChange={(x) => setExercise(dayIndex, i, { rep_max: Number(x.target.value) })} />
-                          </div>
-                        </td>
-                        <td className="px-1 py-2">
-                          <input type="number" min={0} max={10} className={compact} aria-label={`Target ${EFFORT_LABEL} for ${name}`} value={e.target_rir ?? ""} onChange={(x) => setExercise(dayIndex, i, { target_rir: num(x.target.value) })} />
-                        </td>
-                        <td className="px-1 py-2">
-                          <input type="number" min={0} max={900} step={15} className={compact} aria-label={`Rest in seconds for ${name}`} value={e.rest_seconds} onChange={(x) => setExercise(dayIndex, i, { rest_seconds: Number(x.target.value) })} />
-                        </td>
-                        <td className="px-1 py-2">
-                          <input
-                            type="number"
-                            min={0}
-                            step={0.5}
-                            className={compact}
-                            aria-label={`Starting weight in ${unitLabel(unit)} for ${name}`}
-                            placeholder="–"
-                            value={e.starting_weight_kg == null ? "" : Number(toUnit(e.starting_weight_kg, unit).toFixed(1))}
-                            onChange={(x) => {
-                              const v = num(x.target.value);
-                              setExercise(dayIndex, i, { starting_weight_kg: v == null ? null : fromUnit(v, unit) });
-                            }}
-                          />
-                        </td>
-                        <td className="px-1 py-2">
-                          <input type="number" min={1} max={50} className={compact} aria-label={`Superset group for ${name}`} placeholder="–" value={e.superset_group ?? ""} onChange={(x) => setExercise(dayIndex, i, { superset_group: num(x.target.value) })} />
-                        </td>
-                        <td className="px-1 py-2">
-                          <select className={clsx(compact, "font-sans text-sm")} aria-label={`Progression for ${name}`} value={e.progression_rule} onChange={(x) => setExercise(dayIndex, i, { progression_rule: x.target.value as ExerciseDraft["progression_rule"] })}>
-                            {PROGRESSION_RULES.map((r) => (
-                              <option key={r} value={r}>
-                                {PROGRESSION_RULE_LABELS[r]}
-                              </option>
-                            ))}
-                          </select>
-                        </td>
-                        <td className="px-2 py-2">
-                          <div className="flex justify-end">
-                            <IconButton label={`Move ${name} up`} className="h-8 w-8" disabled={i === 0} onClick={() => setDay(dayIndex, { ...day, exercises: move(day.exercises, i, i - 1) })}>
-                              ↑
-                            </IconButton>
-                            <IconButton label={`Move ${name} down`} className="h-8 w-8" disabled={i === day.exercises.length - 1} onClick={() => setDay(dayIndex, { ...day, exercises: move(day.exercises, i, i + 1) })}>
-                              ↓
-                            </IconButton>
-                            <IconButton label={`Remove ${name}`} className="h-8 w-8 text-error" onClick={() => setRemoval({ kind: "exercise", dayIndex, index: i })}>
-                              ✕
-                            </IconButton>
-                          </div>
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
+                        </div>
+                        <div className="flex shrink-0 justify-end xl:order-last">
+                          <IconButton label={`Move ${name} up`} className="h-10 w-10 xl:h-8 xl:w-8" disabled={i === 0} onClick={() => setDay(dayIndex, { ...day, exercises: move(day.exercises, i, i - 1) })}>
+                            ↑
+                          </IconButton>
+                          <IconButton label={`Move ${name} down`} className="h-10 w-10 xl:h-8 xl:w-8" disabled={i === day.exercises.length - 1} onClick={() => setDay(dayIndex, { ...day, exercises: move(day.exercises, i, i + 1) })}>
+                            ↓
+                          </IconButton>
+                          <IconButton label={`Remove ${name}`} className="h-10 w-10 text-error xl:h-8 xl:w-8" onClick={() => setRemoval({ kind: "exercise", dayIndex, index: i })}>
+                            ✕
+                          </IconButton>
+                        </div>
+                      </div>
+                      <ExerciseField caption="Sets">
+                        <input type="number" min={1} max={20} className={compact} aria-label={`Sets for ${name}`} value={e.sets} onChange={(x) => setExercise(dayIndex, i, { sets: Number(x.target.value) })} />
+                      </ExerciseField>
+                      <ExerciseField caption={timed ? "Seconds" : "Reps"} className="col-span-2 xl:col-span-1">
+                        <div className="flex items-center gap-1">
+                          <input type="number" min={1} max={300} className={compact} aria-label={`${timed ? "Seconds" : "Reps"} from, for ${name}`} value={e.rep_min} onChange={(x) => setExercise(dayIndex, i, { rep_min: Number(x.target.value) })} />
+                          <span className="text-muted" aria-hidden="true">
+                            –
+                          </span>
+                          <input type="number" min={1} max={300} className={compact} aria-label={`${timed ? "Seconds" : "Reps"} to, for ${name}`} value={e.rep_max} onChange={(x) => setExercise(dayIndex, i, { rep_max: Number(x.target.value) })} />
+                        </div>
+                      </ExerciseField>
+                      <ExerciseField caption={EFFORT_LABEL}>
+                        <input type="number" min={0} max={10} className={compact} aria-label={`Target ${EFFORT_LABEL} for ${name}`} value={e.target_rir ?? ""} onChange={(x) => setExercise(dayIndex, i, { target_rir: num(x.target.value) })} />
+                      </ExerciseField>
+                      <ExerciseField caption="Rest (s)">
+                        <input type="number" min={0} max={900} step={15} className={compact} aria-label={`Rest in seconds for ${name}`} value={e.rest_seconds} onChange={(x) => setExercise(dayIndex, i, { rest_seconds: Number(x.target.value) })} />
+                      </ExerciseField>
+                      <ExerciseField caption={`Start (${unitLabel(unit)})`}>
+                        <input
+                          type="number"
+                          min={0}
+                          step={0.5}
+                          className={compact}
+                          aria-label={`Starting weight in ${unitLabel(unit)} for ${name}`}
+                          placeholder="–"
+                          value={e.starting_weight_kg == null ? "" : Number(toUnit(e.starting_weight_kg, unit).toFixed(1))}
+                          onChange={(x) => {
+                            const v = num(x.target.value);
+                            setExercise(dayIndex, i, { starting_weight_kg: v == null ? null : fromUnit(v, unit) });
+                          }}
+                        />
+                      </ExerciseField>
+                      <ExerciseField caption="Superset">
+                        <input type="number" min={1} max={50} className={compact} aria-label={`Superset group for ${name}`} placeholder="–" value={e.superset_group ?? ""} onChange={(x) => setExercise(dayIndex, i, { superset_group: num(x.target.value) })} />
+                      </ExerciseField>
+                      <ExerciseField caption="Progression" className="col-span-4 xl:col-span-1">
+                        <select className={clsx(compact, "font-sans")} aria-label={`Progression for ${name}`} value={e.progression_rule} onChange={(x) => setExercise(dayIndex, i, { progression_rule: x.target.value as ExerciseDraft["progression_rule"] })}>
+                          {PROGRESSION_RULES.map((r) => (
+                            <option key={r} value={r}>
+                              {PROGRESSION_RULE_LABELS[r]}
+                            </option>
+                          ))}
+                        </select>
+                      </ExerciseField>
+                    </li>
+                  );
+                })}
+              </ul>
+            </>
           )}
 
           <div className="p-4">
@@ -310,7 +303,7 @@ export function PlanEditor({
         </Button>
       </div>
 
-      <div className="sticky bottom-14 -mx-4 flex items-center justify-end gap-3 border-t border-outline bg-background/95 px-4 py-3 md:bottom-0 md:-mx-10 md:px-10">
+      <div className="sticky bottom-[calc(4rem+env(safe-area-inset-bottom))] -mx-4 flex items-center justify-end gap-3 border-t border-outline bg-background/95 px-4 py-3 md:bottom-0 md:-mx-10 md:px-10">
         {error ? (
           <InlineMessage tone="error" className="mr-auto">
             {error}

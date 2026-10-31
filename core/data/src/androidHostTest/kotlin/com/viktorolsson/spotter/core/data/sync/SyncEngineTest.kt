@@ -222,6 +222,39 @@ class SyncEngineTest {
         assertEquals(0, phone.db.sql.query("SELECT COUNT(*) FROM session_exercise").use { it.moveToFirst(); it.getInt(0) })
     }
 
+    /**
+     * The website deletes a plan (deletion markers for the plan rows only, as web
+     * deletePlanRows): the workouts done on it still point at it on the server. A phone
+     * restoring the backup keeps them, unlinked from the plan.
+     */
+    @Test
+    fun aRestoreKeepsWorkoutsWhosePlanWasDeletedOnTheWebsite() = runTest {
+        val a = device()
+        a.planFor(profile)
+        val day = a.plans.observeActivePlan().first()!!.days.first()
+        val id = a.workouts.startPlannedWorkout(day.id)
+        val set = a.workouts.getSession(id)!!.exercises.first().sets.first()
+        a.workouts.updateSetValues(set.id, 60.0, 10, null)
+        a.workouts.toggleSetCompleted(set.id)
+        a.clock.advanceSeconds(3600)
+        a.workouts.finishWorkout(id)
+        a.sync()
+
+        val at = Clock.System.now().toEpochMilliseconds() + 60_000
+        val markers = listOf("plan_exercise", "plan_day", "plan").flatMap { table ->
+            a.syncIds(table).map { SyncRow(table, it, payload = null, updatedAt = at, deletedAt = at) }
+        }
+        remote.push(markers)
+
+        val b = device()
+        b.sync()
+
+        val restored = b.sessions().single()
+        assertTrue(b.db.sql.query("SELECT planDayId FROM workout_session").use { it.moveToFirst(); it.isNull(0) })
+        assertEquals(a.sessions().single().exercises.map { it.exercise.id }, restored.exercises.map { it.exercise.id })
+        assertEquals(60.0 to 10, restored.exercises.first().sets.first().let { it.weightKg to it.reps })
+    }
+
     /** Deleting a finished workout on one phone removes it, and the records set in it, on the other. */
     @Test
     fun aFinishedWorkoutDeletedOnOnePhoneIsDeletedOnTheOther() = runTest {

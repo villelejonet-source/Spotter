@@ -8,6 +8,11 @@ into the new version's entry and writes the store notes from it. Versions are th
 
 ## Unreleased
 
+### Fixed
+- Restoring your backup on a new or reinstalled phone no longer leaves out workouts done on a
+  plan, or a plan day, that you later deleted on the website. They come back as workouts that
+  are no longer linked to that plan.
+
 ### Website
 - The website fits phones better: editing a plan no longer scrolls sideways (each exercise's
   fields stack under its name), the calendar shows dots in the month and lists the month's

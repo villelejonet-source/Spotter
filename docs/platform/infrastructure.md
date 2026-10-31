@@ -1,7 +1,9 @@
 # Spotter platform: hosting, environments and versioning
 
-_Written 2026-10-24; updated the same day with the audit (`audit-2026-10.md`) and on 2026-10-25
-when the website went live. Covers the Android app, the website (`web/`) and the Supabase backend._
+_Written 2026-10-24; updated the same day with the audit (`audit-2026-10.md`), on 2026-10-25
+when the website went live, and on 2026-10-31 (environments, backups, roadmap). Covers the
+apps, the website (`web/`) and the Supabase backend. The product itself (screens, training
+rules) is in `PLAN.md`._
 
 ## How it fits together today
 
@@ -25,6 +27,26 @@ Workspace (`auth-emails.md`, "SMTP sender").
 - **Units have one source of truth**: the synced `user_profile.units` field (kg or lb). The app
   writes it when its unit setting changes (and mirrors it back into the setting on sync); the
   website reads the same field. Neither side keeps a unit preference of its own.
+
+## Roadmap
+
+The app stays offline-first and free of ads. Around it, Spotter grows into a small platform:
+
+1. **Website** (live): dashboard, history, calendar, per-exercise progress, profile, and a plan
+   editor whose changes sync to the phone (written through `push_rows` exactly as the app
+   writes them). See `web/README.md`.
+2. **Scheduled sessions** (in the app since 1.1.0): a synced `scheduled_session` table (date,
+   plan day or free workout, notes, linked workout), planned on the website's calendar (single
+   days, or "plan weeks ahead" on chosen weekdays) and shown on the app's Today tab, where
+   starting one links the workout so it counts as done. See "Scaling the data model".
+3. **Personal trainers** (foundation built, switched off): see "Trainer foundation" for what's
+   built and what's left, in order. Plan suggestions, later: a plan stored as JSON that the
+   client accepts, which writes normal plan rows.
+4. **iOS**: every screen runs; signing and the App Store are left (`docs/platform/ios-port.md`).
+5. **Freemium** (low priority): logging, history, plans, sync and the basic dashboard stay
+   free. Candidates for paid: advanced analytics, program templates, and a recurring trainer
+   tier for coaching many clients. Entitlements in one table, fed by Google Play Billing and
+   Stripe webhooks; app and web both read it. Needs the paid plans first ("Hosting").
 
 ## Sign-in links: PKCE now, App Links later
 
@@ -63,17 +85,22 @@ desktop users somewhere sensible to land. Was deferred until the domain existed 
 
 ## Environments
 
-| | Local | Staging | Production |
-|---|---|---|---|
-| Supabase | `supabase start` (Docker) | separate project, EU region | `gaherwthntdonrsuowbh` |
-| Website | `npm run dev` | Vercel preview deploy per pull request | Vercel production (`main`), spotter.northstarsolutions.se |
-| App | debug build → local or staging | debug / internal test track | Play production |
-| Data | seed script | test accounts only | real users |
+There are two environments: local and production. **There is no staging project.**
+
+| | Local | Production |
+|---|---|---|
+| Supabase | `supabase db start` (Docker; OrbStack on this Mac), see "Database migrations" | `gaherwthntdonrsuowbh` |
+| Website | `npm --prefix web run dev` | Vercel production (`main`), spotter.northstarsolutions.se |
+| App | debug build | Play production (the testing tracks aren't used) |
+
+**Vercel preview deploys can only reach the production database**, since it's the one
+project: when Vercel's *Preview* environment has the Supabase variables, signing in to a
+pull request's preview reads and writes real data. Use a test account there.
 
 Deferred on 2026-10-24 (revisit before public launch or paid features). In the dashboards:
 1. **Create a staging Supabase project** in the same region as production. Apply
    `supabase/migrations` to it, and point Vercel's *Preview* environment variables at it, so
-   pull-request previews never touch real data.
+   pull-request previews stop touching real data.
 2. **Point debug builds at staging**: add `supabase.staging.url` / `supabase.staging.publishableKey`
    to `local.properties` and pick them per build type in `app/build.gradle.kts`.
 3. **Production region: checked 2026-10-25, staying in London (`eu-west-2`).** Supabase can't
@@ -107,7 +134,8 @@ needs the backend to be up.
 
 1. **Branch and pull request** for every change; `main` is protected and always deployable.
 2. **CI on every pull request** (`.github/workflows/ci.yml`; read-only `permissions`, every
-   action pinned to a commit SHA). The required check `App` passes only when every job did:
+   action pinned to a commit SHA). The GitHub ruleset on `main` requires the `Website` and
+   `App` checks; `App` passes only when every job did:
    - Website: `npm audit` on production dependencies (visible, non-blocking), lint, type check,
      unit tests (including the payload-vs-Room-schema test), build.
    - Android checks: unit tests, Roborazzi screenshot tests against the committed goldens,
@@ -116,10 +144,12 @@ needs the backend to be up.
    - Shared code on iOS: the shared modules' tests in the iOS simulator, then the Xcode app build.
    - Database: every migration on an empty local database, every `supabase/tests/*.sql`, and
      the website's generated types against the schema.
-3. **Preview**: Vercel builds every pull request against staging.
-4. **Database migrations**: see the next section. Applied to staging when a pull request merges
-   and to production as an explicit step before deploying code that needs them. Later this can
-   run from CI with a protected "production" environment that needs a manual approval.
+3. **Preview**: Vercel builds a preview of every pull request that touches the website, against
+   the production database (see "Environments").
+4. **Database migrations**: see the next section. Tested on a local database, then applied to
+   production by hand, after asking, before the code that needs them is deployed or released.
+   Later this can run from CI with a protected "production" environment that needs a manual
+   approval.
 5. **Website release**: merging to `main` deploys production. Vercel keeps every deploy, so a bad
    release is rolled back in one click.
 6. **App release**: `/release`, as in `docs/play-store/README.md`. Every build goes straight to
@@ -170,42 +200,23 @@ Apply them in one of two ways, both of which record the version in the server's 
 
 **Never paste a migration into the SQL editor.** The SQL runs, but nothing is recorded, so the
 history no longer says what the database contains, and the next `db push` tries to apply the
-file again. That was the state of production on 2026-10-24; since the audit the history matches. The files are:
+file again. (Production was in that state until the 2026-10 audit; the history has matched
+since.) `supabase migration list` shows the local and remote columns side by side; check it
+before a push, and before a release (`/release` does).
 
-| Version | File | On production |
-|---|---|---|
-| `20261004000000` | `sync.sql` (sync_rows, RLS, first `push_rows`) | applied via the editor, now recorded |
-| `20261023000000` | `web_views.sql` (typed views for the website) | applied via the editor, now recorded |
-| `20261024000000` | `hardening_and_performance.sql` (`push_rows` limits, indexes, `v_set_history`) | applied via the editor, now recorded |
-| `20261025000000` | `scheduled_sessions.sql` (`scheduled_session`, `v_scheduled_session`) | applied via the editor, now recorded |
-| `20261026000000` | `audit_hardening.sql` (policies with `(select auth.uid())`, `push_rows` checks and row cap, revoked grants, `delete_my_account` cleanup, `v_exercise_usage` which `/library` needs) | applied with the audit, recorded |
-| `20261027000000` | `trainer_foundation.sql` (`profiles`, `trainer_links` and their functions, `can_read_user` in the `sync_rows` read policy, `delete_my_account` removes profile and links) | applied 2026-10-25 with `supabase db push --linked`, recorded |
-| `20261028000000` | `devices_and_admin.sql` (`devices` and `check_in_device`, `admins` and `admin_stats` for `/admin`, `delete_my_account` removes devices) | applied 2026-10-25 with `supabase db push --linked`, recorded |
-| `20261029000000` | `admin_tag.sql` (admin is the `app_metadata.admin` tag; `admins` rows become tags and the table is dropped; `admin_stats` checks the tag) | applied 2026-10-25 with `supabase db push --linked`, recorded |
-
-On 2026-10-24 the history was empty (`list_migrations` returned `[]`); on 2026-10-25 it lists
-all five versions (six since 2026-10-25). If it ever drifts again, repair it the same way: after linking, name the
-versions that are already live, then push the rest:
+If the history ever drifts again, repair it: after linking, mark the versions that are already
+live as applied, check, then push the rest:
 
 ```bash
-supabase migration repair --status applied 20261004000000 20261023000000 20261024000000 20261025000000
-supabase migration list   # remote should now show the four; 20261026000000 local only
-supabase db push          # applies 20261026000000_audit_hardening.sql and records it
+supabase migration repair --status applied <version> <version> …
+supabase migration list   # local and remote should now match, except the ones to push
+supabase db push          # applies the rest and records them
 ```
-
-From then on apply new migrations only via `db push` or `apply_migration`. Check `supabase
-migration list` before a push whenever in doubt.
 
 **Test a migration locally before applying it.** There's no staging project, so new migrations
-are checked on a local stack first (needs Docker; OrbStack on this Mac). `supabase/config.toml`
-holds the local settings, not production's:
-
-```bash
-supabase start -x studio,imgproxy,mailpit,realtime,storage-api,edge-runtime,logflare,vector,supavisor,postgres-meta
-supabase db reset   # rebuilds the local database from every file in supabase/migrations/
-for f in supabase/tests/*.sql; do docker exec -i supabase_db_spotter psql -U postgres -d postgres -v ON_ERROR_STOP=1 -q -t < "$f"; done
-supabase stop
-```
+are checked on a local stack first, with the commands in `CLAUDE.md`, "Build and test"
+(`supabase db start` builds a fresh database from every migration, as CI does).
+`supabase/config.toml` holds the local settings, not production's.
 
 Each test file prints "… all checks passed" or stops at the first failing check. CI's
 Database job does the same on every pull request (a fresh database from every migration, then
@@ -231,11 +242,11 @@ Rules that keep that safe:
    **Every Room migration must also re-create the sync triggers** through
    `SyncSchema.TriggerSpec` (the triggers that stamp `updatedAt` and write tombstones are created
    once, in the database callback, not on every open, so a migration that rebuilds or alters a
-   synced table has to put them back). The schema is at version 8 (7 added scheduled sessions,
-   8 the audit's indexes); the exported JSON lives in `core/data/schemas/`.
+   synced table has to put them back). The exported schema JSON, one file per version, lives
+   in `core/data/schemas/`.
    **The seeded exercise catalog** (`core/data/catalog/exercises.json`) is versioned by
-   `EXERCISE_CATALOG_VERSION` in `ExerciseSeeder`; bump it whenever the JSON changes, or
-   installed apps keep the old catalog.
+   `EXERCISE_CATALOG_VERSION` in `SeedExercise.kt`; bump it whenever the JSON changes, or
+   installed apps keep the old catalog (`ExerciseSeedTest` fails when they disagree).
 3. **The phone ignores payload fields it doesn't know, and skips rows it can't hold**
    (`LocalSyncStore.upsert`), such as a plan exercise using an exercise from a newer catalog,
    so a newer app or the website can't block an older app's sync. Such rows simply don't
@@ -246,15 +257,16 @@ Rules that keep that safe:
 5. **Minimum supported app version** (to build): a public `app_config` row with
    `min_version_code`. The app checks it on sync and asks for an update instead of syncing; this
    is the emergency brake for an incompatible change.
-6. **Record what each phone runs** (built, from versionCode 7): at the end of every successful
+6. **Record what each phone runs** (in the app since 1.1.0, versionCode 8; the code first went
+   into the never-uploaded versionCode 7): at the end of every successful
    sync the app calls `check_in_device(device_id, version_code, schema_version)`
    (`SyncEngine`, `DeviceIdentity`), which upserts the caller's row in `devices`: a random
    per-install UUID (kept in plain SharedPreferences, so it isn't copied to a new phone), the
    `versionCode`, the Room schema version and `last_synced_at`. Each account keeps its 20 most
    recently synced installs; `delete_my_account` removes them. A failed check-in never fails
    the sync. The versionCode spread is on the usage overview (`/admin`, see "Operations").
-   An account that syncs but never checks in runs versionCode 6 or older (or uses only the
-   website). Still to build on top of it: the website warning ("your phone needs an update
+   An account that syncs but never checks in runs 1.0.0 (versionCode 6) or older (or uses
+   only the website). Still to build on top of it: the website warning ("your phone needs an update
    before this plan syncs").
 
 ## Scaling the data model
@@ -282,7 +294,7 @@ Built (`supabase/migrations/20261027000000_trainer_foundation.sql`, tests in
 another account's rows.
 
 - **Owner filters everywhere.** The app's pull and `hasRows` filter `sync_rows` on
-  `user_id = signed-in user` (`SupabaseSyncRemote`, from versionCode 7). Every website read goes
+  `user_id = signed-in user` (`SupabaseSyncRemote`, from 1.1.0). Every website read goes
   through `ownedBy()` in `web/src/lib/queries.ts`, which adds `user_id = signed-in user`, and the
   query functions only accept that client. RLS stays as the second wall. Without these filters a
   trainer's phone would pull client rows into its own database and push them back as its own.
@@ -311,9 +323,10 @@ two `trainer_links` indexes, on an empty table, and `sync_rows_set_entry_exercis
 
 **Left to do before trainers can read a client's data, in order:**
 
-1. **Release versionCode 7** (`/release`) with the owner-filtered pull. Apps on versionCode 6
-   or older pull `sync_rows` unfiltered, so a trainer still on one of those would pull client
-   rows. Before step 3, make sure no trainer runs an old app. Each install now reports its
+1. **Keep trainers off old apps.** The owner-filtered pull shipped in 1.1.0 (versionCode 8,
+   live since 2026-10-31). Apps on versionCode 6 or older pull `sync_rows` unfiltered, so a
+   trainer still on one of those would pull client rows. Before step 3, make sure no trainer
+   runs an old app. Each install now reports its
    `versionCode` on sync ("Versioning", step 6), but an old app never reports anything, so
    the gate is the absence of old apps, not the presence of new ones: wait until `/admin`
    shows (close to) no active accounts without a check-in, and have `create_trainer_invite`
@@ -325,12 +338,13 @@ two `trainer_links` indexes, on an empty table, and `sync_rows_set_entry_exercis
    query in the function's comment), and add SQL tests that a trainer reads an active client,
    loses access the moment the link ends, and still never sees pending or ended clients' rows.
 4. **UI:** invites, accepting a code, the client list and ending a link, on the web and in the
-   app. Then plan suggestions and, if wanted, a paid trainer tier (PLAN.md step 4).
+   app. Then plan suggestions and, if wanted, a paid trainer tier ("Roadmap", step 5).
 
 ## Operations
 
-- **Backups:** daily on Supabase Pro; add point-in-time recovery once paying users exist.
-  Users can also export their data from the website (JSON/CSV).
+- **Backups: none today.** The project is on Supabase Free, which has no backups (see
+  "Hosting"), so a lost or corrupted database can't be restored from Supabase. Moving to Pro gives daily backups; add point-in-time
+  recovery once paying users exist. Users can export their data from the website (JSON/CSV).
 - **Usage overview:** `/admin` on the website (an Admin item in the navigation for accounts
   tagged admin) shows accounts and
   sign-ups per week, last sign-in, last active (the newer of the account's newest synced row
@@ -346,13 +360,9 @@ two `trainer_links` indexes, on an empty table, and `sync_rows_set_entry_exercis
   account in the SQL editor (the repository is public, so never in a migration):
   `update auth.users set raw_app_meta_data = coalesce(raw_app_meta_data, '{}') || '{"admin": true}' where email = '…';`
   `update auth.users set raw_app_meta_data = raw_app_meta_data - 'admin' where email = '…';`
-  Applied to production on 2026-10-25. Advisors afterwards, all expected: the security
-  WARN for SECURITY DEFINER functions callable by signed-in users now also lists
-  `check_in_device` and `admin_stats`; a new INFO says `admins` has RLS without policies (on
-  purpose: no API role may read it; the table goes in `20261029000000`); and a performance INFO says `devices_last_synced_idx` is
-  unused (the table is empty until versionCode 7). After `20261029000000` (also applied
-  2026-10-25, which turned the one `admins` row into the tag) the `admins` INFO is gone with
-  the table; everything else is unchanged.
+  Applied to production on 2026-10-25. Expected advisor results since then: the security
+  WARN for SECURITY DEFINER functions callable by signed-in users also lists
+  `check_in_device` and `admin_stats`.
 - **Errors and logs:** Vercel function logs and Supabase logs to start with. The privacy policy
   promises no analytics or tracking services and describes exactly what the app reports on sync
   and what the usage overview shows; if error reporting (e.g. Sentry) is added, or the overview

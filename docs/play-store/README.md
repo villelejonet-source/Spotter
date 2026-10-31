@@ -55,9 +55,11 @@ this upload key only proves uploads come from you.
 
 ## 2. Build the bundle
 
+Run `/release` in Claude Code (`.claude/commands/release.md`): it runs every check first, then
+`./gradlew bundleRelease`, and verifies the signed bundle. By hand, run the checks in
+`CLAUDE.md`, "Build and test", then:
+
 ```bash
-export JAVA_HOME="/Applications/Android Studio.app/Contents/jbr/Contents/Home"
-./gradlew testDebugUnitTest :core:data:testAndroidHostTest :core:engine:jvmTest :core:model:jvmTest verifyRoborazziDebug :app:lintRelease
 ./gradlew bundleRelease
 ```
 

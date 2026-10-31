@@ -169,12 +169,15 @@ class OnboardingViewModel(
         }
     }
 
+    /** Set once this screen completes setup itself (finish or skip), which then closes it. */
+    private var completing = false
+
     /** Fires when setup gets completed some other way: restoring a backup from the cloud. */
     val restoredFromBackup: Flow<Unit> = preferencesRepository.preferences
         .map { it.onboardingCompleted }
         .distinctUntilChanged()
         .drop(1)
-        .filter { it && !_uiState.value.saving }
+        .filter { it && !completing }
         .map { }
 
     fun update(change: (Answers) -> Answers) = _uiState.update { it.copy(answers = change(it.answers)) }
@@ -230,6 +233,7 @@ class OnboardingViewModel(
     }
 
     fun skip(onDone: () -> Unit) = viewModelScope.launchReporting(errors) {
+        completing = true
         preferencesRepository.setOnboardingCompleted(true)
         onDone()
     }
@@ -239,6 +243,7 @@ class OnboardingViewModel(
         val plan = state.generated?.plan ?: return@launchReporting
         val profile = state.answers.toProfile() ?: return@launchReporting
         _uiState.update { it.copy(saving = true) }
+        completing = true
         profileRepository.save(profile)
         planRepository.saveAsActive(plan)
         preferencesRepository.setWeightUnit(profile.units)

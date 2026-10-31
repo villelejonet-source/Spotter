@@ -46,8 +46,8 @@ object Dimens {
     val KeypadKeyHeight = 52.dp
 
     /** A set row and the tappable fields inside it. */
-    val SetRowHeight = 52.dp
-    val FieldHeight = 44.dp
+    val SetRowHeight = 56.dp
+    val FieldHeight = 48.dp
 
     /** Inside a small tag such as the superset badge. */
     val BadgePaddingHorizontal = 6.dp

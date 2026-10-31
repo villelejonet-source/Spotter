@@ -31,6 +31,10 @@ into the new version's entry and writes the store notes from it. Versions are th
   stat tiles with trend lines (this week against your goal, volume over four weeks with the change
   against the four before, week streak, all-time workouts) and a heatmap of training days. Start
   workout now sits at the bottom of the screen, in reach of your thumb.
+- Logging a workout is easier on the eyes and thumbs: taller set rows and fields, weights and reps
+  in monospace digits, finished sets tinted with a glowing tick, and a short vibration when you
+  tick or untick a set. The rest timer shows big digits under a glowing progress line, with larger
+  −15 s, +15 s and Skip buttons.
 
 ### iOS (not released yet)
 - The whole app runs on iOS from the same shared code as Android (#13–#20).

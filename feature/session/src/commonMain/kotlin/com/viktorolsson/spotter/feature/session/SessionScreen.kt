@@ -74,6 +74,7 @@ import com.viktorolsson.spotter.core.ui.component.LoadingState
 import com.viktorolsson.spotter.core.ui.component.SecondaryButton
 import com.viktorolsson.spotter.core.ui.component.SpotterTopBar
 import com.viktorolsson.spotter.core.ui.formatClock
+import com.viktorolsson.spotter.core.ui.theme.SpotterTheme
 import com.viktorolsson.spotter.core.ui.formatOneRepMax
 import com.viktorolsson.spotter.core.ui.formatSet
 import com.viktorolsson.spotter.core.ui.label
@@ -531,7 +532,7 @@ private fun SessionTopBar(
                 }
                 Text(
                     formatClock(elapsed),
-                    style = MaterialTheme.typography.titleLarge.copy(fontFeatureSettings = "tnum"),
+                    style = SpotterTheme.type.numberMedium.copy(fontSize = MaterialTheme.typography.titleLarge.fontSize),
                 )
             }
         },

@@ -19,6 +19,8 @@ into the new version's entry and writes the store notes from it. Versions are th
 - An exercise set to "None" progression on the website now keeps last session's weight and
   reps, instead of adding weight like double progression. It's no longer flagged as stalled
   either, so it doesn't bring plateau suggestions or a deload.
+- Skipping setup on first launch no longer leaves an empty screen without the bottom bar; it
+  opens Today.
 
 ### Website
 - New timed holds in the plan editor progress like every other exercise (a few seconds longer

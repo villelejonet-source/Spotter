@@ -48,6 +48,7 @@ class SessionViewModelTest {
     private val main = StandardTestDispatcher()
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     private lateinit var graph: DataGraph
+    private val warmUpTicks = WarmUpTicks()
 
     @Before
     fun setUp() {
@@ -73,6 +74,7 @@ class SessionViewModelTest {
         applicationScope = backgroundScope,
         preferencesRepository = graph.preferences,
         errors = graph.errors,
+        warmUpTicks = warmUpTicks,
     )
 
     private suspend fun sets(sessionId: Long): List<WorkoutSet> =
@@ -97,9 +99,28 @@ class SessionViewModelTest {
         assertTrue(MobilityDrill.WALL_SLIDE in mixed)
 
         vm.toggleDrill(MobilityDrill.WALL_SLIDE)
+        runCurrent()
         assertEquals(setOf(MobilityDrill.WALL_SLIDE), vm.warmUpDone.value)
         vm.toggleDrill(MobilityDrill.WALL_SLIDE)
+        runCurrent()
         assertTrue(vm.warmUpDone.value.isEmpty())
+    }
+
+    /** Minimizing the workout closes its screen; ticked drills used to go with it. */
+    @Test
+    fun tickedDrillsSurviveLeavingAndReopeningTheWorkout() = runTest(main) {
+        graph.seeder.seedIfNeeded()
+        val id = graph.workouts.startEmptyWorkout()
+        graph.workouts.addExercises(id, listOf("back-squat"))
+        viewModel(id).toggleDrill(MobilityDrill.ANKLE_ROCK)
+
+        val reopened = viewModel(id)
+        assertEquals(setOf(MobilityDrill.ANKLE_ROCK), reopened.warmUpDone.value)
+
+        // The next workout starts with nothing ticked.
+        graph.workouts.discardWorkout(id)
+        val next = graph.workouts.startEmptyWorkout()
+        assertTrue(viewModel(next).warmUpDone.value.isEmpty())
     }
 
     @Test

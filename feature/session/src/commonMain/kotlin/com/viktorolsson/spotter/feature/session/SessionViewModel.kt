@@ -122,6 +122,7 @@ class SessionViewModel(
     private val applicationScope: CoroutineScope,
     preferencesRepository: UserPreferencesRepository,
     private val errors: AppErrors,
+    private val warmUpTicks: WarmUpTicks,
 ) : ViewModel() {
     private val _swap = MutableStateFlow<SwapUiState?>(null)
     /** The open swap sheet, if any. */
@@ -261,11 +262,11 @@ class SessionViewModel(
         if (records.isNotEmpty()) _prEvents.tryEmit(PrEvent(exercise.exercise.name, set.weightKg, reps, records, exercise.exercise.isTimed))
     }
 
-    private val _warmUpDone = MutableStateFlow<Set<MobilityDrill>>(emptySet())
-    /** Warm-up drills ticked off; kept for this screen only, never logged. */
-    val warmUpDone: StateFlow<Set<MobilityDrill>> = _warmUpDone.asStateFlow()
+    /** Warm-up drills ticked off; kept while the workout runs (see [WarmUpTicks]), never logged. */
+    val warmUpDone: StateFlow<Set<MobilityDrill>> = warmUpTicks.observe(sessionId)
+        .stateIn(viewModelScope, SharingStarted.Eagerly, warmUpTicks.get(sessionId))
 
-    fun toggleDrill(drill: MobilityDrill) = _warmUpDone.update { if (drill in it) it - drill else it + drill }
+    fun toggleDrill(drill: MobilityDrill) = warmUpTicks.toggle(sessionId, drill)
 
     /** Adds the next warm-up set of the ramp; lifters 50+ get a longer ramp. */
     fun addWarmUpSet(exerciseId: Long) = launch {

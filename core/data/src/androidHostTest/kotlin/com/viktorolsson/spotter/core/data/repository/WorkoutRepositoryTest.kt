@@ -259,6 +259,26 @@ class WorkoutRepositoryTest {
         assertEquals((0..6).toList(), sets.map { it.position })
     }
 
+    /**
+     * Any set can be switched to Warm-up by hand. The next warm-up set used to go at
+     * position "number of warm-ups", which put it between working sets when a hand-marked
+     * warm-up sat further down, and picked the ramp step from the wrong count.
+     */
+    @Test
+    fun aWarmUpMarkedByHandFurtherDownDoesNotMoveTheNextWarmUpSet() = runTest {
+        val id = repo.startEmptyWorkout()
+        repo.addExercises(id, listOf("barbell-bench-press"), defaultSetCount = 3)
+        val exercise = session(id).exercises.single()
+        exercise.sets.forEach { repo.updateSetValues(it.id, 100.0, 5, null) }
+        repo.setSetType(exercise.sets.last().id, SetType.WARMUP)
+
+        assertTrue(repo.addWarmUpSet(exercise.id, extended = false))
+        val sets = session(id).exercises.single().sets
+        assertEquals(listOf(SetType.WARMUP, SetType.WORKING, SetType.WORKING, SetType.WARMUP), sets.map { it.setType })
+        assertEquals(listOf(20.0, 100.0, 100.0, 100.0), sets.map { it.weightKg })
+        assertEquals((0..3).toList(), sets.map { it.position })
+    }
+
     @Test
     fun noWarmUpSetWithoutAWorkingWeight() = runTest {
         val id = repo.startEmptyWorkout()

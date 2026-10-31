@@ -7,8 +7,9 @@ import org.koin.dsl.module
 
 /** The session screens' view models, for Koin. */
 val sessionModule = module {
+    single { WarmUpTicks() }
     viewModelOf(::SummaryViewModel)
     viewModel {
-        SessionViewModel(get(), get(), get(), get(), get(), get(), get(), get(ApplicationScope), get(), get())
+        SessionViewModel(get(), get(), get(), get(), get(), get(), get(), get(ApplicationScope), get(), get(), get())
     }
 }

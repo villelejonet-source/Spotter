@@ -54,7 +54,7 @@ function newExercise(exerciseId: string): ExerciseDraft {
     rep_max: timed ? 60 : 12,
     target_rir: timed ? null : 2,
     rest_seconds: 90,
-    progression_rule: timed ? "NONE" : "DOUBLE_PROGRESSION",
+    progression_rule: "DOUBLE_PROGRESSION",
     superset_group: null,
     starting_weight_kg: null,
   };

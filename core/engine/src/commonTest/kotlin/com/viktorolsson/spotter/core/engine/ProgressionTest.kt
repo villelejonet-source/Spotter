@@ -139,5 +139,31 @@ class ProgressionTest {
         assertEquals(ProgressionReason.BODYWEIGHT_TOP_OF_RANGE, top.reason)
     }
 
+    @Test
+    fun `no progression keeps last session's weight and reps`() {
+        val none = input(rule = ProgressionRule.NONE)
+        val topped = Progression.next(none.copy(history = listOf(sets(60.0, 12, 12, 12))))
+        assertEquals(ProgressionReason.REPEAT, topped.reason)
+        assertEquals(listOf(60.0, 60.0, 60.0), topped.weights())
+        assertEquals(listOf(12, 12, 12), topped.reps())
+
+        val tooEasy = Progression.next(none.copy(history = listOf(sets(60.0, 10, 10, 9, rir = 5))))
+        assertEquals(listOf(60.0, 60.0, 60.0), tooEasy.weights())
+        assertEquals(listOf(10, 10, 9), tooEasy.reps())
+
+        // Two misses in a row don't take weight off either.
+        val missed = Progression.next(none.copy(history = listOf(sets(60.0, 5, 5, 4), sets(60.0, 6, 5, 5))))
+        assertEquals(listOf(60.0, 60.0, 60.0), missed.weights())
+    }
+
+    @Test
+    fun `no progression keeps bodyweight reps and hold times`() {
+        val pullUps = input(id = "pull-up", rule = ProgressionRule.NONE, start = null, history = listOf(sets(null, 9, 8, 8)))
+        assertEquals(listOf(9, 8, 8), Progression.next(pullUps).reps())
+
+        val plank = input(id = "plank", rule = ProgressionRule.NONE, repMin = 30, repMax = 60, targetRir = null, start = null, history = listOf(sets(null, 40, 40, 35)))
+        assertEquals(listOf(40, 40, 35), Progression.next(plank).reps())
+    }
+
     private fun WeightUnit.toKgOf(value: Double) = toKg(value)
 }

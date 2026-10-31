@@ -16,8 +16,14 @@ into the new version's entry and writes the store notes from it. Versions are th
   an extra exercise) now changes the right exercise in your plan on either phone. The two
   phones also stop replacing each other's suggestion cards and no longer show the same card
   twice.
+- An exercise set to "None" progression on the website now keeps last session's weight and
+  reps, instead of adding weight like double progression. It's no longer flagged as stalled
+  either, so it doesn't bring plateau suggestions or a deload.
 
 ### Website
+- New timed holds in the plan editor progress like every other exercise (a few seconds longer
+  each time) instead of defaulting to "None". "RIR autoregulation" is now labelled "Double
+  progression (RIR)", which is what it does.
 - The website fits phones better: editing a plan no longer scrolls sideways (each exercise's
   fields stack under its name), the calendar shows dots in the month and lists the month's
   workouts below it, text fields no longer make iPhones zoom in, buttons, chips and links are

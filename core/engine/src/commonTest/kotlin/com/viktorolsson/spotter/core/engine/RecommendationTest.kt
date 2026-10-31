@@ -89,6 +89,12 @@ class RecommendationTest {
         assertTrue(RecommendationEngine.detectPlateau(bench, missed)!!.missedTwice)
     }
 
+    @Test
+    fun `a lift set to no progression is never a plateau`() {
+        val bench = slot("barbell-bench-press", 1, rule = ProgressionRule.NONE)
+        assertNull(RecommendationEngine.detectPlateau(bench, flat(80.0, 8, sessions = 6)))
+    }
+
     /** The PLAN.md example: bench stuck → weak-point accessory on the same day, with the evidence. */
     @Test
     fun `stalled bench with enough volume gets a weak-point accessory on its day`() {

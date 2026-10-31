@@ -150,9 +150,10 @@ object RecommendationEngine {
     /**
      * Stalled when the best estimated 1RM (or reps, for bodyweight) hasn't improved for
      * 3+ sessions over 3+ weeks, or the progression target was missed twice in a row.
+     * A lift set to no progression is held on purpose, so it never stalls.
      */
     fun detectPlateau(slot: PlanSlot, exposures: List<ExerciseExposure>): Plateau? {
-        if (exposures.size < 2) return null
+        if (exposures.size < 2 || slot.rule == ProgressionRule.NONE) return null
         var bestSoFar = exposures.first().score
         var lastImprovement = 0
         exposures.forEachIndexed { i, exposure ->

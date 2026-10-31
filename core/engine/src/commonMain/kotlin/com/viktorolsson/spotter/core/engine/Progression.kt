@@ -39,7 +39,9 @@ data class ProgressionTarget(val sets: List<SetTarget>, val reason: ProgressionR
  *   the top, add the smallest sensible increment and drop to the bottom of the range.
  * - Linear: add weight every session the target reps are hit on every set.
  * - Both: two misses in a row reset the weight by 10 %; logged RIR far from the target
- *   holds back an increase (too hard) or adds one (too easy).
+ *   holds back an increase (too hard) or adds one (too easy). RIR autoregulation is double
+ *   progression (it has these RIR checks too).
+ * - None: last session's weight and reps again; nothing changes on its own.
  */
 object Progression {
     private const val RESET_FACTOR = 0.9
@@ -52,6 +54,7 @@ object Progression {
         val last = input.history.firstOrNull()
         if (last.isNullOrEmpty()) return firstTime(input)
         val weight = last.mapNotNull { it.weightKg }.maxOrNull()
+        if (input.rule == ProgressionRule.NONE) return holdAt(input, last, weight, ProgressionReason.REPEAT)
         if (weight == null) return bodyweight(input, last)
 
         val missedTwice = input.history.size >= 2 && input.history.take(2).all { missed(input, it) }
@@ -97,7 +100,7 @@ object Progression {
     private fun repStep(input: ProgressionInput): Int = if (input.exercise.isTimed) TIMED_STEP_SECONDS else 1
 
     /** Same weight, one more rep (or a longer hold) per set than last time, within the range. */
-    private fun holdAt(input: ProgressionInput, last: List<LoggedSet>, weight: Double, reason: ProgressionReason) =
+    private fun holdAt(input: ProgressionInput, last: List<LoggedSet>, weight: Double?, reason: ProgressionReason) =
         ProgressionTarget(
             List(input.sets) { i ->
                 val previous = (last.getOrNull(i) ?: last.last()).reps

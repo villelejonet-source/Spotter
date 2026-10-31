@@ -41,7 +41,8 @@ data class DetectedRecord(val type: PersonalRecordType, val value: Double, val w
 /**
  * PR detection, run when a workout is saved. The first session of an exercise only sets
  * the baseline; PRs are celebrated from the second time on. At most one record of each
- * type per exercise per session.
+ * type per exercise per session. A hold's reps are seconds, so it only gets the
+ * longest-hold record (reps at weight), never an estimated 1RM or volume one (Lifting.kt).
  */
 object PersonalRecords {
     private const val EPS = 1e-6
@@ -56,7 +57,7 @@ object PersonalRecords {
         return ExerciseBests(oneRepMax, reps, volume)
     }
 
-    fun detect(sets: List<LoggedSet>, previous: ExerciseBests): List<DetectedRecord> {
+    fun detect(sets: List<LoggedSet>, previous: ExerciseBests, timed: Boolean = false): List<DetectedRecord> {
         val session = sets.filter { isLift(it.reps) }
         if (previous.isEmpty || session.isEmpty()) return emptyList()
         val records = mutableListOf<DetectedRecord>()
@@ -64,7 +65,7 @@ object PersonalRecords {
         val best = session
             .mapNotNull { set -> set.weightKg?.let { kg -> Triple(epley(kg, set.reps), kg, set.reps) } }
             .maxByOrNull { it.first }
-        if (best != null) {
+        if (best != null && !timed) {
             val (e1rm, weightKg, reps) = best
             if (previous.estimatedOneRepMax == null || e1rm > previous.estimatedOneRepMax + EPS) {
                 records += DetectedRecord(PersonalRecordType.ESTIMATED_1RM, e1rm, weightKg, reps)
@@ -78,7 +79,7 @@ object PersonalRecords {
             ?.let { records += DetectedRecord(PersonalRecordType.REPS_AT_WEIGHT, it.reps.toDouble(), it.weightKg, it.reps) }
 
         val sessionVolume = volume(session)
-        if (sessionVolume > 0 && sessionVolume > (previous.sessionVolumeKg ?: 0.0) + EPS) {
+        if (!timed && sessionVolume > 0 && sessionVolume > (previous.sessionVolumeKg ?: 0.0) + EPS) {
             records += DetectedRecord(PersonalRecordType.VOLUME, sessionVolume, null, null)
         }
         return records

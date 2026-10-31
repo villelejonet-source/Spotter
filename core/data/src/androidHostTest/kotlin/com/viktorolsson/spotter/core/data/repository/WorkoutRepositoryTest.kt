@@ -208,6 +208,26 @@ class WorkoutRepositoryTest {
         assertEquals(80.0 * (1 + 8 / 30.0), repo.bestsBefore("barbell-bench-press", clock.now()).estimatedOneRepMax!!, 1e-9)
     }
 
+    /** A hold's reps are seconds: it gets a longest-hold record, never a 1RM or volume one. */
+    @Test
+    fun aWeightedHoldGetsNoOneRepMaxOrVolumeRecord() = runTest {
+        suspend fun hold(kg: Double, seconds: Int) {
+            val id = repo.startEmptyWorkout()
+            repo.addExercises(id, listOf("plank"), defaultSetCount = 1)
+            val set = session(id).exercises.single().sets.single()
+            repo.updateSetValues(set.id, kg, seconds, null)
+            repo.toggleSetCompleted(set.id)
+            clock.advanceSeconds(3600)
+            repo.finishWorkout(id)
+            clock.advanceSeconds(86_400)
+        }
+        hold(10.0, 40)
+        hold(10.0, 45)
+
+        val types = db.sql.query("SELECT type FROM personal_record ORDER BY type").use { c -> buildList { while (c.moveToNext()) add(c.getString(0)) } }
+        assertEquals(listOf("REPS_AT_WEIGHT"), types)
+    }
+
     @Test
     fun addSetCopiesLastSetAndDeleteRenumbers() = runTest {
         val id = repo.startEmptyWorkout()

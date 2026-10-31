@@ -21,6 +21,7 @@ import com.viktorolsson.spotter.core.engine.WarmUps
 import com.viktorolsson.spotter.core.engine.WeightConversion
 import com.viktorolsson.spotter.core.model.PreviousSet
 import com.viktorolsson.spotter.core.model.SetType
+import com.viktorolsson.spotter.core.model.TIMED_EXERCISE_IDS
 import com.viktorolsson.spotter.core.model.isLift
 import com.viktorolsson.spotter.core.model.WorkoutSession
 import kotlinx.coroutines.flow.Flow
@@ -434,7 +435,7 @@ class WorkoutRepository(
             val previous = previousByExercise[exerciseId].orEmpty()
                 .groupBy { it.sessionId }.values
                 .map { sets -> sets.mapNotNull { it.set.toLift() } }
-            PersonalRecords.detect(logged, PersonalRecords.bests(previous)).map {
+            PersonalRecords.detect(logged, PersonalRecords.bests(previous), timed = exerciseId in TIMED_EXERCISE_IDS).map {
                 PersonalRecordEntity(
                     exerciseId = exerciseId,
                     type = it.type,

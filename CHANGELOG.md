@@ -26,6 +26,8 @@ into the new version's entry and writes the store notes from it. Versions are th
   the next workout's weight. The website's exercise progress skips it too.
 - A change made at the very moment a sync started could be left out of the backup until it was
   edited again. Now it goes with the next sync.
+- Weighted holds (a plank with a plate, for example) no longer get estimated 1RM or volume
+  records, since their reps are seconds. A longer hold at the same weight is still a record.
 
 ### Website
 - New timed holds in the plan editor progress like every other exercise (a few seconds longer

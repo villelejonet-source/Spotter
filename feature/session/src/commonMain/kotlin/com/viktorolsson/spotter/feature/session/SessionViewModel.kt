@@ -257,7 +257,7 @@ class SessionViewModel(
             .filter { it.id != setId && it.isCompleted && it.setType != SetType.WARMUP && it.reps != null }
             .map { LoggedSet(it.weightKg, it.reps ?: 0) }
         val before = history.withSets(earlierToday)
-        val records = PersonalRecords.detect(listOf(LoggedSet(set.weightKg, reps)), before)
+        val records = PersonalRecords.detect(listOf(LoggedSet(set.weightKg, reps)), before, timed = exercise.exercise.isTimed)
             .filter { it.type != PersonalRecordType.VOLUME }
         if (records.isNotEmpty()) _prEvents.tryEmit(PrEvent(exercise.exercise.name, set.weightKg, reps, records, exercise.exercise.isTimed))
     }

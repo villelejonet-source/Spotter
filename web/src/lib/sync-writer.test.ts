@@ -10,6 +10,7 @@ import {
   dayDraftSchema,
   exerciseDraftSchema,
   planWeeksAhead,
+  takenDays,
   profileSchema,
   scheduledPayload,
   syncIdSchema,
@@ -349,6 +350,18 @@ describe("planConflict", () => {
 
   it("allows a brand-new plan", () => {
     expect(planConflict(null, draft(), {}, new Set())).toBeNull();
+  });
+});
+
+describe("takenDays", () => {
+  // Planning weeks ahead after training today used to put the next plan day on today too.
+  it("counts days already trained, in the display time zone, as well as planned ones", () => {
+    const monday = 20752; // 2026-10-26
+    // 23:30 in Stockholm on Monday is 22:30 UTC the same day; 00:30 on Tuesday is Monday 23:30 UTC.
+    const trainedMondayEvening = Date.UTC(2026, 9, 26, 22, 30);
+    const trainedTuesdayEarly = Date.UTC(2026, 9, 26, 23, 30);
+    const taken = takenDays([{ epoch_day: monday + 3 }], [{ started_at: trainedMondayEvening }, { started_at: trainedTuesdayEarly }]);
+    expect([...taken].sort()).toEqual([monday, monday + 1, monday + 3]);
   });
 });
 

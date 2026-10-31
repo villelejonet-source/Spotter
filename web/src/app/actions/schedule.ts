@@ -5,16 +5,7 @@ import { getPlans, getScheduled, getSessions } from "@/lib/data";
 import { push, saveErrorMessage } from "@/lib/push";
 import { localDate, nextPlanDay } from "@/lib/stats";
 import { requireUser } from "@/lib/supabase/server";
-import {
-  MAX_SCHEDULE_DAYS_AHEAD,
-  newSyncId,
-  planWeeksAhead,
-  scheduledPayload,
-  scheduleSchema,
-  stamp,
-  syncIdSchema,
-  type ScheduleDraft,
-} from "@/lib/sync-writer";
+import { MAX_SCHEDULE_DAYS_AHEAD, newSyncId, planWeeksAhead, scheduledPayload, type ScheduleDraft, scheduleSchema, stamp, syncIdSchema, takenDays } from "@/lib/sync-writer";
 import type { ActionResult } from "./plans";
 
 const DAY_MS = 86_400_000;
@@ -84,7 +75,7 @@ export async function planWeeks(input: z.infer<typeof planWeeksSchema>): Promise
     weekdays: parsed.data.weekdays,
     dayIds: active.days.map((d) => d.sync_id),
     nextDayIndex: Math.max(0, active.days.findIndex((d) => d.sync_id === next?.sync_id)),
-    taken: new Set(scheduled.map((s) => s.epoch_day)),
+    taken: takenDays(scheduled, sessions),
   });
   if (!rows.length) return { ok: true, added: 0 };
   const now = Date.now();

@@ -9,6 +9,7 @@
 //   children without writing tombstones, so the web tombstones children explicitly.
 import { z } from "zod";
 import { newSyncId } from "./ids";
+import { DAY_MS, localDate } from "./stats";
 import type { WorkoutForDelete } from "./queries";
 import {
   BODY_AREAS,
@@ -436,6 +437,11 @@ export function scheduledPayload(s: ScheduleDraft, sessionId: string | null = nu
  * the plan's days in order, continuing the rotation from [nextDayIndex]. Dates in [taken]
  * already have a workout and are skipped without using up a plan day.
  */
+/** Days that already have a workout: planned ones, and ones trained (by the display time zone's date). */
+export function takenDays(scheduled: { epoch_day: number }[], sessions: { started_at: number }[]): Set<number> {
+  return new Set([...scheduled.map((s) => s.epoch_day), ...sessions.map((s) => Math.round(localDate(s.started_at) / DAY_MS))]);
+}
+
 export function planWeeksAhead(opts: {
   fromDay: number;
   weeks: number;
@@ -464,7 +470,8 @@ export function planWeeksAhead(opts: {
  * WorkoutRepository.deleteFinishedWorkout does: deletion markers for the workout, its
  * exercises, its sets and the personal records set in it, and its scheduled days unlinked
  * (kept, shown as not done again). Every row is stamped newer than the version read, so if the
- * phone changed one since, push() reports it instead of half-deleting.
+ * phone changed one since, that row keeps the phone's version and push() reports a conflict.
+ * push_rows isn't all-or-nothing: the other rows are still deleted.
  */
 export function deleteWorkoutRows(w: WorkoutForDelete, now: number): SyncRowInput[] {
   const tomb = (table: SyncRowInput["table_name"], row: { sync_id: string; updated_at: number }): SyncRowInput => ({

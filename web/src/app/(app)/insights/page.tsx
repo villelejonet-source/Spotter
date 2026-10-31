@@ -9,7 +9,7 @@ import { getCatalog, getFinishedSessionCount, getPersonalRecords, getProfile, ge
 import { formatDateValueMonthShort, formatFullDate } from "@/lib/dates";
 import { GOAL_LABELS, label, PR_LABELS } from "@/lib/labels";
 import { formatDuration, formatRecord, volumeTarget } from "@/lib/model";
-import { DAY_MS, finished, localDate, muscleVolume, WEEK_MS, weeklyTotals, workoutsPerDay } from "@/lib/stats";
+import { DAY_MS, fetchSince, finished, localDate, muscleVolume, WEEK_MS, weeklyTotals, workoutsPerDay } from "@/lib/stats";
 
 export const metadata = { title: "Insights" };
 
@@ -19,7 +19,7 @@ const LATEST_RECORDS = { limit: 8 };
 /** Training balance, consistency and records; the page shell shows first and each card streams in. */
 export default async function InsightsPage() {
   // The cards' queries start now, alongside the empty-account check, instead of after it.
-  preload(getSessionTimes(heatmapStart(HEATMAP_WEEKS)), getRecordCount(), getCatalog(), getPersonalRecords(LATEST_RECORDS));
+  preload(getSessionTimes(fetchSince(heatmapStart(HEATMAP_WEEKS))), getRecordCount(), getCatalog(), getPersonalRecords(LATEST_RECORDS));
   const [count, profile] = await Promise.all([getFinishedSessionCount(), getProfile()]);
   if (count === 0) {
     return (
@@ -65,7 +65,7 @@ export default async function InsightsPage() {
 /** The heatmap window: 53 columns of weeks (Monday on top), ending with this week. */
 async function Overview() {
   const now = Date.now();
-  const [times, records, profile] = await Promise.all([getSessionTimes(heatmapStart(HEATMAP_WEEKS, now)), getRecordCount(), getProfile()]);
+  const [times, records, profile] = await Promise.all([getSessionTimes(fetchSince(heatmapStart(HEATMAP_WEEKS, now))), getRecordCount(), getProfile()]);
   const done = finished(times);
   const weeks = weeklyTotals(times, 12, now);
   const avgPerWeek = weeks.reduce((s, w) => s + w.sessions, 0) / weeks.length;
@@ -134,7 +134,7 @@ async function MuscleBalance() {
 
 async function TrainingDays() {
   const now = Date.now();
-  const perDay = workoutsPerDay(await getSessionTimes(heatmapStart(HEATMAP_WEEKS, now)));
+  const perDay = workoutsPerDay(await getSessionTimes(fetchSince(heatmapStart(HEATMAP_WEEKS, now))));
   return (
     <>
       <CardTitle>Training days</CardTitle>

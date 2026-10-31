@@ -87,6 +87,24 @@ export function formatChange(percent: number): string {
   return `${percent > 0 ? "+" : "\u2212"}${Math.abs(percent)}%`;
 }
 
+/**
+ * The instant to fetch from for a window starting on [date] (a date value: UTC midnight of
+ * a Stockholm date). A day earlier, because Stockholm's midnight comes an hour or two before
+ * UTC's; the cards bucket by local date, so the extra hours never show.
+ */
+export function fetchSince(date: number): number {
+  return date - DAY_MS;
+}
+
+/**
+ * A streak counted inside a [windowWeeks]-week window: at the window's limit it may be longer,
+ * so it reads "12+". This week only counts once it has a workout, so before that the limit is a
+ * week less.
+ */
+export function streakLabel(streak: number, windowWeeks: number, thisWeekDone: boolean): string {
+  return streak >= (thisWeekDone ? windowWeeks : windowWeeks - 1) ? `${streak}+` : `${streak}`;
+}
+
 /** The start of the week [weeks] - 1 weeks before this one: the oldest week in a [weeklyTotals] window. */
 export function windowStart(weeks: number, now = Date.now()): number {
   return addWeeks(weekStart(now), 1 - weeks);

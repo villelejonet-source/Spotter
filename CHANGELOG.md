@@ -72,6 +72,16 @@ into the new version's entry and writes the store notes from it. Versions are th
   exercises with no sets logged, includes each exercise's notes, superset, rest and swap, and
   now also exports your planned (scheduled) workouts. The CSV gains an exercise number and keeps
   each exercise's sets together.
+- On the website:
+  - a starting weight with a decimal comma ("62,5") in the plan editor is kept instead of
+    silently cleared;
+  - "Plan weeks ahead" no longer puts a workout on a day you've already trained;
+  - workouts started just after midnight on the oldest Monday of a chart or the calendar are
+    no longer left out;
+  - a long week streak shows as "11+" on a Monday before your first workout of the week,
+    instead of "11";
+  - deleting your latest body weight moves your profile weight back to the entry before it;
+  - being sent to the login page, or away from it, no longer risks signing you out.
 - New timed holds in the plan editor progress like every other exercise (a few seconds longer
   each time) instead of defaulting to "None". "RIR autoregulation" is now labelled "Double
   progression (RIR)", which is what it does.

@@ -2,6 +2,8 @@
 // screen, the bottom bar, the app-wide sync dialogs, and the Koin modules of every screen.
 plugins {
     alias(libs.plugins.spotter.kmp.feature)
+    // Robolectric and Compose UI tests for the navigation (no screenshots yet).
+    alias(libs.plugins.spotter.android.screenshots)
 }
 
 kotlin {

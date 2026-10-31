@@ -251,6 +251,7 @@ class SyncEngineTest {
 
         val restored = b.sessions().single()
         assertTrue(b.db.sql.query("SELECT planDayId FROM workout_session").use { it.moveToFirst(); it.isNull(0) })
+        assertEquals(0, b.db.sql.query("SELECT COUNT(*) FROM session_exercise WHERE planExerciseId IS NOT NULL").use { it.moveToFirst(); it.getInt(0) })
         assertEquals(a.sessions().single().exercises.map { it.exercise.id }, restored.exercises.map { it.exercise.id })
         assertEquals(60.0 to 10, restored.exercises.first().sets.first().let { it.weightKg to it.reps })
     }

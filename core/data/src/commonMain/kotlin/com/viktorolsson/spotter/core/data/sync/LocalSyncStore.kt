@@ -263,6 +263,7 @@ class LocalSyncStore(private val database: SpotterDatabase) {
                     logDebug(TAG, "Deferred ${row.tableName}/${row.syncId}: parent ${fk.parent} not here yet")
                     return Upsert.PARENT_MISSING
                 }
+                if (localId == null) logDebug(TAG, "Unlinked ${row.tableName}/${row.syncId}: parent ${fk.parent} is gone")
                 values[name] = localId
             } else {
                 values[name] = element.sqlValue()

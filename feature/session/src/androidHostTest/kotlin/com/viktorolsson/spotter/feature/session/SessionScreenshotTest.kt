@@ -14,6 +14,7 @@ import com.github.takahirom.roborazzi.RoborazziComposeOptions
 import com.github.takahirom.roborazzi.captureRoboImage
 import com.github.takahirom.roborazzi.captureScreenRoboImage
 import com.github.takahirom.roborazzi.fontScale
+import com.viktorolsson.spotter.core.engine.MobilityWarmUp
 import com.viktorolsson.spotter.core.engine.DetectedRecord
 import com.viktorolsson.spotter.core.model.EffortScale
 import com.viktorolsson.spotter.core.model.PersonalRecordType
@@ -45,7 +46,7 @@ class SessionScreenshotTest {
     private val cardActions = ExerciseCardActions(
         { _, _ -> }, {}, { _, _ -> }, { _, _ -> }, {}, {}, { _, _ -> }, { _, _ -> }, {}, { _, _ -> }, { _, _ -> }, {}, {}, { _, _ -> }, {},
     )
-    private val actions = SessionActions({}, {}, {}, {}, {}, {}, {}, {}, { _, _, _ -> }, {}, {}, { _, _ -> }, {})
+    private val actions = SessionActions({}, {}, {}, {}, {}, {}, {}, {}, { _, _, _ -> }, {}, {}, { _, _ -> }, {}, {})
     private val active = PreviewData.session(finished = false, exercises = listOf(bench, PreviewData.rows(supersetGroup = 1), PreviewData.plank()))
     private val now = PreviewData.startedAt + (32 * 60 + 10).seconds
 
@@ -96,6 +97,7 @@ class SessionScreenshotTest {
                 previous = mapOf("barbell-bench-press" to previous, "barbell-row" to listOf(PreviousSet(57.5, 10))),
                 preferences = UserPreferences(effortScale = effortScale),
                 restTimer = restTimer,
+                warmUp = warmUp,
             ),
             session = active,
             swap = null,
@@ -106,6 +108,22 @@ class SessionScreenshotTest {
             celebration = celebration,
         )
     }
+
+    private val warmUp = MobilityWarmUp.forSession(active.exercises.map { it.exercise to it.sets.size })
+
+    @Composable
+    private fun WarmUp() = Column(Modifier.padding(Spacing.md)) {
+        WarmUpPanel(warmUp, done = setOf(warmUp[0], warmUp[1]), onToggle = {}, initiallyExpanded = true)
+    }
+
+    @Test
+    fun warmUpPanel_light() = capture("warmup_panel_light", dark = false) { WarmUp() }
+
+    @Test
+    fun warmUpPanel_dark() = capture("warmup_panel_dark", dark = true) { WarmUp() }
+
+    @Test
+    fun warmUpPanel_largeFont() = capture("warmup_panel_font_1_6", dark = false, fontScale = 1.6f) { WarmUp() }
 
     @Test
     fun session_light() = capture("session_light", dark = false) { Session() }

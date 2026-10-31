@@ -43,4 +43,34 @@
     </plurals>
     <string name="today_heatmap_less">Less</string>
     <string name="today_heatmap_more">More</string>
+    <string name="review_title">Time to review your plan</string>
+    <string name="review_card_body">%1$s of training on this plan. Stalled: %2$s.</string>
+    <plurals name="review_weeks">
+        <item quantity="one">%1$d week</item>
+        <item quantity="other">%1$d weeks</item>
+    </plurals>
+    <string name="review_later">Later</string>
+    <string name="review_open">Review</string>
+    <string name="review_sheet_intro">Pick anything you'd like to change. Nothing changes until you apply.</string>
+    <string name="review_progress">Progress since %1$s</string>
+    <string name="review_stalled">%1$s has stalled</string>
+    <string name="review_stalled_evidence">%1$s for %2$d sessions</string>
+    <string name="review_add_to">%1$s · added to %2$s</string>
+    <string name="review_variation">Swap for %1$s</string>
+    <string name="review_variation_body">For %1$d weeks, then back to %2$s</string>
+    <string name="review_keep">Keep my plan</string>
+    <string name="review_apply">Apply (%1$d)</string>
+    <string name="support_upper_chest">Upper chest and front delts: the bottom of the press</string>
+    <string name="support_triceps">Stronger triceps for the lockout</string>
+    <string name="support_shoulders">Shoulders that carry the press</string>
+    <string name="support_side_delts">Side delts for a stable overhead position</string>
+    <string name="support_upper_back">Upper back for a solid base</string>
+    <string name="support_rear_delts">Rear delts for healthy shoulders</string>
+    <string name="support_lats">Lats, the main pulling muscle</string>
+    <string name="support_biceps">Biceps that finish the pull</string>
+    <string name="support_quads">Quads to drive out of the hole</string>
+    <string name="support_hamstrings">Hamstrings and glutes for the hip drive</string>
+    <string name="support_glutes">Glutes for hip extension</string>
+    <string name="support_lower_back">Lower back to hold position</string>
+    <string name="support_core">A braced core under the bar</string>
 </resources>

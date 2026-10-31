@@ -57,6 +57,7 @@ import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.semantics
 import org.koin.compose.viewmodel.koinViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.viktorolsson.spotter.core.engine.MobilityDrill
 import com.viktorolsson.spotter.core.engine.Plates
 import com.viktorolsson.spotter.core.model.EffortScale
 import com.viktorolsson.spotter.core.model.NumberInput
@@ -127,6 +128,7 @@ internal fun SessionRoute(
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val swap by viewModel.swap.collectAsStateWithLifecycle()
+    val warmUpDone by viewModel.warmUpDone.collectAsStateWithLifecycle()
 
     // Discarded (or finished elsewhere): nothing to show.
     LaunchedEffect(uiState.loading, uiState.session) {
@@ -209,6 +211,7 @@ internal fun SessionRoute(
             onSwapFilter = viewModel::setSwapFilter,
             onSwapPick = viewModel::swapTo,
             onSwapClose = viewModel::closeSwap,
+            onToggleDrill = viewModel::toggleDrill,
         )
     }
 
@@ -238,6 +241,7 @@ internal fun SessionRoute(
         actions = actions,
         snackbarHostState = snackbar,
         celebration = celebration,
+        warmUpDone = warmUpDone,
     )
 }
 
@@ -257,6 +261,7 @@ internal class SessionActions(
     val onSwapFilter: (SwapFilter) -> Unit,
     val onSwapPick: (exerciseId: String, replaceInPlan: Boolean) -> Unit,
     val onSwapClose: () -> Unit,
+    val onToggleDrill: (MobilityDrill) -> Unit,
 )
 
 @Composable
@@ -270,6 +275,8 @@ internal fun SessionScreen(
     actions: SessionActions,
     snackbarHostState: SnackbarHostState = remember { SnackbarHostState() },
     celebration: PrEvent? = null,
+    warmUpDone: Set<MobilityDrill> = emptySet(),
+    warmUpExpanded: Boolean = false,
 ) {
     var menuOpen by remember { mutableStateOf(false) }
     var editingNote by rememberSaveable { mutableStateOf(false) }
@@ -379,6 +386,9 @@ internal fun SessionScreen(
             contentPadding = PaddingValues(start = Spacing.md, end = Spacing.md, top = Spacing.xs, bottom = Spacing.xxl),
             verticalArrangement = Arrangement.spacedBy(Dimens.ListGap),
         ) {
+            item(key = "warmup") {
+                WarmUpPanel(state.warmUp, warmUpDone, actions.onToggleDrill, initiallyExpanded = warmUpExpanded)
+            }
             session.notes?.let { note ->
                 item(key = "note") {
                     Text(

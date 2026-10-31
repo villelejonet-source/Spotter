@@ -9,11 +9,20 @@ into the new version's entry and writes the store notes from it. Versions are th
 ## Unreleased
 
 ### Added
-- Delete a finished workout, in the app (History → the workout → the bin icon) or on the website
+- A warm-up panel at the top of every workout: tap it for 5–6 mobility drills picked for what
+  you're training (shoulder work on upper-body days, hips and ankles on leg days), and tick them
+  off as you go.
+- A plan review on Today every four weeks or so when a main lift has stalled (sooner if two
+  stall together). It shows how each main lift has moved and suggests exercises for the muscles
+  around a stalled one (for a stuck bench: incline press, close-grip bench, shoulder press) or a
+  variation to swap in. Pick what you want and apply it, keep your plan, or come back later.
+ in the app (History → the workout → the bin icon) or on the website
   (the workout's page → Delete workout). Its sets and any records set in it go too, on every
   device; a scheduled day it completed shows as not done again.
 
 ### Changed
+- "Add warm-up set" adds one set at a time, stepping up towards your working weight, and stays
+  until you finish your first working set, so you can add as many as you like.
 - The website has a new look: dark-first with a glowing orange accent, monospace numbers, a new
   sidebar, and a "Jump to…" command palette (⌘K) to reach any page or action. Light mode
   follows your system setting.

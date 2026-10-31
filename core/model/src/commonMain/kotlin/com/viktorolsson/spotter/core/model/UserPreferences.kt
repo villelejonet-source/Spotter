@@ -10,6 +10,10 @@ data class UserPreferences(
     val onboardingCompleted: Boolean = false,
     /** Last day of an active deload week, if any. */
     val deloadUntil: kotlinx.datetime.LocalDate? = null,
+    /** When the plan was last reviewed (applied or kept); the next review counts from here. */
+    val planReviewedOn: kotlinx.datetime.LocalDate? = null,
+    /** "Later" on the plan review: hidden through this day. */
+    val planReviewSnoozedUntil: kotlinx.datetime.LocalDate? = null,
 ) {
     fun isDeload(today: kotlinx.datetime.LocalDate): Boolean = deloadUntil != null && today <= deloadUntil
 }

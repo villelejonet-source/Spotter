@@ -21,6 +21,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
+import com.viktorolsson.spotter.core.engine.MobilityDrill
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.StandardTestDispatcher
@@ -33,6 +34,7 @@ import kotlinx.coroutines.test.setMain
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
+import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -46,6 +48,7 @@ class SessionViewModelTest {
     private val main = StandardTestDispatcher()
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     private lateinit var graph: DataGraph
+    private val warmUpTicks = WarmUpTicks()
 
     @Before
     fun setUp() {
@@ -71,6 +74,7 @@ class SessionViewModelTest {
         applicationScope = backgroundScope,
         preferencesRepository = graph.preferences,
         errors = graph.errors,
+        warmUpTicks = warmUpTicks,
     )
 
     private suspend fun sets(sessionId: Long): List<WorkoutSet> =
@@ -81,6 +85,44 @@ class SessionViewModelTest {
      * not the ones in the database, so it undid a value the screen hadn't caught up with yet
      * (the next set filled in by a tick, a copied set, a sync).
      */
+    @Test
+    fun theWarmUpFollowsTheSessionAndTicksToggle() = runTest(main) {
+        graph.seeder.seedIfNeeded()
+        val id = graph.workouts.startEmptyWorkout()
+        graph.workouts.addExercises(id, listOf("back-squat"))
+        val vm = viewModel(id)
+        val legs = vm.uiState.first { it.session?.exercises?.isNotEmpty() == true }.warmUp
+        assertTrue(MobilityDrill.ANKLE_ROCK in legs)
+
+        graph.workouts.addExercises(id, listOf("overhead-press", "lat-pulldown", "dumbbell-lateral-raise"))
+        val mixed = vm.uiState.first { it.session?.exercises?.size == 4 }.warmUp
+        assertTrue(MobilityDrill.WALL_SLIDE in mixed)
+
+        vm.toggleDrill(MobilityDrill.WALL_SLIDE)
+        runCurrent()
+        assertEquals(setOf(MobilityDrill.WALL_SLIDE), vm.warmUpDone.value)
+        vm.toggleDrill(MobilityDrill.WALL_SLIDE)
+        runCurrent()
+        assertTrue(vm.warmUpDone.value.isEmpty())
+    }
+
+    /** Minimizing the workout closes its screen; ticked drills used to go with it. */
+    @Test
+    fun tickedDrillsSurviveLeavingAndReopeningTheWorkout() = runTest(main) {
+        graph.seeder.seedIfNeeded()
+        val id = graph.workouts.startEmptyWorkout()
+        graph.workouts.addExercises(id, listOf("back-squat"))
+        viewModel(id).toggleDrill(MobilityDrill.ANKLE_ROCK)
+
+        val reopened = viewModel(id)
+        assertEquals(setOf(MobilityDrill.ANKLE_ROCK), reopened.warmUpDone.value)
+
+        // The next workout starts with nothing ticked.
+        graph.workouts.discardWorkout(id)
+        val next = graph.workouts.startEmptyWorkout()
+        assertTrue(viewModel(next).warmUpDone.value.isEmpty())
+    }
+
     @Test
     fun aTypedWeightKeepsRepsTheScreenHasNotShownYet() = runTest(main) {
         graph.seeder.seedIfNeeded()

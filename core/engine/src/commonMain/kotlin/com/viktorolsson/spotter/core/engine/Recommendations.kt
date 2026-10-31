@@ -220,45 +220,46 @@ object RecommendationEngine {
             )
         }
         accessoryFor(slot, ctx)?.let { accessory ->
-            val compound = accessory.mechanics == Mechanics.COMPOUND
-            val holdSeconds = timedHoldSeconds(ExperienceLevel.INTERMEDIATE).takeIf { accessory.isTimed }
             return RecommendationDraft(
                 RecommendationType.ADD_ACCESSORY,
                 slot.exercise.id,
-                RecommendationPayload(
-                    RecommendationAction.AddExercise(
-                        planDayId = slot.planDayId,
-                        dayName = slot.dayName,
-                        exerciseId = accessory.id,
-                        exerciseName = accessory.name,
-                        sets = 3,
-                        repMin = holdSeconds?.first ?: if (compound) 6 else 10,
-                        repMax = holdSeconds?.last ?: if (compound) 10 else 15,
-                        targetRir = 2,
-                        restSeconds = if (compound) 120 else 90,
-                    ),
-                    evidence(p),
-                ),
+                RecommendationPayload(addAccessory(slot, accessory), evidence(p)),
             )
         }
+        val swap = variationFor(slot, ctx) ?: return null
+        return RecommendationDraft(RecommendationType.VARIATION, slot.exercise.id, RecommendationPayload(swap, evidence(p)))
+    }
+
+    /** Adds [accessory] to [slot]'s day: 3 sets, moderate reps, a couple of reps in reserve. */
+    fun addAccessory(slot: PlanSlot, accessory: Exercise): RecommendationAction.AddExercise {
+        val compound = accessory.mechanics == Mechanics.COMPOUND
+        val holdSeconds = timedHoldSeconds(ExperienceLevel.INTERMEDIATE).takeIf { accessory.isTimed }
+        return RecommendationAction.AddExercise(
+            planDayId = slot.planDayId,
+            dayName = slot.dayName,
+            exerciseId = accessory.id,
+            exerciseName = accessory.name,
+            sets = 3,
+            repMin = holdSeconds?.first ?: if (compound) 6 else 10,
+            repMax = holdSeconds?.last ?: if (compound) 10 else 15,
+            targetRir = 2,
+            restSeconds = if (compound) 120 else 90,
+        )
+    }
+
+    /** A same-pattern variation of [slot]'s lift for a few weeks, or null if none fits. */
+    fun variationFor(slot: PlanSlot, ctx: RecommendationContext, exclude: Set<String> = emptySet()): RecommendationAction.SwapVariation? {
         val variant = ExerciseSimilarity.rank(
             original = slot.exercise,
             library = ctx.library,
             availableEquipment = ctx.equipment,
             limitations = ctx.limitations,
-            exclude = ctx.plan.map { it.exercise.id }.toSet(),
+            exclude = ctx.plan.map { it.exercise.id }.toSet() + exclude,
         ).firstOrNull {
             it.exercise.movementPattern == slot.exercise.movementPattern && it.exercise.mechanics == slot.exercise.mechanics
         }?.exercise ?: return null
-        return RecommendationDraft(
-            RecommendationType.VARIATION,
-            slot.exercise.id,
-            RecommendationPayload(
-                RecommendationAction.SwapVariation(
-                    slot.planExerciseId, slot.exercise.id, slot.exercise.name, variant.id, variant.name, VARIATION_WEEKS,
-                ),
-                evidence(p),
-            ),
+        return RecommendationAction.SwapVariation(
+            slot.planExerciseId, slot.exercise.id, slot.exercise.name, variant.id, variant.name, VARIATION_WEEKS,
         )
     }
 

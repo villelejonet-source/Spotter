@@ -35,6 +35,8 @@ class UserPreferencesRepository(
             ),
             onboardingCompleted = prefs[Keys.ONBOARDING_COMPLETED] ?: defaults.onboardingCompleted,
             deloadUntil = prefs[Keys.DELOAD_UNTIL]?.let(LocalDate::fromEpochDays),
+            planReviewedOn = prefs[Keys.PLAN_REVIEWED_ON]?.let(LocalDate::fromEpochDays),
+            planReviewSnoozedUntil = prefs[Keys.PLAN_REVIEW_SNOOZED_UNTIL]?.let(LocalDate::fromEpochDays),
         )
     }
 
@@ -68,6 +70,18 @@ class UserPreferencesRepository(
         dataStore.edit { if (date == null) it.remove(Keys.DELOAD_UNTIL) else it[Keys.DELOAD_UNTIL] = date.toEpochDays() }
     }
 
+    /** The plan was reviewed on [date]: the next review counts from it, and any snooze ends. */
+    suspend fun setPlanReviewed(date: LocalDate) {
+        dataStore.edit {
+            it[Keys.PLAN_REVIEWED_ON] = date.toEpochDays()
+            it.remove(Keys.PLAN_REVIEW_SNOOZED_UNTIL)
+        }
+    }
+
+    suspend fun snoozePlanReview(until: LocalDate) {
+        dataStore.edit { it[Keys.PLAN_REVIEW_SNOOZED_UNTIL] = until.toEpochDays() }
+    }
+
     suspend fun setOnboardingCompleted(done: Boolean) {
         dataStore.edit { it[Keys.ONBOARDING_COMPLETED] = done }
     }
@@ -84,6 +98,8 @@ class UserPreferencesRepository(
         val EFFORT_SCALE = stringPreferencesKey("effort_scale")
         val DELOAD_UNTIL = longPreferencesKey("deload_until_epoch_day")
         val ONBOARDING_COMPLETED = booleanPreferencesKey("onboarding_completed")
+        val PLAN_REVIEWED_ON = longPreferencesKey("plan_reviewed_on_epoch_day")
+        val PLAN_REVIEW_SNOOZED_UNTIL = longPreferencesKey("plan_review_snoozed_until_epoch_day")
     }
 }
 

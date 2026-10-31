@@ -336,19 +336,21 @@ class WorkoutRepository(
     }
 
     /**
-     * Adds one warm-up set after the existing warm-ups: the next step of the ramp for the
-     * first working set's weight, or the top step again once the ramp has run out.
+     * Adds one warm-up set after the warm-ups at the top: the next step of the ramp for the
+     * first working set's weight, or the top step again once the ramp has run out. A set
+     * marked as a warm-up further down by hand stays where it is and doesn't count.
      * Returns false when there's nothing to add (no weight set, or no ramp for it).
      */
     suspend fun addWarmUpSet(sessionExerciseId: Long, extended: Boolean): Boolean = db.withTransaction {
         val entry = dao.getSessionExercise(sessionExerciseId) ?: return@withTransaction false
-        val sets = dao.getSets(sessionExerciseId)
-        val (warmUps, working) = sets.partition { it.setType == SetType.WARMUP }
-        val workingKg = working.firstOrNull { it.weightKg != null }?.weightKg ?: return@withTransaction false
+        val sets = dao.getSets(sessionExerciseId).sortedBy { it.position }
+        val leading = sets.takeWhile { it.setType == SetType.WARMUP }.size
+        val workingKg = sets.firstOrNull { it.setType != SetType.WARMUP && it.weightKg != null }?.weightKg
+            ?: return@withTransaction false
         val exercise = exerciseDao.getById(entry.exerciseId)?.toModel() ?: return@withTransaction false
         val unit = preferences.preferences.first().weightUnit
-        val next = WarmUps.next(warmUps.size, workingKg, exercise, unit, extended) ?: return@withTransaction false
-        val position = warmUps.size
+        val next = WarmUps.next(leading, workingKg, exercise, unit, extended) ?: return@withTransaction false
+        val position = leading
         dao.updateSets(sets.filter { it.position >= position }.map { it.copy(position = it.position + 1) })
         dao.insertSets(listOf(newSet(sessionExerciseId, position, next.weightKg, next.reps, SetType.WARMUP)))
         true

@@ -166,6 +166,7 @@ These rules live in `core/engine` and run after each session:
   - **Frequency:** if a muscle is trained only once a week, suggest twice.
   - **Variation:** swap to a close variant for 4–6 weeks, then return.
 - Recommendations appear as cards in Progress and on the related exercise screen, with "Apply to plan" or "Dismiss". Each card explains *why* (e.g. "Bench 80 kg × 5 for 4 sessions").
+- A plan review shows on Today after 4 weeks and 8 sessions on the plan (or since the last review) when a main lift has stalled, or after 2 weeks when 2+ stall together. For each stalled lift it offers supporting exercises for the muscles around it (`SupportingLifts`: e.g. bench → incline press, triceps, shoulders) and a variation swap. Applying, or keeping the plan, starts the next 4-week window; "Later" hides it for a week.
 
 ## Theming
 Material 3 theme with light, dark and "follow system" settings, plus dynamic color on Android 12+ and a branded fallback palette. Both themes get contrast checks in the Paparazzi screenshot tests.

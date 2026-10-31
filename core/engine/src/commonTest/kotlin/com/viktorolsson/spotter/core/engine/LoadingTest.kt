@@ -52,7 +52,7 @@ class LoadingTest {
         val steps = (0..5).map { WarmUps.next(it, 100.0, bench, WeightUnit.KG)?.weightKg }
         assertEquals(listOf(20.0, 50.0, 70.0, 85.0, 85.0, 85.0), steps)
         assertEquals(30.0, WarmUps.next(1, 100.0, bench, WeightUnit.KG, extended = true)?.weightKg)
-        assertEquals(null, WarmUps.next(0, 20.0, bench, WeightUnit.KG))
+        assertNull(WarmUps.next(0, 20.0, bench, WeightUnit.KG))
     }
 
     @Test

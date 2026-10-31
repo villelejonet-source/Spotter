@@ -1,6 +1,9 @@
 <resources>
     <!-- Actions shared by every screen -->
     <string name="action_cancel">Cancel</string>
+    <string name="workout_in_progress_title">A workout is in progress</string>
+    <string name="workout_in_progress_text">Finish or discard it before you start another.</string>
+    <string name="workout_in_progress_open">Go to workout</string>
     <string name="action_back">Back</string>
     <string name="action_save">Save</string>
     <string name="action_delete">Delete</string>

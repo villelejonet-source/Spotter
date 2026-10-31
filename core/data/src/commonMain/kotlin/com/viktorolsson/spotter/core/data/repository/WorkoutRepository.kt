@@ -72,6 +72,9 @@ class WorkoutRepository(
      * the progression target computed from the last two sessions of that exercise
      * (or the plan's calibration estimate the first time).
      */
+    /** The workout in progress, if any (only one can be). */
+    suspend fun activeSessionId(): Long? = dao.getActiveSession()?.id
+
     suspend fun startPlannedWorkout(planDayId: Long): Long = db.withTransaction {
         dao.getActiveSession()?.let { return@withTransaction it.id }
         val day = planDao.getDay(planDayId) ?: error("No plan day $planDayId")

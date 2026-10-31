@@ -28,6 +28,7 @@ import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flow
@@ -131,8 +132,18 @@ class WorkoutDetailViewModel(
         WorkoutDetailUiState(false, session, records, prefs.weightUnit, prefs.effortScale, deleting)
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), WorkoutDetailUiState())
 
+    private val _inProgress = MutableStateFlow<Long?>(null)
+
+    /** The workout already running when Repeat was tapped: the screen asks before going there. */
+    val inProgress: StateFlow<Long?> = _inProgress.asStateFlow()
+
     fun repeat(onStarted: (Long) -> Unit) = viewModelScope.launchReporting(errors, Failure.ACTION) {
-        onStarted(workoutRepository.repeatWorkout(sessionId))
+        val running = workoutRepository.activeSessionId()
+        if (running != null) _inProgress.value = running else onStarted(workoutRepository.repeatWorkout(sessionId))
+    }
+
+    fun dismissInProgress() {
+        _inProgress.value = null
     }
 
     /**

@@ -39,6 +39,9 @@ into the new version's entry and writes the store notes from it. Versions are th
   instead of never. The first sync after updating fetches the backup again to pick it up.
 - Restoring a large backup while another phone or the website saves changes no longer misses
   a record now and then.
+- Starting a plan day, or repeating a past workout, while another workout is in progress now
+  asks first ("A workout is in progress") with a button to go to it, instead of silently opening
+  the running workout.
 
 ### Website
 - Saving the profile on the website no longer undoes a body weight you just logged on the same

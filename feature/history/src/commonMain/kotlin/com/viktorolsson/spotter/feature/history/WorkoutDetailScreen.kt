@@ -1,5 +1,8 @@
 package com.viktorolsson.spotter.feature.history
 
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -160,7 +163,7 @@ internal fun WorkoutDetailScreen(
                     verticalArrangement = Arrangement.spacedBy(Dimens.ListGap),
                 ) {
                     item {
-                        Row(horizontalArrangement = Arrangement.spacedBy(Spacing.sm)) {
+                        Row(Modifier.height(IntrinsicSize.Max), horizontalArrangement = Arrangement.spacedBy(Spacing.sm)) {
                             StatTile(stringResource(Res.string.detail_duration), formatClock(summary.duration), Modifier.weight(1f))
                             StatTile(stringResource(Res.string.detail_volume), formatTotal(summary.volumeKg, state.unit), Modifier.weight(1f))
                             StatTile(stringResource(Res.string.detail_sets), summary.completedSets.toString(), Modifier.weight(1f))
@@ -199,7 +202,10 @@ private fun ExerciseSetsCard(
             exercise.sets.firstOrNull { it.weightKg == record.weightKg && it.reps == record.reps }?.id
         }.toSet()
     }
-    Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow)) {
+    Card(
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow),
+        border = BorderStroke(Dimens.Hairline, MaterialTheme.colorScheme.outlineVariant),
+    ) {
         Column(Modifier.padding(start = Dimens.CardPadding, end = Spacing.sm, top = Spacing.sm, bottom = Spacing.md)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text(

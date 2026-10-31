@@ -34,7 +34,7 @@ internal fun OptionCard(
         onClick = onClick,
         selected = selected,
         shape = MaterialTheme.shapes.large,
-        color = if (selected) MaterialTheme.colorScheme.secondaryContainer else MaterialTheme.colorScheme.surfaceContainerLow,
+        color = if (selected) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceContainerLow,
         border = BorderStroke(
             if (selected) 2.dp else 1.dp,
             if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outlineVariant,
@@ -62,6 +62,7 @@ internal fun NumberInput(
     decimal: Boolean = false,
 ) {
     OutlinedTextField(
+        shape = MaterialTheme.shapes.small,
         value = value,
         onValueChange = { text -> onValueChange(text.filter { it.isDigit() || (decimal && (it == '.' || it == ',')) }.take(6)) },
         label = { Text(label) },

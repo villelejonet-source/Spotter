@@ -1,5 +1,8 @@
 package com.viktorolsson.spotter.feature.plan
 
+import com.viktorolsson.spotter.core.ui.theme.SpotterTheme
+import androidx.compose.ui.unit.dp
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -135,9 +138,12 @@ internal fun PlanScreen(
 
 @Composable
 private fun DayCard(day: PlanDay, isNext: Boolean, effortScale: EffortScale, onStart: () -> Unit) {
+    // The next day stands out with the accent's border, like a selected option.
     Card(
-        colors = CardDefaults.cardColors(
-            containerColor = if (isNext) MaterialTheme.colorScheme.secondaryContainer else MaterialTheme.colorScheme.surfaceContainerLow,
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow),
+        border = BorderStroke(
+            if (isNext) NEXT_BORDER else Dimens.Hairline,
+            if (isNext) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outlineVariant,
         ),
         modifier = Modifier.fillMaxWidth(),
     ) {
@@ -179,9 +185,10 @@ internal fun PlanExerciseRow(exercise: PlanExercise, effortScale: EffortScale) {
         val rir = exercise.targetRir?.takeUnless { exercise.exercise.isTimed }
         Text(
             if (rir != null) stringResource(Res.string.plan_target_rir, target, formatEffort(rir, effortScale)) else target,
-            style = MaterialTheme.typography.bodyMedium,
+            style = SpotterTheme.type.numberSmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
     }
 }
 
+private val NEXT_BORDER = 1.5.dp

@@ -39,6 +39,9 @@ into the new version's entry and writes the store notes from it. Versions are th
   monospace axis labels, muscle balance shows the target range as a band on each bar (and no longer
   breaks long names like "Shoulders" with large text), records and workout stats use monospace
   numbers, and the History calendar marks today with a ring.
+- Profile, onboarding, the plan and the account screens finish the new look: settings grouped in
+  outlined cards, choices highlighted in the accent, the next plan day outlined in orange, and
+  rounded text fields.
 
 ### iOS (not released yet)
 - The whole app runs on iOS from the same shared code as Android (#13–#20).

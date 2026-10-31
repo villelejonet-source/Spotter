@@ -137,6 +137,7 @@ internal fun ExercisePickerScreen(
     ) { padding ->
         Column(Modifier.padding(padding).fillMaxSize()) {
             OutlinedTextField(
+                shape = MaterialTheme.shapes.small,
                 value = query,
                 onValueChange = onQueryChange,
                 leadingIcon = { Icon(Icons.Rounded.Search, contentDescription = null) },

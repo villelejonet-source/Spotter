@@ -498,6 +498,7 @@ private fun PasswordSaved(onDone: () -> Unit) {
 @Composable
 private fun EmailField(state: AccountUiState, actions: AccountActions, imeAction: ImeAction = ImeAction.Next, onDone: () -> Unit = {}) {
     OutlinedTextField(
+        shape = MaterialTheme.shapes.small,
         value = state.email,
         onValueChange = actions.setEmail,
         label = { Text(stringResource(Res.string.account_email)) },
@@ -519,6 +520,7 @@ private fun PasswordField(
 ) {
     var visible by rememberSaveable { mutableStateOf(false) }
     OutlinedTextField(
+        shape = MaterialTheme.shapes.small,
         value = value,
         onValueChange = onValueChange,
         label = { Text(stringResource(label)) },
@@ -546,6 +548,7 @@ private fun PasswordField(
 @Composable
 private fun CodeField(state: AccountUiState, actions: AccountActions, onDone: () -> Unit) {
     OutlinedTextField(
+        shape = MaterialTheme.shapes.small,
         value = state.code,
         onValueChange = actions.setCode,
         label = { Text(stringResource(Res.string.account_code)) },

@@ -11,6 +11,7 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExposedDropdownMenuAnchorType
 import androidx.compose.material3.ExposedDropdownMenuBox
 import androidx.compose.material3.ExposedDropdownMenuDefaults
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -61,6 +62,7 @@ internal fun CreateExerciseDialog(
                 modifier = Modifier.verticalScroll(rememberScrollState()),
             ) {
                 OutlinedTextField(
+                    shape = MaterialTheme.shapes.small,
                     value = name,
                     onValueChange = { name = it },
                     label = { Text(stringResource(Res.string.create_name)) },
@@ -106,6 +108,7 @@ private fun <T> EnumDropdown(
     var expanded by remember { mutableStateOf(false) }
     ExposedDropdownMenuBox(expanded = expanded, onExpandedChange = { expanded = it }) {
         OutlinedTextField(
+            shape = MaterialTheme.shapes.small,
             value = optionLabel(selected),
             onValueChange = {},
             readOnly = true,

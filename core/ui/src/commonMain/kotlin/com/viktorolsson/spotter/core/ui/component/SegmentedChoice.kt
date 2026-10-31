@@ -1,5 +1,6 @@
 package com.viktorolsson.spotter.core.ui.component
 
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.material3.SegmentedButton
 import androidx.compose.material3.SegmentedButtonDefaults
@@ -21,7 +22,14 @@ fun <T> SegmentedChoice(
             SegmentedButton(
                 selected = value == selected,
                 onClick = { onSelect(value) },
-                shape = SegmentedButtonDefaults.itemShape(index, options.size),
+                shape = SegmentedButtonDefaults.itemShape(index, options.size, MaterialTheme.shapes.small),
+                colors = SegmentedButtonDefaults.colors(
+                    activeContainerColor = MaterialTheme.colorScheme.primaryContainer,
+                    activeContentColor = MaterialTheme.colorScheme.onPrimaryContainer,
+                    activeBorderColor = MaterialTheme.colorScheme.primary,
+                    inactiveContainerColor = MaterialTheme.colorScheme.surfaceContainerLow,
+                    inactiveBorderColor = MaterialTheme.colorScheme.outline,
+                ),
             ) { Text(label) }
         }
     }

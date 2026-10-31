@@ -3,6 +3,7 @@ package com.viktorolsson.spotter.feature.session
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -38,6 +39,7 @@ internal fun TextInputDialog(
         title = { Text(title) },
         text = {
             OutlinedTextField(
+                shape = MaterialTheme.shapes.small,
                 value = text,
                 onValueChange = { text = it },
                 minLines = 2,

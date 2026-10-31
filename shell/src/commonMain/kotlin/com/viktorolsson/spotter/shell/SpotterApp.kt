@@ -28,12 +28,8 @@ import org.jetbrains.compose.resources.stringResource
 import org.koin.compose.koinInject
 import org.koin.compose.viewmodel.koinViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import androidx.navigation.NavDestination
 import androidx.navigation.NavDestination.Companion.hasRoute
-import androidx.navigation.NavDestination.Companion.hierarchy
-import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.NavHostController
-import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import com.viktorolsson.spotter.core.data.AppErrors
@@ -62,7 +58,6 @@ import com.viktorolsson.spotter.feature.session.summaryScreen
 import com.viktorolsson.spotter.feature.settings.AccountRoute
 import com.viktorolsson.spotter.feature.settings.accountScreen
 import com.viktorolsson.spotter.feature.settings.profileScreen
-import com.viktorolsson.spotter.feature.today.TodayRoute
 import com.viktorolsson.spotter.feature.today.todayScreen
 import kotlinx.coroutines.delay
 import kotlin.time.Clock
@@ -179,9 +174,8 @@ fun SpotterApp(
         // Each screen owns its top app bar and status-bar insets.
         contentWindowInsets = WindowInsets(0),
     ) { padding ->
-        NavHost(
+        SpotterNavHost(
             navController = navController,
-            startDestination = TodayRoute,
             modifier = Modifier.padding(padding).consumeWindowInsets(padding),
         ) {
             todayScreen(
@@ -269,16 +263,4 @@ internal fun SyncChoiceDialog(email: String?, onChoose: (FirstSyncChoice) -> Uni
             TextButton(onClick = { onChoose(FirstSyncChoice.MERGE) }) { Text(stringResource(Res.string.sync_choice_merge)) }
         },
     )
-}
-
-private fun NavDestination?.isOnTab(destination: TopLevelDestination): Boolean =
-    this?.hierarchy?.any { it.hasRoute(destination.route::class) } == true
-
-/** Standard bottom-bar behaviour: one back stack per tab, restored when you return to it. */
-private fun NavHostController.navigateToTab(destination: TopLevelDestination) {
-    navigate(destination.route) {
-        popUpTo(graph.findStartDestination().id) { saveState = true }
-        launchSingleTop = true
-        restoreState = true
-    }
 }

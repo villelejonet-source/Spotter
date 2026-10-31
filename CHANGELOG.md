@@ -60,6 +60,11 @@ into the new version's entry and writes the store notes from it. Versions are th
   outlined cards, choices highlighted in the accent, the next plan day outlined in orange, and
   rounded text fields.
 
+### Fixed
+- Switching between the bottom tabs is instant. It used to fade for most of a second, so the
+  previous tab showed behind the new one, and tapping quickly between two tabs could leave them
+  stuck mid-fade for a moment (most visible on iPhone).
+
 ### iOS (not released yet)
 - The whole app runs on iOS from the same shared code as Android (#13–#20).
 - Fixed a crash on iOS whenever the app logged a warning, such as a failed sync (#27).

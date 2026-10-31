@@ -23,6 +23,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.getAndUpdate
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
@@ -87,8 +88,11 @@ class ExercisePickerViewModel(
 
     fun toggle(exerciseId: String) = selected.update { if (exerciseId in it) it - exerciseId else it + exerciseId }
 
+    /** Adds the selection once: a second tap while the screen closes finds nothing left to add. */
     fun addSelected(onDone: () -> Unit) = viewModelScope.launchReporting(errors) {
-        workoutRepository.addExercises(sessionId, selected.value)
+        val ids = selected.getAndUpdate { emptyList() }
+        if (ids.isEmpty()) return@launchReporting
+        workoutRepository.addExercises(sessionId, ids)
         onDone()
     }
 

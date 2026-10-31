@@ -59,6 +59,11 @@ into the new version's entry and writes the store notes from it. Versions are th
   - "copy previous" closes the keypad, so it no longer shows the old typed value;
   - the swap sheet never shows the previous exercise's alternatives;
   - a save that fails while typing shows "Couldn't save" instead of closing the app.
+- Quick double taps no longer close two screens (for example Done on the workout summary, or
+  Add in the exercise picker, which could also add the exercises twice) or open the same
+  workout twice.
+- If saving your plan at the end of setup fails, Start works again so you can retry, instead of
+  staying greyed out.
 
 ### Website
 - Saving the profile on the website no longer undoes a body weight you just logged on the same

@@ -179,32 +179,32 @@ fun SpotterApp(
             modifier = Modifier.padding(padding).consumeWindowInsets(padding),
         ) {
             todayScreen(
-                onOpenSession = { navController.navigate(SessionRoute(it)) },
+                onOpenSession = { navController.navigate(SessionRoute(it)) { launchSingleTop = true } },
                 onOpenPlan = { navController.navigate(PlanRoute) },
                 onBuildPlan = { navController.navigate(OnboardingRoute()) },
             )
             historyScreen(onOpenWorkout = { navController.navigate(WorkoutDetailRoute(it)) })
             progressScreen(onOpenExercise = { navController.navigate(ExerciseHistoryRoute(it)) })
             workoutDetailScreen(
-                onBack = { navController.popBackStack() },
+                onBack = { navController.popBackStack<WorkoutDetailRoute>(inclusive = true) },
                 onOpenExercise = { navController.navigate(ExerciseHistoryRoute(it)) },
-                onOpenSession = { navController.navigate(SessionRoute(it)) },
+                onOpenSession = { navController.navigate(SessionRoute(it)) { launchSingleTop = true } },
             )
-            exerciseHistoryScreen(onBack = { navController.popBackStack() })
+            exerciseHistoryScreen(onBack = { navController.popBackStack<ExerciseHistoryRoute>(inclusive = true) })
             profileScreen(
                 onOpenPlan = { navController.navigate(PlanRoute) },
                 onRebuildPlan = { navController.navigate(OnboardingRoute(rebuild = true)) },
                 onOpenAccount = { navController.navigate(it) },
             )
             onboardingScreen(
-                onDone = { navController.popBackStack() },
+                onDone = { navController.popBackStack<OnboardingRoute>(inclusive = true) },
                 onSignIn = { navController.navigate(AccountRoute(newAccount = it)) },
             )
-            accountScreen(onDone = { navController.popBackStack() })
+            accountScreen(onDone = { navController.popBackStack<AccountRoute>(inclusive = true) })
             planScreen(
-                onBack = { navController.popBackStack() },
+                onBack = { navController.popBackStack<PlanRoute>(inclusive = true) },
                 onRebuild = { navController.navigate(OnboardingRoute(rebuild = true)) },
-                onOpenSession = { navController.navigate(SessionRoute(it)) },
+                onOpenSession = { navController.navigate(SessionRoute(it)) { launchSingleTop = true } },
             )
             sessionScreen(
                 onAddExercises = { navController.navigate(ExercisePickerRoute(it)) },
@@ -213,10 +213,12 @@ fun SpotterApp(
                         popUpTo<SessionRoute> { inclusive = true }
                     }
                 },
-                onClose = { navController.popBackStack() },
+                onClose = { navController.popBackStack<SessionRoute>(inclusive = true) },
             )
-            exercisePickerScreen(onDone = { navController.popBackStack() })
-            summaryScreen(onDone = { navController.popBackStack() })
+            // Each "close" pops its own screen: a second tap while it animates out finds it gone,
+            // instead of closing the screen underneath (a blank app when that was Today).
+            exercisePickerScreen(onDone = { navController.popBackStack<ExercisePickerRoute>(inclusive = true) })
+            summaryScreen(onDone = { navController.popBackStack<SummaryRoute>(inclusive = true) })
         }
     }
 }

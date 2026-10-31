@@ -68,6 +68,9 @@ interface WorkoutDao {
     @Query("SELECT * FROM workout_session WHERE endedAt IS NOT NULL AND startedAt >= :start AND startedAt < :end ORDER BY startedAt DESC")
     fun observeFinishedSessionsBetween(start: Instant, end: Instant): Flow<List<SessionWithExercises>>
 
+    @Query("SELECT COUNT(*) FROM workout_session WHERE endedAt IS NOT NULL")
+    fun observeFinishedCount(): Flow<Int>
+
     @Transaction
     @Query("SELECT * FROM workout_session WHERE endedAt IS NOT NULL ORDER BY startedAt DESC LIMIT :limit")
     fun observeRecentFinished(limit: Int): Flow<List<SessionWithExercises>>

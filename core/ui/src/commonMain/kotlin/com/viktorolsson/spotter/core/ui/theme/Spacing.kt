@@ -61,6 +61,13 @@ object Dimens {
     /** Elevation of a banner floating over content. */
     val BannerElevation = 6.dp
 
+    /** The weekly-goal ring on Today, and its line. */
+    val RingSize = 64.dp
+    val RingStroke = 6.dp
+
+    /** A stat's trend line. */
+    val SparklineHeight = 28.dp
+
     /** The primary button's glow. */
     val GlowElevation = 14.dp
 

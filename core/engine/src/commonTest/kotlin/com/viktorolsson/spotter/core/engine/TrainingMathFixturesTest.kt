@@ -6,6 +6,10 @@ import com.viktorolsson.spotter.core.model.SetType
 import com.viktorolsson.spotter.core.model.TIMED_EXERCISE_IDS
 import com.viktorolsson.spotter.core.model.WorkoutSet
 import com.viktorolsson.spotter.core.model.epley
+import com.viktorolsson.spotter.core.model.formatChange
+import com.viktorolsson.spotter.core.model.percentChange
+import com.viktorolsson.spotter.core.model.weekStreak
+import kotlinx.datetime.LocalDate
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
 import kotlin.math.abs
@@ -26,7 +30,15 @@ class TrainingMathFixturesTest {
         val decimalInput: List<DecimalCase>,
         val epley: List<EpleyCase>,
         val exerciseSessions: List<SessionCase>,
+        val percentChange: List<ChangeCase>,
+        val weekStreak: List<StreakCase>,
     )
+
+    @Serializable
+    private data class ChangeCase(val current: Double, val previous: Double, val percent: Int?, val text: String? = null)
+
+    @Serializable
+    private data class StreakCase(val name: String, val today: LocalDate, val dates: List<LocalDate>, val streak: Int)
 
     @Serializable
     private data class DecimalCase(val text: String, val value: Double? = null, val result: String? = null)
@@ -95,5 +107,17 @@ class TrainingMathFixturesTest {
         assertClose(case.volumeKg, log.volumeKg, "${case.name}: volume")
         assertClose(case.oneRepMaxKg, log.estimatedOneRepMax, "${case.name}: 1RM")
         assertEquals(case.bestSet, log.bestSet?.let { FixtureSet(it.weightKg, it.reps) }, "${case.name}: best set")
+    }
+
+    @Test
+    fun percentChanges() = fixtures.percentChange.forEach { case ->
+        val percent = percentChange(case.current, case.previous)
+        assertEquals(case.percent, percent, "percentChange(${case.current}, ${case.previous})")
+        if (percent != null) assertEquals(case.text, formatChange(percent), "formatChange($percent)")
+    }
+
+    @Test
+    fun weekStreaks() = fixtures.weekStreak.forEach { case ->
+        assertEquals(case.streak, weekStreak(case.dates, case.today), case.name)
     }
 }

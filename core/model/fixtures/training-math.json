@@ -1,5 +1,5 @@
 {
-  "about": "Cases the app (core/model Lifting.kt, NumberInput.kt) and the website (web/src/lib) must agree on. Checked by core/engine TrainingMathFixturesTest and web/src/lib/training-math.test.ts; change a rule here first, then make both pass.",
+  "about": "Cases the app (core/model Lifting.kt, NumberInput.kt, TrainingStats.kt) and the website (web/src/lib) must agree on. Checked by core/engine TrainingMathFixturesTest and web/src/lib/training-math.test.ts; change a rule here first, then make both pass.",
   "timedExerciseIds": ["plank", "side-plank", "copenhagen-plank", "hollow-body-hold"],
   "decimalInput": [
     { "text": "62,5", "value": 62.5 },
@@ -76,5 +76,20 @@
       "oneRepMaxKg": null,
       "bestSet": { "weightKg": 10, "reps": 45 }
     }
+  ],
+  "percentChange": [
+    { "current": 120, "previous": 100, "percent": 20, "text": "+20%" },
+    { "current": 92, "previous": 100, "percent": -8, "text": "−8%" },
+    { "current": 100, "previous": 100, "percent": 0, "text": "±0%" },
+    { "current": 1005, "previous": 1000, "percent": 1, "text": "+1%" },
+    { "current": 50, "previous": 0, "percent": null }
+  ],
+  "weekStreak": [
+    { "name": "no workouts", "today": "2026-10-28", "dates": [], "streak": 0 },
+    { "name": "this week and the two before", "today": "2026-10-28", "dates": ["2026-10-26", "2026-10-21", "2026-10-12"], "streak": 3 },
+    { "name": "nothing yet this week keeps last week's streak", "today": "2026-10-28", "dates": ["2026-10-25", "2026-10-13"], "streak": 2 },
+    { "name": "a missed week ends it", "today": "2026-10-28", "dates": ["2026-10-27", "2026-10-12"], "streak": 1 },
+    { "name": "Sunday and Monday are different weeks", "today": "2026-11-02", "dates": ["2026-11-01"], "streak": 1 },
+    { "name": "two weeks ago only", "today": "2026-10-28", "dates": ["2026-10-14"], "streak": 0 }
   ]
 }

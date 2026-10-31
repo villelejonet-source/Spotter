@@ -102,6 +102,14 @@ class HistoryRepositoryTest {
     }
 
     @Test
+    fun finishedCountLeavesOutTheWorkoutInProgress() = runTest {
+        logWorkout("barbell-bench-press", 80.0 to 8)
+        logWorkout("back-squat", 100.0 to 5)
+        workouts.startEmptyWorkout()
+        assertEquals(2, history.observeFinishedCount().first())
+    }
+
+    @Test
     fun weeklyVolumeOnlyCountsTheLastSevenDays() = runTest {
         logWorkout("barbell-bench-press", 80.0 to 8, 80.0 to 8, 80.0 to 8)   // day 0
         clock.advanceSeconds(6 * 86_400)                                     // now day 8

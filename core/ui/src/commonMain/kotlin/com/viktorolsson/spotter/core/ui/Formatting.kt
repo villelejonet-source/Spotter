@@ -42,6 +42,9 @@ fun formatWeightOneDecimal(kg: Double, unit: WeightUnit): String =
 fun formatOneRepMax(kg: Double, unit: WeightUnit): String =
     stringResource(Res.string.weight_with_unit, unit.fromKg(kg).roundToLong().toString(), unit.label)
 
+/** "1,204": a count with the locale's grouping. */
+fun formatCount(value: Int): String = formatGroupedInteger(value.toLong())
+
 /** "4,520 kg": whole units with grouping, for totals like volume. */
 @Composable
 fun formatTotal(kg: Double, unit: WeightUnit): String =

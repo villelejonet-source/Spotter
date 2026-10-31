@@ -5,7 +5,7 @@ import { resolve } from "node:path";
 import { describe, expect, it } from "vitest";
 import { epley, isTimed } from "./model";
 import { parseDecimal } from "./number-input";
-import { exerciseProgress } from "./stats";
+import { exerciseProgress, formatChange, percentChange, weekStreak } from "./stats";
 
 interface FixtureSet { weightKg: number | null; reps: number | null; warmup?: boolean }
 
@@ -14,6 +14,8 @@ const fixtures: {
   decimalInput: { text: string; value?: number; result?: "blank" | "invalid" }[];
   epley: { weightKg: number; reps: number; oneRepMaxKg: number }[];
   exerciseSessions: { name: string; exerciseId: string; sets: FixtureSet[]; volumeKg: number; oneRepMaxKg: number | null; bestSet: FixtureSet | null }[];
+  percentChange: { current: number; previous: number; percent: number | null; text?: string }[];
+  weekStreak: { name: string; today: string; dates: string[]; streak: number }[];
 } = JSON.parse(readFileSync(resolve(__dirname, "../../../core/model/fixtures/training-math.json"), "utf8"));
 
 describe("training-math.json", () => {
@@ -43,5 +45,18 @@ describe("training-math.json", () => {
     if (oneRepMaxKg == null) expect(point.e1rmKg).toBeNull();
     else expect(point.e1rmKg).toBeCloseTo(oneRepMaxKg, 4);
     expect(point.topSet).toEqual(bestSet && { weightKg: bestSet.weightKg, reps: bestSet.reps });
+  });
+
+  it.each(fixtures.percentChange)("percent change %j", ({ current, previous, percent, text }) => {
+    expect(percentChange(current, previous)).toBe(percent);
+    if (percent != null) expect(formatChange(percent)).toBe(text);
+  });
+
+  // Noon UTC is the same calendar date in the display time zone.
+  const noon = (date: string) => Date.parse(`${date}T12:00:00Z`);
+
+  it.each(fixtures.weekStreak)("week streak: $name", ({ today, dates, streak }) => {
+    const sessions = dates.map((d) => ({ started_at: noon(d), ended_at: noon(d) + 3_600_000 }));
+    expect(weekStreak(sessions, noon(today))).toBe(streak);
   });
 });

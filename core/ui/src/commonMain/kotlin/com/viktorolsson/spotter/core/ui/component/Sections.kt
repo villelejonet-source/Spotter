@@ -6,12 +6,14 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Card
+import androidx.compose.material3.contentColorFor
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.style.TextOverflow
@@ -69,13 +71,17 @@ fun ContentCard(
     containerColor: Color = MaterialTheme.colorScheme.surfaceContainerLow,
     content: @Composable () -> Unit,
 ) {
+    val shape = MaterialTheme.shapes.medium
+    // The fill and its light are drawn on the card itself, so they cover all of it however
+    // narrow the content is.
     Card(
-        colors = CardDefaults.cardColors(containerColor = containerColor),
+        shape = shape,
+        colors = CardDefaults.cardColors(containerColor = Color.Transparent, contentColor = contentColorFor(containerColor)),
         border = BorderStroke(Dimens.Hairline, MaterialTheme.colorScheme.outlineVariant),
-        modifier = modifier,
+        modifier = modifier.clip(shape).background(containerColor).topLit(),
     ) {
         Column(
-            Modifier.topLit().padding(Dimens.CardPadding),
+            Modifier.padding(Dimens.CardPadding),
             verticalArrangement = Arrangement.spacedBy(Spacing.sm),
         ) {
             content()

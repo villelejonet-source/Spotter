@@ -41,6 +41,7 @@ import org.junit.runner.RunWith
 import java.io.File
 import kotlin.time.Clock
 import kotlin.time.Duration.Companion.milliseconds
+import kotlin.time.Duration.Companion.seconds
 import kotlin.time.Instant
 
 /**
@@ -88,7 +89,7 @@ class SyncEngineTest {
     private val devices = mutableListOf<Device>()
 
     /** One phone: its own database, repositories and sync engine. */
-    inner class Device(private val userId: String = USER) {
+    inner class Device(private val userId: String = USER, engineClock: Clock = Clock.System) {
         val db: SpotterDatabase = testDatabase()
         val clock = MutableClock(Instant.parse("2026-10-03T10:00:00Z"))
         val prefs = testPreferences(db)
@@ -98,7 +99,7 @@ class SyncEngineTest {
         val exercises = ExerciseRepository(db.exerciseDao())
         val bodyWeight = BodyWeightRepository(db, db.userProfileDao())
         val checkIn = DeviceCheckIn("install-$userId", versionCode = 7, schemaVersion = 8)
-        val engine = SyncEngine(LocalSyncStore(db), remote, SyncCursorStore(prefsStore()), Clock.System) { checkIn }
+        val engine = SyncEngine(LocalSyncStore(db), remote, SyncCursorStore(prefsStore()), engineClock) { checkIn }
 
         suspend fun seed() = db.exerciseDao().upsertAll(
             parseExerciseSeed(File("catalog/exercises.json").readText()).exercises.map(SeedExercise::toEntity),
@@ -116,7 +117,8 @@ class SyncEngineTest {
         File.createTempFile("sync", ".preferences_pb").apply { delete(); deleteOnExit() }
     }
 
-    private suspend fun device(userId: String = USER) = Device(userId).also { it.seed(); devices += it }
+    private suspend fun device(userId: String = USER, engineClock: Clock = Clock.System) =
+        Device(userId, engineClock).also { it.seed(); devices += it }
 
     @After
     fun tearDown() = devices.forEach { it.db.close() }
@@ -254,6 +256,28 @@ class SyncEngineTest {
         assertEquals(0, b.db.sql.query("SELECT COUNT(*) FROM session_exercise WHERE planExerciseId IS NOT NULL").use { it.moveToFirst(); it.getInt(0) })
         assertEquals(a.sessions().single().exercises.map { it.exercise.id }, restored.exercises.map { it.exercise.id })
         assertEquals(60.0 to 10, restored.exercises.first().sets.first().let { it.weightKg to it.reps })
+    }
+
+    /**
+     * A change stamped no later than the moment a push started, but not in what that push
+     * read (made in the same millisecond, or committed while it was reading), used to be
+     * skipped by every later push. A sync clock a little ahead of the database's makes that
+     * happen every time.
+     */
+    @Test
+    fun aChangeMadeAsAPushStartsIsPushedNextTime() = runTest {
+        val ahead = object : Clock {
+            override fun now() = Clock.System.now() + 2.seconds
+        }
+        val a = device(engineClock = ahead)
+        a.logWorkout()
+        a.sync()
+        a.workouts.updateSetValues(a.firstSet().id, 85.0, 5, 1)
+        a.sync()
+
+        val b = device()
+        b.sync()
+        assertEquals(85.0 to 5, b.firstSet().let { it.weightKg to it.reps })
     }
 
     /** Deleting a finished workout on one phone removes it, and the records set in it, on the other. */

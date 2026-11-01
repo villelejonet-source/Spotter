@@ -52,6 +52,7 @@ class SyncCursorStore(private val dataStore: DataStore<Preferences>) {
 }
 
 sealed interface SyncOutcome {
+    /** [pushed]: local changes sent for the first time (repeats from the overlap aren't counted). */
     data class Done(val pulled: Int, val pushed: Int) : SyncOutcome
     /**
      * Ask before going on: this phone has its own data and so does the backup, or the
@@ -129,14 +130,17 @@ class SyncEngine(
         }
 
         // Push: anything changed locally since the last push (rows just pulled are skipped
-        // by the server, which only keeps strictly newer versions).
+        // by the server, which only keeps strictly newer versions). The last few seconds
+        // before that push are sent again: a change stamped then but not in what it read
+        // (same millisecond, or committed while it was reading) would otherwise never go.
+        // The server ignores the repeats.
         val pushStartedAt = clock.now().toEpochMilliseconds()
-        val changes = store.changesSince(cursor.pushedUpTo)
+        val changes = store.changesSince(cursor.pushedUpTo - PUSH_OVERLAP_MS)
         changes.chunked(PAGE).forEach { remote.push(it) }
 
         cursors.save(SyncCursor(userId, newPulledUpTo, pushStartedAt, clock.now().toEpochMilliseconds()))
         checkIn()
-        return SyncOutcome.Done(pulled = pulled, pushed = changes.size)
+        return SyncOutcome.Done(pulled = pulled, pushed = changes.count { it.updatedAt > cursor.pushedUpTo })
     }
 
     /**
@@ -161,6 +165,7 @@ class SyncEngine(
 
     private companion object {
         const val PAGE = 500
+        const val PUSH_OVERLAP_MS = 10_000L
         const val TAG = "SpotterSync"
     }
 }

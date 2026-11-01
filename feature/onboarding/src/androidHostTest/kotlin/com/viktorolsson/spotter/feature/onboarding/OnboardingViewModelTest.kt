@@ -27,6 +27,7 @@ import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
 import kotlinx.coroutines.withContext
+import kotlinx.coroutines.withTimeout
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Before
@@ -34,6 +35,7 @@ import org.junit.Test
 import org.junit.runner.RunWith
 import java.io.File
 import kotlin.time.Clock
+import kotlin.time.Duration.Companion.seconds
 
 /** The onboarding view model against a real (in-memory) database and preferences. */
 @OptIn(ExperimentalCoroutinesApi::class)
@@ -93,10 +95,22 @@ class OnboardingViewModelTest {
         return count
     }
 
-    /** Lets the preferences write reach the view model's flows (DataStore runs on its own thread). */
+    /**
+     * Lets the preferences write reach the view model's flows. DataStore writes and emits on
+     * its own thread, so this test's main dispatcher is pumped in real time until the write
+     * is in, then a little longer for the flows to see it. (Waiting on the flow from the test
+     * dispatcher itself could hang under a busy build.)
+     */
     private suspend fun TestScope.settle() {
-        graph.preferences.preferences.first { it.onboardingCompleted }
-        withContext(Dispatchers.Default) { delay(300) }
+        withContext(Dispatchers.Default) {
+            withTimeout(10.seconds) {
+                while (!graph.preferences.preferences.first().onboardingCompleted) delay(10)
+            }
+        }
+        repeat(30) {
+            runCurrent()
+            withContext(Dispatchers.Default) { delay(10) }
+        }
         runCurrent()
     }
 

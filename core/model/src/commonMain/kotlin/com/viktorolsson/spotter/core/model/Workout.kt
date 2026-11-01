@@ -45,6 +45,8 @@ data class SessionExercise(
     /** Name of the exercise this one replaced in the session, if swapped. */
     val substitutedFromName: String? = null,
     val progressionReason: ProgressionReason? = null,
+    /** The 5/3/1 week this exercise was started as (1–4); null when it isn't a 5/3/1 lift. */
+    val cycleWeek: Int? = null,
 )
 
 /** Weight is always kg; null weight means bodyweight. */
@@ -57,6 +59,8 @@ data class WorkoutSet(
     val setType: SetType,
     val completedAt: Instant?,
     val notes: String?,
+    /** A 5/3/1 last set: as many reps as possible, at least [reps]. */
+    val isAmrap: Boolean = false,
 ) {
     val isCompleted: Boolean get() = completedAt != null
 }

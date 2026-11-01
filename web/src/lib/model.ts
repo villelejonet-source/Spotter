@@ -95,6 +95,10 @@ export interface PlanExerciseRow {
   superset_group: number | null;
   starting_weight_kg: number | null;
   updated_at: number;
+  /** Set for a 5/3/1 lift: the training max its weeks are percentages of (app: FiveThreeOne). */
+  training_max_kg: number | null;
+  /** The 5/3/1 week the next session of this lift is: 1–3, then 4 for the deload. */
+  cycle_week: number;
 }
 
 export interface SessionSummaryRow {
@@ -143,6 +147,8 @@ export interface SetEntryRow {
   set_type: SetType;
   completed_at: number | null;
   notes: string | null;
+  /** A 5/3/1 last set: as many reps as possible. */
+  is_amrap: boolean;
 }
 
 export interface PersonalRecordRow {
@@ -248,6 +254,11 @@ export function formatRecord(record: Pick<PersonalRecordRow, "type" | "value" | 
 export function formatTarget(sets: number, repMin: number, repMax: number, exerciseId: string): string {
   const range = repMin === repMax ? `${repMin}` : `${repMin}–${repMax}`;
   return `${sets} × ${range}${isTimed(exerciseId) ? " s" : ""}`;
+}
+
+/** A plan exercise's prescription: "5/3/1 · week 2" for a 5/3/1 lift, otherwise formatTarget (app: formatPlanTarget). */
+export function formatPlanTarget(e: Pick<PlanExerciseRow, "sets" | "rep_min" | "rep_max" | "exercise_id" | "training_max_kg" | "cycle_week">): string {
+  return e.training_max_kg != null ? `5/3/1 · week ${e.cycle_week}` : formatTarget(e.sets, e.rep_min, e.rep_max, e.exercise_id);
 }
 
 /** "RIR 2" (formatEffort on the RIR scale; the app's scale preference isn't synced, see labels.ts). */

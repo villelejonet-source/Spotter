@@ -69,6 +69,9 @@ data class SessionExerciseEntity(
     /** Why the pre-filled targets are what they are (planned workouts only). */
     @ColumnInfo(defaultValue = "NULL")
     val progressionReason: ProgressionReason? = null,
+    /** The 5/3/1 week this exercise was started as (1–4); null when it isn't a 5/3/1 lift. */
+    @ColumnInfo(defaultValue = "NULL")
+    val cycleWeek: Int? = null,
     /** Global id for cloud sync; assigned by a database trigger (see SyncSchema). */
     val syncId: String? = null,
     /** Time of the last local change (ms), maintained by a database trigger. */
@@ -94,6 +97,9 @@ data class SetEntryEntity(
     /** Null until the set is ticked off. */
     val completedAt: Instant?,
     val notes: String?,
+    /** A 5/3/1 last set: as many reps as possible, at least [reps]. */
+    @ColumnInfo(defaultValue = "0")
+    val isAmrap: Boolean = false,
     /** Global id for cloud sync; assigned by a database trigger (see SyncSchema). */
     val syncId: String? = null,
     /** Time of the last local change (ms), maintained by a database trigger. */

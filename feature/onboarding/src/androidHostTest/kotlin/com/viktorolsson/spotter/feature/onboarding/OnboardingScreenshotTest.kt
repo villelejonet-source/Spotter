@@ -115,4 +115,12 @@ class OnboardingScreenshotTest {
             state = OnboardingUiState(step = Step.SUMMARY, answers = answers, generated = GeneratedPlan(PreviewData.plan, listOf(52, 58), emptySet())),
         )
     }
+
+    @Test
+    fun step_summary_531() = capture("onboarding_summary_531_light", dark = false) {
+        StepScreen(
+            Step.SUMMARY,
+            state = OnboardingUiState(step = Step.SUMMARY, answers = answers, fiveThreeOne = true, generated = GeneratedPlan(PreviewData.plan, listOf(52, 58), emptySet())),
+        )
+    }
 }

@@ -234,7 +234,7 @@ class RecommendationRepository(
         val profile = profiles.get()
         val slots = plan.days.sortedBy { it.day.position }.flatMap { day ->
             day.exercises.sortedBy { it.planExercise.position }.map { (pe, exercise) ->
-                PlanSlot(pe.id, day.day.id, day.day.name, exercise.toModel(), pe.sets, pe.repMin, pe.repMax, pe.targetRir, pe.progressionRule)
+                PlanSlot(pe.id, day.day.id, day.day.name, exercise.toModel(), pe.sets, pe.repMin, pe.repMax, pe.targetRir, pe.progressionRule, fiveThreeOne = pe.trainingMaxKg != null)
             }
         }
         val historyByExercise = slots.map { it.exercise.id }.distinct().associateWith { exerciseId ->

@@ -53,7 +53,6 @@ import com.viktorolsson.spotter.core.model.PlanDay
 import com.viktorolsson.spotter.core.model.WeightUnit
 import com.viktorolsson.spotter.core.model.ScheduledWorkout
 import com.viktorolsson.spotter.core.model.formatChange
-import com.viktorolsson.spotter.core.model.isTimed
 import com.viktorolsson.spotter.core.ui.component.ContentCard
 import com.viktorolsson.spotter.core.ui.component.DashboardCard
 import com.viktorolsson.spotter.core.ui.component.DashboardStat
@@ -69,7 +68,7 @@ import com.viktorolsson.spotter.core.ui.component.TrainingHeatmap
 import com.viktorolsson.spotter.core.ui.formatExerciseCount
 import com.viktorolsson.spotter.core.ui.formatCount
 import com.viktorolsson.spotter.core.ui.formatShortDate
-import com.viktorolsson.spotter.core.ui.formatTarget
+import com.viktorolsson.spotter.core.ui.formatPlanTarget
 import com.viktorolsson.spotter.core.ui.formatTotal
 import com.viktorolsson.spotter.core.ui.theme.Dimens
 import com.viktorolsson.spotter.core.ui.theme.Spacing
@@ -357,7 +356,7 @@ private fun WorkoutCard(day: PlanDay, label: StringResource, notes: String?, das
                     modifier = Modifier.weight(1f),
                 )
                 Text(
-                    formatTarget(ex.sets, ex.repMin, ex.repMax, ex.exercise.isTimed),
+                    formatPlanTarget(ex),
                     style = SpotterTheme.type.numberSmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )

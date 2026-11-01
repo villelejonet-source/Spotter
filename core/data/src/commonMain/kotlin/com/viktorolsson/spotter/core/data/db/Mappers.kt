@@ -78,6 +78,7 @@ fun SessionExerciseWithSets.toModel() = SessionExercise(
     target = planExercise?.toTarget(),
     substitutedFromName = substitutedFrom?.name,
     progressionReason = sessionExercise.progressionReason,
+    cycleWeek = sessionExercise.cycleWeek,
 )
 
 fun SetEntryEntity.toModel() = WorkoutSet(
@@ -89,6 +90,7 @@ fun SetEntryEntity.toModel() = WorkoutSet(
     setType = setType,
     completedAt = completedAt,
     notes = notes,
+    isAmrap = isAmrap,
 )
 
 fun SetEntryEntity.toPrevious() = PreviousSet(weightKg = weightKg, reps = reps)
@@ -119,11 +121,13 @@ fun PlanDayWithExercises.toModel() = PlanDay(
             progressionRule = pe.progressionRule,
             supersetGroup = pe.supersetGroup,
             startingWeightKg = pe.startingWeightKg,
+            trainingMaxKg = pe.trainingMaxKg,
+            cycleWeek = pe.cycleWeek,
         )
     },
 )
 
-fun PlanExerciseEntity.toTarget() = PlanTarget(sets = sets, repMin = repMin, repMax = repMax, targetRir = targetRir)
+fun PlanExerciseEntity.toTarget() = PlanTarget(sets = sets, repMin = repMin, repMax = repMax, targetRir = targetRir, trainingMaxKg = trainingMaxKg)
 
 fun UserProfileEntity.toModel() = UserProfile(
     sex = sex,

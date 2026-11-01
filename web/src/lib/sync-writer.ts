@@ -81,6 +81,8 @@ export const exerciseDraftSchema = z
     progression_rule: z.enum(PROGRESSION_RULES),
     superset_group: int(1, 50, "Reload the page and try again.").nullable(),
     starting_weight_kg: num(0, 1000, "Use a starting weight from 0 to 1000 kg.").nullable(),
+    training_max_kg: num(1, 1000, "Use a training max from 1 to 1000 kg.").nullable(),
+    cycle_week: int(1, 4, "Use a 5/3/1 week from 1 to 4."),
   })
   .refine((e) => e.rep_min <= e.rep_max, { message: "The rep range minimum is above the maximum." });
 
@@ -130,6 +132,8 @@ export function planExercisePayload(planDayId: string, position: number, e: Exer
     progressionRule: e.progression_rule,
     supersetGroup: e.superset_group,
     startingWeightKg: e.starting_weight_kg,
+    trainingMaxKg: e.training_max_kg,
+    cycleWeek: e.cycle_week,
   };
 }
 
@@ -282,6 +286,8 @@ export function copyPlan(plan: StoredPlan, name: string): PlanDraft {
         progression_rule: e.progression_rule,
         superset_group: e.superset_group,
         starting_weight_kg: e.starting_weight_kg,
+        training_max_kg: e.training_max_kg,
+        cycle_week: e.cycle_week,
       })),
     })),
   };

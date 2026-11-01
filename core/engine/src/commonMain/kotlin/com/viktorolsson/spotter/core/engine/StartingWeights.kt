@@ -60,11 +60,16 @@ internal class StartingWeights(
     }
 
     fun estimateKg(exercise: Exercise, reps: Int, rir: Int): Double? {
-        val (anchor, movementFactor) = LoadFactors.movement(exercise) ?: return null
-        val equipmentFactor = LoadFactors.equipment(exercise) ?: return null
-        val oneRepMax = anchors.getValue(anchor) * movementFactor * equipmentFactor
+        val oneRepMax = oneRepMaxKg(exercise) ?: return null
         val working = oneRepMax / (1 + (reps + rir) / 30.0) * CALIBRATION
         return LoadFactors.roundDown(working, exercise, profile.units)
+    }
+
+    /** Estimated 1RM of [exercise], from the reported lifts or bodyweight standards; null when it can't be. */
+    fun oneRepMaxKg(exercise: Exercise): Double? {
+        val (anchor, movementFactor) = LoadFactors.movement(exercise) ?: return null
+        val equipmentFactor = LoadFactors.equipment(exercise) ?: return null
+        return anchors.getValue(anchor) * movementFactor * equipmentFactor
     }
 
     private companion object {

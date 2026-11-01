@@ -1,5 +1,9 @@
 package com.viktorolsson.spotter.core.data.repository
 
+import com.viktorolsson.spotter.core.model.ProgressionReason
+import com.viktorolsson.spotter.core.data.db.entity.PlanExerciseEntity
+import com.viktorolsson.spotter.core.engine.SetTarget
+import com.viktorolsson.spotter.core.engine.FiveThreeOne
 import com.viktorolsson.spotter.core.data.db.SpotterDatabase
 import com.viktorolsson.spotter.core.data.db.dao.ExerciseDao
 import com.viktorolsson.spotter.core.data.db.dao.PlanDao
@@ -101,6 +105,15 @@ class WorkoutRepository(
         // so two normal ones are left when the newest were rough days.
         val histories = recentHistoryFor(planned.map { it.planExercise.exerciseId }, sessions = 4)
         planned.forEachIndexed { position, (pe, exercise) ->
+            val trainingMax = pe.trainingMaxKg
+            if (trainingMax != null) {
+                // 5/3/1: this week's percentages of the training max. A lighter session does the
+                // deload week's loads and doesn't move the lift on (finishWorkout).
+                val week = if (deload) FiveThreeOne.DELOAD_WEEK else pe.cycleWeek
+                insertPlannedExercise(sessionId, position, pe, progressionReason = null, cycleWeek = week,
+                    FiveThreeOne.targets(trainingMax, week, exercise.toModel(), unit))
+                return@forEachIndexed
+            }
             val progression = Progression.next(
                 ProgressionInput(
                     exercise = exercise.toModel(),
@@ -116,26 +129,38 @@ class WorkoutRepository(
                 ),
             )
             val target = if (deload) Deload.lighten(progression, exercise.toModel(), pe.repMin, unit) else progression
-            val sessionExerciseId = dao.insertSessionExercise(
-                SessionExerciseEntity(
-                    sessionId = sessionId,
-                    exerciseId = pe.exerciseId,
-                    position = position,
-                    substitutedFromExerciseId = null,
-                    supersetGroup = pe.supersetGroup,
-                    notes = null,
-                    restSeconds = pe.restSeconds,
-                    planExerciseId = pe.id,
-                    progressionReason = target.reason,
-                ),
-            )
-            dao.insertSets(
-                target.sets.mapIndexed { i, set ->
-                    newSet(sessionExerciseId, position = i, weightKg = set.weightKg, reps = set.reps, setType = SetType.WORKING)
-                },
-            )
+            insertPlannedExercise(sessionId, position, pe, target.reason, cycleWeek = null, target.sets)
         }
         sessionId
+    }
+
+    private suspend fun insertPlannedExercise(
+        sessionId: Long,
+        position: Int,
+        pe: PlanExerciseEntity,
+        progressionReason: ProgressionReason?,
+        cycleWeek: Int?,
+        sets: List<SetTarget>,
+    ) {
+        val sessionExerciseId = dao.insertSessionExercise(
+            SessionExerciseEntity(
+                sessionId = sessionId,
+                exerciseId = pe.exerciseId,
+                position = position,
+                substitutedFromExerciseId = null,
+                supersetGroup = pe.supersetGroup,
+                notes = null,
+                restSeconds = pe.restSeconds,
+                planExerciseId = pe.id,
+                progressionReason = progressionReason,
+                cycleWeek = cycleWeek,
+            ),
+        )
+        dao.insertSets(
+            sets.mapIndexed { i, set ->
+                newSet(sessionExerciseId, position = i, weightKg = set.weightKg, reps = set.reps, setType = SetType.WORKING).copy(isAmrap = set.amrap)
+            },
+        )
     }
 
     /** Working sets of the last two sessions with [exerciseId], most recent first. */
@@ -444,6 +469,27 @@ class WorkoutRepository(
         val now = clock.now()
         dao.endSession(sessionId, now)
         recordPersonalRecords(sessionId, now)
+        advanceFiveThreeOne(sessionId)
+    }
+
+    /**
+     * Moves each 5/3/1 lift done in the session on to its next week (and training max), in the
+     * plan, so every phone and the website see it. A lighter session doesn't, nor does a lift
+     * swapped for another or one whose plan week changed while it was being done.
+     */
+    private suspend fun advanceFiveThreeOne(sessionId: Long) {
+        val session = dao.getSessionWithExercises(sessionId) ?: return
+        if (session.session.isDeload) return
+        val unit = preferences.preferences.first().weightUnit
+        session.exercises.forEach { done ->
+            val week = done.sessionExercise.cycleWeek ?: return@forEach
+            val pe = done.planExercise ?: return@forEach
+            val trainingMax = pe.trainingMaxKg ?: return@forEach
+            if (done.sessionExercise.substitutedFromExerciseId != null) return@forEach
+            val amrapReps = done.sets.firstOrNull { it.isAmrap && it.completedAt != null }?.reps
+            val (nextMax, nextWeek) = FiveThreeOne.advance(trainingMax, week, amrapReps, done.exercise.toModel(), unit)
+            planDao.advanceCycle(pe.id, fromWeek = week, trainingMaxKg = nextMax, cycleWeek = nextWeek)
+        }
     }
 
     private suspend fun recordPersonalRecords(sessionId: Long, achievedAt: Instant) {

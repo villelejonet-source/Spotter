@@ -90,6 +90,8 @@
     <string name="onb_split_full">Full body</string>
     <string name="onb_split_upper_lower">Upper / Lower</string>
     <string name="onb_split_ppl">Push / Pull / Legs</string>
+    <string name="onb_split_531">5/3/1</string>
+    <string name="onb_split_531_body">Four barbell days: press, deadlift, bench and squat. Each week is a percentage of your training max (90% of your estimated 1RM), the last set as many reps as you can, and every fourth week is lighter. The training max goes up after each cycle.</string>
     <string name="onb_summary_day_meta">~%1$d min · %2$s</string>
     <string name="onb_summary_calibration">Starting weights are estimates. Your first session calibrates them, so log what you actually lift.</string>
     <string name="onb_summary_missing">Some movements couldn't be programmed with your equipment (%1$s). Adding a pull-up bar or resistance bands fixes most of this.</string>

@@ -35,7 +35,7 @@ export function exportWorkouts(sessions: SessionSummaryRow[], exercises: Session
         notes: e.notes,
         sets: [...(setsByExercise.get(e.sync_id) ?? [])]
           .sort((a, b) => a.position - b.position)
-          .map((x) => ({ position: x.position, set_type: x.set_type, weight_kg: x.weight_kg, reps: x.reps, rir: x.rir, rpe: x.rpe, completed_at: iso(x.completed_at), notes: x.notes })),
+          .map((x) => ({ position: x.position, set_type: x.set_type, weight_kg: x.weight_kg, reps: x.reps, rir: x.rir, rpe: x.rpe, completed_at: iso(x.completed_at), notes: x.notes, is_amrap: x.is_amrap })),
       })),
   }));
 }

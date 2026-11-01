@@ -57,6 +57,8 @@ const exercise: ExerciseDraft = {
   progression_rule: "DOUBLE_PROGRESSION",
   superset_group: null,
   starting_weight_kg: null,
+  training_max_kg: null,
+  cycle_week: 1,
 };
 
 describe("payloads match the Room entities", () => {
@@ -187,6 +189,19 @@ describe("diffPlan", () => {
     const dead = rows.filter((r) => r.deleted_at != null);
     expect(dead.map((r) => r.sync_id).sort()).toEqual([d.days[1].sync_id, d.days[1].exercises[0].sync_id].sort());
     expect(dead.every((r) => r.payload === null)).toBe(true);
+  });
+
+  it("keeps a 5/3/1 lift's training max and week when something else on it changes", () => {
+    const d = draft();
+    const five31 = { ...exercise, progression_rule: "LINEAR" as const, training_max_kg: 100, cycle_week: 3 };
+    const before: PlanDraft = { ...d, days: [{ ...d.days[0], exercises: [five31] }, d.days[1]] };
+    const rows = diffPlan(stored(before, 1000), { ...before, days: [{ ...before.days[0], exercises: [{ ...five31, rest_seconds: 240 }] }, d.days[1]] }, 2000, true);
+    expect(rows).toHaveLength(1);
+    expect(rows[0].payload).toMatchObject({ trainingMaxKg: 100, cycleWeek: 3, restSeconds: 240, progressionRule: "LINEAR" });
+  });
+
+  it("rejects a 5/3/1 week outside 1–4", () => {
+    expect(exerciseDraftSchema.safeParse({ ...exercise, training_max_kg: 100, cycle_week: 5 }).success).toBe(false);
   });
 
   it("re-positions on reorder", () => {

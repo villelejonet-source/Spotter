@@ -50,7 +50,7 @@ import com.viktorolsson.spotter.core.ui.component.SpotterTopBar
 import com.viktorolsson.spotter.core.ui.component.SupersetBadge
 import com.viktorolsson.spotter.core.ui.formatEffort
 import com.viktorolsson.spotter.core.ui.formatExerciseCount
-import com.viktorolsson.spotter.core.ui.formatTarget
+import com.viktorolsson.spotter.core.ui.formatPlanTarget
 import com.viktorolsson.spotter.core.ui.theme.Dimens
 import com.viktorolsson.spotter.core.ui.theme.Spacing
 import com.viktorolsson.spotter.feature.plan.resources.Res
@@ -191,7 +191,7 @@ internal fun PlanExerciseRow(exercise: PlanExercise, effortScale: EffortScale) {
             modifier = Modifier.weight(1f),
         )
         if (exercise.supersetGroup != null) SupersetBadge()
-        val target = formatTarget(exercise.sets, exercise.repMin, exercise.repMax, exercise.exercise.isTimed)
+        val target = formatPlanTarget(exercise)
         // Reps in reserve don't apply to a hold.
         val rir = exercise.targetRir?.takeUnless { exercise.exercise.isTimed }
         Text(

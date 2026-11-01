@@ -157,6 +157,14 @@ export const WORKOUT = "Workout";
 /** A workout planned on the calendar without a plan day (today_free_workout). */
 export const FREE_WORKOUT = "Free workout";
 /** A deload (today_deload_title). */
+/** 5/3/1 in the plan editor's progression menu, and its weeks (app: target_531_week, five31_*). */
+export const FIVE_THREE_ONE_LABEL = "5/3/1";
+/** A 5/3/1 last set, done for as many reps as possible. */
+export const AMRAP_LABEL = "AMRAP";
+export function cycleWeekLabel(week: number): string {
+  return week >= 4 ? "Week 4 (deload)" : `Week ${week}`;
+}
+
 /** A deload session: a whole lighter week, or one day chosen at the check-in (app: session_lighter). */
 export const LIGHTER_SESSION = "Lighter session";
 /** A workout kept as planned on a low day (app: exercise_log_low_day). */

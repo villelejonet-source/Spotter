@@ -58,6 +58,11 @@ data class PlanSlot(
     val repMax: Int,
     val targetRir: Int?,
     val rule: ProgressionRule,
+    /**
+     * Runs 5/3/1: its loads swing by design (week 4 is 40–60 %) and it moves its own training
+     * max, so it's left out of plateau and falling-performance checks.
+     */
+    val fiveThreeOne: Boolean = false,
 )
 
 /** A previously applied variation swap that may be due to switch back. */
@@ -156,6 +161,7 @@ object RecommendationEngine {
         if (ctx.deloadActive) return returnFromVariations(ctx)
         val drafts = mutableListOf<RecommendationDraft>()
         val plateaus = ctx.plan
+            .filter { !it.fiveThreeOne }
             .distinctBy { it.exercise.id }
             .mapNotNull { slot -> detectPlateau(slot, ctx.history[slot.exercise.id].orEmpty()) }
 
@@ -344,7 +350,7 @@ object RecommendationEngine {
      * sets are close to failure, or after ~6 weeks of steady training.
      */
     private fun deload(ctx: RecommendationContext, plateaus: List<Plateau>): RecommendationDraft? {
-        val falling = ctx.plan.distinctBy { it.exercise.id }.filter { slot ->
+        val falling = ctx.plan.filter { !it.fiveThreeOne }.distinctBy { it.exercise.id }.filter { slot ->
             val exposures = ctx.history[slot.exercise.id].orEmpty().comparable()
             exposures.size >= 3 && exposures.last().score < exposures[exposures.size - 2].score * 0.975
         }

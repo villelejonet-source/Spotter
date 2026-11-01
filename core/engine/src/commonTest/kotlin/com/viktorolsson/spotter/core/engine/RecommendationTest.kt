@@ -231,6 +231,14 @@ class RecommendationTest {
     }
 
     @Test
+    fun `a 5-3-1 lift is never called stalled or falling`() {
+        fun falling() = listOf(80.0, 82.5, 75.0).mapIndexed { i, w -> ExerciseExposure(today.minus(14L - i * 7, DateTimeUnit.DAY), List(3) { LoggedSet(w, 8) }) }
+        val plan = listOf(slot("barbell-bench-press", 1).copy(fiveThreeOne = true), slot("barbell-row", 2).copy(fiveThreeOne = true))
+        val history = mapOf("barbell-bench-press" to falling(), "barbell-row" to falling())
+        assertTrue(RecommendationEngine.evaluate(ctx(plan, history, recentRir = listOf(0, 0, 1, 0))).isEmpty())
+    }
+
+    @Test
     fun `six weeks of steady training schedules a deload`() {
         val plan = listOf(slot("barbell-bench-press", 1))
         val dates = (0 until 6).map { today.minus(it.toLong(), DateTimeUnit.WEEK) }

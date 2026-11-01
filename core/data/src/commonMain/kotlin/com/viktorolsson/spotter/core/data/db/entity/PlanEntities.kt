@@ -72,3 +72,6 @@ data class PlanExerciseEntity(
     @ColumnInfo(defaultValue = "0")
     val updatedAt: Long = 0,
 )
+
+/** A row's local id and its sync id, for translating between the two. */
+data class RowSyncId(val id: Long, val syncId: String?)

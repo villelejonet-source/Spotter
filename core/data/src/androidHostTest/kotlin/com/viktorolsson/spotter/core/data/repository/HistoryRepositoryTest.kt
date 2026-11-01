@@ -8,6 +8,7 @@ import com.viktorolsson.spotter.core.data.db.SpotterDatabase
 import com.viktorolsson.spotter.core.data.db.entity.UserProfileEntity
 import com.viktorolsson.spotter.core.data.seed.SeedExercise
 import com.viktorolsson.spotter.core.data.seed.parseExerciseSeed
+import com.viktorolsson.spotter.core.data.sql
 import com.viktorolsson.spotter.core.data.testDatabase
 import com.viktorolsson.spotter.core.model.Equipment
 import com.viktorolsson.spotter.core.model.ExperienceLevel
@@ -153,5 +154,16 @@ class HistoryRepositoryTest {
         assertEquals(listOf(83.5, 83.0), trend.map { it.weightKg })
         assertEquals(83.25, trend.last().sevenDayAverageKg, 0.001)
         assertEquals(83.0, db.userProfileDao().observe().first()!!.bodyWeightKg, 0.0)
+    }
+
+    /** Logging a day again changes that entry: it used to get a new sync id, leaving the old one on the server. */
+    @Test
+    fun loggingADayAgainKeepsItsSyncId() = runTest {
+        val repo = BodyWeightRepository(db, db.userProfileDao())
+        val day = LocalDate(2026, 10, 1)
+        repo.log(day, 84.0)
+        val syncId = db.sql.query("SELECT syncId FROM body_weight_entry").use { it.moveToFirst(); it.getString(0) }
+        repo.log(day, 83.5)
+        assertEquals(listOf(syncId), db.sql.query("SELECT syncId FROM body_weight_entry").use { c -> buildList { while (c.moveToNext()) add(c.getString(0)) } })
     }
 }

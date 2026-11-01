@@ -6,7 +6,7 @@ import { Button, Chip, ChipGroup, Field, InlineMessage, inputClass } from "@/com
 import { BODY_AREA_LABELS, EQUIPMENT_LABELS, EXPERIENCE_LABELS, GOAL_LABELS, label, LIMITATION_LABELS, SEX_LABELS } from "@/lib/labels";
 import { BODY_AREAS, DAYS_PER_WEEK, EQUIPMENT, EXPERIENCE_LEVELS, fromUnit, GOALS, LIMITATIONS, SESSION_LENGTHS, SEXES, toUnit } from "@/lib/model";
 import { DAY_MS, localDate } from "@/lib/stats";
-import type { ProfileDraft } from "@/lib/sync-writer";
+import { mergeDraft, type ProfileDraft } from "@/lib/sync-writer";
 
 function Toggles<T extends string>({ options, labels, value, onChange }: { options: readonly T[]; labels: Record<string, string>; value: T[]; onChange: (v: T[]) => void }) {
   return (
@@ -44,10 +44,19 @@ function defaultProfile(): ProfileDraft {
 /**
  * Edits the training profile. [version] is the profile's updated_at as loaded; the server
  * refuses to save over a newer one. With [create], there is no profile yet and saving makes one.
+ *
+ * Other writes on the page (the weight log saves the profile's weight) revalidate it and bring
+ * a newer profile in as props. The draft takes the newer values for fields the user hasn't
+ * changed and keeps their edits, and saves against the newer version, so nothing is undone.
  */
 export function ProfileForm(props: { initial: ProfileDraft; version: number; create?: false } | { create: true; initial?: undefined; version?: undefined }) {
   const initial = useMemo(() => props.initial ?? defaultProfile(), [props.initial]);
   const [p, setP] = useState(initial);
+  const [base, setBase] = useState(initial);
+  if (base !== initial) {
+    setP(mergeDraft(p, base, initial));
+    setBase(initial);
+  }
   const [error, setError] = useState<string | null>(null);
   const [saved, setSaved] = useState(false);
   const [pending, start] = useTransition();

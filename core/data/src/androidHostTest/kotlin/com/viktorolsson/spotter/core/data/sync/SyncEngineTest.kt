@@ -6,6 +6,8 @@ import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.viktorolsson.spotter.core.data.db.SpotterDatabase
 import com.viktorolsson.spotter.core.data.db.toModel
+import com.viktorolsson.spotter.core.model.ProgressionRule
+import com.viktorolsson.spotter.core.data.db.entity.PlanExerciseEntity
 import com.viktorolsson.spotter.core.data.repository.BodyWeightRepository
 import com.viktorolsson.spotter.core.data.repository.ExerciseRepository
 import com.viktorolsson.spotter.core.data.repository.MutableClock
@@ -40,7 +42,9 @@ import org.junit.Test
 import org.junit.runner.RunWith
 import java.io.File
 import kotlin.time.Clock
+import kotlin.time.Duration.Companion.days
 import kotlin.time.Duration.Companion.milliseconds
+import kotlin.time.Duration.Companion.seconds
 import kotlin.time.Instant
 
 /**
@@ -59,13 +63,45 @@ class FakeRemote : SyncRemote {
     /** What [userId]'s backup holds now, deletion markers left out: what the website reads. */
     fun live(userId: String): List<RemoteRow> = rows.filterKeys { it.first == userId }.values.filter { it.deletedAt == null }
 
+    /** Pulls fail once this many more pages have been served; null: they don't. */
+    var failFromPage: Int? = null
+        set(value) {
+            field = value
+            pagesServed = 0
+        }
+    private var pagesServed = 0
+
+    /** Runs once, after the next page is served: another device writing mid-pull. */
+    var afterNextPage: (() -> Unit)? = null
+
+    /** Another device saves the oldest row again: the server moves it to the end. */
+    fun touchOldest() {
+        val (key, row) = rows.entries.minBy { Instant.parse(it.value.serverUpdatedAt) }
+        serverTime = serverTime + 1.milliseconds
+        rows[key] = row.copy(updatedAt = row.updatedAt + 1, serverUpdatedAt = serverTime.toString())
+    }
+
+    /** Time passes on the server (beyond the pull's overlap window). */
+    fun advance(by: kotlin.time.Duration) {
+        serverTime += by
+    }
+
     override suspend fun hasRows(userId: String) = rows.keys.any { it.first == userId }
 
-    override suspend fun pull(userId: String, since: String?, offset: Int, limit: Int): List<RemoteRow> =
-        rows.filterKeys { it.first == userId }.values
+    override suspend fun pull(userId: String, since: String?, after: PageKey?, limit: Int): List<RemoteRow> {
+        failFromPage?.let { if (pagesServed++ >= it) throw java.io.IOException("connection lost") }
+        return rows.filterKeys { it.first == userId }.values
             .filter { since == null || Instant.parse(it.serverUpdatedAt) > Instant.parse(since) }
-            .sortedBy { Instant.parse(it.serverUpdatedAt) }
-            .drop(offset).take(limit)
+            .filter { row ->
+                after == null || Instant.parse(row.serverUpdatedAt).let { at ->
+                    val afterAt = Instant.parse(after.serverUpdatedAt)
+                    at > afterAt || (at == afterAt && row.syncId > after.syncId)
+                }
+            }
+            .sortedWith(compareBy({ Instant.parse(it.serverUpdatedAt) }, { it.syncId }))
+            .take(limit)
+            .also { afterNextPage?.invoke(); afterNextPage = null }
+    }
 
     override suspend fun push(rows: List<SyncRow>) {
         pushes++
@@ -91,7 +127,7 @@ class SyncEngineTest {
     private val devices = mutableListOf<Device>()
 
     /** One phone: its own database, repositories and sync engine. */
-    inner class Device(private val userId: String = USER) {
+    inner class Device(private val userId: String = USER, engineClock: Clock = Clock.System, pageSize: Int = SyncEngine.PAGE) {
         val db: SpotterDatabase = testDatabase()
         val clock = MutableClock(Instant.parse("2026-10-03T10:00:00Z"))
         val prefs = testPreferences(db)
@@ -101,7 +137,11 @@ class SyncEngineTest {
         val exercises = ExerciseRepository(db.exerciseDao())
         val bodyWeight = BodyWeightRepository(db, db.userProfileDao())
         val checkIn = DeviceCheckIn("install-$userId", versionCode = 7, schemaVersion = 8)
-        val engine = SyncEngine(LocalSyncStore(db), remote, SyncCursorStore(prefsStore()), Clock.System) { checkIn }
+        /** The exercise catalog this install has applied (ExerciseSeeder). */
+        var catalogVersion = 1
+        val engine = SyncEngine(
+            LocalSyncStore(db), remote, SyncCursorStore(prefsStore()), engineClock, catalogVersion = { catalogVersion }, pageSize = pageSize,
+        ) { checkIn }
 
         suspend fun seed() = db.exerciseDao().upsertAll(
             parseExerciseSeed(File("catalog/exercises.json").readText()).exercises.map(SeedExercise::toEntity),
@@ -119,7 +159,8 @@ class SyncEngineTest {
         File.createTempFile("sync", ".preferences_pb").apply { delete(); deleteOnExit() }
     }
 
-    private suspend fun device(userId: String = USER) = Device(userId).also { it.seed(); devices += it }
+    private suspend fun device(userId: String = USER, engineClock: Clock = Clock.System, pageSize: Int = SyncEngine.PAGE) =
+        Device(userId, engineClock, pageSize).also { it.seed(); devices += it }
 
     @After
     fun tearDown() = devices.forEach { it.db.close() }
@@ -259,6 +300,61 @@ class SyncEngineTest {
         assertEquals(60.0 to 10, restored.exercises.first().sets.first().let { it.weightKg to it.reps })
     }
 
+    /**
+     * A change stamped no later than the moment a push started, but not in what that push
+     * read (made in the same millisecond, or committed while it was reading), used to be
+     * skipped by every later push. A sync clock a little ahead of the database's makes that
+     * happen every time.
+     */
+    @Test
+    fun aChangeMadeAsAPushStartsIsPushedNextTime() = runTest {
+        val ahead = object : Clock {
+            override fun now() = Clock.System.now() + 2.seconds
+        }
+        val a = device(engineClock = ahead)
+        a.logWorkout()
+        a.sync()
+        a.workouts.updateSetValues(a.firstSet().id, 85.0, 5, 1)
+        a.sync()
+
+        val b = device()
+        b.sync()
+        assertEquals(85.0 to 5, b.firstSet().let { it.weightKg to it.reps })
+    }
+
+    /**
+     * The website can use an exercise from a newer catalog than this phone's (it ships on
+     * every push, the app after store review). The phone can't store a plan row using it, and
+     * used to skip it for good: the pull cursor moved past it. Once an app update brings that
+     * catalog, the next sync pulls everything again.
+     */
+    @Test
+    fun aRowForAnExerciseFromANewerCatalogArrivesOnceTheAppHasIt() = runTest {
+        val a = device()
+        a.planFor(profile)
+        val day = a.plans.observeActivePlan().first()!!.days.first()
+        a.db.planDao().insertExercises(
+            listOf(PlanExerciseEntity(planDayId = day.id, exerciseId = "pec-deck", position = 99, sets = 3, repMin = 8, repMax = 12, targetRir = 2, restSeconds = 90, progressionRule = ProgressionRule.DOUBLE_PROGRESSION, supersetGroup = null)),
+        )
+        a.sync()
+
+        val b = device()
+        b.db.sql.execSQL("DELETE FROM exercise WHERE id = 'pec-deck'") // an older catalog
+        b.sync()
+        // Days go by with other changes, so the pull cursor moves well past the skipped row.
+        remote.advance(1.days)
+        a.bodyWeight.log(LocalDate(2026, 10, 2), 82.0)
+        a.sync()
+        b.sync()
+        fun Device.hasPecDeck() = db.sql.query("SELECT COUNT(*) FROM plan_exercise WHERE exerciseId = 'pec-deck'").use { it.moveToFirst(); it.getInt(0) } == 1
+        assertTrue(!b.hasPecDeck())
+
+        b.seed() // the app update's catalog
+        b.catalogVersion = 2
+        b.sync()
+        assertTrue(b.hasPecDeck())
+    }
+
     /** Deleting a finished workout on one phone removes it, and the records set in it, on the other. */
     @Test
     fun aFinishedWorkoutDeletedOnOnePhoneIsDeletedOnTheOther() = runTest {
@@ -355,6 +451,48 @@ class SyncEngineTest {
         assertTrue(outcome.pulled > 0)
         assertEquals(12, b.bodyWeight.observeTrend().first().size)
         assertEquals(a.plans.observeActivePlan().first()!!.days.size, b.plans.observeActivePlan().first()!!.days.size)
+        assertEquals(1, b.sessions().size)
+    }
+
+    /**
+     * The pull pages through rows ordered by server time. Paged by offset, a row another
+     * device saved again mid-pull moved to the end and shifted the rest down, so the first
+     * row of the next page was never fetched.
+     */
+    @Test
+    fun aRowSavedElsewhereMidPullDoesNotHideAnother() = runTest {
+        val a = device()
+        repeat(12) { a.bodyWeight.log(LocalDate(2026, 1, 1).plus(it.toLong(), DateTimeUnit.DAY), 80.0 + it) }
+        a.sync()
+
+        val b = device(pageSize = 5)
+        remote.afterNextPage = { remote.touchOldest() }
+        b.sync()
+        assertEquals(12, b.bodyWeight.observeTrend().first().size)
+    }
+
+    /**
+     * A restore that stops partway (the connection drops) left some of the backup on the
+     * phone and no finished first sync, so the next sync asked "use the backup or merge?"
+     * about data that came from the backup. It carries on with the restore instead.
+     */
+    @Test
+    fun aRestoreThatStopsPartwayCarriesOnWithoutAsking() = runTest {
+        val a = device()
+        a.planFor(profile)
+        repeat(12) { a.bodyWeight.log(LocalDate(2026, 1, 1).plus(it.toLong(), DateTimeUnit.DAY), 80.0 + it) }
+        a.logWorkout()
+        a.sync()
+
+        val b = device(pageSize = 5)
+        b.planFor(profile) // its own onboarding plan: the restore replaces it
+        remote.failFromPage = 5 // past the plan rows, before the workout
+        assertTrue(runCatching { b.sync(FirstSyncChoice.USE_BACKUP) }.isFailure)
+        assertTrue(b.sessions().isEmpty())
+        remote.failFromPage = null
+
+        assertEquals(SyncOutcome.Done::class, b.sync()::class)
+        assertEquals(12, b.bodyWeight.observeTrend().first().size)
         assertEquals(1, b.sessions().size)
     }
 

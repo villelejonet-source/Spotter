@@ -21,6 +21,8 @@ import com.viktorolsson.spotter.core.engine.WarmUps
 import com.viktorolsson.spotter.core.engine.WeightConversion
 import com.viktorolsson.spotter.core.model.PreviousSet
 import com.viktorolsson.spotter.core.model.SetType
+import com.viktorolsson.spotter.core.model.TIMED_EXERCISE_IDS
+import com.viktorolsson.spotter.core.model.isLift
 import com.viktorolsson.spotter.core.model.WorkoutSession
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
@@ -70,6 +72,9 @@ class WorkoutRepository(
      * the progression target computed from the last two sessions of that exercise
      * (or the plan's calibration estimate the first time).
      */
+    /** The workout in progress, if any (only one can be). */
+    suspend fun activeSessionId(): Long? = dao.getActiveSession()?.id
+
     suspend fun startPlannedWorkout(planDayId: Long): Long = db.withTransaction {
         dao.getActiveSession()?.let { return@withTransaction it.id }
         val day = planDao.getDay(planDayId) ?: error("No plan day $planDayId")
@@ -131,7 +136,8 @@ class WorkoutRepository(
         dao.getRecentWorkingSets(exerciseId, sessions = 2)
             .groupBy { it.sessionId }
             .values
-            .map { sets -> sets.map { LoggedSet(it.set.weightKg, it.set.reps ?: 0, it.set.rir) } }
+            .map { sets -> sets.mapNotNull { it.set.toLift() } }
+            .filter { it.isNotEmpty() }
 
     /**
      * [recentHistory] for several exercises in two queries: the working sets of each
@@ -149,7 +155,8 @@ class WorkoutRepository(
         return wanted.mapValues { (exerciseId, sessionsOfExercise) ->
             sets.filter { it.exerciseId == exerciseId && it.sessionId in sessionsOfExercise }
                 .groupBy { it.sessionId }.values
-                .map { logged -> logged.map { LoggedSet(it.set.weightKg, it.set.reps ?: 0, it.set.rir) } }
+                .map { logged -> logged.mapNotNull { it.set.toLift() } }
+                .filter { it.isNotEmpty() }
         }
     }
 
@@ -360,7 +367,7 @@ class WorkoutRepository(
     suspend fun bestsBefore(exerciseId: String, before: Instant): ExerciseBests =
         PersonalRecords.bests(
             dao.getWorkingSetsBefore(exerciseId, before).groupBy { it.sessionId }.values
-                .map { sets -> sets.map { LoggedSet(it.set.weightKg, it.set.reps ?: 0, it.set.rir) } },
+                .map { sets -> sets.mapNotNull { it.set.toLift() } },
         )
 
     suspend fun deleteSet(setId: Long) = db.withTransaction {
@@ -409,9 +416,11 @@ class WorkoutRepository(
 
     /**
      * Ends the session, dropping sets that were never ticked and exercises left with no
-     * sets, then records any personal records it set.
+     * sets, then records any personal records it set. A session already finished (a double
+     * tap on Finish) is left as it is.
      */
     suspend fun finishWorkout(sessionId: Long) = db.withTransaction {
+        if (dao.isSessionFinished(sessionId) != false) return@withTransaction
         dao.deleteIncompleteSets(sessionId)
         dao.deleteExercisesWithoutSets(sessionId)
         val now = clock.now()
@@ -430,8 +439,8 @@ class WorkoutRepository(
                 .mapNotNull { set -> set.reps?.let { reps -> LoggedSet(set.weightKg, reps, set.rir) } }
             val previous = previousByExercise[exerciseId].orEmpty()
                 .groupBy { it.sessionId }.values
-                .map { sets -> sets.map { LoggedSet(it.set.weightKg, it.set.reps ?: 0, it.set.rir) } }
-            PersonalRecords.detect(logged, PersonalRecords.bests(previous)).map {
+                .map { sets -> sets.mapNotNull { it.set.toLift() } }
+            PersonalRecords.detect(logged, PersonalRecords.bests(previous), timed = exerciseId in TIMED_EXERCISE_IDS).map {
                 PersonalRecordEntity(
                     exerciseId = exerciseId,
                     type = it.type,
@@ -509,3 +518,6 @@ class WorkoutRepository(
 }
 
 data class ActiveSession(val id: Long, val startedAt: Instant)
+
+/** A logged set as history for progression, records and plateaus; null when it lifted nothing (no reps). */
+internal fun SetEntryEntity.toLift(): LoggedSet? = reps?.takeIf { isLift(it) }?.let { LoggedSet(weightKg, it, rir) }

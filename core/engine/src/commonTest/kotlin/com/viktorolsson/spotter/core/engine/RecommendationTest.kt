@@ -89,6 +89,38 @@ class RecommendationTest {
         assertTrue(RecommendationEngine.detectPlateau(bench, missed)!!.missedTwice)
     }
 
+    @Test
+    fun `a set with no reps doesn't count towards a session's score`() {
+        val exposure = ExerciseExposure(today, listOf(LoggedSet(140.0, 0), LoggedSet(80.0, 8)))
+        assertEquals(80.0 * (1 + 8 / 30.0), exposure.score, 1e-9)
+        assertEquals(LoggedSet(80.0, 8), exposure.bestSet)
+    }
+
+    /** Bodyweight reps and an estimated 1RM in kg aren't comparable: adding weight isn't a drop. */
+    @Test
+    fun `moving from bodyweight to added weight is no plateau`() {
+        val pullUps = slot("pull-up", 1)
+        val history = flat(null, 12, sessions = 5).mapIndexed { i, e -> if (i < 3) e else e.copy(sets = List(3) { LoggedSet(5.0, 8) }) }
+        assertNull(RecommendationEngine.detectPlateau(pullUps, history))
+    }
+
+    @Test
+    fun `moving from bodyweight to added weight is no fall`() {
+        val plan = listOf(slot("pull-up", 1), slot("chest-dip", 2))
+        fun progressing() = listOf<Double?>(null, null, 5.0).mapIndexed { i, w ->
+            ExerciseExposure(today.minus(14L - i * 7, DateTimeUnit.DAY), List(3) { LoggedSet(w, if (w == null) 12 else 8) })
+        }
+        val history = mapOf("pull-up" to progressing(), "chest-dip" to progressing())
+        val recs = RecommendationEngine.evaluate(ctx(plan, history, recentRir = listOf(0, 0, 1, 0)))
+        assertTrue(recs.none { it.type == RecommendationType.DELOAD }, "$recs")
+    }
+
+    @Test
+    fun `a lift set to no progression is never a plateau`() {
+        val bench = slot("barbell-bench-press", 1, rule = ProgressionRule.NONE)
+        assertNull(RecommendationEngine.detectPlateau(bench, flat(80.0, 8, sessions = 6)))
+    }
+
     /** The PLAN.md example: bench stuck → weak-point accessory on the same day, with the evidence. */
     @Test
     fun `stalled bench with enough volume gets a weak-point accessory on its day`() {

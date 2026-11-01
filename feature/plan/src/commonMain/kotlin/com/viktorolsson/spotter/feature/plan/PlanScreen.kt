@@ -1,5 +1,6 @@
 package com.viktorolsson.spotter.feature.plan
 
+import com.viktorolsson.spotter.core.ui.component.WorkoutInProgressDialog
 import com.viktorolsson.spotter.core.ui.theme.SpotterTheme
 import androidx.compose.ui.unit.dp
 import androidx.compose.foundation.BorderStroke
@@ -73,12 +74,22 @@ internal fun PlanRoute(
     viewModel: PlanViewModel = koinViewModel(),
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
+    val inProgress by viewModel.inProgress.collectAsStateWithLifecycle()
     PlanScreen(
         state = state,
         onBack = onBack,
         onRebuild = onRebuild,
         onStartDay = { viewModel.startDay(it, onOpenSession) },
     )
+    inProgress?.let { running ->
+        WorkoutInProgressDialog(
+            onOpen = {
+                viewModel.dismissInProgress()
+                onOpenSession(running)
+            },
+            onDismiss = viewModel::dismissInProgress,
+        )
+    }
 }
 
 @Composable

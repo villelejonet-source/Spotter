@@ -10,8 +10,10 @@ import androidx.lifecycle.viewModelScope
 import com.viktorolsson.spotter.core.data.repository.PlanRepository
 import com.viktorolsson.spotter.core.data.repository.WorkoutRepository
 import com.viktorolsson.spotter.core.model.Plan
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
@@ -36,7 +38,17 @@ class PlanViewModel(
     ) { (plan, next), prefs -> PlanUiState(loading = false, plan = plan, nextDayId = next?.id, effortScale = prefs.effortScale) }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), PlanUiState())
 
+    private val _inProgress = MutableStateFlow<Long?>(null)
+
+    /** The workout already running when Start was tapped: the screen asks before going there. */
+    val inProgress: StateFlow<Long?> = _inProgress.asStateFlow()
+
     fun startDay(planDayId: Long, onStarted: (Long) -> Unit) = viewModelScope.launchReporting(errors, Failure.ACTION) {
-        onStarted(workoutRepository.startPlannedWorkout(planDayId))
+        val running = workoutRepository.activeSessionId()
+        if (running != null) _inProgress.value = running else onStarted(workoutRepository.startPlannedWorkout(planDayId))
+    }
+
+    fun dismissInProgress() {
+        _inProgress.value = null
     }
 }

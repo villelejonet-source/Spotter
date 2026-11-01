@@ -9,6 +9,7 @@ import com.viktorolsson.spotter.core.data.db.entity.PlanDayWithExercises
 import com.viktorolsson.spotter.core.data.db.entity.PlanEntity
 import com.viktorolsson.spotter.core.data.db.entity.PlanExerciseEntity
 import com.viktorolsson.spotter.core.data.db.entity.PlanWithDays
+import com.viktorolsson.spotter.core.data.db.entity.RowSyncId
 import kotlinx.coroutines.flow.Flow
 
 @Dao
@@ -54,6 +55,18 @@ interface PlanDao {
 
     @Query("UPDATE plan_exercise SET sets = :sets, repMin = :repMin, repMax = :repMax WHERE id = :planExerciseId")
     suspend fun setRepRange(planExerciseId: Long, sets: Int, repMin: Int, repMax: Int)
+
+    @Query("SELECT id, syncId FROM plan_day WHERE id IN (:ids)")
+    suspend fun daySyncIds(ids: List<Long>): List<RowSyncId>
+
+    @Query("SELECT id, syncId FROM plan_day WHERE syncId IN (:syncIds)")
+    suspend fun dayIds(syncIds: List<String>): List<RowSyncId>
+
+    @Query("SELECT id, syncId FROM plan_exercise WHERE id IN (:ids)")
+    suspend fun exerciseSyncIds(ids: List<Long>): List<RowSyncId>
+
+    @Query("SELECT id, syncId FROM plan_exercise WHERE syncId IN (:syncIds)")
+    suspend fun exerciseIds(syncIds: List<String>): List<RowSyncId>
 
     /** Holds still prescribed in reps (shorter than [repMin] seconds) get the range in seconds. */
     @Query("UPDATE plan_exercise SET repMin = :repMin, repMax = :repMax WHERE exerciseId IN (:exerciseIds) AND repMax < :repMin")

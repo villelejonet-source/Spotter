@@ -165,7 +165,11 @@ internal fun SessionRoute(
                 if (exercise.sets.none { it.id == setId && it.isCompleted }) keypad.focus(null, "")
                 viewModel.toggleSet(exercise, setId)
             },
-            onCopyPrevious = viewModel::copyPrevious,
+            onCopyPrevious = { setId, previous ->
+                // The copy replaces what was typed: close the keypad so it doesn't show the old text.
+                if (keypad.target?.setId == setId) keypad.focus(null, "")
+                viewModel.copyPrevious(setId, previous)
+            },
             onAddSet = viewModel::addSet,
             onDeleteSet = { setId ->
                 if (keypad.target?.setId == setId) keypad.focus(null, "")

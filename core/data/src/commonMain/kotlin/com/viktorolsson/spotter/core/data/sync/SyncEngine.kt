@@ -2,7 +2,9 @@ package com.viktorolsson.spotter.core.data.sync
 
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
+import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
+import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.longPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import com.viktorolsson.spotter.core.data.logWarn
@@ -23,11 +25,15 @@ data class SyncCursor(
     val pushedUpTo: Long = 0,
     /** Last successful sync (ms), 0 if never. */
     val lastSyncedAt: Long = 0,
+    /** The exercise catalog version the last pull was stored with. */
+    val pulledWithCatalog: Int = 0,
+    /** A restore wiped this phone's data and hasn't finished yet: the next sync carries on with it. */
+    val restoring: Boolean = false,
 )
 
 class SyncCursorStore(private val dataStore: DataStore<Preferences>) {
     val cursor: Flow<SyncCursor> = dataStore.data.map { p ->
-        SyncCursor(p[USER], p[PULLED], p[PUSHED] ?: 0, p[LAST] ?: 0)
+        SyncCursor(p[USER], p[PULLED], p[PUSHED] ?: 0, p[LAST] ?: 0, p[CATALOG] ?: 0, p[RESTORING] ?: false)
     }
 
     suspend fun get(): SyncCursor = cursor.first()
@@ -38,6 +44,8 @@ class SyncCursorStore(private val dataStore: DataStore<Preferences>) {
             cursor.pulledUpTo?.let { p[PULLED] = it } ?: p.remove(PULLED)
             p[PUSHED] = cursor.pushedUpTo
             p[LAST] = cursor.lastSyncedAt
+            p[CATALOG] = cursor.pulledWithCatalog
+            p[RESTORING] = cursor.restoring
         }
     }
 
@@ -48,10 +56,13 @@ class SyncCursorStore(private val dataStore: DataStore<Preferences>) {
         val PULLED = stringPreferencesKey("sync_pulled_up_to")
         val PUSHED = longPreferencesKey("sync_pushed_up_to")
         val LAST = longPreferencesKey("sync_last_synced_at")
+        val CATALOG = intPreferencesKey("sync_pulled_with_catalog")
+        val RESTORING = booleanPreferencesKey("sync_restoring")
     }
 }
 
 sealed interface SyncOutcome {
+    /** [pushed]: local changes sent for the first time (repeats from the overlap aren't counted). */
     data class Done(val pulled: Int, val pushed: Int) : SyncOutcome
     /**
      * Ask before going on: this phone has its own data and so does the backup, or the
@@ -71,6 +82,10 @@ class SyncEngine(
     private val remote: SyncRemote,
     private val cursors: SyncCursorStore,
     private val clock: Clock,
+    /** The exercise catalog version this install has applied (ExerciseSeeder). */
+    private val catalogVersion: suspend () -> Int = { 0 },
+    /** Rows per pull request and push batch. */
+    private val pageSize: Int = PAGE,
     /** What this install reports after each sync; null reports nothing. */
     private val device: suspend () -> DeviceCheckIn? = { null },
 ) {
@@ -79,9 +94,16 @@ class SyncEngine(
      * credentials. The first sync then never uploads this phone's data to an empty
      * account without an explicit [choice] (any choice means "go ahead").
      */
-    suspend fun sync(userId: String, choice: FirstSyncChoice? = null, fromLink: Boolean = false): SyncOutcome {
+    suspend fun sync(userId: String, requested: FirstSyncChoice? = null, fromLink: Boolean = false): SyncOutcome {
         var cursor = cursors.get().takeIf { it.userId == userId } ?: SyncCursor(userId = userId)
+        // A restore that stopped partway carries on: what's here came from the backup itself.
+        val choice = if (cursor.restoring) FirstSyncChoice.USE_BACKUP else requested
         val firstSync = cursor.lastSyncedAt == 0L
+        // A pulled row using an exercise this phone's catalog didn't have yet was skipped
+        // (LocalSyncStore). Once a newer catalog is in, pull everything again to fetch it;
+        // rows already here are left alone (last-write-wins).
+        val catalog = catalogVersion()
+        if (cursor.pulledWithCatalog < catalog) cursor = cursor.copy(pulledUpTo = null)
 
         if (firstSync) {
             val backupExists = remote.hasRows(userId)
@@ -90,7 +112,10 @@ class SyncEngine(
                 backupExists && phoneHasData && choice == null -> return SyncOutcome.NeedsChoice(fromLink = false)
                 !backupExists && phoneHasData && fromLink && choice == null -> return SyncOutcome.NeedsChoice(fromLink = true)
                 // Restore: drop this phone's own data first (often just a fresh onboarding plan).
-                backupExists && (!phoneHasData || choice == FirstSyncChoice.USE_BACKUP) -> store.wipe()
+                backupExists && (!phoneHasData || choice == FirstSyncChoice.USE_BACKUP) -> {
+                    store.wipe()
+                    cursors.save(cursor.copy(restoring = true))
+                }
             }
             // Everything local counts as unpushed the first time.
             cursor = cursor.copy(pushedUpTo = 0, pulledUpTo = null)
@@ -99,13 +124,13 @@ class SyncEngine(
         // Pull page by page, applying each as it arrives so a large backup never sits in
         // memory. Rows whose parent is in a later page are retried once the pull is done.
         val since = cursor.pulledUpTo?.let(::withOverlap)
-        var offset = 0
+        var after: PageKey? = null
         var pulled = 0
         var newestServerTime: Instant? = null
         var newPulledUpTo = cursor.pulledUpTo
         val deferred = mutableListOf<SyncRow>()
         while (true) {
-            val page = remote.pull(userId, since, offset, PAGE)
+            val page = remote.pull(userId, since, after, pageSize)
             pulled += page.size
             page.forEach { row ->
                 val at = parse(row.serverUpdatedAt)
@@ -115,8 +140,8 @@ class SyncEngine(
                 }
             }
             deferred += store.applyAll(page.map { it.toSyncRow() }).deferred
-            if (page.size < PAGE) break
-            offset += PAGE
+            if (page.size < pageSize) break
+            after = page.last().let { PageKey(it.serverUpdatedAt, it.syncId) }
         }
         if (deferred.isNotEmpty()) {
             // A row whose parent still isn't here after every page was deleted elsewhere (or
@@ -129,14 +154,20 @@ class SyncEngine(
         }
 
         // Push: anything changed locally since the last push (rows just pulled are skipped
-        // by the server, which only keeps strictly newer versions).
+        // by the server, which only keeps strictly newer versions). The last few seconds
+        // before that push are sent again: a change stamped then but not in what it read
+        // (same millisecond, or committed while it was reading) would otherwise never go.
+        // The server ignores the repeats.
         val pushStartedAt = clock.now().toEpochMilliseconds()
-        val changes = store.changesSince(cursor.pushedUpTo)
-        changes.chunked(PAGE).forEach { remote.push(it) }
+        val changes = store.changesSince(cursor.pushedUpTo - PUSH_OVERLAP_MS)
+        changes.chunked(pageSize).forEach { remote.push(it) }
 
-        cursors.save(SyncCursor(userId, newPulledUpTo, pushStartedAt, clock.now().toEpochMilliseconds()))
+        // Rows stamped a little ahead of the clock (the update trigger adds 1 ms to a row
+        // changed twice in one millisecond) are behind the cursor too, so they aren't new next time.
+        val pushedUpTo = maxOf(pushStartedAt, changes.maxOfOrNull { it.updatedAt } ?: 0)
+        cursors.save(SyncCursor(userId, newPulledUpTo, pushedUpTo, clock.now().toEpochMilliseconds(), catalog))
         checkIn()
-        return SyncOutcome.Done(pulled = pulled, pushed = changes.size)
+        return SyncOutcome.Done(pulled = pulled, pushed = changes.count { it.updatedAt > cursor.pushedUpTo })
     }
 
     /**
@@ -159,8 +190,9 @@ class SyncEngine(
 
     private fun parse(serverTime: String): Instant = Instant.parse(serverTime)
 
-    private companion object {
+    companion object {
         const val PAGE = 500
+        const val PUSH_OVERLAP_MS = 10_000L
         const val TAG = "SpotterSync"
     }
 }

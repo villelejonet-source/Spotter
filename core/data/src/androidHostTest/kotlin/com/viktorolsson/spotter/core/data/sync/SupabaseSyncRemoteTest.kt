@@ -43,10 +43,16 @@ class SupabaseSyncRemoteTest {
 
     @Test
     fun pullFiltersOnTheOwner() = runTest {
-        remote.pull(USER, since = null, offset = 0, limit = 500)
-        remote.pull(USER, since = "2026-10-27T10:00:00Z", offset = 500, limit = 500)
+        remote.pull(USER, since = null, after = null, limit = 500)
+        remote.pull(USER, since = "2026-10-27T10:00:00Z", after = PageKey("2026-10-27T11:00:00.5Z", "abc"), limit = 500)
         requests.forEach { assertEquals("eq.$USER", it.parameters["user_id"]) }
         assertEquals("gt.2026-10-27T10:00:00Z", requests[1].parameters["server_updated_at"])
+        // The next page starts after the last row: later server time, or the same with a later sync id.
+        assertEquals(
+            "(server_updated_at.gt.\"2026-10-27T11:00:00.5Z\",and(server_updated_at.eq.\"2026-10-27T11:00:00.5Z\",sync_id.gt.abc))",
+            requests[1].parameters["or"],
+        )
+        assertEquals("500", requests[1].parameters["limit"])
     }
 
     @Test

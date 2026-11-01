@@ -27,9 +27,13 @@ export default async function ProgressPage({ searchParams }: { searchParams: Pro
       const last = points[points.length - 1];
       const loaded = points.filter((p) => p.e1rmKg != null);
       const best = loaded.length ? Math.max(...loaded.map((p) => p.e1rmKg!)) : null;
-      const first = loaded[0]?.e1rmKg;
+      // Change runs from the first to the latest session that counts: a lighter session or a
+      // low day at either end isn't a drop (as in the app).
+      const counted = loaded.filter((p) => p.countsTowardsChange);
+      const from = counted[0]?.e1rmKg;
+      const to = counted[counted.length - 1]?.e1rmKg;
       const longestHold = Math.max(0, ...points.map((p) => p.bestReps));
-      return { id, name: exerciseName(catalog, id), sessions: points.length, last, best, longestHold, change: first != null && last?.e1rmKg != null ? last.e1rmKg - first : null };
+      return { id, name: exerciseName(catalog, id), sessions: points.length, last, best, longestHold, change: from != null && to != null ? to - from : null };
     })
     .filter((e) => e.sessions > 0)
     .sort((a, b) => (b.last?.date ?? 0) - (a.last?.date ?? 0));

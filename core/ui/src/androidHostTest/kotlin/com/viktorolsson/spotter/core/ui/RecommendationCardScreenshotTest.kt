@@ -54,6 +54,19 @@ class RecommendationCardScreenshotTest {
         }
     }
 
+    private val lowDaysDeload = rec(
+        RecommendationType.DELOAD,
+        RecommendationAction.Deload(),
+        RecommendationEvidence(deloadReason = DeloadReason.RECOVERY, lowDays = 3),
+    )
+
+    @Test
+    fun recommendationLowDays_light() = captureRoboImage("src/test/screenshots/recommendation_low_days_light.png") {
+        SpotterTheme(darkTheme = false, dynamicColor = false) {
+            Surface { Column(Modifier.padding(16.dp)) { RecommendationCard(lowDaysDeload, WeightUnit.KG, onApply = {}, onDismiss = {}) } }
+        }
+    }
+
     @Test
     fun recommendationCards_light() = capture("recommendation_cards_light", dark = false)
 

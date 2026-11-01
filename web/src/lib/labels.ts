@@ -159,6 +159,10 @@ export const FREE_WORKOUT = "Free workout";
 /** A deload (today_deload_title). */
 /** A deload session: a whole lighter week, or one day chosen at the check-in (app: session_lighter). */
 export const LIGHTER_SESSION = "Lighter session";
+/** A workout kept as planned on a low day (app: exercise_log_low_day). */
+export const LOW_DAY = "Low day";
+/** Under a progress chart (app: exercise_chart_left_out). */
+export const CHART_LEFT_OUT = "Lighter sessions and low days are left out of the chart, so they don't read as a drop.";
 
 /** How a workout felt, 1 to 5 (app: core/ui feel_1–feel_5). */
 export const FEEL_LABELS: Record<number, string> = { 1: "Very low", 2: "Low", 3: "Okay", 4: "Good", 5: "Great" };

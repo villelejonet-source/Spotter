@@ -19,6 +19,7 @@ import com.viktorolsson.spotter.core.engine.RecommendationContext
 import com.viktorolsson.spotter.core.engine.RecommendationDraft
 import com.viktorolsson.spotter.core.engine.RecommendationEngine
 import com.viktorolsson.spotter.core.engine.WeightConversion
+import com.viktorolsson.spotter.core.model.LOW_CHECK_IN
 import com.viktorolsson.spotter.core.model.Equipment
 import com.viktorolsson.spotter.core.model.ProgressionRule
 import com.viktorolsson.spotter.core.model.Recommendation
@@ -275,6 +276,8 @@ class RecommendationRepository(
             appliedVariations = applied,
             deloadActive = prefs.isDeload(today),
             deloadRecentlyHandled = deloadRecentlyHandled,
+            recentLowDays = workoutDao.getCheckInsSince(clock.now().minus(RecommendationEngine.LOW_DAYS_WINDOW.days))
+                .count { (it.readiness ?: 5) <= LOW_CHECK_IN || (it.feel ?: 5) <= LOW_CHECK_IN },
         )
     }
 

@@ -68,7 +68,7 @@ describe("sessions", () => {
   it("loads only three columns for session times and counts finished ones without rows", async () => {
     const m = mockClient({}, 42);
     await q.sessionTimes(m.client, 7);
-    expect(m.chainOf("v_session_summary")[0]).toEqual(["select", "sync_id,started_at,ended_at"]);
+    expect(m.chainOf("v_session_summary")[0]).toEqual(["select", "sync_id,started_at,ended_at,readiness,feel"]);
     const n = mockClient({}, 42);
     expect(await q.finishedSessionCount(n.client)).toBe(42);
     expect(n.chainOf("v_session_summary")).toEqual([["select", "sync_id", { count: "exact", head: true }], ["not", "ended_at", "is", null]]);

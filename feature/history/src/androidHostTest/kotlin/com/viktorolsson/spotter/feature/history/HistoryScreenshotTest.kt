@@ -154,6 +154,12 @@ class HistoryScreenshotTest {
     }
 
     @Test
+    fun exerciseHistory_lowDays() = capture("exercise_history_low_days_light", dark = false) {
+        // A lighter session and a low day: in the log, tagged, but not in the chart.
+        ExerciseHistory(exerciseHistory.copy(logs = logs.mapIndexed { i, log -> log.copy(lighter = i == 4, roughDay = i == 5) }))
+    }
+
+    @Test
     fun exerciseHistory_empty() = capture("exercise_history_empty_light", dark = false) {
         ExerciseHistory(ExerciseHistoryUiState(loading = false, exercise = PreviewData.exercise()))
     }

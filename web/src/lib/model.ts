@@ -117,8 +117,8 @@ export interface SessionSummaryRow {
   perceived_difficulty: number | null;
 }
 
-/** Just when a workout happened: enough for streaks, heatmaps and counts. */
-export type SessionTimeRow = Pick<SessionSummaryRow, "sync_id" | "started_at" | "ended_at">;
+/** When a workout happened and how it felt: enough for streaks, heatmaps, counts and the feel card. */
+export type SessionTimeRow = Pick<SessionSummaryRow, "sync_id" | "started_at" | "ended_at" | "readiness" | "feel">;
 
 export interface SessionExerciseRow {
   sync_id: string;

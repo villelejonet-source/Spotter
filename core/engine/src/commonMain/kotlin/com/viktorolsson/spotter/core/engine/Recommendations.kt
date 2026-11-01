@@ -84,6 +84,8 @@ data class RecommendationContext(
     val deloadActive: Boolean = false,
     /** A deload was applied or dismissed recently: don't suggest (or wait for) another. */
     val deloadRecentlyHandled: Boolean = false,
+    /** Finished workouts in the last [RecommendationEngine.LOW_DAYS_WINDOW] days with a low check-in or rating (1–2). */
+    val recentLowDays: Int = 0,
 )
 
 data class RecommendationDraft(
@@ -113,6 +115,10 @@ object RecommendationEngine {
     private const val LONG_IN_RANGE_DAYS = 42L
     private const val IMPROVEMENT = 1.005
     private const val DELOAD_EVERY_WEEKS = 6
+
+    /** Days looked back over for low check-ins, and how many low workouts in them suggest a deload. */
+    const val LOW_DAYS_WINDOW = 10
+    private const val LOW_DAYS_FOR_DELOAD = 3
     private const val MIN_TRAINING_WEEKS_FOR_PLAN_CHECKS = 2
     private const val VARIATION_WEEKS = 5
 
@@ -346,15 +352,18 @@ object RecommendationEngine {
         val (reason, lifts) = when {
             plateaus.size >= 3 -> DeloadReason.SEVERAL_PLATEAUS to plateaus.map { it.slot.exercise.name }
             falling.size >= 3 || (falling.size >= 2 && nearFailure) -> DeloadReason.RECOVERY to falling.map { it.exercise.name }
+            ctx.recentLowDays >= LOW_DAYS_FOR_DELOAD -> DeloadReason.RECOVERY to emptyList()
             weeksSinceDeload(ctx) >= DELOAD_EVERY_WEEKS -> DeloadReason.SCHEDULED to emptyList()
             else -> return null
         }
+        // Feeling low is the reason only when no lift is named.
+        val lowDays = ctx.recentLowDays.takeIf { reason == DeloadReason.RECOVERY && lifts.isEmpty() }
         return RecommendationDraft(
             RecommendationType.DELOAD,
             null,
             RecommendationPayload(
                 RecommendationAction.Deload(),
-                RecommendationEvidence(deloadReason = reason, lifts = lifts, weeks = weeksSinceDeload(ctx)),
+                RecommendationEvidence(deloadReason = reason, lifts = lifts, weeks = weeksSinceDeload(ctx), lowDays = lowDays),
             ),
         )
     }

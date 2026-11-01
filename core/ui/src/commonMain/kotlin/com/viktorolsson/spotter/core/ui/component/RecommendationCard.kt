@@ -23,6 +23,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
+import org.jetbrains.compose.resources.pluralStringResource
 import org.jetbrains.compose.resources.stringResource
 import com.viktorolsson.spotter.core.ui.theme.Dimens
 import com.viktorolsson.spotter.core.ui.theme.Spacing
@@ -139,8 +140,10 @@ private fun describe(
             )
         }
         is RecommendationAction.Deload -> {
+            val lowDays = evidence.lowDays
             val reason = when (evidence.deloadReason) {
                 DeloadReason.SEVERAL_PLATEAUS -> stringResource(Res.string.rec_deload_plateaus, evidence.lifts.size, evidence.lifts.joinToString(", "))
+                DeloadReason.RECOVERY if lowDays != null -> pluralStringResource(Res.plurals.rec_deload_low_days, lowDays, lowDays)
                 DeloadReason.RECOVERY -> stringResource(Res.string.rec_deload_recovery, evidence.lifts.joinToString(", "))
                 DeloadReason.SCHEDULED, null -> stringResource(Res.string.rec_deload_scheduled, evidence.weeks ?: 0)
             }

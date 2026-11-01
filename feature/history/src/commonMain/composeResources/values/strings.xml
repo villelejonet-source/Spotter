@@ -30,6 +30,10 @@
     <string name="exercise_metric_best">Best set</string>
     <string name="exercise_metric_volume">Volume</string>
     <string name="exercise_chart_empty">Log this exercise in two sessions to see a trend.</string>
+    <string name="exercise_chart_left_out">Lighter sessions and low days are left out of the chart, so they don't read as a drop.</string>
+    <string name="exercise_log_lighter">Lighter session</string>
+    <string name="exercise_log_low_day">Low day</string>
+    <string name="exercise_log_date_tag">%1$s · %2$s</string>
     <string name="exercise_best_1rm">Best est. 1RM</string>
     <string name="exercise_heaviest">Heaviest</string>
     <string name="exercise_best_volume">Best volume</string>

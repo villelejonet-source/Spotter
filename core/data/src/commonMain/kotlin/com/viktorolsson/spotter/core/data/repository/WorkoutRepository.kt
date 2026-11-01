@@ -21,6 +21,7 @@ import com.viktorolsson.spotter.core.engine.WarmUps
 import com.viktorolsson.spotter.core.engine.WeightConversion
 import com.viktorolsson.spotter.core.model.PreviousSet
 import com.viktorolsson.spotter.core.model.SetType
+import com.viktorolsson.spotter.core.model.isRoughDay
 import com.viktorolsson.spotter.core.model.TIMED_EXERCISE_IDS
 import com.viktorolsson.spotter.core.model.isLift
 import com.viktorolsson.spotter.core.model.WorkoutSession
@@ -96,8 +97,9 @@ class WorkoutRepository(
             ),
         )
         val planned = day.exercises.sortedBy { it.planExercise.position }
-        // Two queries for the whole day, instead of one history read per exercise.
-        val histories = recentHistoryFor(planned.map { it.planExercise.exerciseId }, sessions = 2)
+        // Two queries for the whole day, instead of one history read per exercise. Four sessions,
+        // so two normal ones are left when the newest were rough days.
+        val histories = recentHistoryFor(planned.map { it.planExercise.exerciseId }, sessions = 4)
         planned.forEachIndexed { position, (pe, exercise) ->
             val progression = Progression.next(
                 ProgressionInput(
@@ -107,9 +109,10 @@ class WorkoutRepository(
                     repMin = pe.repMin,
                     repMax = pe.repMax,
                     targetRir = pe.targetRir,
-                    history = histories[pe.exerciseId].orEmpty(),
+                    history = histories[pe.exerciseId]?.map { it.sets }.orEmpty(),
                     startingWeightKg = pe.startingWeightKg,
                     unit = unit,
+                    roughDays = histories[pe.exerciseId].orEmpty().withIndex().filter { it.value.roughDay }.map { it.index }.toSet(),
                 ),
             )
             val target = if (deload) Deload.lighten(progression, exercise.toModel(), pe.repMin, unit) else progression
@@ -147,20 +150,25 @@ class WorkoutRepository(
      * [recentHistory] for several exercises in two queries: the working sets of each
      * exercise's last [sessions] finished non-deload sessions, most recent session first.
      */
-    private suspend fun recentHistoryFor(exerciseIds: Collection<String>, sessions: Int): Map<String, List<List<LoggedSet>>> {
+    /** One past session of an exercise: its working sets, and whether it was a rough day. */
+    private data class PastSession(val sets: List<LoggedSet>, val roughDay: Boolean)
+
+    /** The last [sessions] non-deload sessions of each exercise, newest first; empty ones left out. */
+    private suspend fun recentHistoryFor(exerciseIds: Collection<String>, sessions: Int): Map<String, List<PastSession>> {
         val ids = exerciseIds.distinct()
         if (ids.isEmpty()) return emptyMap()
         val wanted = dao.getExerciseSessionRefs(ids).filter { !it.isDeload }
             .groupBy { it.exerciseId }
-            .mapValues { (_, refs) -> refs.take(sessions).map { it.sessionId }.toSet() }
-        val sessionIds = wanted.values.flatten().distinct()
+            .mapValues { (_, refs) -> refs.take(sessions) }
+        val sessionIds = wanted.values.flatten().map { it.sessionId }.distinct()
         if (sessionIds.isEmpty()) return emptyMap()
         val sets = dao.getCompletedSets(sessionIds, ids).filter { it.set.setType != SetType.WARMUP }
-        return wanted.mapValues { (exerciseId, sessionsOfExercise) ->
-            sets.filter { it.exerciseId == exerciseId && it.sessionId in sessionsOfExercise }
-                .groupBy { it.sessionId }.values
-                .map { logged -> logged.mapNotNull { it.set.toLift() } }
-                .filter { it.isNotEmpty() }
+            .groupBy { it.exerciseId to it.sessionId }
+        return wanted.mapValues { (exerciseId, refs) ->
+            refs.mapNotNull { ref ->
+                val lifts = sets[exerciseId to ref.sessionId].orEmpty().mapNotNull { it.set.toLift() }
+                if (lifts.isEmpty()) null else PastSession(lifts, isRoughDay(ref.isDeload, ref.readiness, ref.feel))
+            }
         }
     }
 

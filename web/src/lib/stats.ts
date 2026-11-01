@@ -1,3 +1,4 @@
+import { countsTowardsChange, isRoughDay } from "./check-ins";
 import { LOCALE, TIME_ZONE } from "./tz";
 import { epley, isTimed, MUSCLE_GROUPS, muscleGroupOf, type SessionSummaryRow, type SetEntryRow } from "./model";
 
@@ -140,7 +141,13 @@ export function epochDayToMs(epochDay: number): number {
   return epochDay * DAY_MS;
 }
 
-type LoggedSet = Pick<SetEntryRow, "weight_kg" | "reps" | "set_type" | "completed_at"> & { session_id: string };
+type LoggedSet = Pick<SetEntryRow, "weight_kg" | "reps" | "set_type" | "completed_at"> & {
+  session_id: string;
+  /** The workout's lighter flag and check-ins (v_set_history); absent means a normal workout. */
+  session_is_deload?: boolean;
+  session_readiness?: number | null;
+  session_feel?: number | null;
+};
 
 export interface ExerciseSessionPoint {
   sessionId: string;
@@ -152,6 +159,12 @@ export interface ExerciseSessionPoint {
   volumeKg: number;
   /** Most reps (or seconds, for holds) in one working set. */
   bestReps: number;
+  /** A lighter session. */
+  lighter: boolean;
+  /** Done as planned on a low day (isRoughDay). */
+  roughDay: boolean;
+  /** Lighter sessions and rough days stay in the session list but out of trends and change. */
+  countsTowardsChange: boolean;
 }
 
 /**
@@ -188,7 +201,21 @@ export function exerciseProgress(sets: LoggedSet[], exerciseId: string, sessionD
       volume += s.weight_kg * reps;
       e1rm = Math.max(e1rm ?? 0, epley(s.weight_kg, reps));
     }
-    points.push({ sessionId, date, e1rmKg: e1rm, topSet: top ? { weightKg: top.weight_kg, reps: top.reps } : null, volumeKg: volume, bestReps });
+    const first = working[0];
+    const lighter = first.session_is_deload ?? false;
+    const readiness = first.session_readiness ?? null;
+    const feel = first.session_feel ?? null;
+    points.push({
+      sessionId,
+      date,
+      e1rmKg: e1rm,
+      topSet: top ? { weightKg: top.weight_kg, reps: top.reps } : null,
+      volumeKg: volume,
+      bestReps,
+      lighter,
+      roughDay: isRoughDay(lighter, readiness, feel),
+      countsTowardsChange: countsTowardsChange(lighter, readiness, feel),
+    });
   }
   return points.sort((a, b) => a.date - b.date);
 }

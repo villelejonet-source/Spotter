@@ -4,7 +4,7 @@ import { LineChartView } from "@/components/charts";
 import { BackLink, Badge, Card, CardTitle, EmptyState, PageHeader, Stat } from "@/components/ui";
 import { getCatalog, getPersonalRecords, getSetHistory, getUnit } from "@/lib/data";
 import { formatDayMonth, formatFullDate } from "@/lib/dates";
-import { BODYWEIGHT, EQUIPMENT_LABELS, label, MUSCLE_LABELS, PR_LABELS } from "@/lib/labels";
+import { BODYWEIGHT, CHART_LEFT_OUT, EQUIPMENT_LABELS, label, LIGHTER_SESSION, LOW_DAY, MUSCLE_LABELS, PR_LABELS } from "@/lib/labels";
 import { formatRecord, formatSet, formatVolume, formatWeight, isTimed, toUnit } from "@/lib/model";
 import { exerciseProgress } from "@/lib/stats";
 
@@ -19,6 +19,9 @@ export default async function ExerciseProgressPage({ params }: { params: Promise
 
   const sessionDates = new Map(mine.map((s) => [s.session_id, s.session_started_at]));
   const points = exerciseProgress(mine, id, sessionDates);
+  // Lighter sessions and low days stay in the session list but out of the charts, as in the app.
+  const trend = points.filter((p) => p.countsTowardsChange);
+  const leftOut = points.length - trend.length;
   const timed = isTimed(id);
   const loaded = points.some((p) => p.e1rmKg != null);
   const latest = points[points.length - 1];
@@ -64,22 +67,23 @@ export default async function ExerciseProgressPage({ params }: { params: Promise
           {loaded && (
             <Card>
               <CardTitle>Est. 1RM ({u})</CardTitle>
-              <LineChartView unit={u} data={points.map((p) => ({ label: formatDayMonth(p.date), value: p.e1rmKg != null ? Number(toUnit(p.e1rmKg, unit).toFixed(1)) : null }))} />
+              <LineChartView unit={u} data={trend.map((p) => ({ label: formatDayMonth(p.date), value: p.e1rmKg != null ? Number(toUnit(p.e1rmKg, unit).toFixed(1)) : null }))} />
             </Card>
           )}
           {loaded ? (
             <Card>
               <CardTitle>Volume per session ({u})</CardTitle>
-              <LineChartView unit={u} data={points.map((p) => ({ label: formatDayMonth(p.date), value: Math.round(toUnit(p.volumeKg, unit)) }))} />
+              <LineChartView unit={u} data={trend.map((p) => ({ label: formatDayMonth(p.date), value: Math.round(toUnit(p.volumeKg, unit)) }))} />
             </Card>
           ) : (
             <Card>
               <CardTitle>{timed ? "Best hold (s)" : "Best set (reps)"}</CardTitle>
-              <LineChartView unit={timed ? "s" : "reps"} data={points.map((p) => ({ label: formatDayMonth(p.date), value: p.bestReps }))} />
+              <LineChartView unit={timed ? "s" : "reps"} data={trend.map((p) => ({ label: formatDayMonth(p.date), value: p.bestReps }))} />
             </Card>
           )}
         </div>
       )}
+      {leftOut > 0 && <p className="mt-2 text-xs text-muted">{CHART_LEFT_OUT}</p>}
 
       <div className="mt-4 grid gap-4 lg:grid-cols-2">
         {points.length > 0 && (
@@ -89,7 +93,10 @@ export default async function ExerciseProgressPage({ params }: { params: Promise
               {[...points].reverse().map((p) => (
                 <li key={p.sessionId}>
                   <Link href={`/history/${p.sessionId}`} className="-mx-2 flex justify-between gap-3 rounded-lg px-2 py-2 hover:bg-surface">
-                    <span>{formatFullDate(p.date)}</span>
+                    <span className="flex flex-wrap items-center gap-2">
+                      {formatFullDate(p.date)}
+                      {p.lighter ? <Badge tone="tertiary">{LIGHTER_SESSION}</Badge> : p.roughDay && <Badge>{LOW_DAY}</Badge>}
+                    </span>
                     <span className="text-right text-muted">
                       {topSet(p)}
                       {!timed && loaded && ` · ${formatVolume(p.volumeKg, unit)}`}

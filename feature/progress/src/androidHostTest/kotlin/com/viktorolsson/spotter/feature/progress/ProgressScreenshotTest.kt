@@ -11,7 +11,9 @@ import com.github.takahirom.roborazzi.ThresholdValidator
 import com.github.takahirom.roborazzi.captureRoboImage
 import com.github.takahirom.roborazzi.fontScale
 import com.viktorolsson.spotter.core.data.repository.LoggedExerciseSummary
+import androidx.compose.material3.Surface
 import com.viktorolsson.spotter.core.model.BodyWeightPoint
+import com.viktorolsson.spotter.core.model.FeelSummary
 import com.viktorolsson.spotter.core.model.MovementPattern
 import com.viktorolsson.spotter.core.model.MuscleGroup
 import com.viktorolsson.spotter.core.model.MuscleVolume
@@ -69,6 +71,24 @@ class ProgressScreenshotTest {
                 ProgressScreen(state, onOpenExercise = {}, onApply = {}, onDismiss = {}, onLogWeight = { true })
             }
         }
+
+    private fun captureFeel(name: String, dark: Boolean, fontScale: Float = 1f) = captureRoboImage(
+        "src/test/screenshots/$name.png",
+        roborazziComposeOptions = RoborazziComposeOptions { fontScale(fontScale) },
+    ) {
+        SpotterTheme(darkTheme = dark, dynamicColor = false) {
+            Surface { FeelCard(FeelSummary(rated = 9, averageReadiness = 3.4, averageFeel = 3.9, lowDays = 2)) }
+        }
+    }
+
+    @Test
+    fun feelCard_light() = captureFeel("progress_feel_light", dark = false)
+
+    @Test
+    fun feelCard_dark() = captureFeel("progress_feel_dark", dark = true)
+
+    @Test
+    fun feelCard_largeFont() = captureFeel("progress_feel_font_1_6", dark = false, fontScale = 1.6f)
 
     @Test
     fun progress_light() = capture("progress_light", dark = false, state = full)

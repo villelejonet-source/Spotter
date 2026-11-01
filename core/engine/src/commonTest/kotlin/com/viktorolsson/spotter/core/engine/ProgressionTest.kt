@@ -21,7 +21,8 @@ class ProgressionTest {
         history: List<List<LoggedSet>> = emptyList(),
         start: Double? = 60.0,
         unit: WeightUnit = WeightUnit.KG,
-    ) = ProgressionInput(byId.getValue(id), rule, sets, repMin, repMax, targetRir, history, start, unit)
+        roughDays: Set<Int> = emptySet(),
+    ) = ProgressionInput(byId.getValue(id), rule, sets, repMin, repMax, targetRir, history, start, unit, roughDays)
 
     private fun sets(weight: Double?, vararg reps: Int, rir: Int? = null) = reps.map { LoggedSet(weight, it, rir) }
 
@@ -166,4 +167,43 @@ class ProgressionTest {
     }
 
     private fun WeightUnit.toKgOf(value: Double) = toKg(value)
+
+    @Test
+    fun `a missed rough day is skipped and targets come from the last normal session`() {
+        val history = listOf(sets(60.0, 6, 5, 5), sets(60.0, 10, 9, 8))
+        val target = Progression.next(input(history = history, roughDays = setOf(0)))
+        assertEquals(ProgressionReason.ADD_REPS, target.reason)
+        assertEquals(listOf(60.0, 60.0, 60.0), target.weights())
+        assertEquals(listOf(11, 10, 9), target.reps())
+    }
+
+    @Test
+    fun `rough-day misses never add up to a reset`() {
+        val missed = sets(60.0, 6, 5, 5)
+        val normal = Progression.next(input(history = listOf(missed, missed)))
+        assertEquals(ProgressionReason.RESET_AFTER_MISSES, normal.reason)
+
+        // The newest miss was a rough day: only one normal miss, so no reset.
+        val rough = Progression.next(input(history = listOf(missed, missed, sets(60.0, 10, 9, 8)), roughDays = setOf(0)))
+        assertEquals(listOf(60.0, 60.0, 60.0), rough.weights())
+        assertEquals(ProgressionReason.REPEAT, rough.reason)
+    }
+
+    @Test
+    fun `a rough day that hit the top still earns the increase without the RIR hold`() {
+        val hardButDone = sets(60.0, 12, 12, 12, rir = 0)
+        assertEquals(ProgressionReason.HOLD_TOO_HARD, Progression.next(input(history = listOf(hardButDone))).reason)
+
+        val target = Progression.next(input(history = listOf(hardButDone), roughDays = setOf(0)))
+        assertEquals(ProgressionReason.INCREASE_WEIGHT, target.reason)
+        assertEquals(listOf(62.5, 62.5, 62.5), target.weights())
+    }
+
+    @Test
+    fun `a missed rough day with nothing before it repeats the weight at the usual target`() {
+        val target = Progression.next(input(history = listOf(sets(60.0, 6, 5, 5)), roughDays = setOf(0)))
+        assertEquals(ProgressionReason.REPEAT, target.reason)
+        assertEquals(listOf(60.0, 60.0, 60.0), target.weights())
+        assertEquals(listOf(8, 8, 8), target.reps())
+    }
 }

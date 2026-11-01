@@ -59,7 +59,14 @@ data class ExerciseSessionLog(
     val sets: List<WorkoutSet>,
     /** A hold: reps are seconds, so there's no volume or 1RM. */
     val timed: Boolean = false,
+    /** A lighter (deload) session. */
+    val lighter: Boolean = false,
+    /** Done as planned on a low day (isRoughDay). */
+    val roughDay: Boolean = false,
 ) {
+    /** Lighter sessions and rough days stay in the log but not in trends (countsTowardsChange). */
+    val countsTowardsChange: Boolean get() = !lighter && !roughDay
+
     private val working get() = sets.filter { it.setType != SetType.WARMUP && isLift(it.reps) }
     val bestSet: WorkoutSet? get() = working.maxWithOrNull(bestSetOrder({ it.weightKg }, { it.reps }))
     val estimatedOneRepMax: Double?

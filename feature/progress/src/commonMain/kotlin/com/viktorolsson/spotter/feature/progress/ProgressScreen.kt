@@ -94,6 +94,16 @@ import com.viktorolsson.spotter.feature.progress.resources.progress_weight_avera
 import com.viktorolsson.spotter.feature.progress.resources.progress_weight_empty
 import com.viktorolsson.spotter.feature.progress.resources.progress_weight_invalid
 import com.viktorolsson.spotter.feature.progress.resources.progress_weight_label
+import androidx.compose.foundation.layout.IntrinsicSize
+import com.viktorolsson.spotter.core.ui.component.StatTile
+import org.jetbrains.compose.resources.pluralStringResource
+import com.viktorolsson.spotter.core.model.FeelSummary
+import com.viktorolsson.spotter.feature.progress.resources.progress_feel
+import com.viktorolsson.spotter.feature.progress.resources.progress_feel_hint
+import com.viktorolsson.spotter.feature.progress.resources.progress_feel_before
+import com.viktorolsson.spotter.feature.progress.resources.progress_feel_after
+import com.viktorolsson.spotter.feature.progress.resources.progress_feel_low_days
+import com.viktorolsson.spotter.feature.progress.resources.progress_feel_none
 
 @Composable
 internal fun ProgressRoute(onOpenExercise: (String) -> Unit, viewModel: ProgressViewModel = koinViewModel()) {
@@ -159,6 +169,7 @@ internal fun ProgressScreen(
                 }
                 item { BalanceCard(state.volume) }
             }
+            state.feel?.let { feel -> item(key = "feel") { FeelCard(feel) } }
             item { BodyWeightCard(state.bodyWeight, state.unit) { loggingWeight = true } }
             if (state.lifts.isNotEmpty()) {
                 item { SectionHeader(stringResource(Res.string.progress_lifts)) }
@@ -196,6 +207,26 @@ internal fun ProgressScreen(
         )
     }
 }
+
+/** How training felt over the last four weeks: average check-in before, rating after, low days. */
+@Composable
+internal fun FeelCard(feel: FeelSummary) = ContentCard {
+    CardTitle(stringResource(Res.string.progress_feel))
+    Text(
+        pluralStringResource(Res.plurals.progress_feel_hint, feel.rated, feel.rated),
+        style = MaterialTheme.typography.bodySmall,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+    )
+    Row(Modifier.height(IntrinsicSize.Max), horizontalArrangement = Arrangement.spacedBy(Spacing.sm)) {
+        val none = stringResource(Res.string.progress_feel_none)
+        StatTile(stringResource(Res.string.progress_feel_before), feel.averageReadiness?.let(::formatScore) ?: none, Modifier.weight(1f))
+        StatTile(stringResource(Res.string.progress_feel_after), feel.averageFeel?.let(::formatScore) ?: none, Modifier.weight(1f))
+        StatTile(stringResource(Res.string.progress_feel_low_days), feel.lowDays.toString(), Modifier.weight(1f))
+    }
+}
+
+/** An average out of 5, to one decimal ("3.8"); the hint says it's out of 5. */
+private fun formatScore(average: Double) = "%.1f".localFormat(average)
 
 /** Sets per muscle group against the goal's weekly range; under-trained groups stand out. */
 @Composable

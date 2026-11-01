@@ -6,6 +6,15 @@
     <string name="progress_records">Recent PRs</string>
     <string name="progress_records_empty">PRs show up from the second time you log an exercise.</string>
     <string name="progress_balance">Muscle balance · last 7 days</string>
+    <string name="progress_feel">How training felt</string>
+    <plurals name="progress_feel_hint">
+        <item quantity="one">Average out of 5 over the last 4 weeks, %1$d rated workout. Low days are left out of your trends.</item>
+        <item quantity="other">Average out of 5 over the last 4 weeks, %1$d rated workouts. Low days are left out of your trends.</item>
+    </plurals>
+    <string name="progress_feel_before">Before</string>
+    <string name="progress_feel_after">After</string>
+    <string name="progress_feel_low_days">Low days</string>
+    <string name="progress_feel_none">–</string>
     <string name="progress_balance_hint">Working sets per muscle group. Target %1$d–%2$d for your goal.</string>
     <string name="progress_balance_row">%1$s / %2$d–%3$d</string>
     <string name="progress_body_weight">Body weight</string>

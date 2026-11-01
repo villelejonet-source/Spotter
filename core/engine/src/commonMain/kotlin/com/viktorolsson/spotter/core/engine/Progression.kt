@@ -25,6 +25,8 @@ data class ProgressionInput(
     /** Calibration estimate used when there's no history. */
     val startingWeightKg: Double?,
     val unit: WeightUnit,
+    /** Positions in [history] of rough days (see isRoughDay): they never count as a miss or a hold. */
+    val roughDays: Set<Int> = emptySet(),
 )
 
 data class SetTarget(val weightKg: Double?, val reps: Int)
@@ -42,6 +44,9 @@ data class ProgressionTarget(val sets: List<SetTarget>, val reason: ProgressionR
  *   holds back an increase (too hard) or adds one (too easy). RIR autoregulation is double
  *   progression (it has these RIR checks too).
  * - None: last session's weight and reps again; nothing changes on its own.
+ * - Rough days (a low check-in): one that earned an increase counts, without the RIR hold;
+ *   one that didn't is skipped, so targets come from the last normal session. They never
+ *   count towards two misses in a row.
  */
 object Progression {
     private const val RESET_FACTOR = 0.9
@@ -57,14 +62,22 @@ object Progression {
         if (input.rule == ProgressionRule.NONE) return holdAt(input, last, weight, ProgressionReason.REPEAT)
         if (weight == null) return bodyweight(input, last)
 
-        val missedTwice = input.history.size >= 2 && input.history.take(2).all { missed(input, it) }
+        val lastRough = 0 in input.roughDays
+        if (lastRough && !hitTarget(input, last)) {
+            val normal = input.copy(history = normalDays(input), roughDays = emptySet())
+            // Nothing normal to go on: try the same weight again at the usual target.
+            return if (normal.history.isEmpty()) uniform(input, weight, targetReps(input), ProgressionReason.REPEAT) else next(normal)
+        }
+
+        val normalDays = normalDays(input)
+        val missedTwice = normalDays.size >= 2 && normalDays.take(2).all { missed(input, it) }
         if (missedTwice) {
             val reset = LoadFactors.roundDown(weight * RESET_FACTOR, input.exercise, input.unit) ?: weight
             return uniform(input, reset, targetReps(input), ProgressionReason.RESET_AFTER_MISSES)
         }
 
         val rir = averageRir(last)
-        val tooHard = rir != null && input.targetRir != null && rir <= input.targetRir - RIR_TOLERANCE
+        val tooHard = !lastRough && rir != null && input.targetRir != null && rir <= input.targetRir - RIR_TOLERANCE
         val tooEasy = rir != null && input.targetRir != null && rir >= input.targetRir + RIR_TOLERANCE
         val earnedIncrease = hitTarget(input, last)
 
@@ -77,6 +90,9 @@ object Progression {
             else -> holdAt(input, last, weight, ProgressionReason.ADD_REPS)
         }
     }
+
+    private fun normalDays(input: ProgressionInput): List<List<LoggedSet>> =
+        input.history.filterIndexed { i, _ -> i !in input.roughDays }
 
     /** Linear progression works at one fixed rep target inside the range. */
     private fun targetReps(input: ProgressionInput): Int = firstReps(input.rule, input.repMin, input.repMax)

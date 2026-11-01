@@ -220,6 +220,17 @@ class RecommendationTest {
     }
 
     @Test
+    fun `feeling low three times in ten days suggests a recovery deload`() {
+        val plan = listOf(slot("barbell-bench-press", 1))
+        assertTrue(RecommendationEngine.evaluate(ctx(plan, emptyMap()).copy(recentLowDays = 2)).none { it.type == RecommendationType.DELOAD })
+
+        val rec = RecommendationEngine.evaluate(ctx(plan, emptyMap()).copy(recentLowDays = 3)).single()
+        assertEquals(DeloadReason.RECOVERY, rec.payload.evidence.deloadReason)
+        assertEquals(3, rec.payload.evidence.lowDays)
+        assertTrue(rec.payload.evidence.lifts.isEmpty())
+    }
+
+    @Test
     fun `six weeks of steady training schedules a deload`() {
         val plan = listOf(slot("barbell-bench-press", 1))
         val dates = (0 until 6).map { today.minus(it.toLong(), DateTimeUnit.WEEK) }

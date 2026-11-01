@@ -8,6 +8,7 @@ import { exerciseName } from "@/lib/catalog";
 import { getCatalog, getFinishedSessionCount, getPersonalRecords, getProfile, getRecordCount, getSessionTimes, getSetHistory, getUnit, preload } from "@/lib/data";
 import { formatDateValueMonthShort, formatFullDate } from "@/lib/dates";
 import { GOAL_LABELS, label, PR_LABELS } from "@/lib/labels";
+import { feelSummary, FEEL_WINDOW_DAYS } from "@/lib/check-ins";
 import { formatDuration, formatRecord, volumeTarget } from "@/lib/model";
 import { DAY_MS, fetchSince, finished, localDate, muscleVolume, WEEK_MS, weeklyTotals, workoutsPerDay } from "@/lib/stats";
 
@@ -46,6 +47,9 @@ export default async function InsightsPage() {
           <TrainingDays />
         </Suspense>
       </Card>
+      <Suspense fallback={null}>
+        <HowTrainingFelt />
+      </Suspense>
       <div className="mt-4 grid gap-4 lg:grid-cols-2">
         <Card>
           <Suspense fallback={<Block height="h-56" />}>
@@ -140,6 +144,30 @@ async function TrainingDays() {
       <CardTitle>Training days</CardTitle>
       <TrainingHeatmap weeks={HEATMAP_WEEKS} perDay={perDay} now={now} />
     </>
+  );
+}
+
+/** Average check-in before and rating after over the last four weeks, as on the app's Progress tab; hidden until one is rated. */
+async function HowTrainingFelt() {
+  const now = Date.now();
+  const since = now - FEEL_WINDOW_DAYS * DAY_MS;
+  // The heatmap's fetch, shared: no extra query.
+  const times = await getSessionTimes(fetchSince(heatmapStart(HEATMAP_WEEKS, now)));
+  const feel = feelSummary(finished(times).filter((s) => s.started_at >= since));
+  if (!feel) return null;
+  const score = (v: number | null) => (v == null ? "–" : v.toFixed(1));
+  return (
+    <Card className="mt-4">
+      <CardTitle>How training felt</CardTitle>
+      <p className="mb-3 text-xs text-muted">
+        Average out of 5 over the last 4 weeks, {feel.rated} rated {feel.rated === 1 ? "workout" : "workouts"}. Low days are left out of your trends.
+      </p>
+      <div className="grid grid-cols-3 gap-2 sm:gap-4">
+        <Stat label="Before" value={score(feel.averageReadiness)} />
+        <Stat label="After" value={score(feel.averageFeel)} />
+        <Stat label="Low days" value={feel.lowDays} />
+      </div>
+    </Card>
   );
 }
 

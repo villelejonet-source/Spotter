@@ -170,9 +170,11 @@ export async function sessions(client: OwnClient, query: SessionsQuery = {}): Pr
   return rows.reverse();
 }
 
-/** When each session happened (three columns), oldest first: for streaks, heatmaps and counts. */
+/** When each session happened, and how it felt (five small columns), oldest first: for streaks, heatmaps, counts and the feel card. */
+export const SESSION_TIME_COLUMNS = "sync_id,started_at,ended_at,readiness,feel";
+
 export async function sessionTimes(client: OwnClient, since?: number): Promise<SessionTimeRow[]> {
-  return selectAll<SessionTimeRow>(client, "v_session_summary", { filter: sessionFilter({ since }), key: "started_at", tiebreak: "sync_id", columns: "sync_id,started_at,ended_at" });
+  return selectAll<SessionTimeRow>(client, "v_session_summary", { filter: sessionFilter({ since }), key: "started_at", tiebreak: "sync_id", columns: SESSION_TIME_COLUMNS });
 }
 
 /** Finished workouts, all time. */
@@ -217,11 +219,19 @@ export interface SetWithExercise extends SetEntryRow {
   session_id: string;
   session_started_at: number;
   session_finished: boolean;
+  /** The workout's lighter flag and check-ins, to leave lighter sessions and rough days out of trends. */
+  session_is_deload: boolean;
+  session_readiness: number | null;
+  session_feel: number | null;
 }
 
 /** The columns the progress pages need from v_set_history. */
-export type ProgressSetRow = Pick<SetWithExercise, "session_id" | "exercise_id" | "session_started_at" | "weight_kg" | "reps" | "set_type" | "completed_at">;
-export const PROGRESS_SET_COLUMNS = "sync_id,session_id,exercise_id,session_started_at,weight_kg,reps,set_type,completed_at";
+export type ProgressSetRow = Pick<
+  SetWithExercise,
+  "session_id" | "exercise_id" | "session_started_at" | "weight_kg" | "reps" | "set_type" | "completed_at" | "session_is_deload" | "session_readiness" | "session_feel"
+>;
+export const PROGRESS_SET_COLUMNS =
+  "sync_id,session_id,exercise_id,session_started_at,weight_kg,reps,set_type,completed_at,session_is_deload,session_readiness,session_feel";
 
 interface SetHistoryQuery {
   exerciseId?: string;

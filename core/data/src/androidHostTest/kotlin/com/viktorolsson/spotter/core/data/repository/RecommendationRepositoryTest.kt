@@ -218,6 +218,61 @@ class RecommendationRepositoryTest {
         assertTrue(nextBench.sets.all { it.weightKg == 80.0 && it.reps == 9 })
     }
 
+    /** A planned workout with bench at 80 × [reps] on every set, started with the check-in [readiness]. */
+    private suspend fun benchWorkout(reps: Int, readiness: Int? = null, lighter: Boolean? = null): Long {
+        val sessionId = workouts.startPlannedWorkout(plans.observeNextDay().first()!!.id, readiness, lighter)
+        workouts.getSession(sessionId)!!.exercises.filter { it.exercise.id == "barbell-bench-press" }.flatMap { it.sets }.forEach {
+            if (lighter != true) workouts.updateSetValues(it.id, 80.0, reps, null)
+            workouts.toggleSetCompleted(it.id)
+        }
+        clock.advanceSeconds(3600)
+        workouts.finishWorkout(sessionId)
+        clock.advanceSeconds(2 * 86_400L)
+        return sessionId
+    }
+
+    private suspend fun nextBench() = workouts.getSession(workouts.startPlannedWorkout(plans.observeNextDay().first()!!.id))!!
+        .exercises.first { it.exercise.id == "barbell-bench-press" }
+
+    @Test
+    fun aMissOnARoughDayDoesNotLowerTheNextTargets() = runTest {
+        benchWorkout(reps = 8)
+        benchWorkout(reps = 4, readiness = 2, lighter = false) // kept as planned on a low day, and missed
+        val next = nextBench()
+        // Built on the normal 80 × 8, as if the rough day hadn't happened.
+        assertEquals(ProgressionReason.ADD_REPS, next.progressionReason)
+        assertTrue(next.sets.all { it.weightKg == 80.0 && it.reps == 9 })
+    }
+
+    @Test
+    fun aMissRatedLowAfterwardsAlsoCountsAsARoughDay() = runTest {
+        benchWorkout(reps = 8)
+        val rough = benchWorkout(reps = 4)
+        workouts.setSessionFeel(rough, 1)
+        assertEquals(ProgressionReason.ADD_REPS, nextBench().progressionReason)
+    }
+
+    @Test
+    fun aSingleLighterDayIsNotADeloadWeek() = runTest {
+        benchWorkout(reps = 8, readiness = 1, lighter = true)
+        assertNull(db.workoutDao().getLastDeloadSession())
+        // Two lighter sessions within a week are a deload week.
+        val second = benchWorkout(reps = 8, readiness = 1, lighter = true)
+        assertEquals(workouts.getSession(second)!!.startedAt, db.workoutDao().getLastDeloadSession())
+    }
+
+    @Test
+    fun feelingLowThreeTimesSuggestsALighterWeek() = runTest {
+        repeat(2) { benchWorkout(reps = 8, readiness = 2, lighter = false) }
+        recommendations.refresh()
+        assertTrue(recommendations.observeActive().first().none { it.type == RecommendationType.DELOAD })
+
+        benchWorkout(reps = 8, readiness = 1, lighter = false)
+        recommendations.refresh()
+        val deload = recommendations.observeActive().first().single { it.type == RecommendationType.DELOAD }
+        assertEquals(3, deload.payload.evidence.lowDays)
+    }
+
     @Test
     fun keepingAsPlannedDuringADeloadWeekStartsANormalSession() = runTest {
         stalledBenchWorkout(reps = 8)

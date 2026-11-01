@@ -3,6 +3,7 @@
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { describe, expect, it } from "vitest";
+import { countsTowardsChange, feelSummary, isRoughDay } from "./check-ins";
 import { epley, isTimed } from "./model";
 import { parseDecimal } from "./number-input";
 import { exerciseProgress, formatChange, percentChange, weekStreak } from "./stats";
@@ -16,6 +17,8 @@ const fixtures: {
   exerciseSessions: { name: string; exerciseId: string; sets: FixtureSet[]; volumeKg: number; oneRepMaxKg: number | null; bestSet: FixtureSet | null }[];
   percentChange: { current: number; previous: number; percent: number | null; text?: string }[];
   weekStreak: { name: string; today: string; dates: string[]; streak: number }[];
+  checkIns: { name: string; lighter: boolean; readiness: number | null; feel: number | null; roughDay: boolean; countsTowardsChange: boolean }[];
+  feelSummary: { name: string; checkIns: [number | null, number | null][]; summary: { rated: number; averageReadiness: number | null; averageFeel: number | null; lowDays: number } | null }[];
 } = JSON.parse(readFileSync(resolve(__dirname, "../../../core/model/fixtures/training-math.json"), "utf8"));
 
 describe("training-math.json", () => {
@@ -58,5 +61,21 @@ describe("training-math.json", () => {
   it.each(fixtures.weekStreak)("week streak: $name", ({ today, dates, streak }) => {
     const sessions = dates.map((d) => ({ started_at: noon(d), ended_at: noon(d) + 3_600_000 }));
     expect(weekStreak(sessions, noon(today))).toBe(streak);
+  });
+
+  it.each(fixtures.checkIns)("check-ins: $name", ({ lighter, readiness, feel, roughDay, countsTowardsChange: counts }) => {
+    expect(isRoughDay(lighter, readiness, feel)).toBe(roughDay);
+    expect(countsTowardsChange(lighter, readiness, feel)).toBe(counts);
+  });
+
+  it.each(fixtures.feelSummary)("feel summary: $name", ({ checkIns, summary }) => {
+    const actual = feelSummary(checkIns.map(([readiness, feel]) => ({ readiness, feel })));
+    if (summary == null) return expect(actual).toBeNull();
+    expect(actual?.rated).toBe(summary.rated);
+    expect(actual?.lowDays).toBe(summary.lowDays);
+    for (const key of ["averageReadiness", "averageFeel"] as const) {
+      if (summary[key] == null) expect(actual?.[key]).toBeNull();
+      else expect(actual?.[key]).toBeCloseTo(summary[key]!, 4);
+    }
   });
 });

@@ -5,6 +5,7 @@ import androidx.room.Insert
 import androidx.room.Query
 import androidx.room.Transaction
 import androidx.room.Update
+import com.viktorolsson.spotter.core.data.db.entity.CheckInRow
 import com.viktorolsson.spotter.core.data.db.entity.DatedSet
 import com.viktorolsson.spotter.core.data.db.entity.ExerciseHistorySet
 import com.viktorolsson.spotter.core.data.db.entity.ExerciseSessionRef
@@ -139,7 +140,8 @@ interface WorkoutDao {
     /** Each finished session that included one of [exerciseIds], newest first. */
     @Query(
         """
-        SELECT DISTINCT sx.exerciseId AS exerciseId, ws.id AS sessionId, ws.startedAt AS startedAt, ws.isDeload AS isDeload
+        SELECT DISTINCT sx.exerciseId AS exerciseId, ws.id AS sessionId, ws.startedAt AS startedAt, ws.isDeload AS isDeload,
+            ws.readiness AS readiness, ws.feel AS feel
         FROM workout_session ws
         JOIN session_exercise sx ON sx.sessionId = ws.id
         WHERE sx.exerciseId IN (:exerciseIds) AND ws.endedAt IS NOT NULL
@@ -197,7 +199,8 @@ interface WorkoutDao {
     /** All completed sets of [exerciseId] from finished sessions, oldest first. */
     @Query(
         """
-        SELECT se.*, sx.sessionId AS sessionId, ws.startedAt AS startedAt FROM set_entry se
+        SELECT se.*, sx.sessionId AS sessionId, ws.startedAt AS startedAt,
+            ws.isDeload AS isDeload, ws.readiness AS readiness, ws.feel AS feel FROM set_entry se
         JOIN session_exercise sx ON se.sessionExerciseId = sx.id
         JOIN workout_session ws ON sx.sessionId = ws.id
         WHERE sx.exerciseId = :exerciseId AND ws.endedAt IS NOT NULL AND se.completedAt IS NOT NULL
@@ -231,13 +234,18 @@ interface WorkoutDao {
     )
     fun observeLoggedExercises(): Flow<List<LoggedExercise>>
 
-    /** Working sets of [exerciseId] from finished non-deload sessions, oldest first (plateau detection). */
+    /**
+     * Working sets of [exerciseId] from finished sessions that count towards change, oldest first
+     * (plateau detection and lift trends): no lighter sessions and no rough days (isRoughDay).
+     */
     @Query(
         """
-        SELECT se.*, sx.sessionId AS sessionId, ws.startedAt AS startedAt FROM set_entry se
+        SELECT se.*, sx.sessionId AS sessionId, ws.startedAt AS startedAt,
+            ws.isDeload AS isDeload, ws.readiness AS readiness, ws.feel AS feel FROM set_entry se
         JOIN session_exercise sx ON se.sessionExerciseId = sx.id
         JOIN workout_session ws ON sx.sessionId = ws.id
         WHERE sx.exerciseId = :exerciseId AND ws.endedAt IS NOT NULL AND ws.isDeload = 0
+          AND COALESCE(ws.readiness, 5) > 2 AND COALESCE(ws.feel, 5) > 2
           AND se.completedAt IS NOT NULL AND se.setType != 'WARMUP'
         ORDER BY ws.startedAt, sx.position, se.position
         """,
@@ -247,8 +255,29 @@ interface WorkoutDao {
     @Query("SELECT startedAt FROM workout_session WHERE endedAt IS NOT NULL AND isDeload = 0 ORDER BY startedAt")
     suspend fun getTrainingStarts(): List<Instant>
 
-    @Query("SELECT MAX(startedAt) FROM workout_session WHERE endedAt IS NOT NULL AND isDeload = 1")
+    /**
+     * The latest session of a deload week: a lighter session with another lighter one within a
+     * week of it. A single lighter day chosen at the check-in isn't a deload week, so it doesn't
+     * reset the weeks since the last one.
+     */
+    @Query(
+        """
+        SELECT MAX(ws.startedAt) FROM workout_session ws
+        WHERE ws.endedAt IS NOT NULL AND ws.isDeload = 1 AND EXISTS (
+            SELECT 1 FROM workout_session other
+            WHERE other.id != ws.id AND other.endedAt IS NOT NULL AND other.isDeload = 1
+              AND ABS(other.startedAt - ws.startedAt) < 7 * 86400000
+        )
+        """,
+    )
     suspend fun getLastDeloadSession(): Instant?
+
+    /** Check-ins (before) and ratings (after) of finished workouts since [since], low or not. */
+    @Query("SELECT readiness, feel FROM workout_session WHERE endedAt IS NOT NULL AND startedAt >= :since")
+    suspend fun getCheckInsSince(since: Instant): List<CheckInRow>
+
+    @Query("SELECT readiness, feel FROM workout_session WHERE endedAt IS NOT NULL AND startedAt >= :since")
+    fun observeCheckInsSince(since: Instant): Flow<List<CheckInRow>>
 
     @Query(
         """

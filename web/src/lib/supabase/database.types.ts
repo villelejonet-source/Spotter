@@ -230,7 +230,7 @@ export type Database = {
                   ]
                 },"v_set_history": {
                   Row: {
-                    "completed_at": number | null,"exercise_id": string | null,"notes": string | null,"position": number | null,"reps": number | null,"rir": number | null,"rpe": number | null,"session_exercise_id": string | null,"session_finished": boolean | null,"session_id": string | null,"session_started_at": number | null,"set_type": string | null,"sync_id": string,"user_id": string,"weight_kg": number | null
+                    "completed_at": number | null,"exercise_id": string | null,"notes": string | null,"position": number | null,"reps": number | null,"rir": number | null,"rpe": number | null,"session_exercise_id": string | null,"session_feel": number | null,"session_finished": boolean | null,"session_id": string | null,"session_is_deload": boolean | null,"session_readiness": number | null,"session_started_at": number | null,"set_type": string | null,"sync_id": string,"user_id": string,"weight_kg": number | null
                   }
                   ComputedFields: never
                   Relationships: [

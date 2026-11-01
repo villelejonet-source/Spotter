@@ -15,10 +15,22 @@ into the new version's entry and writes the store notes from it. Versions are th
   your progress, and it doesn't start a deload week.
 - Rate a finished workout: the summary asks "How did it go?" and, if you like, how hard it was
   (effort 1–10).
+- Progress takes how you felt into account:
+  - a workout you kept as planned on a low day (a check-in or rating of 1–2) never counts as a
+    miss, so a bad day doesn't hold back or lower your next weights; it still counts if you hit
+    your reps;
+  - low days and lighter sessions are left out of plateau checks and lift trends, and of the
+    exercise charts, where the log tags them "Low day" or "Lighter session";
+  - feeling low before or after 3 workouts in 10 days suggests a lighter week;
+  - a single lighter day no longer resets the "lighter week every 6 weeks" suggestion.
+- The Progress tab has a "How training felt" card: your average check-in and rating over the
+  last 4 weeks, and how many were low days.
 
 ### Website
 - Workout history shows how you felt before and after each workout and its effort. Lighter
   sessions are marked "Lighter session" (was "Lighter week").
+- Progress pages leave lighter sessions and low days out of the charts and the change column,
+  and tag them in an exercise's session list. Insights has a "How training felt" card.
 - Saving the profile on the website no longer undoes a body weight you just logged on the same
   page (or a change synced from the phone): fields you didn't touch take the newest values.
 - The website's data export lists each workout's exercises in the order you did them, keeps

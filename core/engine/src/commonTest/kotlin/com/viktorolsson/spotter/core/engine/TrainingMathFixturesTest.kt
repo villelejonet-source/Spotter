@@ -1,12 +1,15 @@
 package com.viktorolsson.spotter.core.engine
 
 import com.viktorolsson.spotter.core.model.ExerciseSessionLog
+import com.viktorolsson.spotter.core.model.FeelSummary
 import com.viktorolsson.spotter.core.model.NumberInput
 import com.viktorolsson.spotter.core.model.SetType
 import com.viktorolsson.spotter.core.model.TIMED_EXERCISE_IDS
 import com.viktorolsson.spotter.core.model.WorkoutSet
+import com.viktorolsson.spotter.core.model.countsTowardsChange
 import com.viktorolsson.spotter.core.model.epley
 import com.viktorolsson.spotter.core.model.formatChange
+import com.viktorolsson.spotter.core.model.isRoughDay
 import com.viktorolsson.spotter.core.model.percentChange
 import com.viktorolsson.spotter.core.model.weekStreak
 import kotlinx.datetime.LocalDate
@@ -32,7 +35,25 @@ class TrainingMathFixturesTest {
         val exerciseSessions: List<SessionCase>,
         val percentChange: List<ChangeCase>,
         val weekStreak: List<StreakCase>,
+        val checkIns: List<CheckInCase>,
+        val feelSummary: List<FeelCase>,
     )
+
+    @Serializable
+    private data class CheckInCase(
+        val name: String,
+        val lighter: Boolean,
+        val readiness: Int?,
+        val feel: Int?,
+        val roughDay: Boolean,
+        val countsTowardsChange: Boolean,
+    )
+
+    @Serializable
+    private data class FeelCase(val name: String, val checkIns: List<List<Int?>>, val summary: FeelSummaryCase?)
+
+    @Serializable
+    private data class FeelSummaryCase(val rated: Int, val averageReadiness: Double?, val averageFeel: Double?, val lowDays: Int)
 
     @Serializable
     private data class ChangeCase(val current: Double, val previous: Double, val percent: Int?, val text: String? = null)
@@ -119,5 +140,22 @@ class TrainingMathFixturesTest {
     @Test
     fun weekStreaks() = fixtures.weekStreak.forEach { case ->
         assertEquals(case.streak, weekStreak(case.dates, case.today), case.name)
+    }
+
+    @Test
+    fun checkIns() = fixtures.checkIns.forEach { case ->
+        assertEquals(case.roughDay, isRoughDay(case.lighter, case.readiness, case.feel), "${case.name}: rough day")
+        assertEquals(case.countsTowardsChange, countsTowardsChange(case.lighter, case.readiness, case.feel), "${case.name}: counts")
+    }
+
+    @Test
+    fun feelSummaries() = fixtures.feelSummary.forEach { case ->
+        val summary = FeelSummary.of(case.checkIns.map { it[0] to it[1] })
+        val expected = case.summary ?: return@forEach assertEquals(null, summary, case.name)
+        if (summary == null) fail("${case.name}: expected a summary")
+        assertEquals(expected.rated, summary.rated, "${case.name}: rated")
+        assertClose(expected.averageReadiness, summary.averageReadiness, "${case.name}: before")
+        assertClose(expected.averageFeel, summary.averageFeel, "${case.name}: after")
+        assertEquals(expected.lowDays, summary.lowDays, "${case.name}: low days")
     }
 }

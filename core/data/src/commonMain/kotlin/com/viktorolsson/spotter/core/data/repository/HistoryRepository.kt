@@ -5,6 +5,9 @@ import com.viktorolsson.spotter.core.data.db.entity.RecordWithExercise
 import com.viktorolsson.spotter.core.data.db.entity.SessionWithExercises
 import com.viktorolsson.spotter.core.data.db.toModel
 import com.viktorolsson.spotter.core.engine.MuscleBalance
+import com.viktorolsson.spotter.core.model.FEEL_WINDOW_DAYS
+import com.viktorolsson.spotter.core.model.FeelSummary
+import com.viktorolsson.spotter.core.model.isRoughDay
 import com.viktorolsson.spotter.core.model.Exercise
 import com.viktorolsson.spotter.core.model.ExerciseSessionLog
 import com.viktorolsson.spotter.core.model.Goal
@@ -49,9 +52,17 @@ class HistoryRepository(
     fun observeExerciseLogs(exerciseId: String): Flow<List<ExerciseSessionLog>> =
         dao.observeExerciseSets(exerciseId).map { rows ->
             rows.groupBy { it.sessionId }.map { (sessionId, sets) ->
-                ExerciseSessionLog(sessionId, sets.first().startedAt, sets.map { it.set.toModel() }, timed = exerciseId in TIMED_EXERCISE_IDS)
+                val first = sets.first()
+                ExerciseSessionLog(
+                    sessionId, first.startedAt, sets.map { it.set.toModel() }, timed = exerciseId in TIMED_EXERCISE_IDS,
+                    lighter = first.isDeload, roughDay = isRoughDay(first.isDeload, first.readiness, first.feel),
+                )
             }
         }.flowOn(Dispatchers.Default)
+
+    /** How workouts in the last [FEEL_WINDOW_DAYS] days felt; null when none was rated. */
+    fun observeFeel(): Flow<FeelSummary?> =
+        dao.observeCheckInsSince(clock.now() - FEEL_WINDOW_DAYS.days).map { rows -> FeelSummary.of(rows.map { it.readiness to it.feel }) }
 
     fun observeLoggedExercises(): Flow<List<LoggedExerciseSummary>> =
         dao.observeLoggedExercises().map { rows ->

@@ -10,6 +10,7 @@ import com.viktorolsson.spotter.core.data.repository.LoggedExerciseSummary
 import com.viktorolsson.spotter.core.data.repository.RecommendationRepository
 import com.viktorolsson.spotter.core.data.repository.UserPreferencesRepository
 import com.viktorolsson.spotter.core.data.repository.UserProfileRepository
+import com.viktorolsson.spotter.core.model.FeelSummary
 import com.viktorolsson.spotter.core.model.BodyWeightPoint
 import com.viktorolsson.spotter.core.model.MuscleVolume
 import com.viktorolsson.spotter.core.model.PersonalRecord
@@ -36,6 +37,8 @@ data class ProgressUiState(
     val lifts: List<LoggedExerciseSummary> = emptyList(),
     val unit: WeightUnit = WeightUnit.KG,
     val recommendations: List<Recommendation> = emptyList(),
+    /** How recent workouts felt; null until one is rated. */
+    val feel: FeelSummary? = null,
 ) {
     val isEmpty: Boolean get() = lifts.isEmpty() && bodyWeight.isEmpty()
 }
@@ -59,8 +62,8 @@ class ProgressViewModel(
         ProgressUiState(false, records, volume, weight, lifts, prefs.weightUnit)
     }
 
-    val uiState: StateFlow<ProgressUiState> = combine(base, recommendationRepository.observeActive()) { state, recs ->
-        state.copy(recommendations = recs)
+    val uiState: StateFlow<ProgressUiState> = combine(base, recommendationRepository.observeActive(), historyRepository.observeFeel()) { state, recs, feel ->
+        state.copy(recommendations = recs, feel = feel)
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), ProgressUiState())
 
     fun apply(id: Long) = viewModelScope.launchReporting(errors) { recommendationRepository.apply(id) }

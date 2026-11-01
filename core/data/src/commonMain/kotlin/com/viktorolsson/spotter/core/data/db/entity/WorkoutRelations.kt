@@ -61,6 +61,8 @@ data class ExerciseSessionRef(
     val sessionId: Long,
     val startedAt: kotlin.time.Instant,
     val isDeload: Boolean,
+    val readiness: Int? = null,
+    val feel: Int? = null,
 )
 
 /** A logged set with its session's start time, for per-exercise history. */
@@ -68,6 +70,10 @@ data class DatedSet(
     @Embedded val set: SetEntryEntity,
     val sessionId: Long,
     val startedAt: kotlin.time.Instant,
+    /** The session's lighter flag and check-ins, to tell lighter sessions and rough days apart. */
+    val isDeload: Boolean,
+    val readiness: Int?,
+    val feel: Int?,
 )
 
 data class RecordWithExercise(
@@ -82,3 +88,6 @@ data class LoggedExercise(
     val lastDone: kotlin.time.Instant,
     val sessionCount: Int,
 )
+
+/** A finished workout's check-in before and rating after, 1–5 each, either possibly skipped. */
+data class CheckInRow(val readiness: Int?, val feel: Int?)

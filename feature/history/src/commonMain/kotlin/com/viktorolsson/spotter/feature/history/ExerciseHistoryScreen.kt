@@ -54,6 +54,10 @@ import org.jetbrains.compose.resources.stringResource
 import org.jetbrains.compose.resources.pluralStringResource
 import com.viktorolsson.spotter.feature.history.resources.Res
 import com.viktorolsson.spotter.feature.history.resources.exercise_best_1rm
+import com.viktorolsson.spotter.feature.history.resources.exercise_chart_left_out
+import com.viktorolsson.spotter.feature.history.resources.exercise_log_date_tag
+import com.viktorolsson.spotter.feature.history.resources.exercise_log_lighter
+import com.viktorolsson.spotter.feature.history.resources.exercise_log_low_day
 import com.viktorolsson.spotter.feature.history.resources.exercise_best_volume
 import com.viktorolsson.spotter.feature.history.resources.exercise_chart_empty
 import com.viktorolsson.spotter.feature.history.resources.exercise_heaviest
@@ -123,8 +127,9 @@ internal fun ExerciseHistoryScreen(
                     }
                 }
                 item {
+                    // Lighter sessions and low days stay in the log below but out of the trend.
                     val points = remember(logs, state.metric, unit) {
-                        logs.mapNotNull { log ->
+                        logs.filter { it.countsTowardsChange }.mapNotNull { log ->
                             val value = when (state.metric) {
                                 ExerciseMetric.ONE_REP_MAX -> log.estimatedOneRepMax
                                 ExerciseMetric.BEST_SET -> log.bestSet?.weightKg
@@ -144,6 +149,14 @@ internal fun ExerciseHistoryScreen(
                             emptyText = stringResource(Res.string.exercise_chart_empty),
                             modifier = Modifier.padding(Spacing.md),
                         )
+                        if (logs.any { !it.countsTowardsChange }) {
+                            Text(
+                                stringResource(Res.string.exercise_chart_left_out),
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                modifier = Modifier.padding(start = Spacing.md, end = Spacing.md, bottom = Spacing.md),
+                            )
+                        }
                     }
                 }
                 item {
@@ -185,7 +198,17 @@ internal fun ExerciseHistoryScreen(
                 item { SectionHeader(stringResource(Res.string.exercise_log)) }
                 items(logs.asReversed(), key = { it.sessionId }) { log ->
                     Column {
-                        Text(formatShortDate(log.date.localDate()), style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary)
+                        val tag = when {
+                            log.lighter -> stringResource(Res.string.exercise_log_lighter)
+                            log.roughDay -> stringResource(Res.string.exercise_log_low_day)
+                            else -> null
+                        }
+                        val date = formatShortDate(log.date.localDate())
+                        Text(
+                            if (tag != null) stringResource(Res.string.exercise_log_date_tag, date, tag) else date,
+                            style = MaterialTheme.typography.labelLarge,
+                            color = MaterialTheme.colorScheme.primary,
+                        )
                         Text(
                             log.sets.filter { it.setType != SetType.WARMUP }.map { formatSet(it.weightKg, it.reps, unit, timed) }.joinToString("  ·  "),
                             style = MaterialTheme.typography.bodyMedium,

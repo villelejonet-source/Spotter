@@ -81,6 +81,10 @@
     <string name="rec_deload_title">Take a lighter week</string>
     <string name="rec_deload_plateaus">%1$d lifts have stalled at once: %2$s.</string>
     <string name="rec_deload_recovery">Performance dropped on %1$s while sets are ending close to failure.</string>
+    <plurals name="rec_deload_low_days">
+        <item quantity="one">You've felt low before or after %1$d workout in the last 10 days.</item>
+        <item quantity="other">You've felt low before or after %1$d workouts in the last 10 days.</item>
+    </plurals>
     <string name="rec_deload_scheduled">%1$d weeks of steady training since your last lighter week.</string>
     <string name="rec_deload_body">For 7 days, planned workouts use fewer sets and 10% lighter weights, and they don't count against your progress.</string>
 </resources>

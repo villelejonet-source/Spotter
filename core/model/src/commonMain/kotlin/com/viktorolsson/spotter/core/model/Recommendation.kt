@@ -112,4 +112,6 @@ data class RecommendationEvidence(
     val targetHigh: Int? = null,
     val deloadReason: DeloadReason? = null,
     val lifts: List<String> = emptyList(),
+    /** Recovery deload from feeling low: workouts with a low check-in in the last 10 days. */
+    val lowDays: Int? = null,
 )

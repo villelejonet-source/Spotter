@@ -1,5 +1,5 @@
 {
-  "about": "Cases the app (core/model Lifting.kt, NumberInput.kt, TrainingStats.kt) and the website (web/src/lib) must agree on. Checked by core/engine TrainingMathFixturesTest and web/src/lib/training-math.test.ts; change a rule here first, then make both pass.",
+  "about": "Cases the app (core/model Lifting.kt, NumberInput.kt, TrainingStats.kt, CheckIns.kt) and the website (web/src/lib) must agree on. Checked by core/engine TrainingMathFixturesTest and web/src/lib/training-math.test.ts; change a rule here first, then make both pass.",
   "timedExerciseIds": ["plank", "side-plank", "copenhagen-plank", "hollow-body-hold"],
   "decimalInput": [
     { "text": "62,5", "value": 62.5 },
@@ -102,5 +102,20 @@
     { "name": "a missed week ends it", "today": "2026-10-28", "dates": ["2026-10-27", "2026-10-12"], "streak": 1 },
     { "name": "Sunday and Monday are different weeks", "today": "2026-11-02", "dates": ["2026-11-01"], "streak": 1 },
     { "name": "two weeks ago only", "today": "2026-10-28", "dates": ["2026-10-14"], "streak": 0 }
+  ],
+  "checkIns": [
+    { "name": "no check-ins", "lighter": false, "readiness": null, "feel": null, "roughDay": false, "countsTowardsChange": true },
+    { "name": "felt fine", "lighter": false, "readiness": 3, "feel": 4, "roughDay": false, "countsTowardsChange": true },
+    { "name": "low before, kept as planned", "lighter": false, "readiness": 2, "feel": null, "roughDay": true, "countsTowardsChange": false },
+    { "name": "fine before, rated badly after", "lighter": false, "readiness": 4, "feel": 1, "roughDay": true, "countsTowardsChange": false },
+    { "name": "a lighter session is not a rough day but doesn't count either", "lighter": true, "readiness": 1, "feel": 3, "roughDay": false, "countsTowardsChange": false }
+  ],
+  "feelSummary": [
+    { "name": "nothing rated", "checkIns": [[null, null], [null, null]], "summary": null },
+    {
+      "name": "averages leave out what wasn't rated; a low score either side is a low day",
+      "checkIns": [[4, 5], [2, null], [null, 3], [5, 1], [null, null]],
+      "summary": { "rated": 4, "averageReadiness": 3.66667, "averageFeel": 3, "lowDays": 2 }
+    }
   ]
 }

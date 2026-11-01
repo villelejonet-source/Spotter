@@ -20,9 +20,14 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.ListItem
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Slider
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import kotlin.math.roundToInt
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import org.jetbrains.compose.resources.pluralStringResource
@@ -35,6 +40,9 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewModelScope
 import androidx.navigation.toRoute
+import com.viktorolsson.spotter.core.data.AppErrors
+import com.viktorolsson.spotter.core.data.Failure
+import com.viktorolsson.spotter.core.data.launchReporting
 import com.viktorolsson.spotter.core.data.repository.HistoryRepository
 import com.viktorolsson.spotter.core.data.repository.UserPreferencesRepository
 import com.viktorolsson.spotter.core.data.repository.WorkoutRepository
@@ -42,7 +50,9 @@ import com.viktorolsson.spotter.core.model.PersonalRecord
 import com.viktorolsson.spotter.core.model.WeightUnit
 import com.viktorolsson.spotter.core.model.WorkoutSummary
 import com.viktorolsson.spotter.core.ui.component.Confetti
+import com.viktorolsson.spotter.core.ui.component.ContentCard
 import com.viktorolsson.spotter.core.ui.component.ErrorState
+import com.viktorolsson.spotter.core.ui.component.FeelPicker
 import com.viktorolsson.spotter.core.ui.component.LoadingState
 import com.viktorolsson.spotter.core.ui.component.PrimaryButton
 import com.viktorolsson.spotter.core.ui.component.RecordsCard
@@ -65,6 +75,10 @@ import com.viktorolsson.spotter.feature.session.resources.summary_new_prs
 import com.viktorolsson.spotter.feature.session.resources.summary_sets
 import com.viktorolsson.spotter.feature.session.resources.summary_title
 import com.viktorolsson.spotter.feature.session.resources.summary_volume
+import com.viktorolsson.spotter.feature.session.resources.summary_effort
+import com.viktorolsson.spotter.feature.session.resources.summary_effort_unset
+import com.viktorolsson.spotter.feature.session.resources.summary_effort_value
+import com.viktorolsson.spotter.feature.session.resources.summary_feel_title
 
 data class SummaryUiState(
     val loading: Boolean = true,
@@ -72,13 +86,18 @@ data class SummaryUiState(
     val summary: WorkoutSummary? = null,
     val unit: WeightUnit = WeightUnit.KG,
     val records: List<PersonalRecord> = emptyList(),
+    /** How the session went, 1–5, once rated. */
+    val feel: Int? = null,
+    /** Session effort, 1–10, once rated. */
+    val effort: Int? = null,
 )
 
 class SummaryViewModel(
     savedStateHandle: SavedStateHandle,
-    workoutRepository: WorkoutRepository,
+    private val workoutRepository: WorkoutRepository,
     historyRepository: HistoryRepository,
     preferencesRepository: UserPreferencesRepository,
+    private val errors: AppErrors,
 ) : ViewModel() {
     private val sessionId = savedStateHandle.toRoute<SummaryRoute>().sessionId
 
@@ -87,8 +106,16 @@ class SummaryViewModel(
         historyRepository.observeSessionRecords(sessionId),
         preferencesRepository.preferences,
     ) { session, records, prefs ->
-        SummaryUiState(false, session?.let { WorkoutSummary.of(it) }, prefs.weightUnit, records)
+        SummaryUiState(false, session?.let { WorkoutSummary.of(it) }, prefs.weightUnit, records, session?.feel, session?.effort)
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), SummaryUiState())
+
+    fun rateFeel(feel: Int) = viewModelScope.launchReporting(errors, Failure.SAVE) {
+        workoutRepository.setSessionFeel(sessionId, feel)
+    }
+
+    fun rateEffort(effort: Int) = viewModelScope.launchReporting(errors, Failure.SAVE) {
+        workoutRepository.setSessionEffort(sessionId, effort)
+    }
 }
 
 @Composable
@@ -101,14 +128,26 @@ internal fun SummaryRoute(onDone: () -> Unit, viewModel: SummaryViewModel = koin
             bottomBar = { PrimaryButton(stringResource(Res.string.summary_done), onDone, Modifier.navigationBarsPadding().padding(Dimens.ScreenPadding)) },
         ) { padding -> ErrorState(Modifier.padding(padding).fillMaxSize()) }
         else -> Box {
-            SummaryScreen(summary, uiState.unit, uiState.records, onDone)
+            SummaryScreen(
+                summary, uiState.unit, uiState.records, onDone,
+                feel = uiState.feel, effort = uiState.effort, onFeel = viewModel::rateFeel, onEffort = viewModel::rateEffort,
+            )
             if (uiState.records.isNotEmpty()) Confetti(key = uiState.records.size)
         }
     }
 }
 
 @Composable
-internal fun SummaryScreen(summary: WorkoutSummary, unit: WeightUnit, records: List<PersonalRecord>, onDone: () -> Unit) {
+internal fun SummaryScreen(
+    summary: WorkoutSummary,
+    unit: WeightUnit,
+    records: List<PersonalRecord>,
+    onDone: () -> Unit,
+    feel: Int? = null,
+    effort: Int? = null,
+    onFeel: (Int) -> Unit = {},
+    onEffort: (Int) -> Unit = {},
+) {
     Scaffold(
         bottomBar = {
             PrimaryButton(
@@ -148,6 +187,7 @@ internal fun SummaryScreen(summary: WorkoutSummary, unit: WeightUnit, records: L
                     StatTile(stringResource(Res.string.summary_sets), summary.completedSets.toString(), Modifier.weight(1f))
                 }
             }
+            item(key = "rating") { RatingCard(feel, effort, onFeel, onEffort) }
             if (records.isNotEmpty()) {
                 item(key = "records") {
                     RecordsCard(pluralStringResource(Res.plurals.summary_new_prs, records.size, records.size), records, unit)
@@ -165,6 +205,38 @@ internal fun SummaryScreen(summary: WorkoutSummary, unit: WeightUnit, records: L
                     },
                 )
             }
+        }
+    }
+}
+
+/** "How did it go?" (1–5) and an optional effort (1–10), both saved as soon as they change. */
+@Composable
+private fun RatingCard(feel: Int?, effort: Int?, onFeel: (Int) -> Unit, onEffort: (Int) -> Unit) {
+    ContentCard(Modifier.fillMaxWidth()) {
+        Column(verticalArrangement = Arrangement.spacedBy(Spacing.md)) {
+            Text(
+                stringResource(Res.string.summary_feel_title),
+                style = MaterialTheme.typography.titleMedium,
+                modifier = Modifier.semantics { heading() },
+            )
+            FeelPicker(selected = feel, onSelect = onFeel)
+            // The slider moves locally and saves when let go, so dragging writes once.
+            var dragging by remember(effort) { mutableStateOf(effort?.toFloat()) }
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(stringResource(Res.string.summary_effort), style = MaterialTheme.typography.bodyLarge, modifier = Modifier.weight(1f))
+                Text(
+                    dragging?.let { stringResource(Res.string.summary_effort_value, it.roundToInt()) } ?: stringResource(Res.string.summary_effort_unset),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+            Slider(
+                value = dragging ?: 5f,
+                onValueChange = { dragging = it },
+                onValueChangeFinished = { dragging?.let { onEffort(it.roundToInt()) } },
+                valueRange = 1f..10f,
+                steps = 8,
+            )
         }
     }
 }

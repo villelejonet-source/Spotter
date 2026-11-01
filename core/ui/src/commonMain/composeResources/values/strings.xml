@@ -12,6 +12,13 @@
     <string name="state_expanded">Expanded</string>
     <string name="state_collapsed">Collapsed</string>
 
+    <!-- How a workout felt, 1 to 5 (check-in before, rating after) -->
+    <string name="feel_1">Very low</string>
+    <string name="feel_2">Low</string>
+    <string name="feel_3">Okay</string>
+    <string name="feel_4">Good</string>
+    <string name="feel_5">Great</string>
+
     <!-- Screen states -->
     <string name="state_loading">Loading</string>
     <string name="state_error_title">Something went wrong</string>

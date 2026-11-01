@@ -144,6 +144,24 @@ class TodayScreenshotTest {
     @Test
     fun planReviewSheet_largeFont() = captureSheet("today_review_sheet_font_1_6", false, fontScale = 1.6f)
 
+    private fun captureCheckIn(name: String, dark: Boolean, readiness: Int?, fontScale: Float = 1f) = captureRoboImage(
+        "src/test/screenshots/$name.png",
+        roborazziComposeOptions = RoborazziComposeOptions { fontScale(fontScale) },
+    ) {
+        SpotterTheme(darkTheme = dark) {
+            Surface { CheckInContent(readiness, inDeloadWeek = false, onPick = {}, onStart = { _, _ -> }) }
+        }
+    }
+
+    @Test
+    fun checkIn_light() = captureCheckIn("today_checkin_light", false, readiness = null)
+
+    @Test
+    fun checkIn_largeFont() = captureCheckIn("today_checkin_font_1_6", false, readiness = null, fontScale = 1.6f)
+
+    @Test
+    fun checkInLighter_dark() = captureCheckIn("today_checkin_lighter_dark", true, readiness = 2)
+
     @Test
     fun nextWorkout_light() = capture("today_next_light", false, next())
 

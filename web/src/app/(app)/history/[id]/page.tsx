@@ -6,7 +6,7 @@ import { BackLink, Badge, Card, PageHeader, Stat } from "@/components/ui";
 import { exerciseName } from "@/lib/catalog";
 import { getCatalog, getSessionDetail, getUnit } from "@/lib/data";
 import { formatFullDate, formatTime } from "@/lib/dates";
-import { EFFORT_LABEL, LIGHTER_WEEK, progressionReasonLabel, SET_TYPE_LABELS, SET_TYPE_SHORT, WORKOUT } from "@/lib/labels";
+import { EFFORT_LABEL, formatCheckIn, LIGHTER_SESSION, progressionReasonLabel, SET_TYPE_LABELS, SET_TYPE_SHORT, WORKOUT } from "@/lib/labels";
 import { formatDuration, formatSet, formatSetEffort, formatVolume, isTimed } from "@/lib/model";
 
 export const metadata = { title: "Workout" };
@@ -16,6 +16,7 @@ export default async function SessionPage({ params }: { params: Promise<{ id: st
   const [detail, catalog, unit] = await Promise.all([getSessionDetail(id), getCatalog(), getUnit()]);
   if (!detail) notFound();
   const { session, exercises } = detail;
+  const checkIn = formatCheckIn(session.readiness, session.feel, session.perceived_difficulty);
 
   return (
     <>
@@ -25,7 +26,7 @@ export default async function SessionPage({ params }: { params: Promise<{ id: st
         subtitle={
           <span className="flex flex-wrap items-center gap-2">
             {formatFullDate(session.started_at)} · {formatTime(session.started_at)}
-            {session.is_deload && <Badge tone="tertiary">{LIGHTER_WEEK}</Badge>}
+            {session.is_deload && <Badge tone="tertiary">{LIGHTER_SESSION}</Badge>}
           </span>
         }
         actions={
@@ -51,6 +52,7 @@ export default async function SessionPage({ params }: { params: Promise<{ id: st
         <Stat label="Exercises" value={session.exercise_count} />
       </div>
 
+      {checkIn && <Card className="mt-4 text-sm">{checkIn}</Card>}
       {session.notes && <Card className="mt-4 text-sm whitespace-pre-line">{session.notes}</Card>}
 
       <div className="mt-4 grid gap-4 lg:grid-cols-2">

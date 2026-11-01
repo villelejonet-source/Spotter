@@ -180,14 +180,14 @@ export type Database = {
                   ]
                 },"v_session": {
                   Row: {
-                    "ended_at": number | null,"is_deload": boolean | null,"notes": string | null,"perceived_difficulty": number | null,"plan_day_id": string | null,"started_at": number | null,"sync_id": string,"updated_at": number,"user_id": string
+                    "ended_at": number | null,"feel": number | null,"is_deload": boolean | null,"notes": string | null,"perceived_difficulty": number | null,"plan_day_id": string | null,"readiness": number | null,"started_at": number | null,"sync_id": string,"updated_at": number,"user_id": string
                   }
                   ComputedFields: never
                   Insert: {
-                           "ended_at"?: never,"is_deload"?: never,"notes"?: never,"perceived_difficulty"?: never,"plan_day_id"?: never,"started_at"?: never,"sync_id"?: string | null,"updated_at"?: number | null,"user_id"?: string | null
+                           "ended_at"?: never,"feel"?: never,"is_deload"?: never,"notes"?: never,"perceived_difficulty"?: never,"plan_day_id"?: never,"readiness"?: never,"started_at"?: never,"sync_id"?: string | null,"updated_at"?: number | null,"user_id"?: string | null
                          }
                         Update: {
-                           "ended_at"?: never,"is_deload"?: never,"notes"?: never,"perceived_difficulty"?: never,"plan_day_id"?: never,"started_at"?: never,"sync_id"?: string | null,"updated_at"?: number | null,"user_id"?: string | null
+                           "ended_at"?: never,"feel"?: never,"is_deload"?: never,"notes"?: never,"perceived_difficulty"?: never,"plan_day_id"?: never,"readiness"?: never,"started_at"?: never,"sync_id"?: string | null,"updated_at"?: number | null,"user_id"?: string | null
                          }
                         Relationships: [
                     
@@ -208,7 +208,7 @@ export type Database = {
                   ]
                 },"v_session_summary": {
                   Row: {
-                    "completed_sets": number | null,"ended_at": number | null,"exercise_count": number | null,"is_deload": boolean | null,"notes": string | null,"plan_day_id": string | null,"plan_day_name": string | null,"plan_id": string | null,"started_at": number | null,"sync_id": string,"user_id": string,"volume_kg": number | null
+                    "completed_sets": number | null,"ended_at": number | null,"exercise_count": number | null,"feel": number | null,"is_deload": boolean | null,"notes": string | null,"perceived_difficulty": number | null,"plan_day_id": string | null,"plan_day_name": string | null,"plan_id": string | null,"readiness": number | null,"started_at": number | null,"sync_id": string,"user_id": string,"volume_kg": number | null
                   }
                   ComputedFields: never
                   Relationships: [

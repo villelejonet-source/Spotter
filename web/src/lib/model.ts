@@ -109,6 +109,12 @@ export interface SessionSummaryRow {
   exercise_count: number;
   completed_sets: number;
   volume_kg: number;
+  /** Check-in before the workout, 1 (low) to 5 (great); null when skipped or from an older app. */
+  readiness: number | null;
+  /** Rating after the workout, 1 (badly) to 5 (great). */
+  feel: number | null;
+  /** Session effort, 1 to 10. */
+  perceived_difficulty: number | null;
 }
 
 /** Just when a workout happened: enough for streaks, heatmaps and counts. */

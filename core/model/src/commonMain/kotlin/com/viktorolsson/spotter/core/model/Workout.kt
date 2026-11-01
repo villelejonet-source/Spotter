@@ -20,6 +20,14 @@ data class WorkoutSession(
     val exercises: List<SessionExercise>,
     /** Set when the session was started from a plan day. */
     val planDayName: String? = null,
+    /** A lighter (deload) session; left out of progression and plateau history. */
+    val isLighter: Boolean = false,
+    /** Check-in before the session, 1 (low) to 5 (great). */
+    val readiness: Int? = null,
+    /** Rating after the session, 1 (badly) to 5 (great). */
+    val feel: Int? = null,
+    /** Session effort, 1 to 10. */
+    val effort: Int? = null,
 ) {
     val isActive: Boolean get() = endedAt == null
 }

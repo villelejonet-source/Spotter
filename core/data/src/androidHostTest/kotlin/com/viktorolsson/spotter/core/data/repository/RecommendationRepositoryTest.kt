@@ -27,6 +27,7 @@ import kotlinx.datetime.plus
 import kotlinx.datetime.todayIn
 import org.junit.After
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotEquals
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
@@ -195,6 +196,49 @@ class RecommendationRepositoryTest {
         // Progression continues from the 80 × 8 session, not the lighter deload one.
         assertEquals(ProgressionReason.ADD_REPS, next.progressionReason)
         assertTrue(next.sets.all { it.weightKg == 80.0 && it.reps == 9 })
+    }
+
+    @Test
+    fun lighterCheckInLightensOnlyThatSessionAndIsIgnoredByProgression() = runTest {
+        stalledBenchWorkout(reps = 8)
+        val lighterSession = workouts.getSession(workouts.startPlannedWorkout(plans.observeNextDay().first()!!.id, readiness = 2, lighter = true))!!
+        assertTrue(lighterSession.isLighter)
+        assertEquals(2, lighterSession.readiness)
+        val bench = lighterSession.exercises.first { it.exercise.id == "barbell-bench-press" }
+        assertEquals(ProgressionReason.DELOAD, bench.progressionReason)
+        assertTrue(bench.sets.all { it.weightKg == 70.0 && it.reps == 6 })
+        bench.sets.forEach { workouts.toggleSetCompleted(it.id) }
+        workouts.finishWorkout(lighterSession.id)
+
+        // No deload week was started, and the next session builds on 80 × 8 again.
+        val next = workouts.getSession(workouts.startPlannedWorkout(plans.observeNextDay().first()!!.id))!!
+        assertFalse(next.isLighter)
+        val nextBench = next.exercises.first { it.exercise.id == "barbell-bench-press" }
+        assertEquals(ProgressionReason.ADD_REPS, nextBench.progressionReason)
+        assertTrue(nextBench.sets.all { it.weightKg == 80.0 && it.reps == 9 })
+    }
+
+    @Test
+    fun keepingAsPlannedDuringADeloadWeekStartsANormalSession() = runTest {
+        stalledBenchWorkout(reps = 8)
+        prefs.setDeloadUntil(clock.todayIn(TimeZone.currentSystemDefault()).plus(6, DateTimeUnit.DAY))
+        val session = workouts.getSession(workouts.startPlannedWorkout(plans.observeNextDay().first()!!.id, readiness = 4, lighter = false))!!
+        assertFalse(session.isLighter)
+        assertEquals(ProgressionReason.ADD_REPS, session.exercises.first { it.exercise.id == "barbell-bench-press" }.progressionReason)
+    }
+
+    @Test
+    fun ratingAFinishedSessionStoresFeelAndEffort() = runTest {
+        val sessionId = workouts.startEmptyWorkout(readiness = 5)
+        workouts.finishWorkout(sessionId)
+        workouts.setSessionFeel(sessionId, 4)
+        workouts.setSessionEffort(sessionId, 12) // out of range is clamped to 10
+        val rated = workouts.getSession(sessionId)!!
+        assertEquals(5, rated.readiness)
+        assertEquals(4, rated.feel)
+        assertEquals(10, rated.effort)
+        workouts.setSessionFeel(sessionId, null)
+        assertNull(workouts.getSession(sessionId)!!.feel)
     }
 
     @Test

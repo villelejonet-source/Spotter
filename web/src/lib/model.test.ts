@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { GOAL_LABELS, label, PR_LABELS, progressionReasonLabel, SPLIT_LABELS } from "./labels";
+import { formatCheckIn, GOAL_LABELS, label, PR_LABELS, progressionReasonLabel, SPLIT_LABELS } from "./labels";
 import { formatDuration, formatRecord, formatSet, formatSetEffort, formatTarget, formatVolume, formatWeight, formatWeightValue } from "./model";
 
 describe("formatWeight", () => {
@@ -82,5 +82,17 @@ describe("labels", () => {
     expect(progressionReasonLabel("ADD_REPS", true)).toBe("Hold each set 5 seconds longer than last time.");
     expect(progressionReasonLabel("FIRST_TIME", true)).toBe("First time: hold for the bottom of the target time.");
     expect(progressionReasonLabel("NEW_REASON")).toBe("New reason");
+  });
+});
+
+describe("formatCheckIn", () => {
+  it("lists what was rated and leaves out the rest", () => {
+    expect(formatCheckIn(2, 4, 7)).toBe("Before: Low · After: Good · Effort 7/10");
+    expect(formatCheckIn(null, 5, null)).toBe("After: Great");
+    expect(formatCheckIn(null, null, null)).toBeNull();
+  });
+
+  it("ignores a score outside 1–5 instead of showing undefined", () => {
+    expect(formatCheckIn(9, null, null)).toBeNull();
   });
 });

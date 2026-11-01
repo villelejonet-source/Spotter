@@ -189,6 +189,30 @@ class MigrationTest {
     }
 
     @Test
+    fun migrate8To9AddsCheckInsAndKeepsTriggers() {
+        helper.createDatabase(8).use { db ->
+            SyncSchema.createTriggers(db)
+            db.execSQL("INSERT INTO workout_session (id, startedAt, endedAt, planDayId, notes, perceivedDifficulty, isDeload) VALUES (1, 0, 1, NULL, NULL, NULL, 1)")
+        }
+        helper.runMigrationsAndValidate(9).use { db ->
+            // An older session has no check-ins, keeps its deload flag and its sync id.
+            db.query("SELECT readiness, feel, isDeload, syncId FROM workout_session WHERE id = 1").use {
+                it.moveToFirst()
+                assertTrue(it.isNull(0))
+                assertTrue(it.isNull(1))
+                assertEquals(1, it.getInt(2))
+                assertEquals(32, it.getString(3)!!.length)
+            }
+            assertTrue(SyncSchema.triggersInstalled(db))
+            db.execSQL("UPDATE workout_session SET feel = 4 WHERE id = 1")
+            db.execSQL("DELETE FROM workout_session WHERE id = 1")
+            db.query("SELECT COUNT(*) FROM sync_tombstone WHERE tableName = 'workout_session'").use {
+                it.moveToFirst(); assertEquals(1, it.getInt(0))
+            }
+        }
+    }
+
+    @Test
     fun migratingFrom6InstallsTheScheduledSessionTriggers() {
         helper.createDatabase(6).use { SyncSchema.createTriggers(it, upTo = 6) }
         helper.runMigrationsAndValidate(8).use { db ->

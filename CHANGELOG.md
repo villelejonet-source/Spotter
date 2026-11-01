@@ -8,7 +8,17 @@ into the new version's entry and writes the store notes from it. Versions are th
 
 ## Unreleased
 
+### App
+- Check in before a workout: "Start workout" asks how you feel today (five faces, or Skip). On a
+  low day (1 or 2) it offers to make just today a lighter session: fewer sets at about 90% of
+  the weight, shown as "Lighter session" in the workout. A lighter session never counts against
+  your progress, and it doesn't start a deload week.
+- Rate a finished workout: the summary asks "How did it go?" and, if you like, how hard it was
+  (effort 1–10).
+
 ### Website
+- Workout history shows how you felt before and after each workout and its effort. Lighter
+  sessions are marked "Lighter session" (was "Lighter week").
 - Saving the profile on the website no longer undoes a body weight you just logged on the same
   page (or a change synced from the phone): fields you didn't touch take the newest values.
 - The website's data export lists each workout's exercises in the order you did them, keeps

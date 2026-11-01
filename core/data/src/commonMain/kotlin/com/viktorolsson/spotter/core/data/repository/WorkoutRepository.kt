@@ -54,7 +54,8 @@ class WorkoutRepository(
     suspend fun getSession(sessionId: Long): WorkoutSession? = dao.getSessionWithExercises(sessionId)?.toModel()
 
     /** Starts an empty workout, or returns the one already in progress (only one can be active). */
-    suspend fun startEmptyWorkout(): Long = db.withTransaction {
+    /** [readiness] is the check-in before starting (1–5), null when skipped. */
+    suspend fun startEmptyWorkout(readiness: Int? = null): Long = db.withTransaction {
         dao.getActiveSession()?.id ?: dao.insertSession(
             WorkoutSessionEntity(
                 startedAt = clock.now(),
@@ -62,6 +63,7 @@ class WorkoutRepository(
                 planDayId = null,
                 notes = null,
                 perceivedDifficulty = null,
+                readiness = readiness,
             ),
         )
     }
@@ -75,12 +77,13 @@ class WorkoutRepository(
     /** The workout in progress, if any (only one can be). */
     suspend fun activeSessionId(): Long? = dao.getActiveSession()?.id
 
-    suspend fun startPlannedWorkout(planDayId: Long): Long = db.withTransaction {
+    suspend fun startPlannedWorkout(planDayId: Long, readiness: Int? = null, lighter: Boolean? = null): Long = db.withTransaction {
         dao.getActiveSession()?.let { return@withTransaction it.id }
         val day = planDao.getDay(planDayId) ?: error("No plan day $planDayId")
         val prefs = preferences.preferences.first()
         val unit = prefs.weightUnit
-        val deload = prefs.isDeload(clock.todayIn(TimeZone.currentSystemDefault()))
+        // The check-in's choice wins for this one session; otherwise a deload week decides.
+        val deload = lighter ?: prefs.isDeload(clock.todayIn(TimeZone.currentSystemDefault()))
         val sessionId = dao.insertSession(
             WorkoutSessionEntity(
                 startedAt = clock.now(),
@@ -89,6 +92,7 @@ class WorkoutRepository(
                 notes = null,
                 perceivedDifficulty = null,
                 isDeload = deload,
+                readiness = readiness,
             ),
         )
         val planned = day.exercises.sortedBy { it.planExercise.position }
@@ -413,6 +417,12 @@ class WorkoutRepository(
 
     suspend fun setSessionNotes(sessionId: Long, notes: String?) =
         dao.updateSessionNotes(sessionId, notes?.takeIf(String::isNotBlank))
+
+    /** How the finished session went, 1–5; null clears it. */
+    suspend fun setSessionFeel(sessionId: Long, feel: Int?) = dao.updateSessionFeel(sessionId, feel?.coerceIn(1, 5))
+
+    /** Session effort, 1–10; null clears it. */
+    suspend fun setSessionEffort(sessionId: Long, effort: Int?) = dao.updateSessionEffort(sessionId, effort?.coerceIn(1, 10))
 
     /**
      * Ends the session, dropping sets that were never ticked and exercises left with no

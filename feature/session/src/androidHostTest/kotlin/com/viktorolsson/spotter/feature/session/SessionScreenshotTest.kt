@@ -88,7 +88,14 @@ class SessionScreenshotTest {
     }
 
     @Composable
-    private fun Session(restTimer: RestTimer? = null, keypadTarget: KeypadTarget? = null, effortScale: EffortScale = EffortScale.RIR, celebration: PrEvent? = null) {
+    private fun Session(
+        restTimer: RestTimer? = null,
+        keypadTarget: KeypadTarget? = null,
+        effortScale: EffortScale = EffortScale.RIR,
+        celebration: PrEvent? = null,
+        lighter: Boolean = false,
+    ) {
+        val active = active.copy(isLighter = lighter)
         val keypad = rememberKeypadState()
         if (keypadTarget != null && keypad.target == null) keypad.focus(keypadTarget, "10")
         SessionScreen(
@@ -248,4 +255,17 @@ class SessionScreenshotTest {
     fun summary_light() = capture("summary_light", dark = false) {
         SummaryScreen(WorkoutSummary.of(PreviewData.session()), WeightUnit.KG, emptyList(), onDone = {})
     }
+
+    @Test
+    fun summaryRated_light() = capture("summary_rated_light", dark = false) {
+        SummaryScreen(WorkoutSummary.of(PreviewData.session()), WeightUnit.KG, emptyList(), onDone = {}, feel = 4, effort = 7)
+    }
+
+    @Test
+    fun summaryRated_largeFont() = capture("summary_rated_font_1_6", dark = false, fontScale = 1.6f) {
+        SummaryScreen(WorkoutSummary.of(PreviewData.session()), WeightUnit.KG, emptyList(), onDone = {}, feel = 4, effort = 7)
+    }
+
+    @Test
+    fun sessionLighter_dark() = capture("session_lighter_dark", dark = true) { Session(lighter = true) }
 }

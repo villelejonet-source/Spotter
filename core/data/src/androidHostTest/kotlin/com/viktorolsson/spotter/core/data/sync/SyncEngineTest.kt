@@ -60,6 +60,9 @@ class FakeRemote : SyncRemote {
     val checkIns = mutableListOf<Pair<String, DeviceCheckIn>>()
     var checkInFails = false
 
+    /** What [userId]'s backup holds now, deletion markers left out: what the website reads. */
+    fun live(userId: String): List<RemoteRow> = rows.filterKeys { it.first == userId }.values.filter { it.deletedAt == null }
+
     /** Pulls fail once this many more pages have been served; null: they don't. */
     var failFromPage: Int? = null
         set(value) {

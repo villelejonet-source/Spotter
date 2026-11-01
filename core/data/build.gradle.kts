@@ -88,6 +88,13 @@ extensions.configure<com.android.build.api.variant.KotlinMultiplatformAndroidCom
     }
 }
 
+// StressTest's seeds and length: -Pstress.seeds=500, or -Pstress.seed=1234 -Pstress.seeds=1 to replay one.
+tasks.withType<Test>().configureEach {
+    listOf("stress.seed", "stress.seeds", "stress.steps").forEach { name ->
+        providers.gradleProperty(name).orNull?.let { systemProperty(name, it) }
+    }
+}
+
 dependencies {
     listOf("kspAndroid", "kspIosArm64", "kspIosSimulatorArm64").forEach { add(it, libs.androidx.room.compiler) }
 }

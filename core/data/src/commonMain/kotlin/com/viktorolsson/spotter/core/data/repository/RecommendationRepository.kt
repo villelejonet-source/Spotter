@@ -237,11 +237,9 @@ class RecommendationRepository(
             }
         }
         val historyByExercise = slots.map { it.exercise.id }.distinct().associateWith { exerciseId ->
-            workoutDao.getExposureSets(exerciseId).groupBy { it.sessionId }.values.map { sets ->
-                ExerciseExposure(
-                    sets.first().startedAt.toLocalDateTime(zone).date,
-                    sets.map { LoggedSet(it.set.weightKg, it.set.reps ?: 0, it.set.rir) },
-                )
+            workoutDao.getExposureSets(exerciseId).groupBy { it.sessionId }.values.mapNotNull { sets ->
+                val lifts = sets.mapNotNull { it.set.toLift() }
+                if (lifts.isEmpty()) null else ExerciseExposure(sets.first().startedAt.toLocalDateTime(zone).date, lifts)
             }
         }
         val prefs = preferences.preferences.first()

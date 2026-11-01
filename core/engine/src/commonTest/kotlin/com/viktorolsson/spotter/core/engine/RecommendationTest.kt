@@ -90,6 +90,13 @@ class RecommendationTest {
     }
 
     @Test
+    fun `a set with no reps doesn't count towards a session's score`() {
+        val exposure = ExerciseExposure(today, listOf(LoggedSet(140.0, 0), LoggedSet(80.0, 8)))
+        assertEquals(80.0 * (1 + 8 / 30.0), exposure.score, 1e-9)
+        assertEquals(LoggedSet(80.0, 8), exposure.bestSet)
+    }
+
+    @Test
     fun `a lift set to no progression is never a plateau`() {
         val bench = slot("barbell-bench-press", 1, rule = ProgressionRule.NONE)
         assertNull(RecommendationEngine.detectPlateau(bench, flat(80.0, 8, sessions = 6)))

@@ -138,13 +138,14 @@ export interface ExerciseSessionPoint {
 
 /**
  * One point per session for an exercise, oldest first: the numbers the app's exercise
- * history shows (core/model ExerciseSessionLog). Warm-ups and unfinished sets are skipped.
+ * history shows (core/model ExerciseSessionLog). Warm-ups, unfinished sets and sets with no
+ * reps (they lifted nothing) are skipped.
  */
 export function exerciseProgress(sets: LoggedSet[], exerciseId: string, sessionDates: Map<string, number>): ExerciseSessionPoint[] {
   const timed = isTimed(exerciseId);
   const bySession = new Map<string, LoggedSet[]>();
   for (const s of sets) {
-    if (s.completed_at == null || s.set_type === "WARMUP" || s.reps == null) continue;
+    if (s.completed_at == null || s.set_type === "WARMUP" || s.reps == null || s.reps <= 0) continue;
     const list = bySession.get(s.session_id) ?? [];
     list.push(s);
     bySession.set(s.session_id, list);

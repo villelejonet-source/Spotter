@@ -60,7 +60,7 @@ data class ExerciseSessionLog(
     /** A hold: reps are seconds, so there's no volume or 1RM. */
     val timed: Boolean = false,
 ) {
-    private val working get() = sets.filter { it.setType != SetType.WARMUP && it.reps != null }
+    private val working get() = sets.filter { it.setType != SetType.WARMUP && isLift(it.reps) }
     val bestSet: WorkoutSet? get() = working.maxWithOrNull(bestSetOrder({ it.weightKg }, { it.reps }))
     val estimatedOneRepMax: Double?
         get() = if (timed) null else working.mapNotNull { set ->

@@ -21,6 +21,9 @@ into the new version's entry and writes the store notes from it. Versions are th
   either, so it doesn't bring plateau suggestions or a deload.
 - Skipping setup on first launch no longer leaves an empty screen without the bottom bar; it
   opens Today.
+- A set ticked with 0 reps, or with the reps left blank, no longer counts as a lift: it isn't
+  the best set, doesn't give a 1RM or a record, doesn't block later records, and doesn't raise
+  the next workout's weight. The website's exercise progress skips it too.
 
 ### Website
 - New timed holds in the plan editor progress like every other exercise (a few seconds longer

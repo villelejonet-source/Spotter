@@ -17,6 +17,7 @@ import com.viktorolsson.spotter.core.model.RecommendationType
 import com.viktorolsson.spotter.core.model.VolumeStatus
 import com.viktorolsson.spotter.core.model.bestSetOrder
 import com.viktorolsson.spotter.core.model.epley
+import com.viktorolsson.spotter.core.model.isLift
 import com.viktorolsson.spotter.core.model.isTimed
 import kotlinx.datetime.DateTimeUnit
 import kotlinx.datetime.LocalDate
@@ -25,10 +26,12 @@ import kotlinx.datetime.until
 
 /** One session's working sets of an exercise (deload sessions excluded). */
 data class ExerciseExposure(val date: LocalDate, val sets: List<LoggedSet>) {
+    private val lifts get() = sets.filter { isLift(it.reps) }
+
     /** Best estimated 1RM, or most reps for bodyweight work. */
     val score: Double
-        get() = sets.maxOfOrNull { set -> set.weightKg?.let { epley(it, set.reps) } ?: set.reps.toDouble() } ?: 0.0
-    val bestSet: LoggedSet? get() = sets.maxWithOrNull(bestSetOrder({ it.weightKg }, { it.reps }))
+        get() = lifts.maxOfOrNull { set -> set.weightKg?.let { epley(it, set.reps) } ?: set.reps.toDouble() } ?: 0.0
+    val bestSet: LoggedSet? get() = lifts.maxWithOrNull(bestSetOrder({ it.weightKg }, { it.reps }))
 }
 
 /** An exercise in the active plan, with where it lives so actions can change it. */

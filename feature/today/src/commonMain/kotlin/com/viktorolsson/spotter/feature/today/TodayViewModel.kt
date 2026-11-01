@@ -25,10 +25,14 @@ import com.viktorolsson.spotter.core.model.weekStreak
 import com.viktorolsson.spotter.core.model.weeklyTotals
 import com.viktorolsson.spotter.core.model.windowStart
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
@@ -39,6 +43,7 @@ import kotlinx.datetime.atStartOfDayIn
 import kotlinx.datetime.toLocalDateTime
 import kotlinx.datetime.todayIn
 import kotlin.time.Clock
+import kotlin.time.Duration.Companion.minutes
 import kotlin.time.Instant
 
 data class TodayUiState(
@@ -89,7 +94,13 @@ data class Dashboard(
     }
 }
 
-private data class Schedule(val today: ScheduledWorkout?, val day: PlanDay?, val todayDone: Boolean, val upcoming: List<ScheduledWorkout>)
+private data class Schedule(
+    val date: LocalDate,
+    val today: ScheduledWorkout?,
+    val day: PlanDay?,
+    val todayDone: Boolean,
+    val upcoming: List<ScheduledWorkout>,
+)
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class TodayViewModel(
@@ -101,6 +112,7 @@ class TodayViewModel(
     preferencesRepository: UserPreferencesRepository,
     private val recommendationRepository: RecommendationRepository,
     private val errors: AppErrors,
+    private val clock: Clock,
 ) : ViewModel() {
     /** The plan review, when one is due. */
     val review: StateFlow<PlanReview?> = recommendationRepository.observePlanReview()
@@ -114,18 +126,29 @@ class TodayViewModel(
 
     fun snoozeReview() = viewModelScope.launchReporting(errors, Failure.SAVE) { recommendationRepository.snoozePlanReview() }
 
-    private val schedule = scheduleRepository.observeUpcoming().flatMapLatest { entries ->
-        val today = Clock.System.todayIn(TimeZone.currentSystemDefault())
-        val todays = entries.filter { it.date == today }
-        val pending = todays.firstOrNull { !it.done }
-        val upcoming = entries.filter { it.date > today }
-        val day = pending?.planDayId?.let(planRepository::observeDay) ?: flowOf(null)
-        day.map { Schedule(pending, it, todays.isNotEmpty() && pending == null, upcoming) }
+    /**
+     * The phone's date, checked every minute. Today is the start screen, so this view model
+     * lives as long as the app; whatever depends on the date is rebuilt when it changes.
+     */
+    private val date: Flow<LocalDate> = flow {
+        while (true) {
+            emit(clock.todayIn(TimeZone.currentSystemDefault()))
+            delay(1.minutes)
+        }
+    }.distinctUntilChanged()
+
+    private val schedule = date.flatMapLatest { today ->
+        scheduleRepository.observeUpcoming(today).flatMapLatest { entries ->
+            val todays = entries.filter { it.date == today }
+            val pending = todays.firstOrNull { !it.done }
+            val upcoming = entries.filter { it.date > today }
+            val day = pending?.planDayId?.let(planRepository::observeDay) ?: flowOf(null)
+            day.map { Schedule(today, pending, it, todays.isNotEmpty() && pending == null, upcoming) }
+        }
     }
 
-    private val dashboard = run {
+    private val dashboard = date.flatMapLatest { today ->
         val zone = TimeZone.currentSystemDefault()
-        val today = Clock.System.todayIn(zone)
         val since = windowStart(Dashboard.HEATMAP_WEEKS, today).atStartOfDayIn(zone)
         combine(
             historyRepository.observeFinishedSessionsBetween(since, Instant.DISTANT_FUTURE),
@@ -157,11 +180,11 @@ class TodayViewModel(
     ) { (plan, next), active, prefs, schedule, dashboard ->
         TodayUiState(
             loading = false,
-            today = Clock.System.todayIn(TimeZone.currentSystemDefault()),
+            today = schedule.date,
             hasPlan = plan != null,
             nextDay = next,
             activeSessionId = active?.id,
-            deloadUntil = prefs.deloadUntil?.takeIf { prefs.isDeload(Clock.System.todayIn(TimeZone.currentSystemDefault())) },
+            deloadUntil = prefs.deloadUntil?.takeIf { prefs.isDeload(schedule.date) },
             scheduledToday = schedule.today,
             scheduledDay = schedule.day,
             scheduledTodayDone = schedule.todayDone,

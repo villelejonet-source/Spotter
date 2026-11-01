@@ -46,19 +46,19 @@ export async function middleware(request: NextRequest) {
     const url = request.nextUrl.clone();
     url.pathname = "/login";
     url.search = "";
-    return NextResponse.redirect(url);
+    return redirectKeepingCookies(url, response);
   }
   if (user && SIGNED_OUT_ONLY.includes(path)) {
     const url = request.nextUrl.clone();
     url.pathname = "/";
     url.search = "";
-    return NextResponse.redirect(url);
+    return redirectKeepingCookies(url, response);
   }
   if (path === "/reset-password" && !request.cookies.has(RECOVERY_COOKIE)) {
     const url = request.nextUrl.clone();
     url.pathname = "/login";
     url.search = "?notice=link";
-    return NextResponse.redirect(url);
+    return redirectKeepingCookies(url, response);
   }
   return response;
 }
@@ -69,3 +69,13 @@ export const config = {
   // future route can't slip past the guard by ending in ".png".
   matcher: ["/((?!_next/static|_next/image|favicon.ico).*)"],
 };
+
+/**
+ * A redirect that carries the cookies set on [response]: getClaims() may just have refreshed
+ * the session, and a fresh redirect response would drop the rotated tokens.
+ */
+function redirectKeepingCookies(url: URL, response: NextResponse): NextResponse {
+  const redirect = NextResponse.redirect(url);
+  response.cookies.getAll().forEach((cookie) => redirect.cookies.set(cookie));
+  return redirect;
+}

@@ -381,15 +381,24 @@ class SupabaseSyncRemote internal constructor(private val clientOrNull: suspend 
             limit(1)
         }.decodeList<IdOnly>().isNotEmpty()
 
-    override suspend fun pull(userId: String, since: String?, offset: Int, limit: Int): List<RemoteRow> =
+    override suspend fun pull(userId: String, since: String?, after: PageKey?, limit: Int): List<RemoteRow> =
         client().from(TABLE).select {
             filter {
                 eq("user_id", userId)
                 if (since != null) gt("server_updated_at", since)
+                if (after != null) {
+                    or {
+                        gt("server_updated_at", after.serverUpdatedAt)
+                        and {
+                            eq("server_updated_at", after.serverUpdatedAt)
+                            gt("sync_id", after.syncId)
+                        }
+                    }
+                }
             }
             order("server_updated_at", Order.ASCENDING)
             order("sync_id", Order.ASCENDING)
-            range(offset.toLong(), (offset + limit - 1).toLong())
+            limit(limit.toLong())
         }.decodeList<RemoteRow>()
 
     override suspend fun push(rows: List<SyncRow>) {

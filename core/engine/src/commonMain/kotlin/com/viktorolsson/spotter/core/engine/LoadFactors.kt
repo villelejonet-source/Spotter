@@ -79,9 +79,9 @@ internal object LoadFactors {
         WeightUnit.LB -> 5.0
     }
 
-    /** Lowest loadable weight, in the user's unit (an empty bar for barbells). */
+    /** Lowest loadable weight, in the user's unit: the empty bar (Plates.bar) for bar exercises. */
     fun minimum(ex: Exercise, unit: WeightUnit): Double =
-        if (isBarbell(ex)) (if (unit == WeightUnit.LB) 45.0 else 20.0) else step(ex, unit)
+        Plates.bar(ex, unit) ?: if (isBarbell(ex)) (if (unit == WeightUnit.LB) 45.0 else 20.0) else step(ex, unit)
 
     /** Rounds down to a loadable weight; null when even the lightest option is too heavy. */
     fun roundDown(kg: Double, ex: Exercise, unit: WeightUnit): Double? {

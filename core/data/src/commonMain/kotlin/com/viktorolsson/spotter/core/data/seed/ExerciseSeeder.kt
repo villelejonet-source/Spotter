@@ -39,6 +39,9 @@ class ExerciseSeeder(
         dataStore.edit { it[SEED_VERSION_KEY] = seed.version }
     }
 
+    /** The catalog version in Room (0 before the first seed). */
+    suspend fun appliedVersion(): Int = dataStore.data.first()[SEED_VERSION_KEY] ?: 0
+
     private companion object {
         val SEED_VERSION_KEY = intPreferencesKey("exercise_seed_version")
     }

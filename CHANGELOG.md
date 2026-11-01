@@ -26,8 +26,62 @@ into the new version's entry and writes the store notes from it. Versions are th
   the next workout's weight. The website's exercise progress skips it too.
 - A change made at the very moment a sync started could be left out of the backup until it was
   edited again. Now it goes with the next sync.
+- Weighted holds (a plank with a plate, for example) no longer get estimated 1RM or volume
+  records, since their reps are seconds. A longer hold at the same weight is still a record.
+- Adding weight to a bodyweight exercise (pull-ups, dips) no longer looks like a drop in
+  strength: it doesn't count as a plateau, can't trigger a deload, and the plan review doesn't
+  show the lift as weaker.
+- Today keeps up with the date when the app stays open overnight: this week's workouts, the
+  streak, the heatmap and today's planned workout move on to the new day instead of staying on
+  the day the app was opened.
+- An exercise added on the website that your app doesn't know yet (the website gets new
+  exercises before the app update does) now shows up on the phone once the app is updated,
+  instead of never. The first sync after updating fetches the backup again to pick it up.
+- Restoring a large backup while another phone or the website saves changes no longer misses
+  a record now and then.
+- Starting a plan day, or repeating a past workout, while another workout is in progress now
+  asks first ("A workout is in progress") with a button to go to it, instead of silently opening
+  the running workout.
+- New plans give main lifts on linear progression a first weight that fits the reps they ask
+  for, instead of one a few percent too heavy.
+- Warm-ups and weight rounding never go below the empty bar: 10 kg for an EZ bar, 25 kg for a
+  trap bar.
+- Weights like 1.005 now round up to 1.01 when shown.
+- Logging body weight again for the same day no longer leaves the earlier entry behind in the
+  backup.
+- Tapping Finish twice no longer records the workout's personal records twice.
+- If restoring a backup stops partway (the connection drops), the next sync carries on with the
+  restore instead of asking whether to use the backup or merge.
+- During a workout:
+  - typing an effort outside the scale (RPE 11, or the "1" on the way to typing 10) no longer
+    clears the effort already saved;
+  - a set can be ticked straight after typing its reps;
+  - "copy previous" closes the keypad, so it no longer shows the old typed value;
+  - the swap sheet never shows the previous exercise's alternatives;
+  - a save that fails while typing shows "Couldn't save" instead of closing the app.
+- Quick double taps no longer close two screens (for example Done on the workout summary, or
+  Add in the exercise picker, which could also add the exercises twice) or open the same
+  workout twice.
+- If saving your plan at the end of setup fails, Start works again so you can retry, instead of
+  staying greyed out.
 
 ### Website
+- Saving the profile on the website no longer undoes a body weight you just logged on the same
+  page (or a change synced from the phone): fields you didn't touch take the newest values.
+- The website's data export lists each workout's exercises in the order you did them, keeps
+  exercises with no sets logged, includes each exercise's notes, superset, rest and swap, and
+  now also exports your planned (scheduled) workouts. The CSV gains an exercise number and keeps
+  each exercise's sets together.
+- On the website:
+  - a starting weight with a decimal comma ("62,5") in the plan editor is kept instead of
+    silently cleared;
+  - "Plan weeks ahead" no longer puts a workout on a day you've already trained;
+  - workouts started just after midnight on the oldest Monday of a chart or the calendar are
+    no longer left out;
+  - a long week streak shows as "11+" on a Monday before your first workout of the week,
+    instead of "11";
+  - deleting your latest body weight moves your profile weight back to the entry before it;
+  - being sent to the login page, or away from it, no longer risks signing you out.
 - New timed holds in the plan editor progress like every other exercise (a few seconds longer
   each time) instead of defaulting to "None". "RIR autoregulation" is now labelled "Double
   progression (RIR)", which is what it does.

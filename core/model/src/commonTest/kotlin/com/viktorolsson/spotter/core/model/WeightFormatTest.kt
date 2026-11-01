@@ -12,6 +12,9 @@ class WeightFormatTest {
         assertEquals("0", WeightUnit.KG.format(0.0))
         assertEquals("0.1", WeightUnit.KG.format(0.1))
         assertEquals("1.05", WeightUnit.KG.format(1.049999))
+        // Halves that binary floating point stores a hair low still round up.
+        assertEquals("1.01", WeightUnit.KG.format(1.005))
+        assertEquals("2.68", WeightUnit.KG.format(2.675))
     }
 
     @Test

@@ -185,6 +185,11 @@ export interface SessionDetail {
   exercises: (SessionExerciseRow & { sets: SetEntryRow[] })[];
 }
 
+/** Every workout's exercises, for the export (one fetch, paged by sync id). */
+export async function allSessionExercises(client: OwnClient): Promise<SessionExerciseRow[]> {
+  return selectAll<SessionExerciseRow>(client, "v_session_exercise");
+}
+
 export async function sessionDetail(client: OwnClient, syncId: string): Promise<SessionDetail | null> {
   const [session, exercises, sets] = await Promise.all([
     single<SessionSummaryRow>(client, "v_session_summary", "sync_id", syncId),

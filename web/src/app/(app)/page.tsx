@@ -10,7 +10,7 @@ import { getActivePlan, getCatalog, getFinishedSessionCount, getPersonalRecords,
 import { formatDateValue, formatFullDate, formatRelative } from "@/lib/dates";
 import { APP_BACKUP_PATH, FREE_WORKOUT, PR_LABELS, WORKOUT } from "@/lib/labels";
 import { formatDuration, formatRecord, formatTarget, formatVolume, toUnit } from "@/lib/model";
-import { DAY_MS, finished, formatChange, localDate, nextPlanDay, percentChange, weekStreak, weeklyTotals, windowStart, workoutsPerDay } from "@/lib/stats";
+import { DAY_MS, fetchSince, finished, formatChange, localDate, nextPlanDay, percentChange, streakLabel, weeklyTotals, weekStreak, windowStart, workoutsPerDay } from "@/lib/stats";
 
 export const metadata = { title: "Today" };
 
@@ -37,7 +37,7 @@ export default async function TodayPage({ searchParams }: { searchParams: Promis
     getProfile(),
     getCatalog(),
     getScheduled(nextScheduled()),
-    getSessionTimes(heatmapStart(HEATMAP_WEEKS)),
+    getSessionTimes(fetchSince(heatmapStart(HEATMAP_WEEKS))),
     getSessions(RECENT),
     getPersonalRecords(RECENT),
   );
@@ -104,7 +104,7 @@ export default async function TodayPage({ searchParams }: { searchParams: Promis
   );
 }
 
-const recentSessions = () => getSessions({ since: windowStart(WEEKS) });
+const recentSessions = () => getSessions({ since: fetchSince(windowStart(WEEKS)) });
 /** The first open workout on the calendar from today on. */
 const nextScheduled = () => ({ fromDay: localDate(Date.now()) / DAY_MS, open: true, limit: 1 });
 /** How many recent workouts and records the cards list. */
@@ -115,7 +115,7 @@ async function WeekStats({ total }: { total: number }) {
   const weeks = weeklyTotals(sessions, WEEKS);
   const thisWeek = weeks[weeks.length - 1];
   const target = profile?.days_per_week;
-  // Counted inside the loaded window; a longer streak shows as "12+".
+  // Counted inside the loaded window; at its limit it shows as "12+" (streakLabel).
   const streak = weekStreak(sessions);
   const sum = (ws: typeof weeks) => ws.reduce((s, w) => s + w.volumeKg, 0);
   const fourWeekVolume = sum(weeks.slice(-4));
@@ -135,7 +135,7 @@ async function WeekStats({ total }: { total: number }) {
         delta={change != null && <Delta tone={change >= 0 ? "good" : "neutral"}>{formatChange(change)}</Delta>}
         spark={<Sparkline values={weeks.map((w) => w.volumeKg)} />}
       />
-      <Stat label="Week streak" value={streak >= WEEKS ? `${WEEKS}+` : streak} hint={streak === 1 ? "week in a row" : "weeks in a row"} />
+      <Stat label="Week streak" value={streakLabel(streak, WEEKS, thisWeek.sessions > 0)} hint={streak === 1 ? "week in a row" : "weeks in a row"} />
       <Stat label="Workouts" value={total} hint="all time" />
     </div>
   );
@@ -143,7 +143,7 @@ async function WeekStats({ total }: { total: number }) {
 
 async function WeeklyVolume({ searchParams }: { searchParams: Promise<{ range?: string }> }) {
   const range = rangeOf((await searchParams).range);
-  const [sessions, unit] = await Promise.all([getSessions({ since: windowStart(range.weeks) }), getUnit()]);
+  const [sessions, unit] = await Promise.all([getSessions({ since: fetchSince(windowStart(range.weeks)) }), getUnit()]);
   const weeks = weeklyTotals(sessions, range.weeks);
   const thisWeek = weeks[weeks.length - 1];
   return (
@@ -177,7 +177,7 @@ async function WeeklyVolume({ searchParams }: { searchParams: Promise<{ range?: 
 
 async function TrainingDays() {
   const now = Date.now();
-  const times = await getSessionTimes(heatmapStart(HEATMAP_WEEKS, now));
+  const times = await getSessionTimes(fetchSince(heatmapStart(HEATMAP_WEEKS, now)));
   const perDay = workoutsPerDay(times);
   return (
     <>

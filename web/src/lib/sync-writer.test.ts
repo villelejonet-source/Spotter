@@ -2,6 +2,7 @@ import { readdirSync, readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { describe, expect, it } from "vitest";
 import {
+  mergeDraft,
   deleteWorkoutRows,
   activatePlanRows,
   bodyWeightSchema,
@@ -9,6 +10,7 @@ import {
   dayDraftSchema,
   exerciseDraftSchema,
   planWeeksAhead,
+  takenDays,
   profileSchema,
   scheduledPayload,
   syncIdSchema,
@@ -351,6 +353,18 @@ describe("planConflict", () => {
   });
 });
 
+describe("takenDays", () => {
+  // Planning weeks ahead after training today used to put the next plan day on today too.
+  it("counts days already trained, in the display time zone, as well as planned ones", () => {
+    const monday = 20752; // 2026-10-26
+    // 23:30 in Stockholm on Monday is 22:30 UTC the same day; 00:30 on Tuesday is Monday 23:30 UTC.
+    const trainedMondayEvening = Date.UTC(2026, 9, 26, 22, 30);
+    const trainedTuesdayEarly = Date.UTC(2026, 9, 26, 23, 30);
+    const taken = takenDays([{ epoch_day: monday + 3 }], [{ started_at: trainedMondayEvening }, { started_at: trainedTuesdayEarly }]);
+    expect([...taken].sort()).toEqual([monday, monday + 1, monday + 3]);
+  });
+});
+
 describe("planWeeksAhead", () => {
   // 2026-10-26 is a Monday: epoch day 20752.
   const monday = 20752;
@@ -411,5 +425,23 @@ describe("deleteWorkoutRows", () => {
     expect(order[0]).toBe("scheduled_session");
     expect(order.lastIndexOf("set_entry")).toBeLessThan(order.indexOf("session_exercise"));
     expect(order.lastIndexOf("session_exercise")).toBeLessThan(order.indexOf("workout_session"));
+  });
+});
+
+describe("mergeDraft", () => {
+  const base = { goal: "HYPERTROPHY", body_weight_kg: 80, equipment: ["BARBELL"] };
+
+  // The profile page's weight log also saves the profile (the newest weight). The form used to
+  // keep its own, older weight and save it back over the new one.
+  it("takes newer values for fields the form didn't change, and keeps the ones it did", () => {
+    const edited = { ...base, goal: "STRENGTH" };
+    const latest = { ...base, body_weight_kg: 81 };
+    expect(mergeDraft(edited, base, latest)).toEqual({ goal: "STRENGTH", body_weight_kg: 81, equipment: ["BARBELL"] });
+  });
+
+  it("keeps an edit to a field that also changed elsewhere, and compares lists by value", () => {
+    const edited = { ...base, body_weight_kg: 79, equipment: ["BARBELL"] };
+    const latest = { ...base, body_weight_kg: 81, equipment: ["BARBELL", "DUMBBELL"] };
+    expect(mergeDraft(edited, base, latest)).toEqual({ goal: "HYPERTROPHY", body_weight_kg: 79, equipment: ["BARBELL", "DUMBBELL"] });
   });
 });

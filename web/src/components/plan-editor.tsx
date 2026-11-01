@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState, useTransition, type ReactNode } from "react";
 import { savePlan } from "@/app/actions/plans";
 import { newSyncId } from "@/lib/ids";
+import { parseDecimal } from "@/lib/number-input";
 import { BODYWEIGHT, EFFORT_LABEL, EQUIPMENT_LABELS, GOAL_LABELS, label, MUSCLE_LABELS, PROGRESSION_RULE_LABELS, SPLIT_LABELS } from "@/lib/labels";
 import { fromUnit, GOALS, isTimed, MUSCLES, PROGRESSION_RULES, SPLIT_TYPES, toUnit, unitLabel, type WeightUnit } from "@/lib/model";
 import type { DayDraft, ExerciseDraft, PlanDraft, PlanVersions } from "@/lib/sync-writer";
@@ -258,18 +259,12 @@ export function PlanEditor({
                         <input type="number" min={0} max={900} step={15} className={compact} aria-label={`Rest in seconds for ${name}`} value={e.rest_seconds} onChange={(x) => setExercise(dayIndex, i, { rest_seconds: Number(x.target.value) })} />
                       </ExerciseField>
                       <ExerciseField caption={`Start (${unitLabel(unit)})`}>
-                        <input
-                          type="number"
-                          min={0}
-                          step={0.5}
+                        <WeightInput
                           className={compact}
-                          aria-label={`Starting weight in ${unitLabel(unit)} for ${name}`}
-                          placeholder="–"
-                          value={e.starting_weight_kg == null ? "" : Number(toUnit(e.starting_weight_kg, unit).toFixed(1))}
-                          onChange={(x) => {
-                            const v = num(x.target.value);
-                            setExercise(dayIndex, i, { starting_weight_kg: v == null ? null : fromUnit(v, unit) });
-                          }}
+                          label={`Starting weight in ${unitLabel(unit)} for ${name}`}
+                          valueKg={e.starting_weight_kg}
+                          unit={unit}
+                          onChange={(kg) => setExercise(dayIndex, i, { starting_weight_kg: kg })}
                         />
                       </ExerciseField>
                       <ExerciseField caption="Superset">
@@ -386,5 +381,29 @@ function ExercisePicker({ open, exercises, onPick, onClose }: { open: boolean; e
         {!results.length && <li className="p-4 text-center text-sm text-muted">No exercises match. Try another search or create your own.</li>}
       </ul>
     </Dialog>
+  );
+}
+
+/**
+ * A weight typed as text, so a decimal comma works ("62,5"; a number input drops it in some
+ * browsers). Blank clears it; text that isn't a number yet leaves the value alone (NumberInput).
+ */
+function WeightInput({ className, label: ariaLabel, valueKg, unit, onChange }: { className: string; label: string; valueKg: number | null; unit: WeightUnit; onChange: (kg: number | null) => void }) {
+  const [text, setText] = useState(valueKg == null ? "" : String(Number(toUnit(valueKg, unit).toFixed(1))));
+  return (
+    <input
+      type="text"
+      inputMode="decimal"
+      className={className}
+      aria-label={ariaLabel}
+      placeholder="–"
+      value={text}
+      onChange={(x) => {
+        setText(x.target.value);
+        const parsed = parseDecimal(x.target.value);
+        if (parsed.kind === "blank") onChange(null);
+        else if (parsed.kind === "value") onChange(fromUnit(parsed.value, unit));
+      }}
+    />
   );
 }

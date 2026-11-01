@@ -65,7 +65,7 @@ object PlanReviewEngine {
             StalledLift(plateau, supports.map { it to RecommendationEngine.addAccessory(plateau.slot, it.exercise) }, variation)
         }
         val trends = mainLifts.mapNotNull { slot ->
-            val period = ctx.history[slot.exercise.id].orEmpty().filter { it.date >= since }
+            val period = ctx.history[slot.exercise.id].orEmpty().filter { it.date >= since }.comparable()
             if (period.size < 2) null else LiftTrend(slot.exercise, period.first().score, period.last().score)
         }
         return PlanReview(since, sessions, trends, stalled)

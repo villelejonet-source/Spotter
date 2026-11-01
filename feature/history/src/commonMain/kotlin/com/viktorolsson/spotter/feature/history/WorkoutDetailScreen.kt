@@ -34,6 +34,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import com.viktorolsson.spotter.core.ui.component.WorkoutInProgressDialog
 import com.viktorolsson.spotter.core.ui.component.ConfirmDialog
 import com.viktorolsson.spotter.feature.history.resources.detail_delete
 import com.viktorolsson.spotter.feature.history.resources.detail_delete_body
@@ -86,6 +87,7 @@ internal fun WorkoutDetailRoute(
     viewModel: WorkoutDetailViewModel = koinViewModel(),
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
+    val inProgress by viewModel.inProgress.collectAsStateWithLifecycle()
     WorkoutDetailScreen(
         state = state,
         onBack = onBack,
@@ -93,6 +95,15 @@ internal fun WorkoutDetailRoute(
         onRepeat = { viewModel.repeat(onOpenSession) },
         onDelete = { viewModel.delete(onBack) },
     )
+    inProgress?.let { running ->
+        WorkoutInProgressDialog(
+            onOpen = {
+                viewModel.dismissInProgress()
+                onOpenSession(running)
+            },
+            onDismiss = viewModel::dismissInProgress,
+        )
+    }
 }
 
 @Composable

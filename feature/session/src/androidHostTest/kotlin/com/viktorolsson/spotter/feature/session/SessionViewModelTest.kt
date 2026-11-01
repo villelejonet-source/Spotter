@@ -14,6 +14,7 @@ import com.viktorolsson.spotter.core.data.db.SpotterDatabase
 import com.viktorolsson.spotter.core.data.sync.AppBuild
 import com.viktorolsson.spotter.core.data.sync.SupabaseConfig
 import com.viktorolsson.spotter.core.data.sync.SyncScheduler
+import com.viktorolsson.spotter.core.model.EffortScale
 import com.viktorolsson.spotter.core.model.PreviousSet
 import com.viktorolsson.spotter.core.model.WorkoutSet
 import kotlinx.coroutines.CoroutineScope
@@ -165,6 +166,27 @@ class SessionViewModelTest {
         vm.updateSetField(set.id, SetField.WEIGHT, "")
         vm.flushEdit().join()
         assertNull(sets(id).first().weightKg)
+    }
+
+    /** An effort outside the scale (RPE 11, or the "1" on the way to typing 10) leaves the stored one: it used to clear it. */
+    @Test
+    fun anEffortOutsideTheScaleLeavesTheStoredOne() = runTest(main) {
+        graph.seeder.seedIfNeeded()
+        graph.preferences.setEffortScale(EffortScale.RPE)
+        val id = graph.workouts.startEmptyWorkout()
+        graph.workouts.addExercises(id, listOf("barbell-bench-press"))
+        val set = sets(id).first()
+        graph.workouts.setSetRir(set.id, 2)
+        val vm = viewModel(id)
+        vm.uiState.first { it.session != null }
+
+        vm.updateSetField(set.id, SetField.EFFORT, "11")
+        vm.flushEdit().join()
+        assertEquals(2, sets(id).first().rir)
+
+        vm.updateSetField(set.id, SetField.EFFORT, "9")
+        vm.flushEdit().join()
+        assertEquals(1, sets(id).first().rir)
     }
 
     /** A save that fails (here SQLite rejects it, as with a full disk) shows "Couldn't save" instead of crashing the app. */

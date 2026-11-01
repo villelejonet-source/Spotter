@@ -5,6 +5,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.navigation.toRoute
 import com.viktorolsson.spotter.core.data.AppErrors
+import com.viktorolsson.spotter.core.data.Failure
 import com.viktorolsson.spotter.core.data.launchReporting
 import com.viktorolsson.spotter.core.data.repository.ExerciseRepository
 import com.viktorolsson.spotter.core.data.repository.RecommendationRepository
@@ -139,7 +140,8 @@ class SessionViewModel(
             limitations = profile?.limitations.orEmpty(),
             exclude = inSession,
         )
-        _swap.update { it?.copy(candidates = ranked.map { c -> c.exercise }) }
+        // Only if the sheet is still this exercise's: it may have been closed and opened for another.
+        _swap.update { if (it?.sessionExercise?.id == exercise.id) it.copy(candidates = ranked.map { c -> c.exercise }) else it }
     }
 
     fun setSwapFilter(filter: SwapFilter) = _swap.update { it?.copy(filter = filter) }
@@ -210,7 +212,7 @@ class SessionViewModel(
     // Keypad edits: the screen shows what's typed at once; Room gets it a moment later
     // (or straight away when focus moves, a set is ticked or the workout ends).
     private data class FieldEdit(val setId: Long, val field: SetField, val text: String)
-    private val keypadEdit = DebouncedEdit<FieldEdit>(viewModelScope, EDIT_DEBOUNCE_MS, ::writeField)
+    private val keypadEdit = DebouncedEdit<FieldEdit>(viewModelScope, EDIT_DEBOUNCE_MS, onFailure = { errors.failed(Failure.SAVE, it) }, ::writeField)
 
     /** Queues one field from keypad text; written after a short pause in typing. */
     fun updateSetField(setId: Long, field: SetField, text: String) = keypadEdit.submit(FieldEdit(setId, field, text))
@@ -228,7 +230,11 @@ class SessionViewModel(
         when (edit.field) {
             SetField.WEIGHT -> NumberInput.decimal(edit.text).ifTyped { workoutRepository.setSetWeight(id, it?.let(prefs.weightUnit::toKg)) }
             SetField.REPS -> NumberInput.whole(edit.text).ifTyped { workoutRepository.setSetReps(id, it?.toInt()?.coerceAtMost(999)) }
-            SetField.EFFORT -> NumberInput.whole(edit.text).ifTyped { workoutRepository.setSetRir(id, it?.toInt()?.let(prefs.effortScale::toRir)) }
+            // A number outside the scale (RPE 11, or the "1" on the way to 10) is like invalid text.
+            SetField.EFFORT -> NumberInput.whole(edit.text).ifTyped { value ->
+                if (value == null) workoutRepository.setSetRir(id, null)
+                else prefs.effortScale.toRir(value.toInt())?.let { workoutRepository.setSetRir(id, it) }
+            }
         }
     }
 
@@ -257,7 +263,7 @@ class SessionViewModel(
             .filter { it.id != setId && it.isCompleted && it.setType != SetType.WARMUP && it.reps != null }
             .map { LoggedSet(it.weightKg, it.reps ?: 0) }
         val before = history.withSets(earlierToday)
-        val records = PersonalRecords.detect(listOf(LoggedSet(set.weightKg, reps)), before)
+        val records = PersonalRecords.detect(listOf(LoggedSet(set.weightKg, reps)), before, timed = exercise.exercise.isTimed)
             .filter { it.type != PersonalRecordType.VOLUME }
         if (records.isNotEmpty()) _prEvents.tryEmit(PrEvent(exercise.exercise.name, set.weightKg, reps, records, exercise.exercise.isTimed))
     }

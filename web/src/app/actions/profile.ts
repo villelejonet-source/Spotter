@@ -85,11 +85,20 @@ export async function logBodyWeight(epochDay: number, weightKg: number): Promise
 export async function deleteBodyWeight(syncId: string): Promise<ActionResult> {
   await requireUser();
   if (!syncIdSchema.safeParse(syncId).success) return { ok: false, error: RELOAD };
-  const entry = (await getBodyWeight()).find((e) => e.sync_id === syncId);
+  const [entries, profile] = await Promise.all([getBodyWeight(), getProfile()]);
+  const entry = entries.find((e) => e.sync_id === syncId);
   if (!entry) return { ok: true };
   const at = stamp(Date.now(), entry.updated_at);
+  const rows: SyncRowInput[] = [{ table_name: "body_weight_entry", sync_id: syncId, payload: null, updated_at: at, deleted_at: at }];
+  // The latest entry sets the profile's weight (as when logging): deleting it hands that to the one before.
+  const rest = entries.filter((e) => e.sync_id !== syncId);
+  const newLatest = rest.reduce<(typeof entries)[number] | null>((latest, e) => (latest == null || e.epoch_day > latest.epoch_day ? e : latest), null);
+  const wasLatest = rest.every((e) => e.epoch_day < entry.epoch_day);
+  if (profile && wasLatest && newLatest && profile.body_weight_kg !== newLatest.weight_kg) {
+    rows.push(profileRow({ ...profileDraftFrom(profile), body_weight_kg: newLatest.weight_kg }, profile.updated_at));
+  }
   try {
-    await push([{ table_name: "body_weight_entry", sync_id: syncId, payload: null, updated_at: at, deleted_at: at }]);
+    await push(rows);
   } catch (e) {
     return { ok: false, error: saveErrorMessage(e) };
   }

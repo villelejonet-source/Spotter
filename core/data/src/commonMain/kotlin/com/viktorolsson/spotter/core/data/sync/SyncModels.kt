@@ -40,16 +40,22 @@ data class DeviceCheckIn(
 )
 
 /** The server side of sync. Implemented with Supabase; faked in tests. */
+/** Where a pull page ends: the next page starts after this row (server time, then sync id). */
+data class PageKey(val serverUpdatedAt: String, val syncId: String)
+
 interface SyncRemote {
     /** Whether [userId] (the signed-in user) has anything backed up. */
     suspend fun hasRows(userId: String): Boolean
 
     /**
-     * [userId]'s rows changed after [since] (null: everything), oldest first, one page at a
-     * time. Always filtered on the owner, never left to row-level security: once a trainer
-     * can read a client's rows, an unfiltered pull would copy them into the trainer's phone.
+     * [userId]'s rows changed after [since] (null: everything), oldest first (server time,
+     * then sync id), [limit] at a time, starting [after] the previous page's last row. Paged
+     * by that key, not an offset: a row saved again mid-pull moves to the end without
+     * shifting the rows still to come. Always filtered on the owner, never left to row-level
+     * security: once a trainer can read a client's rows, an unfiltered pull would copy them
+     * into the trainer's phone.
      */
-    suspend fun pull(userId: String, since: String?, offset: Int, limit: Int): List<RemoteRow>
+    suspend fun pull(userId: String, since: String?, after: PageKey?, limit: Int): List<RemoteRow>
 
     /** Uploads changes; the server keeps whichever version is newer. */
     suspend fun push(rows: List<SyncRow>)

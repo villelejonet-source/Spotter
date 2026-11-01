@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { dayKey, formatChange, percentChange, exerciseProgress, muscleVolume, workoutsPerDay, nextPlanDay, weekStart, weekStreak, weeklyTotals } from "./stats";
+import { dayKey, fetchSince, formatChange, streakLabel, windowStart, percentChange, exerciseProgress, muscleVolume, workoutsPerDay, nextPlanDay, weekStart, weekStreak, weeklyTotals } from "./stats";
 
 // Thursday 2026-10-22, 14:00 in Stockholm.
 const NOW = Date.UTC(2026, 9, 22, 12);
@@ -122,3 +122,25 @@ describe("percentChange", () => {
     expect(formatChange(0)).toBe("±0%");
   });
 });
+
+describe("fetchSince", () => {
+  // Windows start on a date value (UTC midnight of the Stockholm date). Fetching from that
+  // instant missed the first hour or two of the oldest Monday: Stockholm's midnight comes first.
+  it("reaches back to the start of the window's first day in Stockholm", () => {
+    const now = Date.UTC(2026, 9, 28, 12); // Wednesday 28 Oct
+    const mondayJustAfterMidnight = Date.UTC(2026, 9, 25, 23, 30); // Mon 26 Oct 00:30 in Stockholm
+    expect(mondayJustAfterMidnight).toBeGreaterThanOrEqual(fetchSince(windowStart(1, now)));
+  });
+});
+
+describe("streakLabel", () => {
+  // Counted inside a 12-week window: with nothing yet this week the count can only reach 11,
+  // so a long streak showed as 11 on a Monday morning.
+  it("shows the window's limit as a floor, whether or not this week has a workout yet", () => {
+    expect(streakLabel(12, 12, true)).toBe("12+");
+    expect(streakLabel(11, 12, false)).toBe("11+");
+    expect(streakLabel(11, 12, true)).toBe("11");
+    expect(streakLabel(3, 12, false)).toBe("3");
+  });
+});
+

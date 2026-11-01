@@ -21,6 +21,7 @@ import com.viktorolsson.spotter.core.engine.WarmUps
 import com.viktorolsson.spotter.core.engine.WeightConversion
 import com.viktorolsson.spotter.core.model.PreviousSet
 import com.viktorolsson.spotter.core.model.SetType
+import com.viktorolsson.spotter.core.model.TIMED_EXERCISE_IDS
 import com.viktorolsson.spotter.core.model.isLift
 import com.viktorolsson.spotter.core.model.WorkoutSession
 import kotlinx.coroutines.flow.Flow
@@ -71,6 +72,9 @@ class WorkoutRepository(
      * the progression target computed from the last two sessions of that exercise
      * (or the plan's calibration estimate the first time).
      */
+    /** The workout in progress, if any (only one can be). */
+    suspend fun activeSessionId(): Long? = dao.getActiveSession()?.id
+
     suspend fun startPlannedWorkout(planDayId: Long): Long = db.withTransaction {
         dao.getActiveSession()?.let { return@withTransaction it.id }
         val day = planDao.getDay(planDayId) ?: error("No plan day $planDayId")
@@ -412,9 +416,11 @@ class WorkoutRepository(
 
     /**
      * Ends the session, dropping sets that were never ticked and exercises left with no
-     * sets, then records any personal records it set.
+     * sets, then records any personal records it set. A session already finished (a double
+     * tap on Finish) is left as it is.
      */
     suspend fun finishWorkout(sessionId: Long) = db.withTransaction {
+        if (dao.isSessionFinished(sessionId) != false) return@withTransaction
         dao.deleteIncompleteSets(sessionId)
         dao.deleteExercisesWithoutSets(sessionId)
         val now = clock.now()
@@ -434,7 +440,7 @@ class WorkoutRepository(
             val previous = previousByExercise[exerciseId].orEmpty()
                 .groupBy { it.sessionId }.values
                 .map { sets -> sets.mapNotNull { it.set.toLift() } }
-            PersonalRecords.detect(logged, PersonalRecords.bests(previous)).map {
+            PersonalRecords.detect(logged, PersonalRecords.bests(previous), timed = exerciseId in TIMED_EXERCISE_IDS).map {
                 PersonalRecordEntity(
                     exerciseId = exerciseId,
                     type = it.type,

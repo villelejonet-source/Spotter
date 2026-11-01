@@ -7,7 +7,7 @@ import { getActivePlan, getCatalog, getPlanOutlines, getProfile, getScheduled, g
 import { formatDateValue, formatDateValueMonth, formatTime, weekdayLabels } from "@/lib/dates";
 import { FREE_WORKOUT, WORKOUT } from "@/lib/labels";
 import { formatVolume } from "@/lib/model";
-import { DAY_MS, dateValueKey, dayKey, localDate, nextPlanDay, weekStart, windowStart } from "@/lib/stats";
+import { dateValueKey, DAY_MS, dayKey, fetchSince, localDate, nextPlanDay, weekStart, windowStart } from "@/lib/stats";
 import { DayPlanner, PlanAhead, type PlanOption, type PlannedEntry } from "./day-planner";
 
 export const metadata = { title: "Calendar" };
@@ -56,7 +56,7 @@ export default async function CalendarPage({ searchParams }: { searchParams: Pro
   // A planned workout already started in the app shows as the workout itself, so only open ones are fetched.
   const [sessions, recent, scheduled, [nextPlanned], plans, activePlan, profile, catalog] = await Promise.all([
     getSessions({ since: gridStart - DAY_MS, until: gridEnd + DAY_MS }),
-    getSessions({ since: windowStart(12) }),
+    getSessions({ since: fetchSince(windowStart(12)) }),
     getScheduled({ fromDay: gridStart / DAY_MS, toDay: gridEnd / DAY_MS - 1, open: true }),
     getScheduled({ fromDay: today / DAY_MS, open: true, limit: 1 }),
     getPlanOutlines(),

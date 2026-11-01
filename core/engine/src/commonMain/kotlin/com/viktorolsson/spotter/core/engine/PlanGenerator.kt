@@ -203,7 +203,8 @@ class PlanGenerator {
             rir = rir,
             rest = rest,
             progression = progression,
-            startingWeightKg = weights.estimateKg(exercise, base.repMin, rir),
+            // Sized for the reps the first session prescribes (Progression: linear works mid-range).
+            startingWeightKg = weights.estimateKg(exercise, Progression.firstReps(progression, base.repMin, repMax), rir),
         )
     }
 

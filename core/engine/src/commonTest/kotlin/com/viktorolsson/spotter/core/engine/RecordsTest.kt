@@ -19,5 +19,12 @@ class RecordsTest {
         assertTrue(records.none { it.type == PersonalRecordType.ESTIMATED_1RM }, "$records")
     }
 
+    @Test
+    fun `a hold only gets the longest-hold record`() {
+        val previous = PersonalRecords.bests(listOf(listOf(LoggedSet(10.0, 40))))
+        val records = PersonalRecords.detect(listOf(LoggedSet(10.0, 45)), previous, timed = true)
+        assertEquals(listOf(PersonalRecordType.REPS_AT_WEIGHT), records.map { it.type })
+    }
+
     private fun epley(kg: Double, reps: Int) = com.viktorolsson.spotter.core.model.epley(kg, reps)
 }

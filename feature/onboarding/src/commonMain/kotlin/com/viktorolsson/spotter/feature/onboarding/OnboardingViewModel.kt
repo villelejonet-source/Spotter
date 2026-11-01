@@ -240,14 +240,22 @@ class OnboardingViewModel(
 
     fun finish(onDone: () -> Unit) = viewModelScope.launchReporting(errors) {
         val state = _uiState.value
+        if (state.saving) return@launchReporting
         val plan = state.generated?.plan ?: return@launchReporting
         val profile = state.answers.toProfile() ?: return@launchReporting
         _uiState.update { it.copy(saving = true) }
         completing = true
-        profileRepository.save(profile)
-        planRepository.saveAsActive(plan)
-        preferencesRepository.setWeightUnit(profile.units)
-        preferencesRepository.setOnboardingCompleted(true)
+        try {
+            profileRepository.save(profile)
+            planRepository.saveAsActive(plan)
+            preferencesRepository.setWeightUnit(profile.units)
+            preferencesRepository.setOnboardingCompleted(true)
+        } catch (e: Throwable) {
+            // The snackbar says it failed; Start works again so it can be retried.
+            completing = false
+            _uiState.update { it.copy(saving = false) }
+            throw e
+        }
         onDone()
     }
 

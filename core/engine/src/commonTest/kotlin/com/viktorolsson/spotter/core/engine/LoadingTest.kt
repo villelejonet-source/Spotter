@@ -39,6 +39,16 @@ class LoadingTest {
         assertTrue(Plates.load(20.0, bench, WeightUnit.KG)!!.perSide.isEmpty())
     }
 
+    /** The empty bar is the lightest a bar exercise can go: 10 kg for an EZ bar, 25 kg for a trap bar. */
+    @Test
+    fun `nothing goes below the empty bar`() {
+        val curl = byId.getValue("ez-bar-curl")
+        assertTrue(WarmUps.generate(15.0, curl, WeightUnit.KG).all { it.weightKg!! >= 10.0 }, "${WarmUps.generate(15.0, curl, WeightUnit.KG)}")
+        val trapBar = byId.getValue("trap-bar-deadlift")
+        assertTrue(WarmUps.generate(40.0, trapBar, WeightUnit.KG).all { it.weightKg!! >= 25.0 }, "${WarmUps.generate(40.0, trapBar, WeightUnit.KG)}")
+        assertEquals(25.0, LoadFactors.roundDown(22.5, trapBar, WeightUnit.KG))
+    }
+
     @Test
     fun `barbell warm-up ramp`() {
         val sets = WarmUps.generate(100.0, bench, WeightUnit.KG)

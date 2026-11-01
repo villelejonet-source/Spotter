@@ -8,6 +8,51 @@ into the new version's entry and writes the store notes from it. Versions are th
 
 ## Unreleased
 
+### Website
+- Saving the profile on the website no longer undoes a body weight you just logged on the same
+  page (or a change synced from the phone): fields you didn't touch take the newest values.
+- The website's data export lists each workout's exercises in the order you did them, keeps
+  exercises with no sets logged, includes each exercise's notes, superset, rest and swap, and
+  now also exports your planned (scheduled) workouts. The CSV gains an exercise number and keeps
+  each exercise's sets together.
+- On the website:
+  - a starting weight with a decimal comma ("62,5") in the plan editor is kept instead of
+    silently cleared;
+  - "Plan weeks ahead" no longer puts a workout on a day you've already trained;
+  - workouts started just after midnight on the oldest Monday of a chart or the calendar are
+    no longer left out;
+  - a long week streak shows as "11+" on a Monday before your first workout of the week,
+    instead of "11";
+  - deleting your latest body weight moves your profile weight back to the entry before it;
+  - being sent to the login page, or away from it, no longer risks signing you out.
+- New timed holds in the plan editor progress like every other exercise (a few seconds longer
+  each time) instead of defaulting to "None". "RIR autoregulation" is now labelled "Double
+  progression (RIR)", which is what it does.
+- The website fits phones better: editing a plan no longer scrolls sideways (each exercise's
+  fields stack under its name), the calendar shows dots in the month and lists the month's
+  workouts below it, text fields no longer make iPhones zoom in, buttons, chips and links are
+  easier to tap, lists and tables use more of the screen's width, and the bars stay clear of
+  the iPhone's home indicator.
+- The website switches between pages faster: a page you've just visited opens instantly instead
+  of loading again, Today and Insights fetch all their cards at once, every section shows its
+  outline the moment you tap it, and scrolling on phones is smoother.
+- The website has a new look: dark-first with a glowing orange accent, monospace numbers, a new
+  sidebar, and a "Jump to…" command palette (⌘K) to reach any page or action. Light mode
+  follows your system setting.
+- The website's Today page is a dashboard: stat tiles with trend lines and the change in volume
+  against the previous four weeks, a weekly volume chart with a 4W/12W/6M/1Y switch, your next
+  workout with this week's progress as a ring, a training heatmap, records and recent workouts.
+- The website's charts match: progress lines and body weight glow over a fading area, bar charts
+  fade with the latest bar highlighted, and muscle balance shows its target range as a dashed band.
+
+### iOS (not released yet)
+- The whole app runs on iOS from the same shared code as Android (#13–#20).
+- Fixed a crash on iOS whenever the app logged a warning, such as a failed sync (#27).
+- Builds without cloud backup no longer show account buttons that couldn't work (#21).
+- The app has its icon on iOS too (it showed a blank placeholder).
+
+## 1.2.1 (10) — 2026-11-01
+
 ### Fixed
 - Restoring your backup on a new or reinstalled phone no longer leaves out workouts done on a
   plan, or a plan day, that you later deleted on the website. They come back as workouts that
@@ -64,49 +109,6 @@ into the new version's entry and writes the store notes from it. Versions are th
   workout twice.
 - If saving your plan at the end of setup fails, Start works again so you can retry, instead of
   staying greyed out.
-
-### Website
-- Saving the profile on the website no longer undoes a body weight you just logged on the same
-  page (or a change synced from the phone): fields you didn't touch take the newest values.
-- The website's data export lists each workout's exercises in the order you did them, keeps
-  exercises with no sets logged, includes each exercise's notes, superset, rest and swap, and
-  now also exports your planned (scheduled) workouts. The CSV gains an exercise number and keeps
-  each exercise's sets together.
-- On the website:
-  - a starting weight with a decimal comma ("62,5") in the plan editor is kept instead of
-    silently cleared;
-  - "Plan weeks ahead" no longer puts a workout on a day you've already trained;
-  - workouts started just after midnight on the oldest Monday of a chart or the calendar are
-    no longer left out;
-  - a long week streak shows as "11+" on a Monday before your first workout of the week,
-    instead of "11";
-  - deleting your latest body weight moves your profile weight back to the entry before it;
-  - being sent to the login page, or away from it, no longer risks signing you out.
-- New timed holds in the plan editor progress like every other exercise (a few seconds longer
-  each time) instead of defaulting to "None". "RIR autoregulation" is now labelled "Double
-  progression (RIR)", which is what it does.
-- The website fits phones better: editing a plan no longer scrolls sideways (each exercise's
-  fields stack under its name), the calendar shows dots in the month and lists the month's
-  workouts below it, text fields no longer make iPhones zoom in, buttons, chips and links are
-  easier to tap, lists and tables use more of the screen's width, and the bars stay clear of
-  the iPhone's home indicator.
-- The website switches between pages faster: a page you've just visited opens instantly instead
-  of loading again, Today and Insights fetch all their cards at once, every section shows its
-  outline the moment you tap it, and scrolling on phones is smoother.
-- The website has a new look: dark-first with a glowing orange accent, monospace numbers, a new
-  sidebar, and a "Jump to…" command palette (⌘K) to reach any page or action. Light mode
-  follows your system setting.
-- The website's Today page is a dashboard: stat tiles with trend lines and the change in volume
-  against the previous four weeks, a weekly volume chart with a 4W/12W/6M/1Y switch, your next
-  workout with this week's progress as a ring, a training heatmap, records and recent workouts.
-- The website's charts match: progress lines and body weight glow over a fading area, bar charts
-  fade with the latest bar highlighted, and muscle balance shows its target range as a dashed band.
-
-### iOS (not released yet)
-- The whole app runs on iOS from the same shared code as Android (#13–#20).
-- Fixed a crash on iOS whenever the app logged a warning, such as a failed sync (#27).
-- Builds without cloud backup no longer show account buttons that couldn't work (#21).
-- The app has its icon on iOS too (it showed a blank placeholder).
 
 ## 1.2.0 (9) — 2026-10-31
 

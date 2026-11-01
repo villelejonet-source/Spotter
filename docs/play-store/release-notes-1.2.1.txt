@@ -1,0 +1,9 @@
+<en-US>
+• Restoring a backup keeps every workout, even from deleted plans
+• Suggestions change the right exercise when you use two phones
+• "None" progression keeps your weight; weighted pull-ups no longer look weaker
+• Sets with 0 reps no longer count as lifts or records
+• Today moves to the new day if the app stays open overnight
+• Asks before starting a workout while another is in progress
+• Fixes for double taps, typing effort and ticking sets during a workout
+</en-US>

@@ -60,6 +60,10 @@ fun SessionWithExercises.toModel() = WorkoutSession(
     endedAt = session.endedAt,
     notes = session.notes,
     planDayName = planDay?.name,
+    isLighter = session.isDeload,
+    readiness = session.readiness,
+    feel = session.feel,
+    effort = session.perceivedDifficulty,
     exercises = exercises.sortedBy { it.sessionExercise.position }.map(SessionExerciseWithSets::toModel),
 )
 

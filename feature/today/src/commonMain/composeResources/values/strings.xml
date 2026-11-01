@@ -20,6 +20,12 @@
     <string name="today_coming_up">Coming up</string>
     <string name="today_deload_title">Lighter week</string>
     <string name="today_deload_body">Until %1$s, planned workouts use fewer sets and lighter weights.</string>
+    <string name="checkin_title">How do you feel today?</string>
+    <string name="checkin_skip">Skip</string>
+    <string name="checkin_lighter_title">Make today a lighter session?</string>
+    <string name="checkin_lighter_body">Fewer sets at about 90% of the weight. It won't count against your progress.</string>
+    <string name="checkin_lighter">Lighter</string>
+    <string name="checkin_keep">Keep as planned</string>
     <string name="today_ring_description">%1$d of %2$d workouts this week</string>
     <string name="today_stat_week">This week</string>
     <string name="today_stat_week_goal_hint">workouts of your weekly goal</string>

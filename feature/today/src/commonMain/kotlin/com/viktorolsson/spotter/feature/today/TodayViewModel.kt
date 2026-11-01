@@ -193,13 +193,16 @@ class TodayViewModel(
         )
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), TodayUiState())
 
-    /** Starts today's scheduled workout if there is one, otherwise the plan's next day. */
-    fun startNext(onStarted: (Long) -> Unit) = viewModelScope.launchReporting(errors, Failure.ACTION) {
+    /**
+     * Starts today's scheduled workout if there is one, otherwise the plan's next day.
+     * [readiness] and [lighter] come from the check-in; null leaves them unset.
+     */
+    fun startNext(readiness: Int? = null, lighter: Boolean? = null, onStarted: (Long) -> Unit) = viewModelScope.launchReporting(errors, Failure.ACTION) {
         val state = uiState.value
         val scheduled = state.scheduledToday
         when {
-            scheduled != null -> onStarted(scheduleRepository.start(scheduled))
-            state.nextDay != null -> onStarted(workoutRepository.startPlannedWorkout(state.nextDay.id))
+            scheduled != null -> onStarted(scheduleRepository.start(scheduled, readiness, lighter))
+            state.nextDay != null -> onStarted(workoutRepository.startPlannedWorkout(state.nextDay.id, readiness, lighter))
         }
     }
 

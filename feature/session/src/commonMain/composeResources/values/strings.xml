@@ -1,6 +1,12 @@
 <resources>
     <string name="session_minimize">Minimize workout</string>
     <string name="session_finish">Finish</string>
+    <string name="session_lighter">Lighter session</string>
+    <string name="session_day_lighter">%1$s · Lighter session</string>
+    <string name="summary_feel_title">How did it go?</string>
+    <string name="summary_effort">Effort</string>
+    <string name="summary_effort_value">%1$d of 10</string>
+    <string name="summary_effort_unset">Not rated</string>
     <string name="session_more">More</string>
     <string name="session_add_exercises">Add exercises</string>
     <string name="session_empty_title">Empty workout</string>

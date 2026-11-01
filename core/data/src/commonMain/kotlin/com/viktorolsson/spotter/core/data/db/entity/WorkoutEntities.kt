@@ -29,6 +29,12 @@ data class WorkoutSessionEntity(
     /** Lighter deload-week session; excluded from progression and plateau history. */
     @ColumnInfo(defaultValue = "0")
     val isDeload: Boolean = false,
+    /** How the user felt before starting, 1 (low) to 5 (great); null when skipped. */
+    @ColumnInfo(defaultValue = "NULL")
+    val readiness: Int? = null,
+    /** How the session went, 1 (badly) to 5 (great), rated after finishing; null when skipped. */
+    @ColumnInfo(defaultValue = "NULL")
+    val feel: Int? = null,
     /** Global id for cloud sync; assigned by a database trigger (see SyncSchema). */
     val syncId: String? = null,
     /** Time of the last local change (ms), maintained by a database trigger. */

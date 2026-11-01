@@ -118,17 +118,28 @@ internal fun TodayRoute(
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val review by viewModel.review.collectAsStateWithLifecycle()
     var reviewing by rememberSaveable { mutableStateOf(false) }
+    var checkingIn by rememberSaveable { mutableStateOf(false) }
     TodayScreen(
         uiState = uiState,
         review = review,
         onReviewLater = viewModel::snoozeReview,
         onReviewOpen = { reviewing = true },
         onResume = { uiState.activeSessionId?.let(onOpenSession) },
-        onStartNext = { viewModel.startNext(onOpenSession) },
+        onStartNext = { checkingIn = true },
         onEmptyWorkout = { viewModel.startEmptyWorkout(onOpenSession) },
         onOpenPlan = onOpenPlan,
         onBuildPlan = onBuildPlan,
     )
+    if (checkingIn) {
+        CheckInSheet(
+            inDeloadWeek = uiState.deloadUntil != null,
+            onStart = { readiness, lighter ->
+                checkingIn = false
+                viewModel.startNext(readiness, lighter, onOpenSession)
+            },
+            onDismiss = { checkingIn = false },
+        )
+    }
     val open = review
     if (reviewing && open != null) {
         PlanReviewSheet(

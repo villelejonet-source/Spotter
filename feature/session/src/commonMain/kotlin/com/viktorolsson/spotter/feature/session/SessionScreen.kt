@@ -92,6 +92,8 @@ import com.viktorolsson.spotter.core.ui.resources.action_undo
 import org.jetbrains.compose.resources.stringResource
 import com.viktorolsson.spotter.feature.session.resources.Res
 import com.viktorolsson.spotter.feature.session.resources.discard_body
+import com.viktorolsson.spotter.feature.session.resources.session_day_lighter
+import com.viktorolsson.spotter.feature.session.resources.session_lighter
 import com.viktorolsson.spotter.feature.session.resources.discard_title
 import com.viktorolsson.spotter.feature.session.resources.finish_body_incomplete
 import com.viktorolsson.spotter.feature.session.resources.finish_body_nothing
@@ -305,6 +307,7 @@ internal fun SessionScreen(
         topBar = {
             SessionTopBar(
                 dayName = session.planDayName,
+                lighter = session.isLighter,
                 elapsed = (now - session.startedAt),
                 menuOpen = menuOpen,
                 onMenuOpenChange = { menuOpen = it },
@@ -524,6 +527,7 @@ internal fun DiscardWorkoutDialog(onConfirm: () -> Unit, onDismiss: () -> Unit) 
 @Composable
 private fun SessionTopBar(
     dayName: String?,
+    lighter: Boolean,
     elapsed: Duration,
     menuOpen: Boolean,
     onMenuOpenChange: (Boolean) -> Unit,
@@ -541,8 +545,13 @@ private fun SessionTopBar(
         },
         title = {
             Column {
-                if (dayName != null) {
-                    Text(dayName, style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary)
+                val label = when {
+                    dayName != null && lighter -> stringResource(Res.string.session_day_lighter, dayName)
+                    lighter -> stringResource(Res.string.session_lighter)
+                    else -> dayName
+                }
+                if (label != null) {
+                    Text(label, style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary)
                 }
                 Text(
                     formatClock(elapsed),

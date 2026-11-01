@@ -28,12 +28,12 @@ class ScheduleRepository(
     /**
      * Starts the scheduled workout (its plan day, or an empty workout) and links it, so the
      * entry shows as done here and on the website. A workout already in progress is
-     * returned instead, as everywhere else.
+     * returned instead, as everywhere else. [readiness] and [lighter] come from the check-in.
      */
-    suspend fun start(scheduled: ScheduledWorkout): Long {
+    suspend fun start(scheduled: ScheduledWorkout, readiness: Int? = null, lighter: Boolean? = null): Long {
         workouts.observeActiveSession().first()?.let { return it.id }
         val planDayId = dao.getPlanDayId(scheduled.id)
-        val sessionId = if (planDayId != null) workouts.startPlannedWorkout(planDayId) else workouts.startEmptyWorkout()
+        val sessionId = if (planDayId != null) workouts.startPlannedWorkout(planDayId, readiness, lighter) else workouts.startEmptyWorkout(readiness)
         dao.setSession(scheduled.id, sessionId)
         return sessionId
     }

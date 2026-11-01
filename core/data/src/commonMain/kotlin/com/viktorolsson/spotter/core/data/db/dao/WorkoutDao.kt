@@ -43,6 +43,12 @@ interface WorkoutDao {
     @Query("UPDATE workout_session SET notes = :notes WHERE id = :sessionId")
     suspend fun updateSessionNotes(sessionId: Long, notes: String?)
 
+    @Query("UPDATE workout_session SET feel = :feel WHERE id = :sessionId")
+    suspend fun updateSessionFeel(sessionId: Long, feel: Int?)
+
+    @Query("UPDATE workout_session SET perceivedDifficulty = :effort WHERE id = :sessionId")
+    suspend fun updateSessionEffort(sessionId: Long, effort: Int?)
+
     @Query("UPDATE workout_session SET endedAt = :endedAt WHERE id = :sessionId")
     suspend fun endSession(sessionId: Long, endedAt: Instant)
 

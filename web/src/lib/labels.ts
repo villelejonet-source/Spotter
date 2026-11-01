@@ -157,7 +157,24 @@ export const WORKOUT = "Workout";
 /** A workout planned on the calendar without a plan day (today_free_workout). */
 export const FREE_WORKOUT = "Free workout";
 /** A deload (today_deload_title). */
-export const LIGHTER_WEEK = "Lighter week";
+/** A deload session: a whole lighter week, or one day chosen at the check-in (app: session_lighter). */
+export const LIGHTER_SESSION = "Lighter session";
+
+/** How a workout felt, 1 to 5 (app: core/ui feel_1–feel_5). */
+export const FEEL_LABELS: Record<number, string> = { 1: "Very low", 2: "Low", 3: "Okay", 4: "Good", 5: "Great" };
+export const READINESS_LABEL = "Before";
+export const FEEL_LABEL = "After";
+export const SESSION_EFFORT_LABEL = "Effort";
+
+/** "Before: Low · After: Good · Effort 7/10", leaving out what wasn't rated; null when nothing was. */
+export function formatCheckIn(readiness: number | null, feel: number | null, effort: number | null): string | null {
+  const parts = [
+    readiness != null && FEEL_LABELS[readiness] ? `${READINESS_LABEL}: ${FEEL_LABELS[readiness]}` : null,
+    feel != null && FEEL_LABELS[feel] ? `${FEEL_LABEL}: ${FEEL_LABELS[feel]}` : null,
+    effort != null ? `${SESSION_EFFORT_LABEL} ${effort}/10` : null,
+  ].filter((p): p is string => p != null);
+  return parts.length ? parts.join(" · ") : null;
+}
 /** Where cloud backup lives in the app (settings backup_section). */
 export const APP_BACKUP_PATH = "Profile → Backup & sync";
 

@@ -5,7 +5,7 @@ import type { SessionExerciseRow, SessionSummaryRow } from "./model";
 const name = (id: string) => `name of ${id}`;
 const session = (sync_id: string, started_at: number): SessionSummaryRow => ({
   sync_id, started_at, ended_at: started_at + 3_600_000, plan_day_id: null, plan_day_name: "Push", plan_id: null,
-  is_deload: false, notes: null, exercise_count: 2, completed_sets: 3, volume_kg: 0,
+  is_deload: false, notes: null, exercise_count: 2, completed_sets: 3, volume_kg: 0, readiness: null, feel: null, perceived_difficulty: null,
 });
 const exercise = (sync_id: string, session_id: string, exercise_id: string, position: number, extra: Partial<SessionExerciseRow> = {}): SessionExerciseRow => ({
   sync_id, session_id, exercise_id, position, substituted_from_exercise_id: null, superset_group: null, notes: null,

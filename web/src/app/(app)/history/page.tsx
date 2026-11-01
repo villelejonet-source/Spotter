@@ -3,7 +3,7 @@ import { Badge, Card, EmptyState, LinkButton, PageHeader, SectionTitle } from "@
 import { groupBy } from "@/lib/collections";
 import { getFinishedSessionCount, getSessions, getUnit } from "@/lib/data";
 import { formatFullDate, formatMonthYear, formatTime } from "@/lib/dates";
-import { LIGHTER_WEEK, WORKOUT } from "@/lib/labels";
+import { FEEL_LABELS, LIGHTER_SESSION, WORKOUT } from "@/lib/labels";
 import { formatDuration, formatVolume } from "@/lib/model";
 
 export const metadata = { title: "History" };
@@ -48,12 +48,13 @@ export default async function HistoryPage({ searchParams }: { searchParams: Prom
                       <div className="min-w-0">
                         <div className="flex flex-wrap items-center gap-2 font-medium">
                           {s.plan_day_name ?? WORKOUT}
-                          {s.is_deload && <Badge tone="tertiary">{LIGHTER_WEEK}</Badge>}
+                          {s.is_deload && <Badge tone="tertiary">{LIGHTER_SESSION}</Badge>}
                           {s.ended_at == null && <Badge tone="primary">In progress</Badge>}
                         </div>
                         <div className="text-xs text-muted">
                           {formatFullDate(s.started_at)} · {formatTime(s.started_at)}
                           {s.ended_at != null && ` · ${formatDuration(s.ended_at - s.started_at)}`}
+                          {s.feel != null && FEEL_LABELS[s.feel] && ` · Felt ${FEEL_LABELS[s.feel].toLowerCase()}`}
                         </div>
                       </div>
                       <div className="shrink-0 text-right text-sm tabular-nums">

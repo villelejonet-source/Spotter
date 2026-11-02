@@ -43,6 +43,8 @@ into the new version's entry and writes the store notes from it. Versions are th
   - a lighter session on a low day does the deload loads without using up the week.
 
 ### Website
+- Levels and badges: your level is on Today, and Progress has a Levels tab with how XP is
+  earned and every badge, the same as in the app.
 - Workout history shows how you felt before and after each workout and its effort. Lighter
   sessions are marked "Lighter session" (was "Lighter week").
 - Progress pages leave lighter sessions and low days out of the charts and the change column,

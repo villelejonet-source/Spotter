@@ -4,6 +4,8 @@
 
 import { LOW_CHECK_IN } from "./check-ins";
 import type { PersonalRecordType } from "./model";
+import type { SessionPlayRow } from "./queries";
+import { LOCALE, TIME_ZONE } from "./tz";
 
 /** Every number levels and badges use; the app's GamificationRules. */
 export const RULES = {
@@ -132,6 +134,33 @@ export interface PlayerProgress {
 }
 
 const DAY_MS = 86_400_000;
+
+const startParts = new Intl.DateTimeFormat(LOCALE, {
+  timeZone: TIME_ZONE,
+  year: "numeric",
+  month: "2-digit",
+  day: "2-digit",
+  hour: "2-digit",
+  minute: "2-digit",
+  hourCycle: "h23",
+});
+
+/** A row from v_session_play, with its start in the display time zone (as the app uses the phone's). */
+export function playedSession(row: SessionPlayRow): PlayedSession {
+  const p = Object.fromEntries(startParts.formatToParts(row.started_at).map((x) => [x.type, x.value]));
+  return {
+    id: row.sync_id,
+    start: `${p.year}-${p.month}-${p.day}T${p.hour}:${p.minute}`,
+    minutes: Math.floor((row.ended_at - row.started_at) / 60_000),
+    lighter: row.is_deload,
+    readiness: row.readiness,
+    feel: row.feel,
+    workingSets: row.working_sets,
+    volumeKg: Number(row.volume_kg),
+    exerciseIds: row.exercise_ids,
+    records: row.record_types,
+  };
+}
 
 /** "2026-10-26" as UTC midnight, so date maths is plain arithmetic. */
 const dateValue = (date: string) => Date.parse(`${date}T00:00:00Z`);

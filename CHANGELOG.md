@@ -50,6 +50,8 @@ into the new version's entry and writes the store notes from it. Versions are th
   - a lighter session on a low day does the deload loads without using up the week.
 
 ### Website
+- Today appears sooner after the site has been idle: the page no longer waits for your whole
+  plan before showing, and the sign-in check runs next to the database.
 - Plans: a 5/3/1 plan is called 5/3/1 in the plan list, not Custom.
 - Levels and badges: your level is on Today, and Progress has a Levels tab with how XP is
   earned and every badge, the same as in the app.

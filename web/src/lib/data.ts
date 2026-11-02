@@ -102,4 +102,6 @@ export const getPlan = cache(async (syncId: string) => q.plan(await client(), sy
 
 export const getActivePlan = cache(async () => q.activePlan(await client()));
 
+export const getHasActivePlan = cache(async () => q.hasActivePlan(await client()));
+
 export const getPlanDay = cache(async (syncId: string) => q.planDay(await client(), syncId));

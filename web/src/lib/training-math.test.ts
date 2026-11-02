@@ -4,7 +4,8 @@ import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { describe, expect, it } from "vitest";
 import { countsTowardsChange, feelSummary, isRoughDay } from "./check-ins";
-import { epley, isTimed } from "./model";
+import { levelFor, playerProgress, type PlayedSession } from "./gamification";
+import { epley, isTimed, type PersonalRecordType } from "./model";
 import { parseDecimal } from "./number-input";
 import { exerciseProgress, formatChange, percentChange, weekStreak } from "./stats";
 
@@ -19,6 +20,19 @@ const fixtures: {
   weekStreak: { name: string; today: string; dates: string[]; streak: number }[];
   checkIns: { name: string; lighter: boolean; readiness: number | null; feel: number | null; roughDay: boolean; countsTowardsChange: boolean }[];
   feelSummary: { name: string; checkIns: [number | null, number | null][]; summary: { rated: number; averageReadiness: number | null; averageFeel: number | null; lowDays: number } | null }[];
+  gamification: {
+    levels: { xp: number; level: number; title: string; xpIntoLevel: number; xpForNext: number }[];
+    histories: {
+      name: string;
+      daysPerWeek: number | null;
+      sessions: (Pick<PlayedSession, "start" | "minutes" | "workingSets"> & { id: number } & Partial<Omit<PlayedSession, "id" | "records">> & { records?: PersonalRecordType[] })[];
+      xp: { id: number; session: number; sets: number; records: number; checkIn: number; weeklyGoal: number }[];
+      totalXp: number;
+      level: number;
+      unlocked: Record<string, number>;
+      progress: Record<string, number>;
+    }[];
+  };
 } = JSON.parse(readFileSync(resolve(__dirname, "../../../core/model/fixtures/training-math.json"), "utf8"));
 
 describe("training-math.json", () => {
@@ -76,6 +90,33 @@ describe("training-math.json", () => {
     for (const key of ["averageReadiness", "averageFeel"] as const) {
       if (summary[key] == null) expect(actual?.[key]).toBeNull();
       else expect(actual?.[key]).toBeCloseTo(summary[key]!, 4);
+    }
+  });
+
+  it.each(fixtures.gamification.levels)("level %j", ({ xp, level, title, xpIntoLevel, xpForNext }) => {
+    expect(levelFor(xp)).toEqual({ number: level, title, xpIntoLevel, xpForNext });
+  });
+
+  it.each(fixtures.gamification.histories)("gamification: $name", ({ daysPerWeek, sessions, xp, totalXp, level, unlocked, progress }) => {
+    const played: PlayedSession[] = sessions.map((s) => ({
+      lighter: false,
+      readiness: null,
+      feel: null,
+      volumeKg: 0,
+      exerciseIds: [],
+      records: [],
+      ...s,
+      id: String(s.id),
+    }));
+    const actual = playerProgress(played, daysPerWeek);
+    expect(actual.sessions).toEqual(
+      xp.map(({ id, ...x }) => ({ sessionId: String(id), ...x, total: x.session + x.sets + x.records + x.checkIn + x.weeklyGoal })),
+    );
+    expect(actual.totalXp).toBe(totalXp);
+    expect(actual.level.number).toBe(level);
+    expect(Object.fromEntries(actual.badges.filter((b) => b.unlockedBy != null).map((b) => [b.badge, Number(b.unlockedBy)]))).toEqual(unlocked);
+    for (const [badge, current] of Object.entries(progress)) {
+      expect(actual.badges.find((b) => b.badge === badge)?.current, badge).toBeCloseTo(current, 4);
     }
   });
 });

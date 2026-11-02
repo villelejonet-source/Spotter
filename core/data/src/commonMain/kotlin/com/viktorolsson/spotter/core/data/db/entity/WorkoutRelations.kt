@@ -91,3 +91,22 @@ data class LoggedExercise(
 
 /** A finished workout's check-in before and rating after, 1–5 each, either possibly skipped. */
 data class CheckInRow(val readiness: Int?, val feel: Int?)
+
+/** A finished workout's totals for levels and badges (core/engine Gamification.kt). */
+data class PlayedSessionRow(
+    val id: Long,
+    val startedAt: kotlin.time.Instant,
+    val endedAt: kotlin.time.Instant,
+    val isDeload: Boolean,
+    val readiness: Int?,
+    val feel: Int?,
+    /** Completed sets that aren't warm-ups. */
+    val workingSets: Int,
+    /** As WorkoutSummary.volumeKg: completed working sets, holds left out. */
+    val volumeKg: Double,
+)
+
+/** An exercise with at least one completed working set in a finished workout. */
+data class SessionExerciseIdRow(val sessionId: Long, val exerciseId: String)
+
+data class SessionRecordRow(val sessionId: Long, val type: com.viktorolsson.spotter.core.model.PersonalRecordType)

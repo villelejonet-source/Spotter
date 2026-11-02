@@ -206,6 +206,14 @@ export type Database = {
                         Relationships: [
                     
                   ]
+                },"v_session_play": {
+                  Row: {
+                    "ended_at": number | null,"exercise_ids": (string)[] | null,"feel": number | null,"is_deload": boolean | null,"readiness": number | null,"record_types": (string)[] | null,"started_at": number | null,"sync_id": string,"user_id": string,"volume_kg": number | null,"working_sets": number | null
+                  }
+                  ComputedFields: never
+                  Relationships: [
+                    
+                  ]
                 },"v_session_summary": {
                   Row: {
                     "completed_sets": number | null,"ended_at": number | null,"exercise_count": number | null,"feel": number | null,"is_deload": boolean | null,"notes": string | null,"perceived_difficulty": number | null,"plan_day_id": string | null,"plan_day_name": string | null,"plan_id": string | null,"readiness": number | null,"started_at": number | null,"sync_id": string,"user_id": string,"volume_kg": number | null

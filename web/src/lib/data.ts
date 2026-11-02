@@ -6,6 +6,7 @@
 import "server-only";
 import { cache } from "react";
 import { buildCatalog } from "./catalog";
+import { playedSession, playerProgress } from "./gamification";
 import type { WeightUnit } from "./model";
 import * as q from "./queries";
 import { requireUser } from "./supabase/server";
@@ -47,6 +48,12 @@ export const getSessions = (query: q.SessionsQuery = {}) => sessionsCached(query
 
 /** When each session happened, oldest first, from [since] (epoch ms) or all time. */
 export const getSessionTimes = cache(async (since?: number) => q.sessionTimes(await client(), since));
+
+/** XP, level and badges, worked out from every finished workout (one small row each). */
+export const getPlayerProgress = cache(async () => {
+  const [rows, profile] = await Promise.all([q.sessionPlay(await client()), getProfile()]);
+  return playerProgress(rows.map(playedSession), profile?.days_per_week ?? null);
+});
 
 export const getFinishedSessionCount = cache(async () => q.finishedSessionCount(await client()));
 

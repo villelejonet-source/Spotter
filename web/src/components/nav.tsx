@@ -36,7 +36,7 @@ const SECTIONS: Section[] = [
     label: "Progress",
     href: "/progress",
     icon: <ProgressIcon />,
-    tabs: [{ href: "/progress", label: "Progress" }, { href: "/insights", label: "Insights" }, { href: "/library", label: "Exercises" }],
+    tabs: [{ href: "/progress", label: "Progress" }, { href: "/insights", label: "Insights" }, { href: "/levels", label: "Levels" }, { href: "/library", label: "Exercises" }],
   },
   { label: "Plans", href: "/plans", icon: <PlansIcon /> },
   { label: "Profile", href: "/profile", icon: <ProfileIcon /> },

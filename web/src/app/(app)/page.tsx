@@ -2,11 +2,12 @@ import clsx from "clsx";
 import Link from "next/link";
 import { Suspense } from "react";
 import { AreaChartView } from "@/components/charts";
+import { LevelProgress } from "@/components/levels";
 import { Sparkline } from "@/components/sparkline";
 import { TrainingHeatmap, heatmapStart } from "@/components/training-heatmap";
-import { Badge, Card, CardTitle, Delta, EmptyState, LinkButton, PageHeader, Stat } from "@/components/ui";
+import { Badge, Card, CardTitle, cardClass, Delta, EmptyState, LinkButton, PageHeader, Stat } from "@/components/ui";
 import { exerciseName } from "@/lib/catalog";
-import { getActivePlan, getCatalog, getFinishedSessionCount, getPersonalRecords, getPlanDay, getProfile, getScheduled, getSessionTimes, getSessions, getUnit, preload } from "@/lib/data";
+import { getActivePlan, getCatalog, getFinishedSessionCount, getPersonalRecords, getPlayerProgress, getPlanDay, getProfile, getScheduled, getSessionTimes, getSessions, getUnit, preload } from "@/lib/data";
 import { formatDateValue, formatFullDate, formatRelative } from "@/lib/dates";
 import { APP_BACKUP_PATH, FREE_WORKOUT, PR_LABELS, WORKOUT } from "@/lib/labels";
 import { formatDuration, formatPlanTarget, formatRecord, formatVolume, toUnit } from "@/lib/model";
@@ -40,6 +41,7 @@ export default async function TodayPage({ searchParams }: { searchParams: Promis
     getSessionTimes(fetchSince(heatmapStart(HEATMAP_WEEKS))),
     getSessions(RECENT),
     getPersonalRecords(RECENT),
+    getPlayerProgress(),
   );
   const [count, activePlan] = await Promise.all([getFinishedSessionCount(), getActivePlan()]);
 
@@ -68,6 +70,9 @@ export default async function TodayPage({ searchParams }: { searchParams: Promis
       />
       <Suspense fallback={<StatsFallback />}>
         <WeekStats total={count} />
+      </Suspense>
+      <Suspense fallback={<div className="mt-4 h-28 animate-pulse rounded-2xl bg-surface-high" aria-hidden="true" />}>
+        <LevelCard />
       </Suspense>
       <div className="mt-4 grid gap-4 lg:grid-cols-3">
         <Card className="lg:col-span-2">
@@ -138,6 +143,20 @@ async function WeekStats({ total }: { total: number }) {
       <Stat label="Week streak" value={streakLabel(streak, WEEKS, thisWeek.sessions > 0)} hint={streak === 1 ? "week in a row" : "weeks in a row"} />
       <Stat label="Workouts" value={total} hint="all time" />
     </div>
+  );
+}
+
+/** The level and its bar (the app's Today card); opens Levels. */
+async function LevelCard() {
+  const progress = await getPlayerProgress();
+  const unlocked = progress.badges.filter((b) => b.unlockedBy != null).length;
+  return (
+    <Link href="/levels" className={cardClass("mt-4 block transition hover:border-outline-strong")}>
+      <LevelProgress level={progress.level} />
+      <div className="mt-2 text-sm">
+        {unlocked} of {progress.badges.length} badges
+      </div>
+    </Link>
   );
 }
 

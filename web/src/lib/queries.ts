@@ -10,6 +10,7 @@ import type { CustomExerciseRow } from "./catalog";
 import type {
   BodyWeightRow,
   PersonalRecordRow,
+  PersonalRecordType,
   PlanDayRow,
   PlanExerciseRow,
   PlanRow,
@@ -175,6 +176,30 @@ export const SESSION_TIME_COLUMNS = "sync_id,started_at,ended_at,readiness,feel"
 
 export async function sessionTimes(client: OwnClient, since?: number): Promise<SessionTimeRow[]> {
   return selectAll<SessionTimeRow>(client, "v_session_summary", { filter: sessionFilter({ since }), key: "started_at", tiebreak: "sync_id", columns: SESSION_TIME_COLUMNS });
+}
+
+/** A finished workout's totals for levels and badges (web/src/lib/gamification.ts). */
+export interface SessionPlayRow {
+  sync_id: string;
+  started_at: number;
+  ended_at: number;
+  is_deload: boolean;
+  readiness: number | null;
+  feel: number | null;
+  /** Completed sets that aren't warm-ups. */
+  working_sets: number;
+  volume_kg: number;
+  /** Exercises with a completed working set. */
+  exercise_ids: string[];
+  /** One entry per personal record set in the workout. */
+  record_types: PersonalRecordType[];
+}
+
+export const SESSION_PLAY_COLUMNS = "sync_id,started_at,ended_at,is_deload,readiness,feel,working_sets,volume_kg,exercise_ids,record_types";
+
+/** Every finished workout, one small row each, oldest first. */
+export async function sessionPlay(client: OwnClient): Promise<SessionPlayRow[]> {
+  return selectAll<SessionPlayRow>(client, "v_session_play", { key: "started_at", tiebreak: "sync_id", columns: SESSION_PLAY_COLUMNS });
 }
 
 /** Finished workouts, all time. */

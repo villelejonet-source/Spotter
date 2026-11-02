@@ -30,6 +30,7 @@ import com.viktorolsson.spotter.core.data.repository.UserProfileRepository
 import com.viktorolsson.spotter.core.data.repository.WorkoutRepository
 import com.viktorolsson.spotter.core.data.seed.ExerciseSeeder
 import com.viktorolsson.spotter.core.data.sync.AccountService
+import com.viktorolsson.spotter.core.data.sync.Accounts
 import com.viktorolsson.spotter.core.data.sync.SyncRepository
 import com.viktorolsson.spotter.core.data.sync.SyncWorker
 import com.viktorolsson.spotter.feature.session.SessionViewModel
@@ -65,7 +66,7 @@ class AppModulesTest {
         UserProfileRepository::class, UserPreferencesRepository::class, ExerciseRepository::class, HistoryRepository::class, GamificationRepository::class,
         PlanRepository::class, BodyWeightRepository::class, RestTimerRepository::class, WorkoutRepository::class,
         ScheduleRepository::class, RecommendationRepository::class, ExerciseSeeder::class, StartupMaintenance::class,
-        AccountService::class, SyncRepository::class,
+        AccountService::class, SyncRepository::class, Accounts::class,
     )
 
     @Test

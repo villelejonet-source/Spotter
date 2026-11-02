@@ -31,24 +31,21 @@ class AccountScreenshotTest {
     }
 
     @Test
-    fun account_sign_in() = capture("account_sign_in", AccountUiState(email = "you@example.com", password = "secret-pass"))
+    fun account_email() = capture("account_email", AccountUiState(email = "you@example.com"))
 
     @Test
-    fun account_sign_in_dark() = capture("account_sign_in_dark", AccountUiState(email = "you@example.com", password = "secret-pass"), dark = true)
+    fun account_email_dark() = capture("account_email_dark", AccountUiState(email = "you@example.com"), dark = true)
 
     @Test
-    fun account_sign_in_error() = capture(
-        "account_sign_in_error",
-        AccountUiState(email = "you@example.com", password = "secret-pass", error = Res.string.account_error_wrong_credentials),
-    )
+    fun account_email_busy() = capture("account_email_busy", AccountUiState(email = "you@example.com", busy = true))
 
     @Test
-    fun account_sign_in_busy() = capture("account_sign_in_busy", AccountUiState(email = "you@example.com", password = "secret-pass", busy = true))
+    fun account_password() = capture("account_password", AccountUiState(step = AccountStep.PASSWORD, email = "you@example.com", password = "secret-pass"))
 
     @Test
-    fun account_sign_up() = capture(
-        "account_sign_up",
-        AccountUiState(step = AccountStep.SIGN_UP, email = "you@example.com", password = "short", repeat = ""),
+    fun account_password_error() = capture(
+        "account_password_error",
+        AccountUiState(step = AccountStep.PASSWORD, email = "you@example.com", password = "secret-pass", error = Res.string.account_error_wrong_credentials),
     )
 
     @Test
@@ -57,7 +54,7 @@ class AccountScreenshotTest {
     @Test
     fun account_confirm_code() = capture(
         "account_confirm_code",
-        AccountUiState(step = AccountStep.CODE, codePurpose = CodePurpose.SIGN_UP, email = "you@example.com", code = "123456"),
+        AccountUiState(step = AccountStep.CODE, codePurpose = CodePurpose.SIGN_IN, email = "you@example.com", code = "123456"),
     )
 
     @Test

@@ -6,20 +6,20 @@ import { Suspense, useState } from "react";
 import { AuthCard, useAuthForm } from "@/components/auth-ui";
 import { CodeForm } from "@/components/code-form";
 import { Button, Field, InlineMessage, inputClass } from "@/components/ui";
-import { authErrorMessage } from "@/lib/auth";
+import { authErrorMessage, safeNext } from "@/lib/auth";
 
 /** Messages the auth callback (A) and sign-out send here with ?notice= or ?error=. */
 const NOTICES: Record<string, string> = {
-  link: "That link has expired or was already used. Sign in, or ask for a new email.",
-  "link-other-browser": "That link couldn't sign you in here, usually because it opened in a different browser. If you were confirming your email, it's confirmed: sign in below.",
+  link: "That link has expired or was already used. Ask for a new code below.",
+  "link-other-browser": "That link couldn't sign you in here, usually because it opened in a different browser. Ask for a new code below and type it in instead.",
   "signed-out": "You're signed out.",
   "account-deleted": "Your account and backup are deleted. The data on your phone stays there.",
 };
 
 type Mode =
-  | { kind: "password" }
-  | { kind: "unconfirmed" } // email not confirmed yet: enter the sign-up code
-  | { kind: "code-sent" }; // passwordless: enter the sign-in code
+  | { kind: "email" } // the way in for everyone: email, then the code
+  | { kind: "password" } // for those who set one
+  | { kind: "code-sent"; unconfirmed: boolean };
 
 export default function LoginPage() {
   return (
@@ -30,18 +30,31 @@ export default function LoginPage() {
 }
 
 /**
- * Email and password. Accounts made in the app have no password yet; they sign in with a
- * code instead (and can add a password on the Profile page), or use "Forgot password".
+ * One way in: an email, then the code from it. A new address gets an account, so there's no
+ * separate sign-up, and the code also confirms an account that never was. A password is an
+ * option for those who set one (in the app or on the Profile page).
  */
 function Login() {
   const router = useRouter();
   const params = useSearchParams();
   const notice = NOTICES[params.get("notice") ?? params.get("error") ?? ""];
+  const next = safeNext(params.get("next"));
   const [password, setPassword] = useState("");
-  const [mode, setMode] = useState<Mode>({ kind: "password" });
+  const [mode, setMode] = useState<Mode>({ kind: "email" });
   const { email, rawEmail, setEmail, busy, error, setError, run, supabase } = useAuthForm();
-  const done = () => router.replace("/");
-  const callback = () => `${location.origin}/auth/callback`;
+  const done = () => router.replace(next);
+  const callback = () => `${location.origin}/auth/callback${next === "/" ? "" : `?next=${encodeURIComponent(next)}`}`;
+
+  /** Emails a code and link. An unknown address gets a new account. */
+  async function emailCode(): Promise<string | null> {
+    const { error } = await supabase.auth.signInWithOtp({ email, options: { emailRedirectTo: callback(), shouldCreateUser: true } });
+    return error ? authErrorMessage(error) : null;
+  }
+
+  async function sendCode(e: React.FormEvent) {
+    e.preventDefault();
+    if (await run(emailCode)) setMode({ kind: "code-sent", unconfirmed: false });
+  }
 
   async function signIn(e: React.FormEvent) {
     e.preventDefault();
@@ -52,106 +65,100 @@ function Login() {
         return null;
       }
       if (error.code !== "email_not_confirmed") return authErrorMessage(error);
-      // Not confirmed yet: send the confirmation again and ask for its code. If that
-      // email can't be sent (rate limit, say), show why instead of an empty code form.
-      const problem = await resendConfirmation();
+      // Not confirmed yet: the sign-in code confirms it. If that email can't be sent (rate
+      // limit, say), show why instead of an empty code form.
+      const problem = await emailCode();
       if (problem) return problem;
-      setMode({ kind: "unconfirmed" });
+      setMode({ kind: "code-sent", unconfirmed: true });
       return null;
     });
   }
 
-  /**
-   * Emails a sign-in code. shouldCreateUser is off: new accounts go through sign-up, which
-   * sets a password. Supabase answers an unknown email with otp_disabled; that's treated as
-   * sent, so the form doesn't reveal who has an account.
-   */
-  async function emailSignInCode(): Promise<string | null> {
-    const { error } = await supabase.auth.signInWithOtp({ email, options: { emailRedirectTo: callback(), shouldCreateUser: false } });
-    return error && error.code !== "otp_disabled" ? authErrorMessage(error) : null;
-  }
-
-  async function sendCode() {
-    if (!email) return setError("Enter your email first.");
-    if (await run(emailSignInCode)) setMode({ kind: "code-sent" });
-  }
-
-  async function resendConfirmation(): Promise<string | null> {
-    const { error } = await supabase.auth.resend({ type: "signup", email, options: { emailRedirectTo: callback() } });
-    return error ? authErrorMessage(error) : null;
-  }
-
-  if (mode.kind !== "password") {
-    const signup = mode.kind === "unconfirmed";
+  if (mode.kind === "code-sent") {
     return (
       <AuthCard
-        title={signup ? "Confirm your email" : "Check your email"}
+        title="Check your email"
         subtitle={
           <>
-            {signup ? "Your account isn't confirmed yet. We sent a new email to " : "If there's an account for "}
-            <span className="font-medium text-foreground">{email}</span>
-            {signup ? ". Enter the code from it, or open its link on this device." : ", we sent a sign-in code. Enter it below, or open the link in the email on this device."}
+            {mode.unconfirmed ? "Your account isn't confirmed yet. We sent a code to " : "We sent a code to "}
+            <span className="font-medium text-foreground">{email}</span>. Enter it below, or open the link in the email on this device.
           </>
         }
         footer={
-          <Button variant="ghost" onClick={() => setMode({ kind: "password" })}>
-            ← Back to sign in
+          <Button variant="ghost" onClick={() => setMode({ kind: "email" })}>
+            ← Use another email
           </Button>
         }
       >
         <CodeForm
           email={email}
-          submitLabel={signup ? "Confirm and sign in" : "Sign in"}
+          submitLabel="Continue"
           onVerify={async (token) => {
-            const { error } = await supabase.auth.verifyOtp({ email, token, type: signup ? "signup" : "email" });
+            const { error } = await supabase.auth.verifyOtp({ email, token, type: "email" });
             if (error) return authErrorMessage(error);
             done();
             return null;
           }}
-          onResend={signup ? resendConfirmation : emailSignInCode}
+          onResend={emailCode}
         />
+      </AuthCard>
+    );
+  }
+
+  const emailField = (
+    <Field label="Email">
+      <input type="email" required autoFocus autoComplete="email" value={rawEmail} onChange={(e) => setEmail(e.target.value)} className={inputClass} />
+    </Field>
+  );
+
+  if (mode.kind === "password") {
+    return (
+      <AuthCard
+        title="Sign in"
+        subtitle="With your password, the same one you use in the app."
+        footer={
+          <Button variant="ghost" onClick={() => { setError(null); setMode({ kind: "email" }); }}>
+            Email me a code instead
+          </Button>
+        }
+      >
+        <form onSubmit={signIn} className="space-y-3">
+          {emailField}
+          <Field label="Password">
+            <input type="password" required autoComplete="current-password" value={password} onChange={(e) => setPassword(e.target.value)} className={inputClass} />
+          </Field>
+          <div className="text-right">
+            <Link href={`/forgot-password${email ? `?email=${encodeURIComponent(email)}` : ""}`} className="tap rounded-md text-sm text-muted hover:text-foreground">
+              Forgot password?
+            </Link>
+          </div>
+          <Button type="submit" variant="primary" className="w-full" disabled={busy}>
+            {busy ? "Signing in…" : "Sign in"}
+          </Button>
+          {error && <InlineMessage tone="error">{error}</InlineMessage>}
+        </form>
       </AuthCard>
     );
   }
 
   return (
     <AuthCard
-      title="Sign in"
-      subtitle="Same account as cloud backup in the app."
+      title="Continue with email"
+      subtitle="We'll send you a code. New to Spotter? The same code makes your free account, shared with cloud backup in the app."
       footer={
-        <>
-          New to Spotter?{" "}
-          <Link href="/signup" className="rounded-md font-medium text-primary">
-            Create an account
-          </Link>
-        </>
+        <Button variant="ghost" onClick={() => { setError(null); setMode({ kind: "password" }); }}>
+          Use a password instead
+        </Button>
       }
     >
-      <form onSubmit={signIn} className="space-y-3">
+      <form onSubmit={sendCode} className="space-y-3">
         {notice && <InlineMessage tone="info">{notice}</InlineMessage>}
-        <Field label="Email">
-          <input type="email" required autoFocus autoComplete="email" value={rawEmail} onChange={(e) => setEmail(e.target.value)} className={inputClass} />
-        </Field>
-        <Field label="Password">
-          <input type="password" required autoComplete="current-password" value={password} onChange={(e) => setPassword(e.target.value)} className={inputClass} />
-        </Field>
-        <div className="text-right">
-          <Link href={`/forgot-password${email ? `?email=${encodeURIComponent(email)}` : ""}`} className="tap rounded-md text-sm text-muted hover:text-foreground">
-            Forgot password?
-          </Link>
-        </div>
+        {emailField}
         <Button type="submit" variant="primary" className="w-full" disabled={busy}>
-          {busy ? "Signing in…" : "Sign in"}
+          {busy ? "Sending…" : "Send code"}
         </Button>
         {error && <InlineMessage tone="error">{error}</InlineMessage>}
       </form>
-      <div className="my-5 flex items-center gap-3 text-xs text-muted">
-        <span className="h-px flex-1 bg-outline" /> or <span className="h-px flex-1 bg-outline" />
-      </div>
-      <Button className="w-full" onClick={sendCode} disabled={busy}>
-        Email me a sign-in code
-      </Button>
-      <p className="mt-2 text-center text-xs text-muted">For accounts made in the app without a password.</p>
     </AuthCard>
   );
 }

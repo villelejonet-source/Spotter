@@ -1,10 +1,10 @@
 # Sign-in emails and auth settings (Supabase dashboard)
 
-The app and the website share accounts and flows: sign up with email + password and
-confirm the email, sign in with the password, reset it by email, change it from Profile.
-Accounts made before passwords existed sign in with an emailed code and can set a password
-with "Forgot password". Both use the same email templates, so every email carries **both**
-a link and a code:
+The app and the website share accounts and flows. The way in for everyone is an emailed
+code: type an email, then the code. An address without an account gets one, so there's no
+separate sign-up, and the code also confirms an account that never was. A password is
+optional: people who set one (in the app, or on the Profile page) can still sign in with
+it, and reset it by email. Every email carries **both** a link and a code:
 
 - The **link** (`{{ .ConfirmationURL }}`) works on the device that asked for it: it opens
   the app (`spotter://login`) or the website (`/auth/callback`), whichever sent the request.
@@ -15,62 +15,20 @@ Keep `{{ .ConfirmationURL }}` as the link: the app's deep link depends on it.
 
 ## 1. Email templates
 
-Supabase → **Authentication → Emails → Templates**. Replace the subject and body of each.
+The templates live in `supabase/templates/`, and `supabase/config.toml` sets their subjects,
+so the local stack sends the same emails as production. Production keeps its own copy:
+after changing a template, paste it into Supabase → **Authentication → Emails → Templates**
+(after asking, since it's production).
 
-### Confirm signup
+| Template | File | Subject | Sent when |
+|---|---|---|---|
+| Confirm signup | `confirmation.html` | `Your Spotter code: {{ .Token }}` | The first code for a new address (it makes the account) |
+| Magic Link | `magic_link.html` | `Your Spotter code: {{ .Token }}` | Every other code: app and website sign-in |
+| Reset Password | `recovery.html` | `Reset your Spotter password` | "Forgot password?" |
+| Reauthentication | `reauthentication.html` | `Confirm your Spotter password change` | Changing the password a while after signing in |
 
-Sent when someone creates an account on the website, and the first time someone signs in
-to the app with a new email.
-
-Subject: `Confirm your Spotter account`
-
-```html
-<h2>Welcome to Spotter</h2>
-<p>Confirm your email to finish setting up your account.</p>
-<p><a href="{{ .ConfirmationURL }}">Confirm my email</a></p>
-<p>Or enter this code: <strong style="font-size:20px;letter-spacing:4px">{{ .Token }}</strong></p>
-<p style="color:#85736c;font-size:13px">The link and code work once and expire in an hour. If you didn't sign up for Spotter, ignore this email.</p>
-```
-
-### Magic Link
-
-Sent for "Email me a sign-in code" on the website and for sign-in in the app.
-
-Subject: `Your Spotter sign-in code: {{ .Token }}`
-
-```html
-<h2>Sign in to Spotter</h2>
-<p>Your code: <strong style="font-size:20px;letter-spacing:4px">{{ .Token }}</strong></p>
-<p>Or <a href="{{ .ConfirmationURL }}">sign in with this link</a> on the device you asked from.</p>
-<p style="color:#85736c;font-size:13px">The link and code work once and expire in an hour. If you didn't ask to sign in, ignore this email.</p>
-```
-
-### Reset Password
-
-Sent from "Forgot password?" on the website. Also how an account made in the app gets its
-first password.
-
-Subject: `Reset your Spotter password`
-
-```html
-<h2>Reset your password</h2>
-<p><a href="{{ .ConfirmationURL }}">Choose a new password</a></p>
-<p>Or enter this code on the reset page: <strong style="font-size:20px;letter-spacing:4px">{{ .Token }}</strong></p>
-<p style="color:#85736c;font-size:13px">The link and code work once and expire in an hour. If you didn't ask for this, ignore this email; your password stays the same.</p>
-```
-
-### Reauthentication
-
-Sent when someone changes their password a while after signing in (see "Secure password
-change" below).
-
-Subject: `Confirm your Spotter password change`
-
-```html
-<h2>Confirm your password change</h2>
-<p>Enter this code to confirm: <strong style="font-size:20px;letter-spacing:4px">{{ .Token }}</strong></p>
-<p style="color:#85736c;font-size:13px">If you didn't try to change your password, sign in and change it now.</p>
-```
+The code is in the subject, so it shows in the notification and people rarely need to open
+the email at all.
 
 ## 2. Settings
 
@@ -85,10 +43,11 @@ Subject: `Confirm your Spotter password change`
 **Authentication → URL Configuration**
 - **Site URL:** `https://spotter.northstarsolutions.se`. Supabase falls back to it when a
   request names no redirect, so it must be the live website.
-- **Redirect URLs:** `spotter://login` (the app), `https://spotter.northstarsolutions.se/auth/callback`
-  (the website) and `http://localhost:3000/auth/callback` (local development).
-  The reset link uses `/auth/callback?next=/reset-password`; a redirect URL matches with or
-  without a query string.
+- **Redirect URLs:** `spotter://login` (the app), `https://spotter.northstarsolutions.se/auth/callback**`
+  (the website) and `http://localhost:3000/auth/callback**` (local development). The `**`
+  lets the link carry where to go next (`/auth/callback?next=/history`, or
+  `?next=/reset-password` for a reset): Supabase matches redirect URLs exactly otherwise, and
+  falls back to the Site URL, which loses the `next`.
 
 **Authentication → Rate Limits**: defaults are fine. With custom SMTP, emails are limited per
 hour; raise it only if real users hit it. Google Workspace itself allows about 2 000 sent
@@ -126,11 +85,13 @@ steps. In the app a reset link opens "New password" directly.
 
 | Flow | Website pages | Email | Ends |
 |---|---|---|---|
-| Sign up | `/signup` → "Confirm your email" | Confirm signup | Code or link confirms and signs in → dashboard |
-| Sign in | `/login` with email + password | — | Dashboard. Unconfirmed accounts get a new confirmation email and the code step |
-| Sign in without a password | `/login` → "Email me a sign-in code" | Magic Link | Code or link → dashboard. Only for existing accounts |
+| Sign in or sign up | `/login`: email → "Check your email" | Confirm signup (new address) or Magic Link | Code or link → the page they wanted, or the dashboard |
+| Sign in with a password | `/login` → "Use a password instead" | — | The page they wanted. Unconfirmed accounts get a code, which confirms them |
 | Forgot password | `/forgot-password` → "Check your email" | Reset Password | Code or link → `/reset-password` → new password saved |
-| Change password | Profile → Account → Change password | Reauthentication (sometimes) | Saved |
+| Change or set a password | Profile → Account → Change password | Reauthentication (sometimes) | Saved |
 
-Messages never reveal whether an email has an account, except at sign-up, where Supabase
-reports that the address is taken.
+`/signup` forwards to `/login`. A signed-out visitor sent to `/login` keeps the page they
+asked for in `?next=`, and signing in (by code, link or password) lands there.
+
+Typing an email doesn't say whether it has an account: either way the next step is "We sent
+a code".

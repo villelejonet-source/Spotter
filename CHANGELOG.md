@@ -9,6 +9,11 @@ into the new version's entry and writes the store notes from it. Versions are th
 ## Unreleased
 
 ### App
+- Signing in is one step for everyone: type your email, then the code we send you (or tap the
+  link in the email). A new email gets a free account straight away: no password to make or
+  repeat. Profile → Backup & sync has a single "Sign in or create account" button. Passwords
+  still work under "Use a password instead", and you can add one later. Password managers and
+  the keyboard can now fill in your email, password and the code.
 - Programs: the plan screen says what kind of plan you're on, and "Change program" shows a card
   for each way to train (Full body, Upper / Lower, Push / Pull / Legs and 5/3/1) with who it's
   for, what a week looks like and how it progresses. The ones that suit your answers are marked.
@@ -50,6 +55,10 @@ into the new version's entry and writes the store notes from it. Versions are th
   - a lighter session on a low day does the deload loads without using up the week.
 
 ### Website
+- Sign-in works the same way as in the app: your email, then the emailed code or link. A new
+  email gets an account, so there's no separate sign-up page any more (old links to it still
+  work). "Use a password instead" is there for people who set one. After signing in you land
+  on the page you were trying to open, not always on Today.
 - Today appears sooner after the site has been idle: the page no longer waits for your whole
   plan before showing, and the sign-in check runs next to the database.
 - Plans: a 5/3/1 plan is called 5/3/1 in the plan list, not Custom.

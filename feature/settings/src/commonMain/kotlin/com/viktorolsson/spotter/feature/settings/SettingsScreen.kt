@@ -68,7 +68,6 @@ import com.viktorolsson.spotter.feature.settings.resources.backup_last_synced
 import com.viktorolsson.spotter.feature.settings.resources.backup_never_synced
 import com.viktorolsson.spotter.feature.settings.resources.backup_section
 import com.viktorolsson.spotter.feature.settings.resources.backup_sign_in
-import com.viktorolsson.spotter.feature.settings.resources.backup_sign_in_existing
 import com.viktorolsson.spotter.feature.settings.resources.backup_sign_out
 import com.viktorolsson.spotter.feature.settings.resources.backup_sign_out_body
 import com.viktorolsson.spotter.feature.settings.resources.backup_sign_out_title
@@ -128,7 +127,7 @@ internal fun SettingsRoute(
         planName = planName,
         syncStatus = syncStatus,
         sync = SyncActions(
-            onSignIn = { onOpenAccount(AccountRoute(newAccount = it)) },
+            onSignIn = { onOpenAccount(AccountRoute()) },
             onChangePassword = { onOpenAccount(AccountRoute(newPassword = true)) },
             onSyncNow = viewModel::syncNow,
             onSignOut = viewModel::signOut,
@@ -299,8 +298,8 @@ internal fun SettingsScreen(
 }
 
 internal class SyncActions(
-    /** Opens sign-in; true for creating a new account. */
-    val onSignIn: (newAccount: Boolean) -> Unit,
+    /** Opens sign-in, which also makes new accounts. */
+    val onSignIn: () -> Unit,
     /** Also how an account made with email codes gets its first password. */
     val onChangePassword: () -> Unit,
     val onSyncNow: () -> Unit,
@@ -344,8 +343,7 @@ private fun BackupContent(status: SyncStatus, actions: SyncActions, onSignOut: (
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
-        Button(onClick = { actions.onSignIn(true) }) { Text(stringResource(Res.string.backup_sign_in)) }
-        TextButton(onClick = { actions.onSignIn(false) }) { Text(stringResource(Res.string.backup_sign_in_existing)) }
+        Button(onClick = actions.onSignIn) { Text(stringResource(Res.string.backup_sign_in)) }
         return
     }
     Text(stringResource(Res.string.backup_signed_in_as, account.email.orEmpty()), style = MaterialTheme.typography.bodyLarge)

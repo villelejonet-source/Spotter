@@ -16,7 +16,6 @@ import androidx.compose.material.icons.rounded.CheckCircle
 import androidx.compose.material.icons.rounded.MarkEmailRead
 import androidx.compose.material.icons.rounded.Visibility
 import androidx.compose.material.icons.rounded.VisibilityOff
-import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -30,13 +29,14 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import com.viktorolsson.spotter.core.data.AppErrors
 import com.viktorolsson.spotter.core.data.Failure
 import com.viktorolsson.spotter.core.data.launchReporting
 import org.jetbrains.compose.resources.stringResource
+import androidx.compose.ui.autofill.ContentType
 import androidx.compose.ui.semantics.LiveRegionMode
+import androidx.compose.ui.semantics.contentType
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.semantics
@@ -56,8 +56,7 @@ import com.viktorolsson.spotter.core.data.logWarn
 import com.viktorolsson.spotter.core.data.sync.AuthException
 import com.viktorolsson.spotter.core.data.sync.AuthProblem
 import com.viktorolsson.spotter.core.data.sync.CodePurpose
-import com.viktorolsson.spotter.core.data.sync.SignUpResult
-import com.viktorolsson.spotter.core.data.sync.SyncRepository
+import com.viktorolsson.spotter.core.data.sync.Accounts
 import com.viktorolsson.spotter.core.ui.component.PrimaryButton
 import com.viktorolsson.spotter.core.ui.component.SecondaryButton
 import com.viktorolsson.spotter.core.ui.component.SpotterTopBar
@@ -76,14 +75,9 @@ import com.viktorolsson.spotter.feature.settings.resources.account_check_email
 import com.viktorolsson.spotter.feature.settings.resources.account_code
 import com.viktorolsson.spotter.feature.settings.resources.account_code_intro_recovery
 import com.viktorolsson.spotter.feature.settings.resources.account_code_intro_sign_in
-import com.viktorolsson.spotter.feature.settings.resources.account_code_intro_sign_up
 import com.viktorolsson.spotter.feature.settings.resources.account_code_intro_unconfirmed
-import com.viktorolsson.spotter.feature.settings.resources.account_create
 import com.viktorolsson.spotter.feature.settings.resources.account_done
 import com.viktorolsson.spotter.feature.settings.resources.account_email
-import com.viktorolsson.spotter.feature.settings.resources.account_email_code
-import com.viktorolsson.spotter.feature.settings.resources.account_email_code_hint
-import com.viktorolsson.spotter.feature.settings.resources.account_error_already_registered
 import com.viktorolsson.spotter.feature.settings.resources.account_error_code
 import com.viktorolsson.spotter.feature.settings.resources.account_error_invalid_email
 import com.viktorolsson.spotter.feature.settings.resources.account_error_mismatch
@@ -97,12 +91,15 @@ import com.viktorolsson.spotter.feature.settings.resources.account_error_wrong_c
 import com.viktorolsson.spotter.feature.settings.resources.account_forgot
 import com.viktorolsson.spotter.feature.settings.resources.account_hide_password
 import com.viktorolsson.spotter.feature.settings.resources.account_intro_forgot
-import com.viktorolsson.spotter.feature.settings.resources.account_intro_new
+import com.viktorolsson.spotter.feature.settings.resources.account_intro
 import com.viktorolsson.spotter.feature.settings.resources.account_intro_sign_in
+import com.viktorolsson.spotter.feature.settings.resources.account_send_code
+import com.viktorolsson.spotter.feature.settings.resources.account_use_code
+import com.viktorolsson.spotter.feature.settings.resources.account_use_password
+import com.viktorolsson.spotter.feature.settings.resources.account_title_email
 import com.viktorolsson.spotter.feature.settings.resources.account_new_password_intro
 import com.viktorolsson.spotter.feature.settings.resources.account_nonce_intro
 import com.viktorolsson.spotter.feature.settings.resources.account_open_email
-import com.viktorolsson.spotter.feature.settings.resources.account_or
 import com.viktorolsson.spotter.feature.settings.resources.account_password
 import com.viktorolsson.spotter.feature.settings.resources.account_password_new
 import com.viktorolsson.spotter.feature.settings.resources.account_password_repeat
@@ -115,23 +112,19 @@ import com.viktorolsson.spotter.feature.settings.resources.account_save_password
 import com.viktorolsson.spotter.feature.settings.resources.account_send_reset
 import com.viktorolsson.spotter.feature.settings.resources.account_show_password
 import com.viktorolsson.spotter.feature.settings.resources.account_sign_in
-import com.viktorolsson.spotter.feature.settings.resources.account_switch_to_new
-import com.viktorolsson.spotter.feature.settings.resources.account_switch_to_sign_in
 import com.viktorolsson.spotter.feature.settings.resources.account_title
 import com.viktorolsson.spotter.feature.settings.resources.account_title_forgot
-import com.viktorolsson.spotter.feature.settings.resources.account_title_new
 import com.viktorolsson.spotter.feature.settings.resources.account_title_new_password
 import com.viktorolsson.spotter.feature.settings.resources.account_verify
 import org.jetbrains.compose.resources.StringResource
 
 /**
- * Accounts are shared with the website: email + password, confirmed by an emailed code or
- * link. See docs/platform/auth-emails.md for the emails.
+ * Accounts are shared with the website. One way in for everyone: type an email, then the
+ * code (or tap the link) from the email. A new address gets an account, so there's no
+ * separate sign-up. A password is optional. See docs/platform/auth-emails.md for the emails.
  */
 @Serializable
 data class AccountRoute(
-    /** Opens on "create account" (from the welcome screen and the backup section). */
-    val newAccount: Boolean = false,
     /** Opens on "choose a new password": from Profile, or after a password-reset link. */
     val newPassword: Boolean = false,
 )
@@ -140,19 +133,19 @@ fun NavGraphBuilder.accountScreen(onDone: () -> Unit) {
     composable<AccountRoute> { AccountRoute(onDone = onDone) }
 }
 
-enum class AccountStep { SIGN_IN, SIGN_UP, FORGOT, CODE, NEW_PASSWORD, PASSWORD_SAVED }
+enum class AccountStep { EMAIL, CODE, PASSWORD, FORGOT, NEW_PASSWORD, PASSWORD_SAVED }
 
 const val MIN_PASSWORD_LENGTH = 8
 
 data class AccountUiState(
-    val step: AccountStep = AccountStep.SIGN_IN,
+    val step: AccountStep = AccountStep.EMAIL,
     val email: String = "",
     val password: String = "",
     val repeat: String = "",
     val code: String = "",
     /** What the CODE step's code is for. */
     val codePurpose: CodePurpose = CodePurpose.SIGN_IN,
-    /** The CODE step for a sign-in attempt on an unconfirmed account (worded differently). */
+    /** The CODE step after a password sign-in on an unconfirmed account (worded differently). */
     val unconfirmed: Boolean = false,
     /** NEW_PASSWORD needs the emailed reauthentication code too. */
     val needsNonce: Boolean = false,
@@ -166,25 +159,21 @@ data class AccountUiState(
 }
 
 class AccountViewModel(
-    private val sync: SyncRepository,
+    private val sync: Accounts,
     savedStateHandle: SavedStateHandle,
     private val errors: AppErrors,
 ) : ViewModel() {
     private val route = savedStateHandle.toRoute<AccountRoute>()
     private val _state = MutableStateFlow(
         AccountUiState(
-            step = when {
-                route.newPassword -> AccountStep.NEW_PASSWORD
-                route.newAccount -> AccountStep.SIGN_UP
-                else -> AccountStep.SIGN_IN
-            },
+            step = if (route.newPassword) AccountStep.NEW_PASSWORD else AccountStep.EMAIL,
         ),
     )
     val state: StateFlow<AccountUiState> = _state.asStateFlow()
 
     init {
-        // Tapping a link in the email signs in from outside this screen. A sign-in or sign-up
-        // is then finished; a password reset goes on to choosing the new password.
+        // Tapping a link in the email signs in from outside this screen. A sign-in is then
+        // finished; a password reset goes on to choosing the new password.
         viewModelScope.launchReporting(errors, Failure.ACTION) {
             sync.status.collect { status ->
                 if (status.account == null) return@collect
@@ -192,7 +181,7 @@ class AccountViewModel(
                 when {
                     s.step == AccountStep.FORGOT || (s.step == AccountStep.CODE && s.codePurpose == CodePurpose.RECOVERY) ->
                         _state.update { it.copy(step = AccountStep.NEW_PASSWORD, busy = false, error = null, notice = null) }
-                    s.step in setOf(AccountStep.SIGN_IN, AccountStep.SIGN_UP, AccountStep.CODE) -> _state.update { it.copy(busy = false, done = true) }
+                    s.step in setOf(AccountStep.EMAIL, AccountStep.PASSWORD, AccountStep.CODE) -> _state.update { it.copy(busy = false, done = true) }
                     else -> Unit
                 }
             }
@@ -206,24 +195,21 @@ class AccountViewModel(
 
     fun goTo(step: AccountStep) = _state.update { it.copy(step = step, error = null, notice = null, code = "", password = "", repeat = "") }
 
+    /** Signs in, or makes the account for a new address: both continue with the emailed code. */
+    fun sendCode() = perform { s ->
+        sync.sendCode(s.email)
+        toCode(CodePurpose.SIGN_IN)
+    }
+
     fun signIn() = perform { s ->
         try {
             sync.signIn(s.email, s.password)
         } catch (e: AuthException) {
             if (e.problem != AuthProblem.EMAIL_NOT_CONFIRMED) throw e
-            sync.resendConfirmation(s.email)
-            toCode(CodePurpose.SIGN_UP, unconfirmed = true)
+            // The sign-in code confirms the account too.
+            sync.sendCode(s.email)
+            toCode(CodePurpose.SIGN_IN, unconfirmed = true)
         }
-    }
-
-    fun signUp() = perform { s ->
-        passwordProblem(s)?.let { problem -> return@perform _state.update { it.copy(error = problem) } }
-        if (sync.signUp(s.email, s.password) == SignUpResult.CONFIRM_EMAIL) toCode(CodePurpose.SIGN_UP)
-    }
-
-    fun sendSignInCode() = perform { s ->
-        sync.sendCode(s.email)
-        toCode(CodePurpose.SIGN_IN)
     }
 
     fun sendReset() = perform { s ->
@@ -241,7 +227,6 @@ class AccountViewModel(
 
     fun resend() = perform { s ->
         when (s.codePurpose) {
-            CodePurpose.SIGN_UP -> sync.resendConfirmation(s.email)
             CodePurpose.SIGN_IN -> sync.sendCode(s.email)
             CodePurpose.RECOVERY -> sync.sendPasswordReset(s.email)
         }
@@ -297,7 +282,6 @@ class AccountViewModel(
 
 private fun AuthProblem.message(): StringResource = when (this) {
     AuthProblem.WRONG_CREDENTIALS -> Res.string.account_error_wrong_credentials
-    AuthProblem.ALREADY_REGISTERED -> Res.string.account_error_already_registered
     AuthProblem.CODE_INVALID -> Res.string.account_error_code
     AuthProblem.WEAK_PASSWORD -> Res.string.account_error_weak_password
     AuthProblem.SAME_PASSWORD -> Res.string.account_error_same_password
@@ -324,9 +308,8 @@ internal fun AccountRoute(onDone: () -> Unit, viewModel: AccountViewModel = koin
             setRepeat = viewModel::setRepeat,
             setCode = viewModel::setCode,
             goTo = viewModel::goTo,
+            sendCode = viewModel::sendCode,
             signIn = viewModel::signIn,
-            signUp = viewModel::signUp,
-            sendSignInCode = viewModel::sendSignInCode,
             sendReset = viewModel::sendReset,
             verify = viewModel::verify,
             resend = viewModel::resend,
@@ -341,9 +324,8 @@ internal class AccountActions(
     val setRepeat: (String) -> Unit = {},
     val setCode: (String) -> Unit = {},
     val goTo: (AccountStep) -> Unit = {},
+    val sendCode: () -> Unit = {},
     val signIn: () -> Unit = {},
-    val signUp: () -> Unit = {},
-    val sendSignInCode: () -> Unit = {},
     val sendReset: () -> Unit = {},
     val verify: () -> Unit = {},
     val resend: () -> Unit = {},
@@ -353,12 +335,11 @@ internal class AccountActions(
 @Composable
 internal fun AccountScreen(state: AccountUiState, onBack: () -> Unit, actions: AccountActions) {
     val title = when (state.step) {
-        AccountStep.SIGN_IN -> Res.string.account_title
-        AccountStep.SIGN_UP -> Res.string.account_title_new
+        AccountStep.EMAIL -> Res.string.account_title_email
+        AccountStep.PASSWORD -> Res.string.account_title
         AccountStep.FORGOT -> Res.string.account_title_forgot
         AccountStep.CODE -> when (state.codePurpose) {
-            CodePurpose.SIGN_UP -> Res.string.account_title_new
-            CodePurpose.SIGN_IN -> Res.string.account_title
+            CodePurpose.SIGN_IN -> Res.string.account_title_email
             CodePurpose.RECOVERY -> Res.string.account_title_forgot
         }
         AccountStep.NEW_PASSWORD, AccountStep.PASSWORD_SAVED -> Res.string.account_title_new_password
@@ -371,8 +352,8 @@ internal fun AccountScreen(state: AccountUiState, onBack: () -> Unit, actions: A
             verticalArrangement = Arrangement.spacedBy(Spacing.lg),
         ) {
             when (state.step) {
-                AccountStep.SIGN_IN -> SignInForm(state, actions)
-                AccountStep.SIGN_UP -> SignUpForm(state, actions)
+                AccountStep.EMAIL -> EmailForm(state, actions)
+                AccountStep.PASSWORD -> PasswordForm(state, actions)
                 AccountStep.FORGOT -> ForgotForm(state, actions)
                 AccountStep.CODE -> CodeStep(state, actions)
                 AccountStep.NEW_PASSWORD -> NewPasswordForm(state, actions)
@@ -388,7 +369,7 @@ internal fun AccountScreen(state: AccountUiState, onBack: () -> Unit, actions: A
                     modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite },
                 )
             }
-            if (state.step in setOf(AccountStep.SIGN_IN, AccountStep.SIGN_UP)) {
+            if (state.step in setOf(AccountStep.EMAIL, AccountStep.PASSWORD)) {
                 Text(
                     stringResource(Res.string.account_privacy),
                     style = MaterialTheme.typography.bodySmall,
@@ -400,7 +381,15 @@ internal fun AccountScreen(state: AccountUiState, onBack: () -> Unit, actions: A
 }
 
 @Composable
-private fun SignInForm(state: AccountUiState, actions: AccountActions) {
+private fun EmailForm(state: AccountUiState, actions: AccountActions) {
+    Text(stringResource(Res.string.account_intro), style = MaterialTheme.typography.bodyLarge)
+    EmailField(state, actions, imeAction = ImeAction.Send, onDone = actions.sendCode)
+    ActionButton(Res.string.account_send_code, enabled = state.emailValid, busy = state.busy, onClick = actions.sendCode)
+    TextButton(onClick = { actions.goTo(AccountStep.PASSWORD) }, enabled = !state.busy) { Text(stringResource(Res.string.account_use_password)) }
+}
+
+@Composable
+private fun PasswordForm(state: AccountUiState, actions: AccountActions) {
     Text(stringResource(Res.string.account_intro_sign_in), style = MaterialTheme.typography.bodyLarge)
     EmailField(state, actions)
     PasswordField(state.password, actions.setPassword, Res.string.account_password, ImeAction.Done, onDone = actions.signIn)
@@ -408,29 +397,7 @@ private fun SignInForm(state: AccountUiState, actions: AccountActions) {
         TextButton(onClick = { actions.goTo(AccountStep.FORGOT) }) { Text(stringResource(Res.string.account_forgot)) }
     }
     ActionButton(Res.string.account_sign_in, enabled = state.emailValid && state.password.isNotEmpty(), busy = state.busy, onClick = actions.signIn)
-    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(Spacing.md)) {
-        HorizontalDivider(Modifier.weight(1f))
-        Text(stringResource(Res.string.account_or), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-        HorizontalDivider(Modifier.weight(1f))
-    }
-    SecondaryButton(stringResource(Res.string.account_email_code), actions.sendSignInCode, enabled = state.emailValid && !state.busy)
-    Text(stringResource(Res.string.account_email_code_hint), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-    TextButton(onClick = { actions.goTo(AccountStep.SIGN_UP) }) { Text(stringResource(Res.string.account_switch_to_new)) }
-}
-
-@Composable
-private fun SignUpForm(state: AccountUiState, actions: AccountActions) {
-    Text(stringResource(Res.string.account_intro_new), style = MaterialTheme.typography.bodyLarge)
-    EmailField(state, actions)
-    PasswordField(state.password, actions.setPassword, Res.string.account_password_new, ImeAction.Next, newPassword = true)
-    PasswordField(state.repeat, actions.setRepeat, Res.string.account_password_repeat, ImeAction.Done, newPassword = true, onDone = actions.signUp)
-    ActionButton(
-        Res.string.account_create,
-        enabled = state.emailValid && state.password.isNotEmpty() && state.repeat.isNotEmpty(),
-        busy = state.busy,
-        onClick = actions.signUp,
-    )
-    TextButton(onClick = { actions.goTo(AccountStep.SIGN_IN) }) { Text(stringResource(Res.string.account_switch_to_sign_in)) }
+    TextButton(onClick = { actions.goTo(AccountStep.EMAIL) }, enabled = !state.busy) { Text(stringResource(Res.string.account_use_code)) }
 }
 
 @Composable
@@ -438,7 +405,7 @@ private fun ForgotForm(state: AccountUiState, actions: AccountActions) {
     Text(stringResource(Res.string.account_intro_forgot), style = MaterialTheme.typography.bodyLarge)
     EmailField(state, actions, imeAction = ImeAction.Send, onDone = actions.sendReset)
     ActionButton(Res.string.account_send_reset, enabled = state.emailValid, busy = state.busy, onClick = actions.sendReset)
-    TextButton(onClick = { actions.goTo(AccountStep.SIGN_IN) }) { Text(stringResource(Res.string.account_switch_to_sign_in)) }
+    TextButton(onClick = { actions.goTo(AccountStep.PASSWORD) }) { Text(stringResource(Res.string.account_title)) }
 }
 
 @Composable
@@ -447,7 +414,6 @@ private fun CodeStep(state: AccountUiState, actions: AccountActions) {
     Text(stringResource(Res.string.account_check_email), style = MaterialTheme.typography.headlineSmall, modifier = Modifier.semantics { heading() })
     val intro = when {
         state.unconfirmed -> Res.string.account_code_intro_unconfirmed
-        state.codePurpose == CodePurpose.SIGN_UP -> Res.string.account_code_intro_sign_up
         state.codePurpose == CodePurpose.RECOVERY -> Res.string.account_code_intro_recovery
         else -> Res.string.account_code_intro_sign_in
     }
@@ -458,7 +424,7 @@ private fun CodeStep(state: AccountUiState, actions: AccountActions) {
     SecondaryButton(stringResource(Res.string.account_open_email), openEmailApp)
     TextButton(onClick = actions.resend, enabled = !state.busy) { Text(stringResource(Res.string.account_resend)) }
     TextButton(
-        onClick = { actions.goTo(if (state.codePurpose == CodePurpose.SIGN_UP && !state.unconfirmed) AccountStep.SIGN_UP else AccountStep.SIGN_IN) },
+        onClick = { actions.goTo(if (state.codePurpose == CodePurpose.RECOVERY) AccountStep.FORGOT else AccountStep.EMAIL) },
         enabled = !state.busy,
     ) { Text(stringResource(Res.string.account_change_email)) }
 }
@@ -505,7 +471,7 @@ private fun EmailField(state: AccountUiState, actions: AccountActions, imeAction
         singleLine = true,
         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email, imeAction = imeAction),
         keyboardActions = KeyboardActions(onSend = { onDone() }),
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier.fillMaxWidth().semantics { contentType = ContentType.EmailAddress + ContentType.Username },
     )
 }
 
@@ -541,7 +507,7 @@ private fun PasswordField(
         },
         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password, imeAction = imeAction),
         keyboardActions = KeyboardActions(onDone = { onDone() }),
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier.fillMaxWidth().semantics { contentType = if (newPassword) ContentType.NewPassword else ContentType.Password },
     )
 }
 
@@ -555,7 +521,7 @@ private fun CodeField(state: AccountUiState, actions: AccountActions, onDone: ()
         singleLine = true,
         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.NumberPassword, imeAction = ImeAction.Done),
         keyboardActions = KeyboardActions(onDone = { if (state.code.length >= 6) onDone() }),
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier.fillMaxWidth().semantics { contentType = ContentType.SmsOtpCode },
     )
 }
 

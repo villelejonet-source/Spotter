@@ -13,7 +13,7 @@ const exercise = (sync_id: string, session_id: string, exercise_id: string, posi
 });
 const set = (sync_id: string, session_exercise_id: string, session_id: string, exercise_id: string, position: number) => ({
   sync_id, session_exercise_id, session_id, exercise_id, position, weight_kg: 60, reps: 8, rir: null, rpe: null,
-  set_type: "WORKING" as const, completed_at: 1, notes: null,
+  set_type: "WORKING" as const, completed_at: 1, notes: null, is_amrap: false,
 });
 
 // Sets come back from the database ordered by sync id, which is random.

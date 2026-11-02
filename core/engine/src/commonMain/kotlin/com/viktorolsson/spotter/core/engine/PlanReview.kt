@@ -49,7 +49,7 @@ object PlanReviewEngine {
         if (ctx.deloadActive || (snoozedUntil != null && ctx.today <= snoozedUntil)) return null
         val days = since.daysUntil(ctx.today)
         val sessions = ctx.trainingDates.count { it >= since }
-        val mainLifts = ctx.plan.filter { it.exercise.mechanics == Mechanics.COMPOUND }.distinctBy { it.exercise.id }
+        val mainLifts = ctx.plan.filter { it.exercise.mechanics == Mechanics.COMPOUND && !it.fiveThreeOne }.distinctBy { it.exercise.id }
         val plateaus = mainLifts.mapNotNull { slot -> RecommendationEngine.detectPlateau(slot, ctx.history[slot.exercise.id].orEmpty()) }
         val due = plateaus.isNotEmpty() && (
             (days >= REVIEW_DAYS && sessions >= MIN_SESSIONS) || (days >= EARLY_DAYS && plateaus.size >= EARLY_STALLS)

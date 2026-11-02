@@ -66,6 +66,15 @@ data class PlanExerciseEntity(
     /** First-session estimate from the plan generator. */
     @ColumnInfo(defaultValue = "NULL")
     val startingWeightKg: Double? = null,
+    /**
+     * Set for a 5/3/1 lift: the training max its weeks are percentages of. Older apps ignore it
+     * and keep the plain [progressionRule], so a 5/3/1 lift still works for them.
+     */
+    @ColumnInfo(defaultValue = "NULL")
+    val trainingMaxKg: Double? = null,
+    /** The 5/3/1 week the next session of this lift is: 1–3, then 4 for the deload. */
+    @ColumnInfo(defaultValue = "1")
+    val cycleWeek: Int = 1,
     /** Global id for cloud sync; assigned by a database trigger (see SyncSchema). */
     val syncId: String? = null,
     /** Time of the last local change (ms), maintained by a database trigger. */

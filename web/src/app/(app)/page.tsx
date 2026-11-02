@@ -9,7 +9,7 @@ import { exerciseName } from "@/lib/catalog";
 import { getActivePlan, getCatalog, getFinishedSessionCount, getPersonalRecords, getPlanDay, getProfile, getScheduled, getSessionTimes, getSessions, getUnit, preload } from "@/lib/data";
 import { formatDateValue, formatFullDate, formatRelative } from "@/lib/dates";
 import { APP_BACKUP_PATH, FREE_WORKOUT, PR_LABELS, WORKOUT } from "@/lib/labels";
-import { formatDuration, formatRecord, formatTarget, formatVolume, toUnit } from "@/lib/model";
+import { formatDuration, formatPlanTarget, formatRecord, formatVolume, toUnit } from "@/lib/model";
 import { DAY_MS, fetchSince, finished, formatChange, localDate, nextPlanDay, percentChange, streakLabel, weeklyTotals, weekStreak, windowStart, workoutsPerDay } from "@/lib/stats";
 
 export const metadata = { title: "Today" };
@@ -271,7 +271,7 @@ async function NextWorkout() {
               <li key={e.sync_id} className="grid grid-cols-[1.75rem_1fr_auto] items-center gap-2 py-2">
                 <span className="font-mono text-[0.6875rem] text-faint">{String(i + 1).padStart(2, "0")}</span>
                 <span className="truncate">{exerciseName(catalog, e.exercise_id)}</span>
-                <span className="shrink-0 font-mono text-xs text-muted tabular-nums">{formatTarget(e.sets, e.rep_min, e.rep_max, e.exercise_id)}</span>
+                <span className="shrink-0 font-mono text-xs text-muted tabular-nums">{formatPlanTarget(e)}</span>
               </li>
             ))}
           </ol>

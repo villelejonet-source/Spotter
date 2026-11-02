@@ -123,6 +123,8 @@ data class OnboardingUiState(
     val answers: Answers = Answers(),
     val rebuild: Boolean = false,
     val splitOverride: SplitType? = null,
+    /** The 5/3/1 program instead of a split (offered with a barbell). */
+    val fiveThreeOne: Boolean = false,
     val generated: GeneratedPlan? = null,
     val saving: Boolean = false,
     /** First launch: choose between an account and staying on this phone only. */
@@ -228,7 +230,12 @@ class OnboardingViewModel(
     }
 
     fun setSplit(split: SplitType?) {
-        _uiState.update { it.copy(splitOverride = split) }
+        _uiState.update { it.copy(splitOverride = split, fiveThreeOne = false) }
+        generate()
+    }
+
+    fun chooseFiveThreeOne() {
+        _uiState.update { it.copy(splitOverride = null, fiveThreeOne = true) }
         generate()
     }
 
@@ -272,6 +279,7 @@ class OnboardingViewModel(
                     now = clock.now(),
                     knownLifts = state.answers.knownLifts(),
                     splitOverride = state.splitOverride,
+                    fiveThreeOne = state.fiveThreeOne && Equipment.BARBELL in profile.equipment,
                 ),
             )
         }

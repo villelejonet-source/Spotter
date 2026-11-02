@@ -1,5 +1,7 @@
 package com.viktorolsson.spotter.core.ui
 
+import com.viktorolsson.spotter.core.model.isTimed
+import com.viktorolsson.spotter.core.model.PlanExercise
 import androidx.compose.runtime.Composable
 import org.jetbrains.compose.resources.pluralStringResource
 import org.jetbrains.compose.resources.stringResource
@@ -91,6 +93,12 @@ fun formatSet(weightKg: Double?, reps: Int?, unit: WeightUnit, timed: Boolean = 
 @Composable
 fun formatTarget(sets: Int, repMin: Int, repMax: Int, timed: Boolean = false): String =
     stringResource(if (timed) Res.string.target_sets_seconds else Res.string.target_sets_reps, sets, repMin, repMax)
+
+/** A plan exercise's prescription: "5/3/1 · week 2" for a 5/3/1 lift, otherwise [formatTarget]. */
+@Composable
+fun formatPlanTarget(exercise: PlanExercise): String =
+    if (exercise.trainingMaxKg != null) stringResource(Res.string.target_531_week, exercise.cycleWeek)
+    else formatTarget(exercise.sets, exercise.repMin, exercise.repMax, exercise.exercise.isTimed)
 
 /** The headline value of a record: "101 kg", "82.5 kg × 9" or "2,080 kg". */
 @Composable

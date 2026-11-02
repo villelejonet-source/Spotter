@@ -25,6 +25,8 @@ data class PlanInput(
     val knownLifts: KnownLifts = KnownLifts(),
     /** FULL_BODY, UPPER_LOWER or PUSH_PULL_LEGS to override the automatic choice. */
     val splitOverride: SplitType? = null,
+    /** Wendler's 5/3/1 instead of a split: four barbell days (see [FiveThreeOne]); needs a barbell. */
+    val fiveThreeOne: Boolean = false,
 )
 
 data class GeneratedPlan(
@@ -48,6 +50,7 @@ class PlanGenerator {
         val age = profile.birthDate.yearsUntil(input.today)
         val selector = ExerciseSelector(profile, input.library, age)
         val weights = StartingWeights(profile, input.knownLifts, age)
+        if (input.fiveThreeOne) fiveThreeOne(input, age, selector, weights)?.let { return it }
         val split = chooseSplit(profile.daysPerWeek, profile.experience, input.splitOverride)
         val templates = dayTemplates(split, profile.daysPerWeek)
 
@@ -75,6 +78,39 @@ class PlanGenerator {
             createdAt = input.now,
             days = days,
         )
+        return GeneratedPlan(plan, days.map { estimateMinutes(it.exercises) }, unfilled)
+    }
+
+    /**
+     * The 5/3/1 program: each day's main lift at 3 sets on its training max (90 % of the
+     * estimated 1RM, from the reported lifts when there are some), then assistance picked and
+     * prescribed as in any plan. Null when the library lacks one of the barbell lifts.
+     */
+    private fun fiveThreeOne(input: PlanInput, age: Int, selector: ExerciseSelector, weights: StartingWeights): GeneratedPlan? {
+        val profile = input.profile
+        val byId = input.library.associateBy { it.id }
+        val usedInPlan = mutableSetOf<String>()
+        val unfilled = mutableSetOf<MovementPattern>()
+        val days = Templates.fiveThreeOne.mapIndexed { index, day ->
+            val main = byId[day.mainId] ?: return null
+            val oneRepMax = weights.oneRepMaxKg(main) ?: return null
+            usedInPlan += main.id
+            val usedInDay = mutableSetOf(main.id)
+            val assistance = day.assistance.mapNotNull { slot ->
+                val exercise = selector.pick(slot, usedInDay, usedInPlan) ?: run {
+                    if (slot.role != SlotRole.ACCESSORY) unfilled += slot.patterns.first()
+                    null
+                }
+                exercise?.also { usedInDay += it.id; usedInPlan += it.id }?.let { prescribe(it, slot.role, profile, age, weights) }
+            }
+            val mainPlanned = PlanExercise(
+                id = 0, exercise = main, position = 0, sets = 3, repMin = 1, repMax = 5, targetRir = null,
+                restSeconds = FIVE_THREE_ONE_REST, progressionRule = ProgressionRule.LINEAR, supersetGroup = null, startingWeightKg = null,
+                trainingMaxKg = FiveThreeOne.trainingMaxFrom(oneRepMax, main, profile.units), cycleWeek = 1,
+            )
+            PlanDay(0, index, day.name, listOf(mainPlanned) + assistance.mapIndexed { i, p -> p.toPlanExercise(i + 1) })
+        }
+        val plan = Plan(0, "5/3/1 · 4 days", SplitType.CUSTOM, profile.goal, input.now, days)
         return GeneratedPlan(plan, days.map { estimateMinutes(it.exercises) }, unfilled)
     }
 
@@ -221,6 +257,9 @@ class PlanGenerator {
         private const val MAX_FOCUS_SLOTS_PER_DAY = 2
         private const val WORK_SECONDS_PER_SET = 40
         private const val WARM_UP_MINUTES = 5
+
+        /** Rest after a 5/3/1 main-lift set: heavy, low-rep work. */
+        private const val FIVE_THREE_ONE_REST = 180
 
         fun chooseSplit(days: Int, experience: ExperienceLevel, override: SplitType?): SplitType = when (override) {
             SplitType.FULL_BODY -> SplitType.FULL_BODY

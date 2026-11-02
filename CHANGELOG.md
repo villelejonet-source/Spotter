@@ -25,12 +25,23 @@ into the new version's entry and writes the store notes from it. Versions are th
   - a single lighter day no longer resets the "lighter week every 6 weeks" suggestion.
 - The Progress tab has a "How training felt" card: your average check-in and rating over the
   last 4 weeks, and how many were low days.
+- 5/3/1: pick "5/3/1" when building a plan (with a barbell) for Wendler's four days: press,
+  deadlift, bench and squat, each followed by assistance work. Each main lift runs on a training
+  max (90% of your estimated 1RM):
+  - weeks 1–3 are 5s, 3s and 5/3/1 at set percentages, the last set as many reps as you can;
+    week 4 is a deload;
+  - the workout card shows the week and training max, and what the last set asks for;
+  - after week 4 the training max goes up (+2.5 kg upper body, +5 kg lower); falling short on
+    the last set lowers it to 90% and repeats the week;
+  - a lighter session on a low day does the deload loads without using up the week.
 
 ### Website
 - Workout history shows how you felt before and after each workout and its effort. Lighter
   sessions are marked "Lighter session" (was "Lighter week").
 - Progress pages leave lighter sessions and low days out of the charts and the change column,
   and tag them in an exercise's session list. Insights has a "How training felt" card.
+- The plan editor can set any lift to 5/3/1, with its training max and current week. Today's
+  next workout shows a 5/3/1 lift's week, workouts mark the AMRAP set, and the export includes it.
 - Saving the profile on the website no longer undoes a body weight you just logged on the same
   page (or a change synced from the phone): fields you didn't touch take the newest values.
 - The website's data export lists each workout's exercises in the order you did them, keeps

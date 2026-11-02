@@ -138,14 +138,14 @@ export type Database = {
                   ]
                 },"v_plan_exercise": {
                   Row: {
-                    "exercise_id": string | null,"plan_day_id": string | null,"position": number | null,"progression_rule": string | null,"rep_max": number | null,"rep_min": number | null,"rest_seconds": number | null,"sets": number | null,"starting_weight_kg": number | null,"superset_group": number | null,"sync_id": string,"target_rir": number | null,"updated_at": number,"user_id": string
+                    "cycle_week": number | null,"exercise_id": string | null,"plan_day_id": string | null,"position": number | null,"progression_rule": string | null,"rep_max": number | null,"rep_min": number | null,"rest_seconds": number | null,"sets": number | null,"starting_weight_kg": number | null,"superset_group": number | null,"sync_id": string,"target_rir": number | null,"training_max_kg": number | null,"updated_at": number,"user_id": string
                   }
                   ComputedFields: never
                   Insert: {
-                           "exercise_id"?: never,"plan_day_id"?: never,"position"?: never,"progression_rule"?: never,"rep_max"?: never,"rep_min"?: never,"rest_seconds"?: never,"sets"?: never,"starting_weight_kg"?: never,"superset_group"?: never,"sync_id"?: string | null,"target_rir"?: never,"updated_at"?: number | null,"user_id"?: string | null
+                           "cycle_week"?: never,"exercise_id"?: never,"plan_day_id"?: never,"position"?: never,"progression_rule"?: never,"rep_max"?: never,"rep_min"?: never,"rest_seconds"?: never,"sets"?: never,"starting_weight_kg"?: never,"superset_group"?: never,"sync_id"?: string | null,"target_rir"?: never,"training_max_kg"?: never,"updated_at"?: number | null,"user_id"?: string | null
                          }
                         Update: {
-                           "exercise_id"?: never,"plan_day_id"?: never,"position"?: never,"progression_rule"?: never,"rep_max"?: never,"rep_min"?: never,"rest_seconds"?: never,"sets"?: never,"starting_weight_kg"?: never,"superset_group"?: never,"sync_id"?: string | null,"target_rir"?: never,"updated_at"?: number | null,"user_id"?: string | null
+                           "cycle_week"?: never,"exercise_id"?: never,"plan_day_id"?: never,"position"?: never,"progression_rule"?: never,"rep_max"?: never,"rep_min"?: never,"rest_seconds"?: never,"sets"?: never,"starting_weight_kg"?: never,"superset_group"?: never,"sync_id"?: string | null,"target_rir"?: never,"training_max_kg"?: never,"updated_at"?: number | null,"user_id"?: string | null
                          }
                         Relationships: [
                     
@@ -194,14 +194,14 @@ export type Database = {
                   ]
                 },"v_session_exercise": {
                   Row: {
-                    "exercise_id": string | null,"notes": string | null,"plan_exercise_id": string | null,"position": number | null,"progression_reason": string | null,"rest_seconds": number | null,"session_id": string | null,"substituted_from_exercise_id": string | null,"superset_group": number | null,"sync_id": string,"updated_at": number,"user_id": string
+                    "cycle_week": number | null,"exercise_id": string | null,"notes": string | null,"plan_exercise_id": string | null,"position": number | null,"progression_reason": string | null,"rest_seconds": number | null,"session_id": string | null,"substituted_from_exercise_id": string | null,"superset_group": number | null,"sync_id": string,"updated_at": number,"user_id": string
                   }
                   ComputedFields: never
                   Insert: {
-                           "exercise_id"?: never,"notes"?: never,"plan_exercise_id"?: never,"position"?: never,"progression_reason"?: never,"rest_seconds"?: never,"session_id"?: never,"substituted_from_exercise_id"?: never,"superset_group"?: never,"sync_id"?: string | null,"updated_at"?: number | null,"user_id"?: string | null
+                           "cycle_week"?: never,"exercise_id"?: never,"notes"?: never,"plan_exercise_id"?: never,"position"?: never,"progression_reason"?: never,"rest_seconds"?: never,"session_id"?: never,"substituted_from_exercise_id"?: never,"superset_group"?: never,"sync_id"?: string | null,"updated_at"?: number | null,"user_id"?: string | null
                          }
                         Update: {
-                           "exercise_id"?: never,"notes"?: never,"plan_exercise_id"?: never,"position"?: never,"progression_reason"?: never,"rest_seconds"?: never,"session_id"?: never,"substituted_from_exercise_id"?: never,"superset_group"?: never,"sync_id"?: string | null,"updated_at"?: number | null,"user_id"?: string | null
+                           "cycle_week"?: never,"exercise_id"?: never,"notes"?: never,"plan_exercise_id"?: never,"position"?: never,"progression_reason"?: never,"rest_seconds"?: never,"session_id"?: never,"substituted_from_exercise_id"?: never,"superset_group"?: never,"sync_id"?: string | null,"updated_at"?: number | null,"user_id"?: string | null
                          }
                         Relationships: [
                     
@@ -216,21 +216,21 @@ export type Database = {
                   ]
                 },"v_set_entry": {
                   Row: {
-                    "completed_at": number | null,"notes": string | null,"position": number | null,"reps": number | null,"rir": number | null,"rpe": number | null,"session_exercise_id": string | null,"set_type": string | null,"sync_id": string,"updated_at": number,"user_id": string,"weight_kg": number | null
+                    "completed_at": number | null,"is_amrap": boolean | null,"notes": string | null,"position": number | null,"reps": number | null,"rir": number | null,"rpe": number | null,"session_exercise_id": string | null,"set_type": string | null,"sync_id": string,"updated_at": number,"user_id": string,"weight_kg": number | null
                   }
                   ComputedFields: never
                   Insert: {
-                           "completed_at"?: never,"notes"?: never,"position"?: never,"reps"?: never,"rir"?: never,"rpe"?: never,"session_exercise_id"?: never,"set_type"?: never,"sync_id"?: string | null,"updated_at"?: number | null,"user_id"?: string | null,"weight_kg"?: never
+                           "completed_at"?: never,"is_amrap"?: never,"notes"?: never,"position"?: never,"reps"?: never,"rir"?: never,"rpe"?: never,"session_exercise_id"?: never,"set_type"?: never,"sync_id"?: string | null,"updated_at"?: number | null,"user_id"?: string | null,"weight_kg"?: never
                          }
                         Update: {
-                           "completed_at"?: never,"notes"?: never,"position"?: never,"reps"?: never,"rir"?: never,"rpe"?: never,"session_exercise_id"?: never,"set_type"?: never,"sync_id"?: string | null,"updated_at"?: number | null,"user_id"?: string | null,"weight_kg"?: never
+                           "completed_at"?: never,"is_amrap"?: never,"notes"?: never,"position"?: never,"reps"?: never,"rir"?: never,"rpe"?: never,"session_exercise_id"?: never,"set_type"?: never,"sync_id"?: string | null,"updated_at"?: number | null,"user_id"?: string | null,"weight_kg"?: never
                          }
                         Relationships: [
                     
                   ]
                 },"v_set_history": {
                   Row: {
-                    "completed_at": number | null,"exercise_id": string | null,"notes": string | null,"position": number | null,"reps": number | null,"rir": number | null,"rpe": number | null,"session_exercise_id": string | null,"session_feel": number | null,"session_finished": boolean | null,"session_id": string | null,"session_is_deload": boolean | null,"session_readiness": number | null,"session_started_at": number | null,"set_type": string | null,"sync_id": string,"user_id": string,"weight_kg": number | null
+                    "completed_at": number | null,"exercise_id": string | null,"is_amrap": boolean | null,"notes": string | null,"position": number | null,"reps": number | null,"rir": number | null,"rpe": number | null,"session_exercise_id": string | null,"session_feel": number | null,"session_finished": boolean | null,"session_id": string | null,"session_is_deload": boolean | null,"session_readiness": number | null,"session_started_at": number | null,"set_type": string | null,"sync_id": string,"user_id": string,"weight_kg": number | null
                   }
                   ComputedFields: never
                   Relationships: [

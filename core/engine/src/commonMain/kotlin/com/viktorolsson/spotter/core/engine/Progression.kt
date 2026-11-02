@@ -29,7 +29,8 @@ data class ProgressionInput(
     val roughDays: Set<Int> = emptySet(),
 )
 
-data class SetTarget(val weightKg: Double?, val reps: Int)
+/** One set to do; [amrap] is a 5/3/1 last set, as many reps as possible from [reps]. */
+data class SetTarget(val weightKg: Double?, val reps: Int, val amrap: Boolean = false)
 
 data class ProgressionTarget(val sets: List<SetTarget>, val reason: ProgressionReason)
 

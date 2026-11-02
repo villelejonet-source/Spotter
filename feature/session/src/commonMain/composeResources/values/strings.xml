@@ -2,6 +2,12 @@
     <string name="session_minimize">Minimize workout</string>
     <string name="session_finish">Finish</string>
     <string name="session_lighter">Lighter session</string>
+    <string name="five31_week">5/3/1 · Week %1$d of 3 · training max %2$s</string>
+    <string name="five31_deload_week">5/3/1 · Deload week · training max %1$s</string>
+    <plurals name="five31_amrap">
+        <item quantity="one">Last set: as many reps as you can, at least %1$d.</item>
+        <item quantity="other">Last set: as many reps as you can, at least %1$d.</item>
+    </plurals>
     <string name="session_day_lighter">%1$s · Lighter session</string>
     <string name="summary_feel_title">How did it go?</string>
     <string name="summary_effort">Effort</string>

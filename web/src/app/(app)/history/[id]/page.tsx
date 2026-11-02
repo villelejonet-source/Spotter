@@ -6,7 +6,7 @@ import { BackLink, Badge, Card, PageHeader, Stat } from "@/components/ui";
 import { exerciseName } from "@/lib/catalog";
 import { getCatalog, getSessionDetail, getUnit } from "@/lib/data";
 import { formatFullDate, formatTime } from "@/lib/dates";
-import { EFFORT_LABEL, formatCheckIn, LIGHTER_SESSION, progressionReasonLabel, SET_TYPE_LABELS, SET_TYPE_SHORT, WORKOUT } from "@/lib/labels";
+import { AMRAP_LABEL, EFFORT_LABEL, formatCheckIn, LIGHTER_SESSION, progressionReasonLabel, SET_TYPE_LABELS, SET_TYPE_SHORT, WORKOUT } from "@/lib/labels";
 import { formatDuration, formatSet, formatSetEffort, formatVolume, isTimed } from "@/lib/model";
 
 export const metadata = { title: "Workout" };
@@ -93,7 +93,10 @@ export default async function SessionPage({ params }: { params: Promise<{ id: st
                         <td className="py-1">
                           {s.set_type === "WORKING" ? marker : <abbr title={SET_TYPE_LABELS[s.set_type]} className="no-underline"><Badge>{marker}</Badge></abbr>}
                         </td>
-                        <td className="py-1">{formatSet(s, e.exercise_id, unit)}</td>
+                        <td className="py-1">
+                          {formatSet(s, e.exercise_id, unit)}
+                          {s.is_amrap && <span className="ml-1 text-xs text-primary">{AMRAP_LABEL}</span>}
+                        </td>
                         <td className="py-1 text-right text-muted">{formatSetEffort(s) ?? "–"}</td>
                       </tr>
                     );

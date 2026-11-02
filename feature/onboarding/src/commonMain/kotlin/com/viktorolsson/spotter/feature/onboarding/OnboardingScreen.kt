@@ -155,6 +155,7 @@ internal fun OnboardingRoute(
         onChoose = viewModel::choose,
         onImperial = viewModel::setImperial,
         onSplit = viewModel::setSplit,
+        onFiveThreeOne = viewModel::chooseFiveThreeOne,
         onFinish = { viewModel.finish(onDone) },
     )
 }
@@ -171,6 +172,7 @@ internal fun OnboardingScreen(
     onImperial: (Boolean) -> Unit,
     onSplit: (com.viktorolsson.spotter.core.model.SplitType?) -> Unit,
     onFinish: () -> Unit,
+    onFiveThreeOne: () -> Unit = {},
 ) {
     val answers = state.answers
     Scaffold(
@@ -277,7 +279,7 @@ internal fun OnboardingScreen(
                         )
                     }
                     Step.LIFTS -> LiftsStep(answers, onUpdate)
-                    Step.SUMMARY -> SummaryStep(state, onSplit)
+                    Step.SUMMARY -> SummaryStep(state, onSplit, onFiveThreeOne)
                 }
             }
         }

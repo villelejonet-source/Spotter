@@ -33,6 +33,8 @@ export default async function PlanPage({ params }: { params: Promise<{ id: strin
         progression_rule: e.progression_rule,
         superset_group: e.superset_group,
         starting_weight_kg: e.starting_weight_kg,
+        training_max_kg: e.training_max_kg,
+        cycle_week: e.cycle_week,
       })),
     })),
   };

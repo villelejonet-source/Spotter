@@ -252,4 +252,25 @@ class PlanGeneratorTest {
         val plan = PlanGenerator().generate(PlanInput(input, withCustom, Fixtures.today, Fixtures.now)).plan
         assertTrue(plan.days.flatMap { it.exercises }.none { it.exercise.isCustom })
     }
+
+    @Test
+    fun `5-3-1 is four barbell days with a training max on each main lift`() {
+        val known = KnownLifts(bench = LiftResult(100.0, 5), squat = LiftResult(140.0, 3), deadlift = LiftResult(180.0, 1))
+        val plan = PlanGenerator().generate(PlanInput(profile(days = 3), Fixtures.library, Fixtures.today, Fixtures.now, known, fiveThreeOne = true)).plan
+        assertEquals(SplitType.CUSTOM, plan.splitType)
+        assertEquals(listOf("Press day", "Deadlift day", "Bench day", "Squat day"), plan.days.map { it.name })
+        assertEquals(listOf("overhead-press", "deadlift", "barbell-bench-press", "back-squat"), plan.days.map { it.exercises.first().exercise.id })
+        plan.days.forEach { day ->
+            val main = day.exercises.first()
+            assertEquals(1, main.cycleWeek)
+            assertTrue(main.trainingMaxKg!! > 0)
+            // Assistance follows the main lift and progresses the normal way.
+            assertTrue(day.exercises.drop(1).isNotEmpty())
+            assertTrue(day.exercises.drop(1).all { it.trainingMaxKg == null })
+        }
+        // Bench 100 × 5 is an estimated 1RM of 116.7 kg: 90 % is 105, rounded down to a plate step.
+        assertEquals(105.0, plan.days[2].exercises.first().trainingMaxKg!!, 0.001)
+        // Deadlift 180 × 1: 162.
+        assertEquals(162.5, plan.days[1].exercises.first().trainingMaxKg!!, 2.5)
+    }
 }

@@ -107,6 +107,13 @@ import com.viktorolsson.spotter.feature.session.resources.progress_reset
 import com.viktorolsson.spotter.feature.session.resources.session_more
 import com.viktorolsson.spotter.feature.session.resources.warmup_add
 import com.viktorolsson.spotter.core.ui.uppercaseLocal
+import com.viktorolsson.spotter.core.engine.FiveThreeOne
+import com.viktorolsson.spotter.core.model.WeightUnit
+import com.viktorolsson.spotter.core.ui.formatWeight
+import org.jetbrains.compose.resources.pluralStringResource
+import com.viktorolsson.spotter.feature.session.resources.five31_amrap
+import com.viktorolsson.spotter.feature.session.resources.five31_deload_week
+import com.viktorolsson.spotter.feature.session.resources.five31_week
 
 /**
  * Everything a card can ask the screen to do. One instance serves every card (each
@@ -239,7 +246,11 @@ internal fun ExerciseCard(
                     }
                 }
             }
-            exercise.target?.let { target ->
+            val week = exercise.cycleWeek
+            val trainingMax = exercise.target?.trainingMaxKg
+            if (week != null && trainingMax != null) {
+                FiveThreeOneNote(week, trainingMax, exercise.sets.firstOrNull { it.isAmrap }?.reps, preferences.weightUnit)
+            } else exercise.target?.let { target ->
                 val range = formatTarget(target.sets, target.repMin, target.repMax, timed)
                 // Reps in reserve don't apply to a hold.
                 val rir = target.targetRir?.takeUnless { timed }
@@ -340,6 +351,27 @@ internal fun ExerciseCard(
             onDismiss = { confirmRemove = false },
             destructive = true,
         )
+    }
+}
+
+/** A 5/3/1 lift: its week and training max, and what the AMRAP set asks for. */
+@Composable
+private fun FiveThreeOneNote(week: Int, trainingMaxKg: Double, amrapReps: Int?, unit: WeightUnit) {
+    Column(Modifier.padding(horizontal = Dimens.CardPadding), verticalArrangement = Arrangement.spacedBy(Spacing.xxs)) {
+        val max = formatWeight(trainingMaxKg, unit)
+        Text(
+            if (week >= FiveThreeOne.DELOAD_WEEK) stringResource(Res.string.five31_deload_week, max)
+            else stringResource(Res.string.five31_week, week, max),
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        if (amrapReps != null) {
+            Text(
+                pluralStringResource(Res.plurals.five31_amrap, amrapReps, amrapReps),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.primary,
+            )
+        }
     }
 }
 

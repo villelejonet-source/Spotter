@@ -10,7 +10,6 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
-import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.resetMain
@@ -57,16 +56,17 @@ class SummaryViewModelTest {
         val id = graph.workouts.startEmptyWorkout(readiness = 2)
         graph.workouts.finishWorkout(id)
         val vm = viewModel(id)
-        backgroundScope.launch { vm.uiState.collect {} }
-        vm.uiState.first { !it.loading }
 
         vm.rateFeel(4).join()
         vm.rateEffort(7).join()
 
-        val rated = vm.uiState.first { it.feel != null && it.effort != null }
+        // Read back from the database, not by collecting uiState: a collector left running
+        // re-queries after each write and could still be mid-query when tearDown closes the
+        // database, failing whichever test ran next ("connection is closed").
+        val rated = graph.workouts.getSession(id)!!
         assertEquals(4, rated.feel)
         assertEquals(7, rated.effort)
-        assertEquals(2, graph.workouts.getSession(id)!!.readiness)
+        assertEquals(2, rated.readiness)
     }
 
     @Test

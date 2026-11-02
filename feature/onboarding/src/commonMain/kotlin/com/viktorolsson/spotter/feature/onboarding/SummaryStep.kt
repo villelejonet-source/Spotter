@@ -17,17 +17,19 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import org.jetbrains.compose.resources.stringResource
 import androidx.compose.ui.text.style.TextOverflow
+import com.viktorolsson.spotter.core.model.Equipment
 import com.viktorolsson.spotter.core.model.SplitType
-import com.viktorolsson.spotter.core.model.isTimed
 import com.viktorolsson.spotter.core.ui.component.LoadingState
 import com.viktorolsson.spotter.core.ui.component.SectionHeader
 import com.viktorolsson.spotter.core.ui.formatExerciseCount
-import com.viktorolsson.spotter.core.ui.formatTarget
+import com.viktorolsson.spotter.core.ui.formatPlanTarget
 import com.viktorolsson.spotter.core.ui.labelRes
 import com.viktorolsson.spotter.core.ui.theme.Dimens
 import com.viktorolsson.spotter.core.ui.theme.Spacing
 import org.jetbrains.compose.resources.stringResource
 import com.viktorolsson.spotter.feature.onboarding.resources.Res
+import com.viktorolsson.spotter.feature.onboarding.resources.onb_split_531
+import com.viktorolsson.spotter.feature.onboarding.resources.onb_split_531_body
 import com.viktorolsson.spotter.feature.onboarding.resources.onb_split_auto
 import com.viktorolsson.spotter.feature.onboarding.resources.onb_split_full
 import com.viktorolsson.spotter.feature.onboarding.resources.onb_split_ppl
@@ -39,7 +41,7 @@ import com.viktorolsson.spotter.feature.onboarding.resources.onb_summary_split
 import com.viktorolsson.spotter.feature.onboarding.resources.onb_summary_title
 
 @Composable
-internal fun SummaryStep(state: OnboardingUiState, onSplit: (SplitType?) -> Unit) {
+internal fun SummaryStep(state: OnboardingUiState, onSplit: (SplitType?) -> Unit, onFiveThreeOne: () -> Unit = {}) {
     val generated = state.generated
     Title(Res.string.onb_summary_title)
     if (generated == null) {
@@ -58,8 +60,21 @@ internal fun SummaryStep(state: OnboardingUiState, onSplit: (SplitType?) -> Unit
                 SplitType.PUSH_PULL_LEGS to Res.string.onb_split_ppl,
             ).filter { (split, _) -> split != SplitType.PUSH_PULL_LEGS || (state.answers.days ?: 0) >= 3 },
         ) { (split, label) ->
-            FilterChip(selected = state.splitOverride == split, onClick = { onSplit(split) }, label = { Text(stringResource(label)) })
+            FilterChip(selected = !state.fiveThreeOne && state.splitOverride == split, onClick = { onSplit(split) }, label = { Text(stringResource(label)) })
         }
+        // 5/3/1 is built on the barbell lifts.
+        if (Equipment.BARBELL in state.answers.equipment) {
+            item {
+                FilterChip(selected = state.fiveThreeOne, onClick = onFiveThreeOne, label = { Text(stringResource(Res.string.onb_split_531)) })
+            }
+        }
+    }
+    if (state.fiveThreeOne) {
+        Text(
+            stringResource(Res.string.onb_split_531_body),
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
     }
 
     if (generated.unfilledPatterns.isNotEmpty()) {
@@ -99,7 +114,7 @@ internal fun SummaryStep(state: OnboardingUiState, onSplit: (SplitType?) -> Unit
                             modifier = Modifier.weight(1f),
                         )
                         Text(
-                            formatTarget(ex.sets, ex.repMin, ex.repMax, ex.exercise.isTimed),
+                            formatPlanTarget(ex),
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )

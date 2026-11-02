@@ -22,6 +22,7 @@ import com.viktorolsson.spotter.core.model.PreviousSet
 import com.viktorolsson.spotter.core.model.RestTimer
 import com.viktorolsson.spotter.core.model.UserPreferences
 import com.viktorolsson.spotter.core.model.WeightUnit
+import com.viktorolsson.spotter.core.model.SetType
 import com.viktorolsson.spotter.core.model.WorkoutSummary
 import com.viktorolsson.spotter.core.ui.PreviewData
 import com.viktorolsson.spotter.core.ui.theme.Spacing
@@ -94,8 +95,18 @@ class SessionScreenshotTest {
         effortScale: EffortScale = EffortScale.RIR,
         celebration: PrEvent? = null,
         lighter: Boolean = false,
+        fiveThreeOne: Boolean = false,
     ) {
-        val active = active.copy(isLighter = lighter)
+        val active = active.copy(isLighter = lighter, exercises = if (!fiveThreeOne) active.exercises else active.exercises.mapIndexed { i, ex ->
+            if (i != 0) ex else ex.copy(
+                cycleWeek = 1,
+                progressionReason = null,
+                target = ex.target?.copy(trainingMaxKg = 100.0),
+                sets = ex.sets.filter { it.setType != SetType.WARMUP }.mapIndexed { j, set ->
+                    set.copy(weightKg = listOf(65.0, 75.0, 85.0)[j.coerceAtMost(2)], reps = 5, isAmrap = j == 2)
+                }.take(3),
+            )
+        })
         val keypad = rememberKeypadState()
         if (keypadTarget != null && keypad.target == null) keypad.focus(keypadTarget, "10")
         SessionScreen(
@@ -265,6 +276,12 @@ class SessionScreenshotTest {
     fun summaryRated_largeFont() = capture("summary_rated_font_1_6", dark = false, fontScale = 1.6f) {
         SummaryScreen(WorkoutSummary.of(PreviewData.session()), WeightUnit.KG, emptyList(), onDone = {}, feel = 4, effort = 7)
     }
+
+    @Test
+    fun session531_light() = capture("session_531_light", dark = false) { Session(fiveThreeOne = true) }
+
+    @Test
+    fun session531_largeFont() = capture("session_531_font_1_6", dark = false, fontScale = 1.6f) { Session(fiveThreeOne = true) }
 
     @Test
     fun sessionLighter_dark() = capture("session_lighter_dark", dark = true) { Session(lighter = true) }

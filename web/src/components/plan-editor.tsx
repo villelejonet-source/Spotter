@@ -6,7 +6,7 @@ import { useEffect, useMemo, useState, useTransition, type ReactNode } from "rea
 import { savePlan } from "@/app/actions/plans";
 import { newSyncId } from "@/lib/ids";
 import { parseDecimal } from "@/lib/number-input";
-import { BODYWEIGHT, EFFORT_LABEL, EQUIPMENT_LABELS, GOAL_LABELS, label, MUSCLE_LABELS, PROGRESSION_RULE_LABELS, SPLIT_LABELS } from "@/lib/labels";
+import { BODYWEIGHT, cycleWeekLabel, EFFORT_LABEL, EQUIPMENT_LABELS, FIVE_THREE_ONE_LABEL, GOAL_LABELS, label, MUSCLE_LABELS, PROGRESSION_RULE_LABELS, SPLIT_LABELS } from "@/lib/labels";
 import { fromUnit, GOALS, isTimed, MUSCLES, PROGRESSION_RULES, SPLIT_TYPES, toUnit, unitLabel, type WeightUnit } from "@/lib/model";
 import type { DayDraft, ExerciseDraft, PlanDraft, PlanVersions } from "@/lib/sync-writer";
 import { ConfirmDialog, Dialog } from "./dialog";
@@ -45,6 +45,18 @@ function move<T>(list: T[], from: number, to: number): T[] {
   return next;
 }
 
+/** The progression menu's 5/3/1 entry: not a stored rule, but a training max on the exercise. */
+const FIVE_THREE_ONE = "FIVE_THREE_ONE";
+
+/**
+ * Picking a progression: 5/3/1 gives the lift a training max (its starting weight, or a
+ * placeholder to edit) on the linear rule older apps fall back to; any other rule clears it.
+ */
+function progressionChange(e: ExerciseDraft, value: string): Partial<ExerciseDraft> {
+  if (value === FIVE_THREE_ONE) return { progression_rule: "LINEAR", training_max_kg: e.training_max_kg ?? e.starting_weight_kg ?? 60, cycle_week: 1 };
+  return { progression_rule: value as ExerciseDraft["progression_rule"], training_max_kg: null, cycle_week: 1 };
+}
+
 function newExercise(exerciseId: string): ExerciseDraft {
   const timed = isTimed(exerciseId);
   return {
@@ -58,6 +70,8 @@ function newExercise(exerciseId: string): ExerciseDraft {
     progression_rule: "DOUBLE_PROGRESSION",
     superset_group: null,
     starting_weight_kg: null,
+    training_max_kg: null,
+    cycle_week: 1,
   };
 }
 
@@ -220,6 +234,7 @@ export function PlanEditor({
                 {day.exercises.map((e, i) => {
                   const name = nameOf(e.exercise_id);
                   const timed = isTimed(e.exercise_id);
+                  const fiveThreeOne = e.training_max_kg != null;
                   return (
                     <li key={e.sync_id} className={clsx("grid grid-cols-4 gap-x-2 gap-y-3 px-4 py-3 xl:py-2", EXERCISE_GRID)}>
                       {/* One row on wide screens; on phones the name and buttons, then the fields in a grid below. */}
@@ -258,26 +273,56 @@ export function PlanEditor({
                       <ExerciseField caption="Rest (s)">
                         <input type="number" min={0} max={900} step={15} className={compact} aria-label={`Rest in seconds for ${name}`} value={e.rest_seconds} onChange={(x) => setExercise(dayIndex, i, { rest_seconds: Number(x.target.value) })} />
                       </ExerciseField>
-                      <ExerciseField caption={`Start (${unitLabel(unit)})`}>
-                        <WeightInput
-                          className={compact}
-                          label={`Starting weight in ${unitLabel(unit)} for ${name}`}
-                          valueKg={e.starting_weight_kg}
-                          unit={unit}
-                          onChange={(kg) => setExercise(dayIndex, i, { starting_weight_kg: kg })}
-                        />
-                      </ExerciseField>
+                      {fiveThreeOne ? (
+                        <ExerciseField caption={`Training max (${unitLabel(unit)})`}>
+                          <WeightInput
+                            className={compact}
+                            label={`5/3/1 training max in ${unitLabel(unit)} for ${name}`}
+                            valueKg={e.training_max_kg}
+                            unit={unit}
+                            onChange={(kg) => setExercise(dayIndex, i, kg == null ? { training_max_kg: null, cycle_week: 1 } : { training_max_kg: kg })}
+                          />
+                        </ExerciseField>
+                      ) : (
+                        <ExerciseField caption={`Start (${unitLabel(unit)})`}>
+                          <WeightInput
+                            className={compact}
+                            label={`Starting weight in ${unitLabel(unit)} for ${name}`}
+                            valueKg={e.starting_weight_kg}
+                            unit={unit}
+                            onChange={(kg) => setExercise(dayIndex, i, { starting_weight_kg: kg })}
+                          />
+                        </ExerciseField>
+                      )}
                       <ExerciseField caption="Superset">
                         <input type="number" min={1} max={50} className={compact} aria-label={`Superset group for ${name}`} placeholder="–" value={e.superset_group ?? ""} onChange={(x) => setExercise(dayIndex, i, { superset_group: num(x.target.value) })} />
                       </ExerciseField>
                       <ExerciseField caption="Progression" className="col-span-4 xl:col-span-1">
-                        <select className={clsx(compact, "font-sans")} aria-label={`Progression for ${name}`} value={e.progression_rule} onChange={(x) => setExercise(dayIndex, i, { progression_rule: x.target.value as ExerciseDraft["progression_rule"] })}>
-                          {PROGRESSION_RULES.map((r) => (
-                            <option key={r} value={r}>
-                              {PROGRESSION_RULE_LABELS[r]}
-                            </option>
-                          ))}
-                        </select>
+                        {/* The 5/3/1 week sits in the same cell, so the wide-screen row keeps its columns. */}
+                        <div className="flex flex-col gap-1">
+                          <select
+                            className={clsx(compact, "font-sans")}
+                            aria-label={`Progression for ${name}`}
+                            value={fiveThreeOne ? FIVE_THREE_ONE : e.progression_rule}
+                            onChange={(x) => setExercise(dayIndex, i, progressionChange(e, x.target.value))}
+                          >
+                            {PROGRESSION_RULES.map((r) => (
+                              <option key={r} value={r}>
+                                {PROGRESSION_RULE_LABELS[r]}
+                              </option>
+                            ))}
+                            {!timed && <option value={FIVE_THREE_ONE}>{FIVE_THREE_ONE_LABEL}</option>}
+                          </select>
+                          {fiveThreeOne && (
+                            <select className={clsx(compact, "font-sans")} aria-label={`5/3/1 week for ${name}`} value={e.cycle_week} onChange={(x) => setExercise(dayIndex, i, { cycle_week: Number(x.target.value) })}>
+                              {[1, 2, 3, 4].map((w) => (
+                                <option key={w} value={w}>
+                                  {cycleWeekLabel(w)}
+                                </option>
+                              ))}
+                            </select>
+                          )}
+                        </div>
                       </ExerciseField>
                     </li>
                   );

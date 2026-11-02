@@ -50,6 +50,10 @@ interface PlanDao {
     @Query("SELECT COALESCE(MAX(position) + 1, 0) FROM plan_exercise WHERE planDayId = :planDayId")
     suspend fun nextExercisePosition(planDayId: Long): Int
 
+    /** Moves a 5/3/1 lift on, but only from [fromWeek]: an edit made meanwhile (the website) wins. */
+    @Query("UPDATE plan_exercise SET trainingMaxKg = :trainingMaxKg, cycleWeek = :cycleWeek WHERE id = :planExerciseId AND cycleWeek = :fromWeek AND trainingMaxKg IS NOT NULL")
+    suspend fun advanceCycle(planExerciseId: Long, fromWeek: Int, trainingMaxKg: Double, cycleWeek: Int)
+
     @Query("UPDATE plan_exercise SET sets = sets + 1 WHERE id IN (:planExerciseIds)")
     suspend fun addOneSet(planExerciseIds: List<Long>)
 

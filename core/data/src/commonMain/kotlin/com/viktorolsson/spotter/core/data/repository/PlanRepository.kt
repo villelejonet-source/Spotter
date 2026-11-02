@@ -74,6 +74,8 @@ class PlanRepository(
                         progressionRule = it.progressionRule,
                         supersetGroup = it.supersetGroup,
                         startingWeightKg = it.startingWeightKg,
+                        trainingMaxKg = it.trainingMaxKg,
+                        cycleWeek = it.cycleWeek,
                     )
                 },
             )

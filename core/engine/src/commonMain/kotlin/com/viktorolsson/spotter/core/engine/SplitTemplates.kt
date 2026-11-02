@@ -42,7 +42,18 @@ private val M = SlotRole.MAIN
 private val S = SlotRole.SECONDARY
 private val A = SlotRole.ACCESSORY
 
+/** A 5/3/1 day: its barbell main lift (by catalog id) and the assistance work after it. */
+internal class FiveThreeOneDay(val name: String, val mainId: String, val region: DayRegion, val assistance: List<Slot>)
+
 internal object Templates {
+    /** Wendler's four days, each one main lift then pulling, legs or arms and core work. */
+    val fiveThreeOne = listOf(
+        FiveThreeOneDay("Press day", "overhead-press", DayRegion.UPPER, listOf(Slot(S, VERTICAL_PULL, HORIZONTAL_PULL), Slot(A, ELBOW_EXTENSION))),
+        FiveThreeOneDay("Deadlift day", "deadlift", DayRegion.LOWER, listOf(Slot(S, LUNGE, SQUAT), Slot(A, CORE_FLEXION, CORE_ANTI_EXTENSION))),
+        FiveThreeOneDay("Bench day", "barbell-bench-press", DayRegion.UPPER, listOf(Slot(S, HORIZONTAL_PULL, VERTICAL_PULL), Slot(A, ELBOW_FLEXION))),
+        FiveThreeOneDay("Squat day", "back-squat", DayRegion.LOWER, listOf(Slot(S, HINGE, HIP_THRUST), Slot(A, KNEE_FLEXION))),
+    )
+
     val fullA = DayTemplate(
         "full-a", "Full body A", DayRegion.FULL,
         listOf(

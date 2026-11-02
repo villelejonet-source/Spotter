@@ -213,6 +213,29 @@ class MigrationTest {
     }
 
     @Test
+    fun migrate9To10Adds531ColumnsAndKeepsTriggers() {
+        helper.createDatabase(9).use { db ->
+            SyncSchema.createTriggers(db)
+            db.execSQL("INSERT INTO workout_session (id, startedAt, endedAt, planDayId, notes, perceivedDifficulty, isDeload) VALUES (1, 0, 1, NULL, NULL, NULL, 0)")
+            db.execSQL("INSERT INTO exercise (id, name, primaryMuscles, secondaryMuscles, movementPattern, equipment, mechanics, difficulty, unilateral, instructions, isCustom) VALUES ('squat', 'Squat', 'QUADS', '', 'SQUAT', 'BARBELL', 'COMPOUND', 'BEGINNER', 0, '', 0)")
+            db.execSQL("INSERT INTO session_exercise (id, sessionId, exerciseId, position, substitutedFromExerciseId, supersetGroup, notes) VALUES (1, 1, 'squat', 0, NULL, NULL, NULL)")
+            db.execSQL("INSERT INTO set_entry (id, sessionExerciseId, position, weightKg, reps, rir, rpe, setType, completedAt, notes) VALUES (1, 1, 0, 100.0, 5, NULL, NULL, 'WORKING', 1, NULL)")
+        }
+        helper.runMigrationsAndValidate(10).use { db ->
+            // Existing rows aren't 5/3/1: no AMRAP, no week, and their sync ids survived.
+            db.query("SELECT isAmrap, syncId FROM set_entry WHERE id = 1").use {
+                it.moveToFirst(); assertEquals(0, it.getInt(0)); assertEquals(32, it.getString(1)!!.length)
+            }
+            db.query("SELECT cycleWeek FROM session_exercise WHERE id = 1").use { it.moveToFirst(); assertTrue(it.isNull(0)) }
+            assertTrue(SyncSchema.triggersInstalled(db))
+            db.execSQL("DELETE FROM set_entry WHERE id = 1")
+            db.query("SELECT COUNT(*) FROM sync_tombstone WHERE tableName = 'set_entry'").use {
+                it.moveToFirst(); assertEquals(1, it.getInt(0))
+            }
+        }
+    }
+
+    @Test
     fun migratingFrom6InstallsTheScheduledSessionTriggers() {
         helper.createDatabase(6).use { SyncSchema.createTriggers(it, upTo = 6) }
         helper.runMigrationsAndValidate(8).use { db ->

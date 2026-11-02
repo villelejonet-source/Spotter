@@ -37,7 +37,7 @@ import kotlinx.coroutines.IO
  * exported JSON in `core/data/schemas` is what migration tests run against.
  */
 @Database(
-    version = 9,
+    version = 10,
     exportSchema = true,
     autoMigrations = [
         AutoMigration(from = 1, to = 2), // session_exercise.restSeconds
@@ -47,6 +47,7 @@ import kotlinx.coroutines.IO
         AutoMigration(from = 6, to = 7, spec = SyncSchema.TriggerSpec::class), // scheduled_session (+ its sync triggers)
         AutoMigration(from = 7, to = 8, spec = SyncSchema.TriggerSpec::class), // updatedAt/deletedAt/achievedAt/endedAt indices
         AutoMigration(from = 8, to = 9, spec = SyncSchema.TriggerSpec::class), // workout_session.readiness/feel
+        AutoMigration(from = 9, to = 10, spec = SyncSchema.TriggerSpec::class), // 5/3/1: plan_exercise.trainingMaxKg/cycleWeek, session_exercise.cycleWeek, set_entry.isAmrap
     ],
     entities = [
         UserProfileEntity::class,

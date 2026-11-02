@@ -44,6 +44,10 @@ data class PlanExercise(
     val supersetGroup: Int?,
     /** First-session estimate ("calibration"); null when it can't be estimated (bodyweight, isolation). */
     val startingWeightKg: Double?,
+    /** Set for a 5/3/1 lift: the training max its weeks are percentages of. */
+    val trainingMaxKg: Double? = null,
+    /** The 5/3/1 week the next session of this lift is (1–4). */
+    val cycleWeek: Int = 1,
 )
 
 /** Plan prescription shown on a session's exercise card when the session came from a plan. */
@@ -52,6 +56,8 @@ data class PlanTarget(
     val repMin: Int,
     val repMax: Int,
     val targetRir: Int?,
+    /** The lift's 5/3/1 training max, when it runs 5/3/1. */
+    val trainingMaxKg: Double? = null,
 )
 
 /** Why next session's targets are what they are; shown on the exercise card. */

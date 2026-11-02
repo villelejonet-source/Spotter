@@ -6,6 +6,7 @@ import com.russhwolf.settings.Settings
 import com.viktorolsson.spotter.core.data.db.SpotterDatabase
 import com.viktorolsson.spotter.core.data.repository.BodyWeightRepository
 import com.viktorolsson.spotter.core.data.repository.ExerciseRepository
+import com.viktorolsson.spotter.core.data.repository.GamificationRepository
 import com.viktorolsson.spotter.core.data.repository.HistoryRepository
 import com.viktorolsson.spotter.core.data.repository.PlanRepository
 import com.viktorolsson.spotter.core.data.repository.RecommendationRepository
@@ -64,6 +65,7 @@ class DataGraph(
     val preferences by lazy { UserPreferencesRepository(dataStore, database.userProfileDao()) }
     val exercises by lazy { ExerciseRepository(database.exerciseDao()) }
     val history by lazy { HistoryRepository(database.workoutDao(), clock) }
+    val gamification by lazy { GamificationRepository(database.workoutDao(), userProfiles) }
     val plans by lazy { PlanRepository(database, database.planDao()) }
     val bodyWeight by lazy { BodyWeightRepository(database, database.userProfileDao()) }
     val restTimer by lazy { RestTimerRepository(dataStore, clock) }

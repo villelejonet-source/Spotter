@@ -12,8 +12,11 @@ import com.viktorolsson.spotter.core.data.db.entity.ExerciseSessionRef
 import com.viktorolsson.spotter.core.data.db.entity.HistorySet
 import com.viktorolsson.spotter.core.data.db.entity.LoggedExercise
 import com.viktorolsson.spotter.core.data.db.entity.PersonalRecordEntity
+import com.viktorolsson.spotter.core.data.db.entity.PlayedSessionRow
 import com.viktorolsson.spotter.core.data.db.entity.RecordWithExercise
 import com.viktorolsson.spotter.core.data.db.entity.SessionExerciseEntity
+import com.viktorolsson.spotter.core.data.db.entity.SessionExerciseIdRow
+import com.viktorolsson.spotter.core.data.db.entity.SessionRecordRow
 import com.viktorolsson.spotter.core.data.db.entity.SessionWithExercises
 import com.viktorolsson.spotter.core.data.db.entity.SetEntryEntity
 import com.viktorolsson.spotter.core.data.db.entity.WorkoutSessionEntity
@@ -278,6 +281,38 @@ interface WorkoutDao {
 
     @Query("SELECT readiness, feel FROM workout_session WHERE endedAt IS NOT NULL AND startedAt >= :since")
     fun observeCheckInsSince(since: Instant): Flow<List<CheckInRow>>
+
+    // --- Levels and badges ---
+
+    /** One row per finished workout; [timedIds] are the holds, which add no volume. */
+    @Query(
+        """
+        SELECT ws.id, ws.startedAt, ws.endedAt, ws.isDeload, ws.readiness, ws.feel,
+            COUNT(se.id) AS workingSets,
+            COALESCE(SUM(CASE WHEN sx.exerciseId IN (:timedIds) THEN 0
+                ELSE COALESCE(se.weightKg, 0) * COALESCE(se.reps, 0) END), 0) AS volumeKg
+        FROM workout_session ws
+        LEFT JOIN session_exercise sx ON sx.sessionId = ws.id
+        LEFT JOIN set_entry se ON se.sessionExerciseId = sx.id
+            AND se.completedAt IS NOT NULL AND se.setType != 'WARMUP'
+        WHERE ws.endedAt IS NOT NULL
+        GROUP BY ws.id
+        """,
+    )
+    fun observePlayedSessions(timedIds: List<String>): Flow<List<PlayedSessionRow>>
+
+    @Query(
+        """
+        SELECT DISTINCT sx.sessionId, sx.exerciseId FROM session_exercise sx
+        JOIN workout_session ws ON sx.sessionId = ws.id
+        JOIN set_entry se ON se.sessionExerciseId = sx.id
+        WHERE ws.endedAt IS NOT NULL AND se.completedAt IS NOT NULL AND se.setType != 'WARMUP'
+        """,
+    )
+    fun observePlayedExercises(): Flow<List<SessionExerciseIdRow>>
+
+    @Query("SELECT sessionId, type FROM personal_record WHERE sessionId IS NOT NULL")
+    fun observeRecordTypes(): Flow<List<SessionRecordRow>>
 
     @Query(
         """

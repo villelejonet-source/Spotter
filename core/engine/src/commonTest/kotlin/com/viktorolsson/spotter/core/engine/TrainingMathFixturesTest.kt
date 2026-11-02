@@ -1,8 +1,11 @@
 package com.viktorolsson.spotter.core.engine
 
+import com.viktorolsson.spotter.core.model.Badge
 import com.viktorolsson.spotter.core.model.ExerciseSessionLog
 import com.viktorolsson.spotter.core.model.FeelSummary
 import com.viktorolsson.spotter.core.model.NumberInput
+import com.viktorolsson.spotter.core.model.PersonalRecordType
+import com.viktorolsson.spotter.core.model.PlayedSession
 import com.viktorolsson.spotter.core.model.SetType
 import com.viktorolsson.spotter.core.model.TIMED_EXERCISE_IDS
 import com.viktorolsson.spotter.core.model.WorkoutSet
@@ -13,6 +16,7 @@ import com.viktorolsson.spotter.core.model.isRoughDay
 import com.viktorolsson.spotter.core.model.percentChange
 import com.viktorolsson.spotter.core.model.weekStreak
 import kotlinx.datetime.LocalDate
+import kotlinx.datetime.LocalDateTime
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
 import kotlin.math.abs
@@ -37,7 +41,43 @@ class TrainingMathFixturesTest {
         val weekStreak: List<StreakCase>,
         val checkIns: List<CheckInCase>,
         val feelSummary: List<FeelCase>,
+        val gamification: GamificationCases,
     )
+
+    @Serializable
+    private data class GamificationCases(val levels: List<LevelCase>, val histories: List<HistoryCase>)
+
+    @Serializable
+    private data class LevelCase(val xp: Int, val level: Int, val title: String, val xpIntoLevel: Int, val xpForNext: Int)
+
+    @Serializable
+    private data class HistoryCase(
+        val name: String,
+        val daysPerWeek: Int?,
+        val sessions: List<HistorySession>,
+        val xp: List<XpCase>,
+        val totalXp: Int,
+        val level: Int,
+        val unlocked: Map<String, Long>,
+        val progress: Map<String, Double>,
+    )
+
+    @Serializable
+    private data class HistorySession(
+        val id: Long,
+        val start: LocalDateTime,
+        val minutes: Int,
+        val lighter: Boolean = false,
+        val readiness: Int? = null,
+        val feel: Int? = null,
+        val workingSets: Int,
+        val volumeKg: Double = 0.0,
+        val exerciseIds: Set<String> = emptySet(),
+        val records: List<PersonalRecordType> = emptyList(),
+    )
+
+    @Serializable
+    private data class XpCase(val id: Long, val session: Int, val sets: Int, val records: Int, val checkIn: Int, val weeklyGoal: Int)
 
     @Serializable
     private data class CheckInCase(
@@ -157,5 +197,42 @@ class TrainingMathFixturesTest {
         assertClose(expected.averageReadiness, summary.averageReadiness, "${case.name}: before")
         assertClose(expected.averageFeel, summary.averageFeel, "${case.name}: after")
         assertEquals(expected.lowDays, summary.lowDays, "${case.name}: low days")
+    }
+
+    @Test
+    fun levels() = fixtures.gamification.levels.forEach { case ->
+        val level = Gamification.level(case.xp)
+        assertEquals(case.level, level.number, "level(${case.xp})")
+        assertEquals(case.title, level.title.name, "title(${case.xp})")
+        assertEquals(case.xpIntoLevel, level.xpIntoLevel, "into level(${case.xp})")
+        assertEquals(case.xpForNext, level.xpForNext, "for next(${case.xp})")
+    }
+
+    @Test
+    fun gamificationHistories() = fixtures.gamification.histories.forEach { case ->
+        val progress = Gamification.progress(
+            case.sessions.map {
+                PlayedSession(
+                    it.id, it.start, it.minutes, it.lighter, it.readiness, it.feel,
+                    it.workingSets, it.volumeKg, it.exerciseIds, it.records,
+                )
+            },
+            case.daysPerWeek,
+        )
+        assertEquals(
+            case.xp,
+            progress.sessions.map { XpCase(it.sessionId, it.session, it.sets, it.records, it.checkIn, it.weeklyGoal) },
+            "${case.name}: XP",
+        )
+        assertEquals(case.totalXp, progress.totalXp, "${case.name}: total")
+        assertEquals(case.level, progress.level.number, "${case.name}: level")
+        assertEquals(
+            case.unlocked,
+            progress.badges.filter { it.unlocked }.associate { it.badge.name to it.unlockedBy!! },
+            "${case.name}: unlocked",
+        )
+        case.progress.forEach { (badge, current) ->
+            assertClose(current, progress.badges.single { it.badge == Badge.valueOf(badge) }.current, "${case.name}: $badge")
+        }
     }
 }

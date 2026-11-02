@@ -1,5 +1,5 @@
 {
-  "about": "Cases the app (core/model Lifting.kt, NumberInput.kt, TrainingStats.kt, CheckIns.kt) and the website (web/src/lib) must agree on. Checked by core/engine TrainingMathFixturesTest and web/src/lib/training-math.test.ts; change a rule here first, then make both pass.",
+  "about": "Cases the app (core/model Lifting.kt, NumberInput.kt, TrainingStats.kt, CheckIns.kt, Gamification.kt) and the website (web/src/lib) must agree on. Checked by core/engine TrainingMathFixturesTest and web/src/lib/training-math.test.ts; change a rule here first, then make both pass.",
   "timedExerciseIds": ["plank", "side-plank", "copenhagen-plank", "hollow-body-hold"],
   "decimalInput": [
     { "text": "62,5", "value": 62.5 },
@@ -117,5 +117,111 @@
       "checkIns": [[4, 5], [2, null], [null, 3], [5, 1], [null, null]],
       "summary": { "rated": 4, "averageReadiness": 3.66667, "averageFeel": 3, "lowDays": 2 }
     }
-  ]
+  ],
+  "gamification": {
+    "levels": [
+      { "xp": 0, "level": 1, "title": "FRESH_CHALK", "xpIntoLevel": 0, "xpForNext": 300 },
+      { "xp": 299, "level": 1, "title": "FRESH_CHALK", "xpIntoLevel": 299, "xpForNext": 300 },
+      { "xp": 300, "level": 2, "title": "FRESH_CHALK", "xpIntoLevel": 0, "xpForNext": 300 },
+      { "xp": 1500, "level": 5, "title": "GYM_REGULAR", "xpIntoLevel": 0, "xpForNext": 600 },
+      { "xp": 5499, "level": 9, "title": "PLATE_COLLECTOR", "xpIntoLevel": 999, "xpForNext": 1000 },
+      { "xp": 46500, "level": 30, "title": "MYTHICAL_BEAST", "xpIntoLevel": 0, "xpForNext": 3100 }
+    ],
+    "histories": [
+      {
+        "name": "a first workout",
+        "daysPerWeek": 3,
+        "sessions": [
+          { "id": 1, "start": "2026-10-26T18:00", "minutes": 60, "readiness": 4, "workingSets": 12, "volumeKg": 2000, "exerciseIds": ["a", "b", "c"] }
+        ],
+        "xp": [{ "id": 1, "session": 100, "sets": 60, "records": 0, "checkIn": 25, "weeklyGoal": 0 }],
+        "totalXp": 185,
+        "level": 1,
+        "unlocked": { "FIRST_REP": 1, "GRAND_PIANO": 1, "CAR": 1 },
+        "progress": { "TEN_DOWN": 1, "ELEPHANT": 2000, "EXPLORER": 3 }
+      },
+      {
+        "name": "short or empty workouts don't count, and sets past 25 earn nothing",
+        "daysPerWeek": null,
+        "sessions": [
+          { "id": 1, "start": "2026-10-26T18:00", "minutes": 8, "workingSets": 10 },
+          { "id": 2, "start": "2026-10-27T18:00", "minutes": 45, "workingSets": 0 },
+          { "id": 3, "start": "2026-10-28T18:00", "minutes": 90, "workingSets": 40 }
+        ],
+        "xp": [
+          { "id": 1, "session": 0, "sets": 0, "records": 0, "checkIn": 0, "weeklyGoal": 0 },
+          { "id": 2, "session": 0, "sets": 0, "records": 0, "checkIn": 0, "weeklyGoal": 0 },
+          { "id": 3, "session": 100, "sets": 125, "records": 0, "checkIn": 0, "weeklyGoal": 0 }
+        ],
+        "totalXp": 225,
+        "level": 1,
+        "unlocked": { "FIRST_REP": 3 },
+        "progress": { "TEN_DOWN": 1 }
+      },
+      {
+        "name": "two workouts a day earn session XP, records always do",
+        "daysPerWeek": null,
+        "sessions": [
+          { "id": 1, "start": "2026-10-26T07:00", "minutes": 30, "workingSets": 5 },
+          { "id": 2, "start": "2026-10-26T12:00", "minutes": 30, "workingSets": 5, "readiness": 3 },
+          { "id": 3, "start": "2026-10-26T19:00", "minutes": 30, "workingSets": 5, "feel": 5, "records": ["ESTIMATED_1RM", "REPS_AT_WEIGHT", "VOLUME"] }
+        ],
+        "xp": [
+          { "id": 1, "session": 100, "sets": 25, "records": 0, "checkIn": 0, "weeklyGoal": 0 },
+          { "id": 2, "session": 100, "sets": 25, "records": 0, "checkIn": 25, "weeklyGoal": 0 },
+          { "id": 3, "session": 0, "sets": 0, "records": 150, "checkIn": 0, "weeklyGoal": 0 }
+        ],
+        "totalXp": 425,
+        "level": 2,
+        "unlocked": { "FIRST_REP": 1, "FIRST_PR": 3, "TRIPLE_THREAT": 3 },
+        "progress": { "PR_HUNTER": 3, "EARLY_BIRD": 0 }
+      },
+      {
+        "name": "the week goal pays once, on the day it's reached",
+        "daysPerWeek": 2,
+        "sessions": [
+          { "id": 1, "start": "2026-10-26T18:00", "minutes": 30, "workingSets": 4 },
+          { "id": 2, "start": "2026-10-26T20:00", "minutes": 30, "workingSets": 4 },
+          { "id": 3, "start": "2026-10-28T18:00", "minutes": 30, "workingSets": 4 },
+          { "id": 4, "start": "2026-10-30T18:00", "minutes": 30, "workingSets": 4 },
+          { "id": 5, "start": "2026-11-02T18:00", "minutes": 30, "workingSets": 4 }
+        ],
+        "xp": [
+          { "id": 1, "session": 100, "sets": 20, "records": 0, "checkIn": 0, "weeklyGoal": 0 },
+          { "id": 2, "session": 100, "sets": 20, "records": 0, "checkIn": 0, "weeklyGoal": 0 },
+          { "id": 3, "session": 100, "sets": 20, "records": 0, "checkIn": 0, "weeklyGoal": 150 },
+          { "id": 4, "session": 100, "sets": 20, "records": 0, "checkIn": 0, "weeklyGoal": 0 },
+          { "id": 5, "session": 100, "sets": 20, "records": 0, "checkIn": 0, "weeklyGoal": 0 }
+        ],
+        "totalXp": 750,
+        "level": 3,
+        "unlocked": { "FIRST_REP": 1 },
+        "progress": { "STREAK_4": 2, "TEN_DOWN": 5 }
+      },
+      {
+        "name": "streaks, a comeback, early and late starts and a lighter session on a low day",
+        "daysPerWeek": null,
+        "sessions": [
+          { "id": 1, "start": "2026-09-07T06:00", "minutes": 40, "workingSets": 6, "exerciseIds": ["squat"] },
+          { "id": 2, "start": "2026-09-14T06:00", "minutes": 40, "workingSets": 6, "exerciseIds": ["squat", "bench"] },
+          { "id": 3, "start": "2026-09-21T06:00", "minutes": 40, "workingSets": 6, "exerciseIds": ["squat", "bench"] },
+          { "id": 4, "start": "2026-09-28T06:00", "minutes": 40, "workingSets": 6, "exerciseIds": ["squat", "bench"] },
+          { "id": 5, "start": "2026-10-26T06:30", "minutes": 40, "workingSets": 6, "lighter": true, "readiness": 2, "exerciseIds": ["squat"] },
+          { "id": 6, "start": "2026-10-27T21:00", "minutes": 40, "workingSets": 6, "exerciseIds": ["bench"] }
+        ],
+        "xp": [
+          { "id": 1, "session": 100, "sets": 30, "records": 0, "checkIn": 0, "weeklyGoal": 0 },
+          { "id": 2, "session": 100, "sets": 30, "records": 0, "checkIn": 0, "weeklyGoal": 0 },
+          { "id": 3, "session": 100, "sets": 30, "records": 0, "checkIn": 0, "weeklyGoal": 0 },
+          { "id": 4, "session": 100, "sets": 30, "records": 0, "checkIn": 0, "weeklyGoal": 0 },
+          { "id": 5, "session": 100, "sets": 30, "records": 0, "checkIn": 25, "weeklyGoal": 0 },
+          { "id": 6, "session": 100, "sets": 30, "records": 0, "checkIn": 0, "weeklyGoal": 0 }
+        ],
+        "totalXp": 805,
+        "level": 3,
+        "unlocked": { "FIRST_REP": 1, "STREAK_4": 4, "EARLY_BIRD": 5, "COMEBACK_KID": 5, "LISTENED_TO_YOUR_BODY": 5 },
+        "progress": { "TEN_DOWN": 6, "STREAK_12": 4, "NIGHT_OWL": 1, "EXPLORER": 2 }
+      }
+    ]
+  }
 }

@@ -30,6 +30,7 @@ fun dataModule(graph: DataGraph): Module = module {
     single { graph.preferences }
     single { graph.exercises }
     single { graph.history }
+    single { graph.gamification }
     single { graph.plans }
     single { graph.bodyWeight }
     single { graph.restTimer }

@@ -1,0 +1,9 @@
+<en-US>
+• Levels and badges: earn XP every workout and unlock 23 badges
+• 5/3/1: Wendler's four-day program, with a training max per lift
+• Change program: compare each way to train and switch without the questionnaire
+• Check in before a workout; on a low day, make it a lighter session
+• Rate how a workout went; a low day doesn't hold back your progress
+• Restoring a backup keeps every workout, even from deleted plans
+• Fixes for two phones, 0-rep sets, Today overnight and set entry
+</en-US>

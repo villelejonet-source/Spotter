@@ -5,7 +5,7 @@
 // form of the name so an enum value the web doesn't know yet still shows something.
 
 import type { Badge, LevelTitle } from "./gamification";
-import type { Goal, PersonalRecordType, ProgressionRule, SetType, SplitType } from "./model";
+import type { Goal, PersonalRecordType, PlanExerciseRow, PlanRow, ProgressionRule, SetType, SplitType } from "./model";
 
 /** "FRONT_DELTS" → "Front delts": the fallback for an unknown enum value. */
 function enumLabel(value: string): string {
@@ -56,16 +56,22 @@ export const BODY_AREA_LABELS: Record<string, string> = {
   CORE: "Core",
 };
 
-// ---- Plans (feature/onboarding SummaryStep; the two 5-day splits have no app label yet) ----
+// ---- Plans (core/ui program_* strings; the two 5-day splits as the app names those plans) ----
 
 export const SPLIT_LABELS: Record<SplitType, string> = {
   FULL_BODY: "Full body",
   UPPER_LOWER: "Upper / Lower",
   PUSH_PULL_LEGS: "Push / Pull / Legs",
-  UPPER_LOWER_FULL: "Upper / Lower / Full",
+  UPPER_LOWER_FULL: "Upper / Lower + Full body",
   PPL_UPPER_LOWER: "Push / Pull / Legs + Upper / Lower",
   CUSTOM: "Custom",
 };
+
+/** What kind of plan it is, as the app's program cards name it (core/ui program_*, `Plan.program()`): 5/3/1 is stored as a custom plan whose lifts have a training max. */
+export function planKindLabel(plan: Pick<PlanRow, "split_type"> & { days: { exercises: Pick<PlanExerciseRow, "training_max_kg">[] }[] }): string {
+  const fiveThreeOne = plan.days.some((d) => d.exercises.some((e) => e.training_max_kg != null));
+  return fiveThreeOne ? FIVE_THREE_ONE_LABEL : label(SPLIT_LABELS, plan.split_type);
+}
 
 /** The app never names these to users; plain descriptions for the web's plan editor. */
 export const PROGRESSION_RULE_LABELS: Record<ProgressionRule, string> = {

@@ -10,4 +10,17 @@
     <string name="plan_none_title">No plan yet</string>
     <string name="plan_none_body">Answer a few questions and Spotter builds a plan around your goal, schedule and equipment.</string>
     <string name="plan_none_action">Build my plan</string>
+    <string name="plan_programs">Change program</string>
+    <string name="plan_program_custom">A plan of your own, not one of the programs.</string>
+    <string name="programs_title">Programs</string>
+    <string name="programs_intro">Each program is a different way to spread your training over the week. Tap one to see who it's for.</string>
+    <string name="programs_use">Use this program</string>
+    <string name="programs_no_profile">Answer the questionnaire first, so Spotter can build a program around your days and equipment.</string>
+    <string name="programs_questionnaire">Answer the questionnaire</string>
+    <string name="preview_intro">Built from your saved answers. Your workout history is kept.</string>
+    <string name="preview_estimated">No recent bench, squat or deadlift to start from, so starting weights are estimates. Your first session calibrates them.</string>
+    <string name="preview_switch">Switch to this plan</string>
+    <string name="preview_confirm_title">Switch your plan?</string>
+    <string name="preview_confirm_body">This plan replaces your current one. Your workout history is kept.</string>
+    <string name="preview_confirm">Switch</string>
 </resources>

@@ -12,6 +12,14 @@ import com.viktorolsson.spotter.core.data.db.SpotterDatabase
 import com.viktorolsson.spotter.core.data.sync.AppBuild
 import com.viktorolsson.spotter.core.data.sync.SupabaseConfig
 import com.viktorolsson.spotter.core.data.sync.SyncScheduler
+import com.viktorolsson.spotter.core.model.Equipment
+import com.viktorolsson.spotter.core.model.ExperienceLevel
+import com.viktorolsson.spotter.core.model.Goal
+import com.viktorolsson.spotter.core.model.Program
+import com.viktorolsson.spotter.core.model.Sex
+import com.viktorolsson.spotter.core.model.UserProfile
+import com.viktorolsson.spotter.core.model.WeightUnit
+import com.viktorolsson.spotter.core.model.program
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -36,6 +44,8 @@ import org.junit.runner.RunWith
 import java.io.File
 import kotlin.time.Clock
 import kotlin.time.Duration.Companion.seconds
+import kotlinx.datetime.LocalDate
+import org.junit.Assert.assertTrue
 
 /** The onboarding view model against a real (in-memory) database and preferences. */
 @OptIn(ExperimentalCoroutinesApi::class)
@@ -136,5 +146,47 @@ class OnboardingViewModelTest {
         graph.preferences.setOnboardingCompleted(true)
         settle()
         assertEquals(1, closes[0])
+    }
+
+    /** Pumps this test's main dispatcher in real time until [done]: the plan is generated off it. */
+    private suspend fun TestScope.until(done: () -> Boolean) {
+        repeat(500) {
+            runCurrent()
+            if (done()) return
+            withContext(Dispatchers.Default) { delay(10) }
+        }
+    }
+
+    @Test
+    fun aProgramCardBuildsThatProgram() = runTest(main) {
+        graph.seeder.seedIfNeeded()
+        graph.userProfiles.save(
+            UserProfile(
+                sex = Sex.FEMALE, heightCm = 168.0, birthDate = LocalDate(1995, 5, 5), bodyWeightKg = 62.0, units = WeightUnit.KG,
+                experience = ExperienceLevel.INTERMEDIATE, goal = Goal.STRENGTH, daysPerWeek = 4, sessionLengthMinutes = 60,
+                equipment = Equipment.entries.toSet(), focusAreas = emptySet(), limitations = emptySet(),
+            ),
+        )
+        val vm = viewModel()
+        until { vm.uiState.value.answers.days != null }
+        fun built() = vm.uiState.value.generated?.plan?.program()
+
+        vm.chooseProgram(Program.FIVE_THREE_ONE)
+        until { built() == Program.FIVE_THREE_ONE }
+        assertEquals(Program.FIVE_THREE_ONE, built())
+        assertTrue(Program.FIVE_THREE_ONE in vm.uiState.value.suited)
+
+        vm.chooseProgram(Program.FULL_BODY)
+        until { built() == Program.FULL_BODY }
+        assertEquals(Program.FULL_BODY, built())
+
+        // 5/3/1 picked, then the barbell unticked: the automatic plan instead.
+        vm.chooseProgram(Program.FIVE_THREE_ONE)
+        until { built() == Program.FIVE_THREE_ONE }
+        vm.update { it.copy(equipment = it.equipment - Equipment.BARBELL) }
+        vm.chooseProgram(Program.FIVE_THREE_ONE)
+        until { built() == Program.UPPER_LOWER }
+        assertEquals(Program.UPPER_LOWER, built())
+        assertTrue(Program.FIVE_THREE_ONE !in vm.uiState.value.suited)
     }
 }

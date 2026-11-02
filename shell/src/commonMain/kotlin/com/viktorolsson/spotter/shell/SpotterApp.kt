@@ -49,7 +49,11 @@ import com.viktorolsson.spotter.feature.library.exercisePickerScreen
 import com.viktorolsson.spotter.feature.onboarding.OnboardingRoute
 import com.viktorolsson.spotter.feature.onboarding.onboardingScreen
 import com.viktorolsson.spotter.feature.plan.PlanRoute
+import com.viktorolsson.spotter.feature.plan.ProgramPreviewRoute
+import com.viktorolsson.spotter.feature.plan.ProgramsRoute
 import com.viktorolsson.spotter.feature.plan.planScreen
+import com.viktorolsson.spotter.feature.plan.programPreviewScreen
+import com.viktorolsson.spotter.feature.plan.programsScreen
 import com.viktorolsson.spotter.feature.progress.AchievementsRoute
 import com.viktorolsson.spotter.feature.progress.achievementsScreen
 import com.viktorolsson.spotter.feature.progress.progressScreen
@@ -211,7 +215,18 @@ fun SpotterApp(
             planScreen(
                 onBack = { navController.popBackStack<PlanRoute>(inclusive = true) },
                 onRebuild = { navController.navigate(OnboardingRoute(rebuild = true)) },
+                onOpenPrograms = { navController.navigate(ProgramsRoute) },
                 onOpenSession = { navController.navigate(SessionRoute(it)) { launchSingleTop = true } },
+            )
+            programsScreen(
+                onBack = { navController.popBackStack<ProgramsRoute>(inclusive = true) },
+                onPreview = { navController.navigate(ProgramPreviewRoute(it.name)) },
+                onQuestionnaire = { navController.navigate(OnboardingRoute(rebuild = true)) },
+            )
+            programPreviewScreen(
+                onBack = { navController.popBackStack<ProgramPreviewRoute>(inclusive = true) },
+                // Back to the plan, now the new one.
+                onSwitched = { navController.popBackStack<ProgramsRoute>(inclusive = true) },
             )
             sessionScreen(
                 onAddExercises = { navController.navigate(ExercisePickerRoute(it)) },

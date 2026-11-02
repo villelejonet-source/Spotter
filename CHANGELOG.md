@@ -9,6 +9,13 @@ into the new version's entry and writes the store notes from it. Versions are th
 ## Unreleased
 
 ### App
+- Programs: the plan screen says what kind of plan you're on, and "Change program" shows a card
+  for each way to train (Full body, Upper / Lower, Push / Pull / Legs and 5/3/1) with who it's
+  for, what a week looks like and how it progresses. The ones that suit your answers are marked.
+  Pick one to see the plan it would give you, then switch without redoing the questionnaire;
+  starting weights come from your recent bench, squat and deadlift, and your history is kept.
+  The last step of the questionnaire uses the same cards, and 5/3/1 now says it needs a barbell
+  instead of hiding.
 - Levels and badges: every workout earns XP (finishing it, its working sets, any PRs, a
   check-in, and reaching your days a week), and XP levels you up from Fresh Chalk to Mythical
   Beast. 23 badges to unlock, from First Rep and Piano Mover to Comeback Kid and Night Owl.
@@ -43,6 +50,7 @@ into the new version's entry and writes the store notes from it. Versions are th
   - a lighter session on a low day does the deload loads without using up the week.
 
 ### Website
+- Plans: a 5/3/1 plan is called 5/3/1 in the plan list, not Custom.
 - Levels and badges: your level is on Today, and Progress has a Levels tab with how XP is
   earned and every badge, the same as in the app.
 - Workout history shows how you felt before and after each workout and its effort. Lighter

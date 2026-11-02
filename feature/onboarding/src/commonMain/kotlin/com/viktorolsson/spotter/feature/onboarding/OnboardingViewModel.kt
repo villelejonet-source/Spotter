@@ -17,6 +17,8 @@ import com.viktorolsson.spotter.core.engine.KnownLifts
 import com.viktorolsson.spotter.core.engine.LiftResult
 import com.viktorolsson.spotter.core.engine.PlanGenerator
 import com.viktorolsson.spotter.core.engine.PlanInput
+import com.viktorolsson.spotter.core.engine.forProgram
+import com.viktorolsson.spotter.core.engine.suitedPrograms
 import com.viktorolsson.spotter.core.model.BodyArea
 import com.viktorolsson.spotter.core.model.Equipment
 import com.viktorolsson.spotter.core.model.ExperienceLevel
@@ -24,7 +26,7 @@ import com.viktorolsson.spotter.core.model.Goal
 import com.viktorolsson.spotter.core.model.Limitation
 import com.viktorolsson.spotter.core.model.NumberInput
 import com.viktorolsson.spotter.core.model.Sex
-import com.viktorolsson.spotter.core.model.SplitType
+import com.viktorolsson.spotter.core.model.Program
 import com.viktorolsson.spotter.core.model.UserProfile
 import com.viktorolsson.spotter.core.model.WeightUnit
 import com.viktorolsson.spotter.core.model.format
@@ -122,9 +124,10 @@ data class OnboardingUiState(
     val step: Step = Step.BODY,
     val answers: Answers = Answers(),
     val rebuild: Boolean = false,
-    val splitOverride: SplitType? = null,
-    /** The 5/3/1 program instead of a split (offered with a barbell). */
-    val fiveThreeOne: Boolean = false,
+    /** The program picked on the summary; null is the automatic choice ("Recommended"). */
+    val program: Program? = null,
+    /** Programs that suit the answers, marked on their cards. */
+    val suited: Set<Program> = emptySet(),
     val generated: GeneratedPlan? = null,
     val saving: Boolean = false,
     /** First launch: choose between an account and staying on this phone only. */
@@ -229,13 +232,8 @@ class OnboardingViewModel(
         return true
     }
 
-    fun setSplit(split: SplitType?) {
-        _uiState.update { it.copy(splitOverride = split, fiveThreeOne = false) }
-        generate()
-    }
-
-    fun chooseFiveThreeOne() {
-        _uiState.update { it.copy(splitOverride = null, fiveThreeOne = true) }
+    fun chooseProgram(program: Program?) {
+        _uiState.update { it.copy(program = program) }
         generate()
     }
 
@@ -278,12 +276,11 @@ class OnboardingViewModel(
                     today = clock.todayIn(TimeZone.currentSystemDefault()),
                     now = clock.now(),
                     knownLifts = state.answers.knownLifts(),
-                    splitOverride = state.splitOverride,
-                    fiveThreeOne = state.fiveThreeOne && Equipment.BARBELL in profile.equipment,
-                ),
+                    // A pick the answers no longer allow (the barbell unticked) falls back to the automatic one.
+                ).forProgram(state.program?.takeIf { it.availableFor(profile) }),
             )
         }
-        _uiState.update { it.copy(generated = generated) }
+        _uiState.update { it.copy(generated = generated, suited = suitedPrograms(profile)) }
     }
 
     private fun Answers.toProfile(): UserProfile? = UserProfile(

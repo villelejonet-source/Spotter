@@ -5,11 +5,8 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.lazy.LazyRow
-import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.FilterChip
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -17,9 +14,10 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import org.jetbrains.compose.resources.stringResource
 import androidx.compose.ui.text.style.TextOverflow
-import com.viktorolsson.spotter.core.model.Equipment
-import com.viktorolsson.spotter.core.model.SplitType
+import com.viktorolsson.spotter.core.model.Program
 import com.viktorolsson.spotter.core.ui.component.LoadingState
+import com.viktorolsson.spotter.core.ui.component.OptionCard
+import com.viktorolsson.spotter.core.ui.component.ProgramCard
 import com.viktorolsson.spotter.core.ui.component.SectionHeader
 import com.viktorolsson.spotter.core.ui.formatExerciseCount
 import com.viktorolsson.spotter.core.ui.formatPlanTarget
@@ -28,12 +26,8 @@ import com.viktorolsson.spotter.core.ui.theme.Dimens
 import com.viktorolsson.spotter.core.ui.theme.Spacing
 import org.jetbrains.compose.resources.stringResource
 import com.viktorolsson.spotter.feature.onboarding.resources.Res
-import com.viktorolsson.spotter.feature.onboarding.resources.onb_split_531
-import com.viktorolsson.spotter.feature.onboarding.resources.onb_split_531_body
 import com.viktorolsson.spotter.feature.onboarding.resources.onb_split_auto
-import com.viktorolsson.spotter.feature.onboarding.resources.onb_split_full
-import com.viktorolsson.spotter.feature.onboarding.resources.onb_split_ppl
-import com.viktorolsson.spotter.feature.onboarding.resources.onb_split_upper_lower
+import com.viktorolsson.spotter.feature.onboarding.resources.onb_split_auto_body
 import com.viktorolsson.spotter.feature.onboarding.resources.onb_summary_calibration
 import com.viktorolsson.spotter.feature.onboarding.resources.onb_summary_day_meta
 import com.viktorolsson.spotter.feature.onboarding.resources.onb_summary_missing
@@ -41,7 +35,7 @@ import com.viktorolsson.spotter.feature.onboarding.resources.onb_summary_split
 import com.viktorolsson.spotter.feature.onboarding.resources.onb_summary_title
 
 @Composable
-internal fun SummaryStep(state: OnboardingUiState, onSplit: (SplitType?) -> Unit, onFiveThreeOne: () -> Unit = {}) {
+internal fun SummaryStep(state: OnboardingUiState, onProgram: (Program?) -> Unit) {
     val generated = state.generated
     Title(Res.string.onb_summary_title)
     if (generated == null) {
@@ -51,29 +45,24 @@ internal fun SummaryStep(state: OnboardingUiState, onSplit: (SplitType?) -> Unit
     SectionHeader(generated.plan.name)
 
     Text(stringResource(Res.string.onb_summary_split), style = MaterialTheme.typography.titleSmall)
-    LazyRow(horizontalArrangement = Arrangement.spacedBy(Spacing.sm)) {
-        items(
-            listOf(
-                null to Res.string.onb_split_auto,
-                SplitType.FULL_BODY to Res.string.onb_split_full,
-                SplitType.UPPER_LOWER to Res.string.onb_split_upper_lower,
-                SplitType.PUSH_PULL_LEGS to Res.string.onb_split_ppl,
-            ).filter { (split, _) -> split != SplitType.PUSH_PULL_LEGS || (state.answers.days ?: 0) >= 3 },
-        ) { (split, label) ->
-            FilterChip(selected = !state.fiveThreeOne && state.splitOverride == split, onClick = { onSplit(split) }, label = { Text(stringResource(label)) })
-        }
-        // 5/3/1 is built on the barbell lifts.
-        if (Equipment.BARBELL in state.answers.equipment) {
-            item {
-                FilterChip(selected = state.fiveThreeOne, onClick = onFiveThreeOne, label = { Text(stringResource(Res.string.onb_split_531)) })
-            }
-        }
-    }
-    if (state.fiveThreeOne) {
-        Text(
-            stringResource(Res.string.onb_split_531_body),
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
+    OptionCard(
+        title = stringResource(Res.string.onb_split_auto),
+        selected = state.program == null,
+        onClick = { onProgram(null) },
+        subtitle = stringResource(Res.string.onb_split_auto_body),
+    )
+    Program.entries.forEach { program ->
+        val blocker = program.blocker(state.answers.equipment, state.answers.days ?: 0)
+        val selected = state.program == program
+        ProgramCard(
+            program = program,
+            daysPerWeek = if (program == Program.FIVE_THREE_ONE) Program.FIVE_THREE_ONE_DAYS else state.answers.days,
+            // A blocked card stays, saying why, but can't be picked.
+            onClick = { if (blocker == null) onProgram(program) },
+            suits = program in state.suited,
+            blocker = blocker,
+            selected = selected,
+            expanded = selected,
         )
     }
 

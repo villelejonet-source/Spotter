@@ -13,6 +13,8 @@ import com.viktorolsson.spotter.core.model.MovementPattern
 import com.viktorolsson.spotter.core.model.MuscleGroup
 import com.viktorolsson.spotter.core.model.PersonalRecordType
 import com.viktorolsson.spotter.core.model.Muscle
+import com.viktorolsson.spotter.core.model.Program
+import com.viktorolsson.spotter.core.model.ProgramBlocker
 import com.viktorolsson.spotter.core.ui.resources.Res
 import com.viktorolsson.spotter.core.ui.resources.*
 
@@ -191,3 +193,47 @@ fun EffortScale.label(): String = when (this) {
     EffortScale.RIR -> stringResource(Res.string.effort_scale_rir)
     EffortScale.RPE -> stringResource(Res.string.effort_scale_rpe)
 }
+
+val Program.labelRes: StringResource
+    get() = when (this) {
+        Program.FULL_BODY -> Res.string.program_full_body
+        Program.UPPER_LOWER -> Res.string.program_upper_lower
+        Program.PUSH_PULL_LEGS -> Res.string.program_ppl
+        Program.FIVE_THREE_ONE -> Res.string.program_531
+    }
+
+/** One line on what the program is, under its name. */
+val Program.pitchRes: StringResource
+    get() = when (this) {
+        Program.FULL_BODY -> Res.string.program_full_body_pitch
+        Program.UPPER_LOWER -> Res.string.program_upper_lower_pitch
+        Program.PUSH_PULL_LEGS -> Res.string.program_ppl_pitch
+        Program.FIVE_THREE_ONE -> Res.string.program_531_pitch
+    }
+
+/** Who the program suits. */
+val Program.forRes: StringResource
+    get() = when (this) {
+        Program.FULL_BODY -> Res.string.program_full_body_for
+        Program.UPPER_LOWER -> Res.string.program_upper_lower_for
+        Program.PUSH_PULL_LEGS -> Res.string.program_ppl_for
+        Program.FIVE_THREE_ONE -> Res.string.program_531_for
+    }
+
+val Program.weekRes: StringResource
+    get() = when (this) {
+        Program.FULL_BODY -> Res.string.program_full_body_week
+        Program.UPPER_LOWER -> Res.string.program_upper_lower_week
+        Program.PUSH_PULL_LEGS -> Res.string.program_ppl_week
+        Program.FIVE_THREE_ONE -> Res.string.program_531_week
+    }
+
+/** How its weights go up: the splits share the generator's rules, 5/3/1 has its own. */
+val Program.progressRes: StringResource
+    get() = if (this == Program.FIVE_THREE_ONE) Res.string.program_531_progress else Res.string.program_split_progress
+
+val ProgramBlocker.labelRes: StringResource
+    get() = when (this) {
+        ProgramBlocker.NEEDS_BARBELL -> Res.string.program_needs_barbell
+        ProgramBlocker.NEEDS_THREE_DAYS -> Res.string.program_needs_three_days
+    }

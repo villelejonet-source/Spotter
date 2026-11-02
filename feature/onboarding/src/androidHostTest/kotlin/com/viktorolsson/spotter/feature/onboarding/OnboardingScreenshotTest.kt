@@ -51,7 +51,7 @@ class OnboardingScreenshotTest {
     private fun StepScreen(step: Step, dark: Boolean = false, state: OnboardingUiState = OnboardingUiState(step = step, answers = answers)) =
         OnboardingScreen(
             state = state, onBack = {}, onSkip = {}, onNext = {}, onUpdate = {}, onChoose = {},
-            onImperial = {}, onSplit = {}, onFinish = {},
+            onImperial = {}, onProgram = {}, onFinish = {},
         )
 
     @Test
@@ -120,7 +120,7 @@ class OnboardingScreenshotTest {
     fun step_summary_531() = capture("onboarding_summary_531_light", dark = false) {
         StepScreen(
             Step.SUMMARY,
-            state = OnboardingUiState(step = Step.SUMMARY, answers = answers, fiveThreeOne = true, generated = GeneratedPlan(PreviewData.plan, listOf(52, 58), emptySet())),
+            state = OnboardingUiState(step = Step.SUMMARY, answers = answers, program = com.viktorolsson.spotter.core.model.Program.FIVE_THREE_ONE, generated = GeneratedPlan(PreviewData.plan, listOf(52, 58), emptySet())),
         )
     }
 }

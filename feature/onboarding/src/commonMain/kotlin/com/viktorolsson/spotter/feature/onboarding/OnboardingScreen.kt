@@ -44,6 +44,7 @@ import com.viktorolsson.spotter.core.model.Limitation
 import com.viktorolsson.spotter.core.model.Sex
 import com.viktorolsson.spotter.core.model.label
 import com.viktorolsson.spotter.core.ui.component.BackButton
+import com.viktorolsson.spotter.core.ui.component.OptionCard
 import com.viktorolsson.spotter.core.ui.component.PrimaryButton
 import com.viktorolsson.spotter.core.ui.component.SegmentedChoice
 import com.viktorolsson.spotter.core.ui.component.SpotterTopBar
@@ -154,8 +155,7 @@ internal fun OnboardingRoute(
         onUpdate = viewModel::update,
         onChoose = viewModel::choose,
         onImperial = viewModel::setImperial,
-        onSplit = viewModel::setSplit,
-        onFiveThreeOne = viewModel::chooseFiveThreeOne,
+        onProgram = viewModel::chooseProgram,
         onFinish = { viewModel.finish(onDone) },
     )
 }
@@ -170,9 +170,8 @@ internal fun OnboardingScreen(
     onUpdate: ((Answers) -> Answers) -> Unit,
     onChoose: ((Answers) -> Answers) -> Unit,
     onImperial: (Boolean) -> Unit,
-    onSplit: (com.viktorolsson.spotter.core.model.SplitType?) -> Unit,
+    onProgram: (com.viktorolsson.spotter.core.model.Program?) -> Unit,
     onFinish: () -> Unit,
-    onFiveThreeOne: () -> Unit = {},
 ) {
     val answers = state.answers
     Scaffold(
@@ -279,7 +278,7 @@ internal fun OnboardingScreen(
                         )
                     }
                     Step.LIFTS -> LiftsStep(answers, onUpdate)
-                    Step.SUMMARY -> SummaryStep(state, onSplit, onFiveThreeOne)
+                    Step.SUMMARY -> SummaryStep(state, onProgram)
                 }
             }
         }

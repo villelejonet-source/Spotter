@@ -8,47 +8,6 @@ into the new version's entry and writes the store notes from it. Versions are th
 
 ## Unreleased
 
-### App
-- Programs: the plan screen says what kind of plan you're on, and "Change program" shows a card
-  for each way to train (Full body, Upper / Lower, Push / Pull / Legs and 5/3/1) with who it's
-  for, what a week looks like and how it progresses. The ones that suit your answers are marked.
-  Pick one to see the plan it would give you, then switch without redoing the questionnaire;
-  starting weights come from your recent bench, squat and deadlift, and your history is kept.
-  The last step of the questionnaire uses the same cards, and 5/3/1 now says it needs a barbell
-  instead of hiding.
-- Levels and badges: every workout earns XP (finishing it, its working sets, any PRs, a
-  check-in, and reaching your days a week), and XP levels you up from Fresh Chalk to Mythical
-  Beast. 23 badges to unlock, from First Rep and Piano Mover to Comeback Kid and Night Owl.
-  The summary after a workout shows the XP it earned, the level bar filling up and any new
-  badges; Today and Progress show your level, and Progress opens every badge. Your workouts so
-  far count straight away. A lighter session earns as much as any other, and missing a day
-  never costs anything. Settings can hide it all.
-- Check in before a workout: "Start workout" asks how you feel today (five faces, or Skip). On a
-  low day (1 or 2) it offers to make just today a lighter session: fewer sets at about 90% of
-  the weight, shown as "Lighter session" in the workout. A lighter session never counts against
-  your progress, and it doesn't start a deload week.
-- Rate a finished workout: the summary asks "How did it go?" and, if you like, how hard it was
-  (effort 1–10).
-- Progress takes how you felt into account:
-  - a workout you kept as planned on a low day (a check-in or rating of 1–2) never counts as a
-    miss, so a bad day doesn't hold back or lower your next weights; it still counts if you hit
-    your reps;
-  - low days and lighter sessions are left out of plateau checks and lift trends, and of the
-    exercise charts, where the log tags them "Low day" or "Lighter session";
-  - feeling low before or after 3 workouts in 10 days suggests a lighter week;
-  - a single lighter day no longer resets the "lighter week every 6 weeks" suggestion.
-- The Progress tab has a "How training felt" card: your average check-in and rating over the
-  last 4 weeks, and how many were low days.
-- 5/3/1: pick "5/3/1" when building a plan (with a barbell) for Wendler's four days: press,
-  deadlift, bench and squat, each followed by assistance work. Each main lift runs on a training
-  max (90% of your estimated 1RM):
-  - weeks 1–3 are 5s, 3s and 5/3/1 at set percentages, the last set as many reps as you can;
-    week 4 is a deload;
-  - the workout card shows the week and training max, and what the last set asks for;
-  - after week 4 the training max goes up (+2.5 kg upper body, +5 kg lower); falling short on
-    the last set lowers it to 90% and repeats the week;
-  - a lighter session on a low day does the deload loads without using up the week.
-
 ### Website
 - Today appears sooner after the site has been idle: the page no longer waits for your whole
   plan before showing, and the sign-in check runs next to the database.
@@ -102,6 +61,52 @@ into the new version's entry and writes the store notes from it. Versions are th
 - Fixed a crash on iOS whenever the app logged a warning, such as a failed sync (#27).
 - Builds without cloud backup no longer show account buttons that couldn't work (#21).
 - The app has its icon on iOS too (it showed a blank placeholder).
+
+## 1.3.0 (11) — 2026-11-02
+
+### Added
+- Programs: the plan screen says what kind of plan you're on, and "Change program" shows a card
+  for each way to train (Full body, Upper / Lower, Push / Pull / Legs and 5/3/1) with who it's
+  for, what a week looks like and how it progresses. The ones that suit your answers are marked.
+  Pick one to see the plan it would give you, then switch without redoing the questionnaire;
+  starting weights come from your recent bench, squat and deadlift, and your history is kept.
+  The last step of the questionnaire uses the same cards, and 5/3/1 now says it needs a barbell
+  instead of hiding.
+- Levels and badges: every workout earns XP (finishing it, its working sets, any PRs, a
+  check-in, and reaching your days a week), and XP levels you up from Fresh Chalk to Mythical
+  Beast. 23 badges to unlock, from First Rep and Piano Mover to Comeback Kid and Night Owl.
+  The summary after a workout shows the XP it earned, the level bar filling up and any new
+  badges; Today and Progress show your level, and Progress opens every badge. Your workouts so
+  far count straight away. A lighter session earns as much as any other, and missing a day
+  never costs anything. Settings can hide it all.
+- Check in before a workout: "Start workout" asks how you feel today (five faces, or Skip). On a
+  low day (1 or 2) it offers to make just today a lighter session: fewer sets at about 90% of
+  the weight, shown as "Lighter session" in the workout. A lighter session never counts against
+  your progress, and it doesn't start a deload week.
+- Rate a finished workout: the summary asks "How did it go?" and, if you like, how hard it was
+  (effort 1–10).
+- Progress takes how you felt into account:
+  - a workout you kept as planned on a low day (a check-in or rating of 1–2) never counts as a
+    miss, so a bad day doesn't hold back or lower your next weights; it still counts if you hit
+    your reps;
+  - low days and lighter sessions are left out of plateau checks and lift trends, and of the
+    exercise charts, where the log tags them "Low day" or "Lighter session";
+  - feeling low before or after 3 workouts in 10 days suggests a lighter week;
+  - a single lighter day no longer resets the "lighter week every 6 weeks" suggestion.
+- The Progress tab has a "How training felt" card: your average check-in and rating over the
+  last 4 weeks, and how many were low days.
+- 5/3/1: pick "5/3/1" when building a plan (with a barbell) for Wendler's four days: press,
+  deadlift, bench and squat, each followed by assistance work. Each main lift runs on a training
+  max (90% of your estimated 1RM):
+  - weeks 1–3 are 5s, 3s and 5/3/1 at set percentages, the last set as many reps as you can;
+    week 4 is a deload;
+  - the workout card shows the week and training max, and what the last set asks for;
+  - after week 4 the training max goes up (+2.5 kg upper body, +5 kg lower); falling short on
+    the last set lowers it to 90% and repeats the week;
+  - a lighter session on a low day does the deload loads without using up the week.
+
+### Also in this release (from 1.2.1, which was never uploaded)
+- Every fix listed under 1.2.1 below.
 
 ## 1.2.1 (10) — 2026-11-01
 

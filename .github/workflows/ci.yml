@@ -20,8 +20,37 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  # Whether a pull request changes anything a check reads. Only Markdown files and .claude/ count
+  # as docs, and not the privacy policy, which the website builds into /privacy
+  # (web/scripts/copy-shared.mjs). A docs-only pull request skips every job below; a push to main
+  # always runs everything.
+  changes:
+    name: What changed
+    runs-on: ubuntu-latest
+    outputs:
+      code: ${{ steps.diff.outputs.code }}
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          fetch-depth: 0
+      - id: diff
+        env:
+          EVENT: ${{ github.event_name }}
+          BASE: ${{ github.event.pull_request.base.sha }}
+          HEAD: ${{ github.event.pull_request.head.sha }}
+        run: |
+          if [ "$EVENT" != pull_request ]; then echo "code=true" >> "$GITHUB_OUTPUT"; exit 0; fi
+          changed=$(git diff --name-only "$BASE...$HEAD")
+          echo "$changed"
+          code=$(printf '%s\n' "$changed" | grep -vE '\.md$|^\.claude/' | grep -v '^$' || true)
+          policy=$(printf '%s\n' "$changed" | grep -xF 'docs/play-store/privacy-policy.md' || true)
+          if [ -n "$code$policy" ]; then echo "code=true" >> "$GITHUB_OUTPUT"; else echo "code=false" >> "$GITHUB_OUTPUT"; fi
+
+  # Skipped on a docs-only pull request; GitHub counts a skipped required check as passing.
   web:
     name: Website
+    needs: changes
+    if: needs.changes.outputs.code == 'true'
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -60,11 +89,15 @@ jobs:
   # - Unit tests, and screenshot tests against the committed goldens (`verifyRoborazziDebug`
   #   runs a module's testDebugUnitTest in verify mode, so each test runs once).
   # - Lint on the release variant.
-  # - Both builds. assembleRelease is debug-signed here (no keystore.properties) and exists to
-  #   prove that the R8 shrink and resource-shrink step still succeeds; it is not uploadable.
+  # - The debug build, and on pushes to main the release build too. assembleRelease is
+  #   debug-signed here (no keystore.properties) and exists to prove that the R8 shrink and
+  #   resource-shrink step still succeeds; it is not uploadable. Pull requests leave it out
+  #   (it only matters at release, and /release builds the real bundle), so it runs on main.
   # `--continue` runs every check even when one fails, so one run reports all failures.
   app:
     name: Android checks
+    needs: changes
+    if: needs.changes.outputs.code == 'true'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
@@ -79,7 +112,7 @@ jobs:
           ./gradlew --continue
           testDebugUnitTest :core:data:testAndroidHostTest :core:engine:jvmTest :core:model:jvmTest verifyRoborazziDebug
           :app:lintRelease
-          assembleDebug :app:assembleRelease
+          assembleDebug ${{ github.event_name == 'push' && ':app:assembleRelease' || '' }}
       # On failure, keep the screenshot comparisons (actual, expected and diff images), test
       # reports and lint reports, so they can be inspected without re-running locally.
       - name: Upload reports
@@ -99,6 +132,8 @@ jobs:
   # simulator and unsigned (its build phase compiles the Kotlin framework). Needs a macOS runner.
   shared-ios:
     name: Shared code on iOS
+    needs: changes
+    if: needs.changes.outputs.code == 'true'
     runs-on: macos-latest
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
@@ -136,6 +171,8 @@ jobs:
   # website reads can't land without the types (and web/src/lib/supabase/schema-check.ts) following.
   database:
     name: Database
+    needs: changes
+    if: needs.changes.outputs.code == 'true'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
@@ -165,12 +202,18 @@ jobs:
   android:
     name: App
     if: always()
-    needs: [app, shared-ios, database]
+    needs: [changes, app, shared-ios, database]
     runs-on: ubuntu-latest
     steps:
+      # Skipped counts only when "What changed" ran and found docs alone.
       - name: All app jobs passed
         env:
-          RESULTS: ${{ join(needs.*.result, ' ') }}
+          CHANGES: ${{ needs.changes.result }}
+          CODE: ${{ needs.changes.outputs.code }}
+          RESULTS: ${{ needs.app.result }} ${{ needs.shared-ios.result }} ${{ needs.database.result }}
         run: |
-          echo "$RESULTS"
-          for r in $RESULTS; do [ "$r" = success ] || exit 1; done
+          echo "changes=$CHANGES code=$CODE jobs: $RESULTS"
+          [ "$CHANGES" = success ] || exit 1
+          for r in $RESULTS; do
+            [ "$r" = success ] || { [ "$r" = skipped ] && [ "$CODE" = false ]; } || exit 1
+          done

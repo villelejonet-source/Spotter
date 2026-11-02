@@ -97,8 +97,12 @@ supabase stop
 ```
 
 CI (`.github/workflows/ci.yml`) runs all of this on every pull request: Website, Android checks,
-Shared code on iOS (tests plus the Xcode build) and Database. The ruleset on `main` requires
-the `Website` and `App` checks, and `App` passes only when every job did. The web dev server is the `web` entry in `.claude/launch.json` (port 3000).
+Shared code on iOS (tests plus the Xcode build) and Database. A pull request that only changes
+Markdown or `.claude/` (not the privacy policy, which the website builds) skips them all; the
+release build (R8) runs on pushes to `main` only. The ruleset on `main` requires the `Website`
+and `App` checks, and `App` passes only when every job did (or all were skipped as docs-only).
+The repository must stay public: on GitHub Free a private repository has no enforced ruleset
+and no auto-merge. "Merge when green" means turning on auto-merge (squash) for the PR. The web dev server is the `web` entry in `.claude/launch.json` (port 3000).
 
 **Strictness:**
 - Kotlin warnings are errors in every module (root `build.gradle.kts`).

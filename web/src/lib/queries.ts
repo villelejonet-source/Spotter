@@ -436,11 +436,22 @@ export async function activePlan(client: OwnClient): Promise<PlanTree | null> {
   return rows.length ? (await trees(client, rows))[0] : null;
 }
 
+/**
+ * Whether a plan is active, in one request: activePlan() takes three in a row (plan, days,
+ * exercises), too long for a page to wait on before it can show anything.
+ */
+export async function hasActivePlan(client: OwnClient): Promise<boolean> {
+  return (await count(client, "v_plan", (q) => q.eq("is_active", true))) > 0;
+}
+
 /** One plan day with its exercises (for a scheduled workout from any plan), or null. */
 export async function planDay(client: OwnClient, syncId: string): Promise<(PlanDayRow & { exercises: PlanExerciseRow[] }) | null> {
-  const day = await single<PlanDayRow>(client, "v_plan_day", "sync_id", syncId);
+  // The exercises filter on the day's id, which is already known, so both requests go at once.
+  const [day, exercises] = await Promise.all([
+    single<PlanDayRow>(client, "v_plan_day", "sync_id", syncId),
+    selectAll<PlanExerciseRow>(client, "v_plan_exercise", { filter: (q) => q.eq("plan_day_id", syncId) }),
+  ]);
   if (!day) return null;
-  const exercises = await selectAll<PlanExerciseRow>(client, "v_plan_exercise", { filter: (q) => q.eq("plan_day_id", syncId) });
   return { ...day, exercises: exercises.sort((a, b) => a.position - b.position) };
 }
 

@@ -7,7 +7,7 @@ import { Sparkline } from "@/components/sparkline";
 import { TrainingHeatmap, heatmapStart } from "@/components/training-heatmap";
 import { Badge, Card, CardTitle, cardClass, Delta, EmptyState, LinkButton, PageHeader, Stat } from "@/components/ui";
 import { exerciseName } from "@/lib/catalog";
-import { getActivePlan, getCatalog, getFinishedSessionCount, getPersonalRecords, getPlayerProgress, getPlanDay, getProfile, getScheduled, getSessionTimes, getSessions, getUnit, preload } from "@/lib/data";
+import { getActivePlan, getCatalog, getFinishedSessionCount, getHasActivePlan, getPersonalRecords, getPlayerProgress, getPlanDay, getProfile, getScheduled, getSessionTimes, getSessions, getUnit, preload } from "@/lib/data";
 import { formatDateValue, formatFullDate, formatRelative } from "@/lib/dates";
 import { APP_BACKUP_PATH, FREE_WORKOUT, PR_LABELS, WORKOUT } from "@/lib/labels";
 import { formatDuration, formatPlanTarget, formatRecord, formatVolume, toUnit } from "@/lib/model";
@@ -33,7 +33,10 @@ const rangeOf = (key: string | undefined) => RANGES.find((r) => r.key === key) ?
  */
 export default async function TodayPage({ searchParams }: { searchParams: Promise<{ range?: string }> }) {
   // The cards' queries start now, alongside the empty-account check, instead of after it.
+  // The check asks only whether a plan is active; the plan itself takes three requests in a
+  // row and is left to the Next workout card.
   preload(
+    getActivePlan(),
     recentSessions(),
     getProfile(),
     getCatalog(),
@@ -43,9 +46,9 @@ export default async function TodayPage({ searchParams }: { searchParams: Promis
     getPersonalRecords(RECENT),
     getPlayerProgress(),
   );
-  const [count, activePlan] = await Promise.all([getFinishedSessionCount(), getActivePlan()]);
+  const [count, hasPlan] = await Promise.all([getFinishedSessionCount(), getHasActivePlan()]);
 
-  if (count === 0 && !activePlan) {
+  if (count === 0 && !hasPlan) {
     return (
       <>
         <PageHeader title="Today" subtitle={formatFullDate(Date.now())} />

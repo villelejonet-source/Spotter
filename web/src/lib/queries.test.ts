@@ -214,6 +214,23 @@ describe("schedule and plans", () => {
     expect((await q.activePlan(m.client))?.sync_id).toBe("p1");
     expect(m.chainOf("v_plan")).toEqual([["select", "*"], ["eq", "is_active", true], ["order", "created_at", { ascending: false }], ["limit", 1]]);
   });
+
+  it("checks for an active plan with one count, without loading it", async () => {
+    const m = mockClient({}, 1);
+    expect(await q.hasActivePlan(m.client)).toBe(true);
+    expect(m.calls.map((c) => c.view)).toEqual(["v_plan"]);
+    expect(m.chainOf("v_plan")).toEqual([["select", "sync_id", { count: "exact", head: true }], ["eq", "is_active", true]]);
+    expect(await q.hasActivePlan(mockClient({}, 0).client)).toBe(false);
+  });
+
+  it("asks for a plan day and its exercises at once", async () => {
+    const m = mockClient({ v_plan_day: [{ sync_id: "d1", plan_id: "p1", position: 0 }], v_plan_exercise: [{ sync_id: "e2", plan_day_id: "d1", position: 1 }, { sync_id: "e1", plan_day_id: "d1", position: 0 }] });
+    const pending = q.planDay(m.client, "d1");
+    // Both requests are out before either answers.
+    expect(m.calls.map((c) => c.view)).toEqual(["v_plan_day", "v_plan_exercise"]);
+    expect((await pending)?.exercises.map((e) => e.sync_id)).toEqual(["e1", "e2"]);
+    expect(await q.planDay(mockClient().client, "nope")).toBeNull();
+  });
 });
 
 describe("owner filter", () => {
@@ -251,6 +268,7 @@ describe("owner filter", () => {
       ["planOutlines", q.planOutlines],
       ["plan", (c) => q.plan(c, "p1")],
       ["activePlan", q.activePlan],
+      ["hasActivePlan", q.hasActivePlan],
       ["planDay", (c) => q.planDay(c, "d1")],
     ];
     for (const [name, run] of runs) {

@@ -64,6 +64,10 @@ export async function middleware(request: NextRequest) {
 }
 
 export const config = {
+  // Node, not the edge: it then runs in the functions' region (London, next to Supabase), so a
+  // session refresh doesn't cross Europe, and a warm instance keeps Supabase's signing keys
+  // between requests instead of fetching them again.
+  runtime: "nodejs",
   // Everything except Next's own static output and the favicon. There is no public/ folder;
   // if one is added, list its files here rather than skipping by file extension, so a
   // future route can't slip past the guard by ending in ".png".

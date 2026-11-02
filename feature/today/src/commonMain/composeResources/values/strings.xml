@@ -79,4 +79,9 @@
     <string name="support_glutes">Glutes for hip extension</string>
     <string name="support_lower_back">Lower back to hold position</string>
     <string name="support_core">A braced core under the bar</string>
+    <string name="today_levels_intro">New: levels and badges</string>
+    <string name="today_levels_intro_body">Every workout so far counts. Tap to see your badges.</string>
+    <string name="today_levels_got_it">Got it</string>
+    <string name="today_levels_badges">%1$d of %2$d badges</string>
+    <string name="today_levels_open">Open levels and badges</string>
 </resources>

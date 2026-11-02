@@ -34,6 +34,7 @@ import com.viktorolsson.spotter.core.model.weeklyTotals
 import com.viktorolsson.spotter.core.ui.PreviewData
 import com.viktorolsson.spotter.core.ui.theme.SpotterTheme
 import org.junit.Rule
+import com.viktorolsson.spotter.core.engine.Gamification
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.annotation.Config
@@ -85,15 +86,27 @@ class TodayScreenshotTest {
         dynamic: Boolean = false,
         fontScale: Float = 1f,
         review: PlanReview? = null,
+        level: TodayLevel? = null,
     ) =
         captureRoboImage(
             "src/test/screenshots/$name.png",
             roborazziComposeOptions = RoborazziComposeOptions { fontScale(fontScale) },
         ) {
             SpotterTheme(darkTheme = dark, dynamicColor = dynamic) {
-                TodayScreen(state, review = review, onResume = {}, onStartNext = {}, onEmptyWorkout = {}, onOpenPlan = {}, onBuildPlan = {})
+                TodayScreen(state, review = review, onResume = {}, onStartNext = {}, onEmptyWorkout = {}, onOpenPlan = {}, onBuildPlan = {}, level = level)
             }
         }
+
+    private fun level(intro: Boolean) = TodayLevel(Gamification.level(2_350), badgesUnlocked = 6, badgesTotal = 23, intro = intro)
+
+    @Test
+    fun levelIntro_light() = capture("today_level_intro_light", false, next(), level = level(intro = true))
+
+    @Test
+    fun level_dark() = capture("today_level_dark", true, next(), level = level(intro = false))
+
+    @Test
+    fun levelIntro_largeFont() = capture("today_level_intro_font_1_6", false, next(), fontScale = 1.6f, level = level(intro = true))
 
     /** Bench stalled at 80 × 6 for four weeks, with three helpers and a variation to pick from. */
     private val review = run {

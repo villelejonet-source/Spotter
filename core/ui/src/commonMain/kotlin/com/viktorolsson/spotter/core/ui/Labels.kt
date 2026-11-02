@@ -4,8 +4,10 @@ package com.viktorolsson.spotter.core.ui
 import androidx.compose.runtime.Composable
 import org.jetbrains.compose.resources.StringResource
 import org.jetbrains.compose.resources.stringResource
+import com.viktorolsson.spotter.core.model.Badge
 import com.viktorolsson.spotter.core.model.BodyArea
 import com.viktorolsson.spotter.core.model.EffortScale
+import com.viktorolsson.spotter.core.model.LevelTitle
 import com.viktorolsson.spotter.core.model.Equipment
 import com.viktorolsson.spotter.core.model.MovementPattern
 import com.viktorolsson.spotter.core.model.MuscleGroup
@@ -112,6 +114,74 @@ val PersonalRecordType.labelRes: StringResource
         PersonalRecordType.ESTIMATED_1RM -> Res.string.record_estimated_1rm
         PersonalRecordType.REPS_AT_WEIGHT -> Res.string.record_reps_at_weight
         PersonalRecordType.VOLUME -> Res.string.record_volume
+    }
+
+val LevelTitle.labelRes: StringResource
+    get() = when (this) {
+        LevelTitle.FRESH_CHALK -> Res.string.level_title_fresh_chalk
+        LevelTitle.BENCH_WARMER -> Res.string.level_title_bench_warmer
+        LevelTitle.GYM_REGULAR -> Res.string.level_title_gym_regular
+        LevelTitle.PLATE_COLLECTOR -> Res.string.level_title_plate_collector
+        LevelTitle.IRON_ADDICT -> Res.string.level_title_iron_addict
+        LevelTitle.BARBELL_BARON -> Res.string.level_title_barbell_baron
+        LevelTitle.SQUAT_ROYALTY -> Res.string.level_title_squat_royalty
+        LevelTitle.IRON_LEGEND -> Res.string.level_title_iron_legend
+        LevelTitle.MYTHICAL_BEAST -> Res.string.level_title_mythical_beast
+    }
+
+val Badge.labelRes: StringResource
+    get() = when (this) {
+        Badge.FIRST_REP -> Res.string.badge_first_rep
+        Badge.TEN_DOWN -> Res.string.badge_ten_down
+        Badge.HALF_CENTURY -> Res.string.badge_half_century
+        Badge.CENTURION -> Res.string.badge_centurion
+        Badge.CLUB_250 -> Res.string.badge_club_250
+        Badge.FIRST_PR -> Res.string.badge_first_pr
+        Badge.PR_HUNTER -> Res.string.badge_pr_hunter
+        Badge.RECORD_MACHINE -> Res.string.badge_record_machine
+        Badge.TRIPLE_THREAT -> Res.string.badge_triple_threat
+        Badge.STREAK_4 -> Res.string.badge_streak_4
+        Badge.STREAK_12 -> Res.string.badge_streak_12
+        Badge.STREAK_26 -> Res.string.badge_streak_26
+        Badge.STREAK_52 -> Res.string.badge_streak_52
+        Badge.GRAND_PIANO -> Res.string.badge_grand_piano
+        Badge.CAR -> Res.string.badge_car
+        Badge.ELEPHANT -> Res.string.badge_elephant
+        Badge.BLUE_WHALE -> Res.string.badge_blue_whale
+        Badge.EIFFEL_TOWER -> Res.string.badge_eiffel_tower
+        Badge.LISTENED_TO_YOUR_BODY -> Res.string.badge_listened_to_your_body
+        Badge.COMEBACK_KID -> Res.string.badge_comeback_kid
+        Badge.EARLY_BIRD -> Res.string.badge_early_bird
+        Badge.NIGHT_OWL -> Res.string.badge_night_owl
+        Badge.EXPLORER -> Res.string.badge_explorer
+    }
+
+/** How to earn the badge. */
+val Badge.howRes: StringResource
+    get() = when (this) {
+        Badge.FIRST_REP -> Res.string.badge_first_rep_how
+        Badge.TEN_DOWN -> Res.string.badge_ten_down_how
+        Badge.HALF_CENTURY -> Res.string.badge_half_century_how
+        Badge.CENTURION -> Res.string.badge_centurion_how
+        Badge.CLUB_250 -> Res.string.badge_club_250_how
+        Badge.FIRST_PR -> Res.string.badge_first_pr_how
+        Badge.PR_HUNTER -> Res.string.badge_pr_hunter_how
+        Badge.RECORD_MACHINE -> Res.string.badge_record_machine_how
+        Badge.TRIPLE_THREAT -> Res.string.badge_triple_threat_how
+        Badge.STREAK_4 -> Res.string.badge_streak_4_how
+        Badge.STREAK_12 -> Res.string.badge_streak_12_how
+        Badge.STREAK_26 -> Res.string.badge_streak_26_how
+        Badge.STREAK_52 -> Res.string.badge_streak_52_how
+        Badge.GRAND_PIANO -> Res.string.badge_grand_piano_how
+        Badge.CAR -> Res.string.badge_car_how
+        Badge.ELEPHANT -> Res.string.badge_elephant_how
+        Badge.BLUE_WHALE -> Res.string.badge_blue_whale_how
+        Badge.EIFFEL_TOWER -> Res.string.badge_eiffel_tower_how
+        Badge.LISTENED_TO_YOUR_BODY -> Res.string.badge_listened_to_your_body_how
+        Badge.COMEBACK_KID -> Res.string.badge_comeback_kid_how
+        Badge.EARLY_BIRD -> Res.string.badge_early_bird_how
+        Badge.NIGHT_OWL -> Res.string.badge_night_owl_how
+        Badge.EXPLORER -> Res.string.badge_explorer_how
     }
 
 /** "RIR" or "RPE" as a column header; empty when effort isn't rated. */

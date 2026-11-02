@@ -106,6 +106,19 @@
     <string name="summary_sets">Sets</string>
     <string name="summary_exercise_line">%1$s · best %2$s</string>
     <string name="summary_done">Done</string>
+    <string name="summary_xp_title">+%1$s XP</string>
+    <string name="summary_xp_session">Workout +%1$d</string>
+    <string name="summary_xp_sets">Sets +%1$d</string>
+    <string name="summary_xp_records">PRs +%1$d</string>
+    <string name="summary_xp_check_in">Check-in +%1$d</string>
+    <string name="summary_xp_week_goal">Week goal +%1$d</string>
+    <string name="summary_xp_none">Too short to earn XP: 10 minutes and one working set count.</string>
+    <string name="summary_xp_rate_hint">Rate how it went for +%1$d XP.</string>
+    <string name="summary_level_up">Level up!</string>
+    <plurals name="summary_new_badges">
+        <item quantity="one">New badge</item>
+        <item quantity="other">New badges</item>
+    </plurals>
     <plurals name="summary_new_prs">
         <item quantity="one">%1$d new personal record</item>
         <item quantity="other">%1$d new personal records</item>

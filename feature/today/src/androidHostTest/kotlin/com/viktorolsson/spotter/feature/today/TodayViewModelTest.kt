@@ -86,7 +86,7 @@ class TodayViewModelTest {
 
     private fun viewModel() = TodayViewModel(
         graph.plans, graph.workouts, graph.schedule, graph.history, graph.userProfiles, graph.preferences,
-        graph.recommendations, graph.errors, clock,
+        graph.recommendations, graph.gamification, graph.errors, clock,
     )
 
     /** The database answers on its own thread: pump this test's main dispatcher in real time until [done]. */

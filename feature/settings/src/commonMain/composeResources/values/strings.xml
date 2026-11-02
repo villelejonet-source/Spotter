@@ -13,6 +13,8 @@
     <string name="settings_theme_dark">Dark</string>
     <string name="settings_dynamic_color">Dynamic color</string>
     <string name="settings_dynamic_color_summary">Use colors from your wallpaper</string>
+    <string name="settings_show_levels">Levels and badges</string>
+    <string name="settings_show_levels_summary">XP, levels and badges on Today, after a workout and in Progress</string>
     <string name="settings_section_units">Units</string>
     <string name="settings_weight_unit">Weight</string>
     <string name="settings_unit_kg">kg</string>

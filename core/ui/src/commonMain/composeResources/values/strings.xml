@@ -88,4 +88,12 @@
     </plurals>
     <string name="rec_deload_scheduled">%1$d weeks of steady training since your last lighter week.</string>
     <string name="rec_deload_body">For 7 days, planned workouts use fewer sets and 10% lighter weights, and they don't count against your progress.</string>
+    <!-- Levels and badges -->
+    <string name="level_heading">Level %1$d · %2$s</string>
+    <string name="level_xp_total">%1$s XP in total</string>
+    <string name="level_to_next">%1$s XP to level %2$d</string>
+    <string name="level_bar_description">%1$s of %2$s XP to level %3$d</string>
+    <string name="badge_unlocked_on">Unlocked %1$s</string>
+    <string name="badge_progress">%1$d% there</string>
+    <string name="badge_locked_description">Locked</string>
 </resources>

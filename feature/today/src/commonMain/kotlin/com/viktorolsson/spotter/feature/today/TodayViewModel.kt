@@ -5,6 +5,7 @@ import androidx.lifecycle.viewModelScope
 import com.viktorolsson.spotter.core.data.AppErrors
 import com.viktorolsson.spotter.core.data.Failure
 import com.viktorolsson.spotter.core.data.launchReporting
+import com.viktorolsson.spotter.core.data.repository.GamificationRepository
 import com.viktorolsson.spotter.core.data.repository.HistoryRepository
 import com.viktorolsson.spotter.core.data.repository.PlanRepository
 import com.viktorolsson.spotter.core.data.repository.PlanReviewChoice
@@ -14,6 +15,7 @@ import com.viktorolsson.spotter.core.data.repository.UserPreferencesRepository
 import com.viktorolsson.spotter.core.data.repository.UserProfileRepository
 import com.viktorolsson.spotter.core.data.repository.WorkoutRepository
 import com.viktorolsson.spotter.core.engine.PlanReview
+import com.viktorolsson.spotter.core.model.Level
 import com.viktorolsson.spotter.core.model.PlanDay
 import com.viktorolsson.spotter.core.model.ScheduledWorkout
 import com.viktorolsson.spotter.core.model.TrainedDay
@@ -67,6 +69,15 @@ data class TodayUiState(
     val dashboard: Dashboard? = null,
 )
 
+/** The level card on Today. */
+data class TodayLevel(
+    val level: Level,
+    val badgesUnlocked: Int,
+    val badgesTotal: Int,
+    /** First time since levels arrived: say what they are. */
+    val intro: Boolean,
+)
+
 /** The training numbers above the fold: this week, volume, streak and the heatmap. */
 data class Dashboard(
     val today: LocalDate,
@@ -109,11 +120,20 @@ class TodayViewModel(
     private val scheduleRepository: ScheduleRepository,
     historyRepository: HistoryRepository,
     profileRepository: UserProfileRepository,
-    preferencesRepository: UserPreferencesRepository,
+    private val preferencesRepository: UserPreferencesRepository,
     private val recommendationRepository: RecommendationRepository,
+    gamificationRepository: GamificationRepository,
     private val errors: AppErrors,
     private val clock: Clock,
 ) : ViewModel() {
+    /** Null when levels are switched off in Settings. */
+    val level: StateFlow<TodayLevel?> = combine(gamificationRepository.observeProgress(), preferencesRepository.preferences) { progress, prefs ->
+        if (!prefs.showLevels) return@combine null
+        TodayLevel(progress.level, progress.badges.count { it.unlocked }, progress.badges.size, intro = !prefs.levelsIntroSeen)
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
+
+    fun levelsIntroSeen() = viewModelScope.launchReporting(errors) { preferencesRepository.setLevelsIntroSeen() }
+
     /** The plan review, when one is due. */
     val review: StateFlow<PlanReview?> = recommendationRepository.observePlanReview()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)

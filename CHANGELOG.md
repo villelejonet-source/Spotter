@@ -9,6 +9,13 @@ into the new version's entry and writes the store notes from it. Versions are th
 ## Unreleased
 
 ### App
+- Levels and badges: every workout earns XP (finishing it, its working sets, any PRs, a
+  check-in, and reaching your days a week), and XP levels you up from Fresh Chalk to Mythical
+  Beast. 23 badges to unlock, from First Rep and Piano Mover to Comeback Kid and Night Owl.
+  The summary after a workout shows the XP it earned, the level bar filling up and any new
+  badges; Today and Progress show your level, and Progress opens every badge. Your workouts so
+  far count straight away. A lighter session earns as much as any other, and missing a day
+  never costs anything. Settings can hide it all.
 - Check in before a workout: "Start workout" asks how you feel today (five faces, or Skip). On a
   low day (1 or 2) it offers to make just today a lighter session: fewer sets at about 90% of
   the weight, shown as "Lighter session" in the workout. A lighter session never counts against

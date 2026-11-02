@@ -73,6 +73,8 @@ class SettingsViewModel(
 
     fun setDynamicColor(enabled: Boolean) = viewModelScope.launchReporting(errors) { preferencesRepository.setDynamicColor(enabled) }
 
+    fun setShowLevels(show: Boolean) = viewModelScope.launchReporting(errors) { preferencesRepository.setShowLevels(show) }
+
     fun setWeightUnit(unit: WeightUnit) = viewModelScope.launchReporting(errors) { preferencesRepository.setWeightUnit(unit) }
 
     fun setDefaultRest(seconds: Int) = viewModelScope.launchReporting(errors) { preferencesRepository.setDefaultRestSeconds(seconds) }

@@ -31,6 +31,15 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import com.viktorolsson.spotter.feature.today.resources.today_levels_open
+import com.viktorolsson.spotter.feature.today.resources.today_levels_badges
+import com.viktorolsson.spotter.feature.today.resources.today_levels_got_it
+import com.viktorolsson.spotter.feature.today.resources.today_levels_intro_body
+import com.viktorolsson.spotter.feature.today.resources.today_levels_intro
+import com.viktorolsson.spotter.core.ui.component.LevelProgress
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.draw.clip
+import androidx.compose.foundation.clickable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -112,9 +121,11 @@ internal fun TodayRoute(
     onOpenSession: (Long) -> Unit,
     onOpenPlan: () -> Unit,
     onBuildPlan: () -> Unit,
+    onOpenLevels: () -> Unit,
     viewModel: TodayViewModel = koinViewModel(),
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val level by viewModel.level.collectAsStateWithLifecycle()
     val review by viewModel.review.collectAsStateWithLifecycle()
     var reviewing by rememberSaveable { mutableStateOf(false) }
     var checkingIn by rememberSaveable { mutableStateOf(false) }
@@ -128,6 +139,12 @@ internal fun TodayRoute(
         onEmptyWorkout = { viewModel.startEmptyWorkout(onOpenSession) },
         onOpenPlan = onOpenPlan,
         onBuildPlan = onBuildPlan,
+        level = level,
+        onOpenLevels = {
+            if (level?.intro == true) viewModel.levelsIntroSeen()
+            onOpenLevels()
+        },
+        onLevelsIntroSeen = viewModel::levelsIntroSeen,
     )
     if (checkingIn) {
         CheckInSheet(
@@ -162,6 +179,9 @@ internal fun TodayScreen(
     onEmptyWorkout: () -> Unit,
     onOpenPlan: () -> Unit,
     onBuildPlan: () -> Unit,
+    level: TodayLevel? = null,
+    onOpenLevels: () -> Unit = {},
+    onLevelsIntroSeen: () -> Unit = {},
 ) {
     val next = uiState.nextDay
     val scheduled = uiState.scheduledToday
@@ -206,6 +226,7 @@ internal fun TodayScreen(
                 !uiState.hasPlan -> NoPlanCard(onBuildPlan)
             }
             if (dashboard != null) {
+                if (level != null) LevelCard(level, onOpenLevels, onLevelsIntroSeen)
                 Stats(dashboard)
                 TrainingDays(dashboard)
             }
@@ -248,6 +269,33 @@ private fun StartBar(
                 }
             }
             else -> SecondaryButton(empty, onEmptyWorkout, Modifier.weight(1f), icon = Icons.Rounded.Add)
+        }
+    }
+}
+
+/** The level and its bar; opens levels and badges. The first time, it says what's new. */
+@Composable
+internal fun LevelCard(level: TodayLevel, onOpen: () -> Unit, onIntroSeen: () -> Unit) {
+    val openLabel = stringResource(Res.string.today_levels_open)
+    ContentCard(
+        Modifier.fillMaxWidth().clip(MaterialTheme.shapes.medium).clickable(onClickLabel = openLabel, role = Role.Button, onClick = onOpen),
+    ) {
+        if (level.intro) {
+            Eyebrow(stringResource(Res.string.today_levels_intro))
+            Text(
+                stringResource(Res.string.today_levels_intro_body),
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+        LevelProgress(level.level)
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Text(
+                stringResource(Res.string.today_levels_badges, level.badgesUnlocked, level.badgesTotal),
+                style = MaterialTheme.typography.bodyMedium,
+                modifier = Modifier.weight(1f),
+            )
+            if (level.intro) TextButton(onClick = onIntroSeen) { Text(stringResource(Res.string.today_levels_got_it)) }
         }
     }
 }

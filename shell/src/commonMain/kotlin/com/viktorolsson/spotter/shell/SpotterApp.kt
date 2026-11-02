@@ -50,6 +50,8 @@ import com.viktorolsson.spotter.feature.onboarding.OnboardingRoute
 import com.viktorolsson.spotter.feature.onboarding.onboardingScreen
 import com.viktorolsson.spotter.feature.plan.PlanRoute
 import com.viktorolsson.spotter.feature.plan.planScreen
+import com.viktorolsson.spotter.feature.progress.AchievementsRoute
+import com.viktorolsson.spotter.feature.progress.achievementsScreen
 import com.viktorolsson.spotter.feature.progress.progressScreen
 import com.viktorolsson.spotter.feature.session.SessionRoute
 import com.viktorolsson.spotter.feature.session.SummaryRoute
@@ -182,9 +184,14 @@ fun SpotterApp(
                 onOpenSession = { navController.navigate(SessionRoute(it)) { launchSingleTop = true } },
                 onOpenPlan = { navController.navigate(PlanRoute) },
                 onBuildPlan = { navController.navigate(OnboardingRoute()) },
+                onOpenLevels = { navController.navigate(AchievementsRoute) },
             )
             historyScreen(onOpenWorkout = { navController.navigate(WorkoutDetailRoute(it)) })
-            progressScreen(onOpenExercise = { navController.navigate(ExerciseHistoryRoute(it)) })
+            progressScreen(
+                onOpenExercise = { navController.navigate(ExerciseHistoryRoute(it)) },
+                onOpenLevels = { navController.navigate(AchievementsRoute) },
+            )
+            achievementsScreen(onBack = { navController.popBackStack<AchievementsRoute>(inclusive = true) })
             workoutDetailScreen(
                 onBack = { navController.popBackStack<WorkoutDetailRoute>(inclusive = true) },
                 onOpenExercise = { navController.navigate(ExerciseHistoryRoute(it)) },

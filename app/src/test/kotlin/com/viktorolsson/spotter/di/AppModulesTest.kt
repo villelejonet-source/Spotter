@@ -19,6 +19,7 @@ import com.viktorolsson.spotter.core.data.db.dao.WorkoutDao
 import com.viktorolsson.spotter.core.data.di.ApplicationScope
 import com.viktorolsson.spotter.core.data.repository.BodyWeightRepository
 import com.viktorolsson.spotter.core.data.repository.ExerciseRepository
+import com.viktorolsson.spotter.core.data.repository.GamificationRepository
 import com.viktorolsson.spotter.core.data.repository.HistoryRepository
 import com.viktorolsson.spotter.core.data.repository.PlanRepository
 import com.viktorolsson.spotter.core.data.repository.RecommendationRepository
@@ -61,7 +62,7 @@ class AppModulesTest {
     private val dataTypes: List<KClass<*>> = listOf(
         DataGraph::class, Clock::class, AppErrors::class, SpotterDatabase::class,
         ExerciseDao::class, UserProfileDao::class, WorkoutDao::class, PlanDao::class, RecommendationDao::class, ScheduleDao::class,
-        UserProfileRepository::class, UserPreferencesRepository::class, ExerciseRepository::class, HistoryRepository::class,
+        UserProfileRepository::class, UserPreferencesRepository::class, ExerciseRepository::class, HistoryRepository::class, GamificationRepository::class,
         PlanRepository::class, BodyWeightRepository::class, RestTimerRepository::class, WorkoutRepository::class,
         ScheduleRepository::class, RecommendationRepository::class, ExerciseSeeder::class, StartupMaintenance::class,
         AccountService::class, SyncRepository::class,

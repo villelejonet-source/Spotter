@@ -4,6 +4,7 @@
 // Enum values are the app's enum names (core/model); `label()` falls back to a readable
 // form of the name so an enum value the web doesn't know yet still shows something.
 
+import type { Badge, LevelTitle } from "./gamification";
 import type { Goal, PersonalRecordType, ProgressionRule, SetType, SplitType } from "./model";
 
 /** "FRONT_DELTS" → "Front delts": the fallback for an unknown enum value. */
@@ -248,3 +249,43 @@ export function progressionReasonLabel(reason: string, timed = false): string {
       return enumLabel(reason);
   }
 }
+
+// ---- Levels and badges (core/ui labels.xml) ----
+
+export const LEVEL_TITLE_LABELS: Record<LevelTitle, string> = {
+  FRESH_CHALK: "Fresh Chalk",
+  BENCH_WARMER: "Bench Warmer",
+  GYM_REGULAR: "Gym Regular",
+  PLATE_COLLECTOR: "Plate Collector",
+  IRON_ADDICT: "Iron Addict",
+  BARBELL_BARON: "Barbell Baron",
+  SQUAT_ROYALTY: "Squat Royalty",
+  IRON_LEGEND: "Iron Legend",
+  MYTHICAL_BEAST: "Mythical Beast",
+};
+
+export const BADGE_LABELS: Record<Badge, { name: string; how: string }> = {
+  FIRST_REP: { name: "First Rep", how: "Finish your first workout" },
+  TEN_DOWN: { name: "Ten Down", how: "Finish 10 workouts" },
+  HALF_CENTURY: { name: "Half Century", how: "Finish 50 workouts" },
+  CENTURION: { name: "Centurion", how: "Finish 100 workouts" },
+  CLUB_250: { name: "250 Club", how: "Finish 250 workouts" },
+  FIRST_PR: { name: "First PR", how: "Set a personal record" },
+  PR_HUNTER: { name: "PR Hunter", how: "Set 10 personal records" },
+  RECORD_MACHINE: { name: "Record Machine", how: "Set 50 personal records" },
+  TRIPLE_THREAT: { name: "Triple Threat", how: "Set all three kinds of record in one workout" },
+  STREAK_4: { name: "On a Roll", how: "Train 4 weeks in a row" },
+  STREAK_12: { name: "Habit Formed", how: "Train 12 weeks in a row" },
+  STREAK_26: { name: "Half a Year Strong", how: "Train 26 weeks in a row" },
+  STREAK_52: { name: "Year of Iron", how: "Train 52 weeks in a row" },
+  GRAND_PIANO: { name: "Piano Mover", how: "Lift a grand piano, all workouts added up" },
+  CAR: { name: "Car Lifter", how: "Lift a car, all workouts added up" },
+  ELEPHANT: { name: "Elephant Hauler", how: "Lift an elephant, all workouts added up" },
+  BLUE_WHALE: { name: "Whale Wrangler", how: "Lift a blue whale, all workouts added up" },
+  EIFFEL_TOWER: { name: "Tower Toppler", how: "Lift the Eiffel Tower, all workouts added up" },
+  LISTENED_TO_YOUR_BODY: { name: "Listened to Your Body", how: "Take a lighter session on a low day" },
+  COMEBACK_KID: { name: "Comeback Kid", how: "Train again after 3 weeks or more away" },
+  EARLY_BIRD: { name: "Early Bird", how: "Start 5 workouts before 7 am" },
+  NIGHT_OWL: { name: "Night Owl", how: "Start 5 workouts at 9 pm or later" },
+  EXPLORER: { name: "Explorer", how: "Train 20 different exercises" },
+};

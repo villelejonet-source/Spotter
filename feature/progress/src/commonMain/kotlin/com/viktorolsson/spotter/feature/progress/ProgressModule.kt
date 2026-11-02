@@ -6,4 +6,5 @@ import org.koin.dsl.module
 /** The progress screens' view models, for Koin. */
 val progressModule = module {
     viewModelOf(::ProgressViewModel)
+    viewModelOf(::AchievementsViewModel)
 }

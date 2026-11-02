@@ -14,6 +14,10 @@ data class UserPreferences(
     val planReviewedOn: kotlinx.datetime.LocalDate? = null,
     /** "Later" on the plan review: hidden through this day. */
     val planReviewSnoozedUntil: kotlinx.datetime.LocalDate? = null,
+    /** XP, levels and badges on Today, the summary and Progress. */
+    val showLevels: Boolean = true,
+    /** The one-time "levels are here" note on Today has been seen. */
+    val levelsIntroSeen: Boolean = false,
 ) {
     fun isDeload(today: kotlinx.datetime.LocalDate): Boolean = deloadUntil != null && today <= deloadUntil
 }

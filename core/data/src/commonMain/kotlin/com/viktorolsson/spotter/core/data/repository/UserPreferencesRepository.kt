@@ -37,6 +37,8 @@ class UserPreferencesRepository(
             deloadUntil = prefs[Keys.DELOAD_UNTIL]?.let(LocalDate::fromEpochDays),
             planReviewedOn = prefs[Keys.PLAN_REVIEWED_ON]?.let(LocalDate::fromEpochDays),
             planReviewSnoozedUntil = prefs[Keys.PLAN_REVIEW_SNOOZED_UNTIL]?.let(LocalDate::fromEpochDays),
+            showLevels = prefs[Keys.SHOW_LEVELS] ?: defaults.showLevels,
+            levelsIntroSeen = prefs[Keys.LEVELS_INTRO_SEEN] ?: defaults.levelsIntroSeen,
         )
     }
 
@@ -86,6 +88,14 @@ class UserPreferencesRepository(
         dataStore.edit { it[Keys.ONBOARDING_COMPLETED] = done }
     }
 
+    suspend fun setShowLevels(show: Boolean) {
+        dataStore.edit { it[Keys.SHOW_LEVELS] = show }
+    }
+
+    suspend fun setLevelsIntroSeen() {
+        dataStore.edit { it[Keys.LEVELS_INTRO_SEEN] = true }
+    }
+
     /** The current unit preference, for callers that only need it once. */
     suspend fun weightUnit(): WeightUnit = preferences.first().weightUnit
 
@@ -100,6 +110,8 @@ class UserPreferencesRepository(
         val ONBOARDING_COMPLETED = booleanPreferencesKey("onboarding_completed")
         val PLAN_REVIEWED_ON = longPreferencesKey("plan_reviewed_on_epoch_day")
         val PLAN_REVIEW_SNOOZED_UNTIL = longPreferencesKey("plan_review_snoozed_until_epoch_day")
+        val SHOW_LEVELS = booleanPreferencesKey("show_levels")
+        val LEVELS_INTRO_SEEN = booleanPreferencesKey("levels_intro_seen")
     }
 }
 

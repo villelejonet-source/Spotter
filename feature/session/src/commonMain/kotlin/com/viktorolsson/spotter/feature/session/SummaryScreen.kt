@@ -43,6 +43,30 @@ import androidx.navigation.toRoute
 import com.viktorolsson.spotter.core.data.AppErrors
 import com.viktorolsson.spotter.core.data.Failure
 import com.viktorolsson.spotter.core.data.launchReporting
+import com.viktorolsson.spotter.core.data.repository.GamificationRepository
+import com.viktorolsson.spotter.core.engine.Gamification
+import com.viktorolsson.spotter.core.engine.GamificationRules
+import com.viktorolsson.spotter.core.model.Badge
+import com.viktorolsson.spotter.core.model.BadgeProgress
+import com.viktorolsson.spotter.core.model.Level
+import com.viktorolsson.spotter.core.model.PlayerProgress
+import com.viktorolsson.spotter.core.model.SessionXp
+import com.viktorolsson.spotter.core.ui.component.BadgeTile
+import com.viktorolsson.spotter.core.ui.component.LevelProgress
+import com.viktorolsson.spotter.core.ui.formatCount
+import com.viktorolsson.spotter.core.ui.theme.SpotterTheme
+import androidx.compose.ui.semantics.LiveRegionMode
+import androidx.compose.ui.semantics.liveRegion
+import com.viktorolsson.spotter.feature.session.resources.summary_level_up
+import com.viktorolsson.spotter.feature.session.resources.summary_new_badges
+import com.viktorolsson.spotter.feature.session.resources.summary_xp_check_in
+import com.viktorolsson.spotter.feature.session.resources.summary_xp_none
+import com.viktorolsson.spotter.feature.session.resources.summary_xp_rate_hint
+import com.viktorolsson.spotter.feature.session.resources.summary_xp_records
+import com.viktorolsson.spotter.feature.session.resources.summary_xp_session
+import com.viktorolsson.spotter.feature.session.resources.summary_xp_sets
+import com.viktorolsson.spotter.feature.session.resources.summary_xp_title
+import com.viktorolsson.spotter.feature.session.resources.summary_xp_week_goal
 import com.viktorolsson.spotter.core.data.repository.HistoryRepository
 import com.viktorolsson.spotter.core.data.repository.UserPreferencesRepository
 import com.viktorolsson.spotter.core.data.repository.WorkoutRepository
@@ -80,6 +104,31 @@ import com.viktorolsson.spotter.feature.session.resources.summary_effort_unset
 import com.viktorolsson.spotter.feature.session.resources.summary_effort_value
 import com.viktorolsson.spotter.feature.session.resources.summary_feel_title
 
+/** What this workout did for the level: its XP, the level now and the badges it unlocked. */
+data class SummaryXp(
+    val earned: SessionXp,
+    val level: Level,
+    /** Where the bar stood before this workout (0–1); 0 after a level-up. */
+    val from: Float,
+    val levelUp: Boolean,
+    val badges: List<Badge>,
+) {
+    companion object {
+        fun of(progress: PlayerProgress, sessionId: Long): SummaryXp? {
+            val earned = progress.xpFor(sessionId) ?: return null
+            val before = Gamification.level(progress.totalXp - earned.total)
+            val levelUp = before.number < progress.level.number
+            return SummaryXp(
+                earned = earned,
+                level = progress.level,
+                from = if (levelUp || before.xpForNext == 0) 0f else before.xpIntoLevel.toFloat() / before.xpForNext,
+                levelUp = levelUp,
+                badges = progress.unlockedBy(sessionId),
+            )
+        }
+    }
+}
+
 data class SummaryUiState(
     val loading: Boolean = true,
     /** Null once loaded means the workout is gone. */
@@ -90,6 +139,8 @@ data class SummaryUiState(
     val feel: Int? = null,
     /** Session effort, 1–10, once rated. */
     val effort: Int? = null,
+    /** Null when levels are switched off. */
+    val xp: SummaryXp? = null,
 )
 
 class SummaryViewModel(
@@ -97,6 +148,7 @@ class SummaryViewModel(
     private val workoutRepository: WorkoutRepository,
     historyRepository: HistoryRepository,
     preferencesRepository: UserPreferencesRepository,
+    gamificationRepository: GamificationRepository,
     private val errors: AppErrors,
 ) : ViewModel() {
     private val sessionId = savedStateHandle.toRoute<SummaryRoute>().sessionId
@@ -105,8 +157,12 @@ class SummaryViewModel(
         workoutRepository.observeSession(sessionId),
         historyRepository.observeSessionRecords(sessionId),
         preferencesRepository.preferences,
-    ) { session, records, prefs ->
-        SummaryUiState(false, session?.let { WorkoutSummary.of(it) }, prefs.weightUnit, records, session?.feel, session?.effort)
+        gamificationRepository.observeProgress(),
+    ) { session, records, prefs, progress ->
+        SummaryUiState(
+            false, session?.let { WorkoutSummary.of(it) }, prefs.weightUnit, records, session?.feel, session?.effort,
+            xp = if (prefs.showLevels) SummaryXp.of(progress, sessionId) else null,
+        )
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), SummaryUiState())
 
     fun rateFeel(feel: Int) = viewModelScope.launchReporting(errors, Failure.SAVE) {
@@ -131,8 +187,10 @@ internal fun SummaryRoute(onDone: () -> Unit, viewModel: SummaryViewModel = koin
             SummaryScreen(
                 summary, uiState.unit, uiState.records, onDone,
                 feel = uiState.feel, effort = uiState.effort, onFeel = viewModel::rateFeel, onEffort = viewModel::rateEffort,
+                xp = uiState.xp,
             )
-            if (uiState.records.isNotEmpty()) Confetti(key = uiState.records.size)
+            val levelUp = uiState.xp?.levelUp == true
+            if (uiState.records.isNotEmpty() || levelUp) Confetti(key = uiState.records.size to levelUp)
         }
     }
 }
@@ -147,6 +205,7 @@ internal fun SummaryScreen(
     effort: Int? = null,
     onFeel: (Int) -> Unit = {},
     onEffort: (Int) -> Unit = {},
+    xp: SummaryXp? = null,
 ) {
     Scaffold(
         bottomBar = {
@@ -187,6 +246,7 @@ internal fun SummaryScreen(
                     StatTile(stringResource(Res.string.summary_sets), summary.completedSets.toString(), Modifier.weight(1f))
                 }
             }
+            if (xp != null) item(key = "xp") { XpCard(xp) }
             item(key = "rating") { RatingCard(feel, effort, onFeel, onEffort) }
             if (records.isNotEmpty()) {
                 item(key = "records") {
@@ -204,6 +264,61 @@ internal fun SummaryScreen(
                         )
                     },
                 )
+            }
+        }
+    }
+}
+
+/** "+275 XP", where it came from, the level bar filling up and any badges this workout unlocked. */
+@Composable
+private fun XpCard(xp: SummaryXp) {
+    val earned = xp.earned
+    ContentCard(Modifier.fillMaxWidth()) {
+        Column(verticalArrangement = Arrangement.spacedBy(Spacing.md)) {
+            Column(verticalArrangement = Arrangement.spacedBy(Spacing.xs)) {
+                Text(
+                    stringResource(Res.string.summary_xp_title, formatCount(earned.total)),
+                    style = SpotterTheme.type.numberMedium,
+                    color = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.semantics { heading() },
+                )
+                val parts = listOfNotNull(
+                    earned.session.takeIf { it > 0 }?.let { stringResource(Res.string.summary_xp_session, it) },
+                    earned.sets.takeIf { it > 0 }?.let { stringResource(Res.string.summary_xp_sets, it) },
+                    earned.records.takeIf { it > 0 }?.let { stringResource(Res.string.summary_xp_records, it) },
+                    earned.checkIn.takeIf { it > 0 }?.let { stringResource(Res.string.summary_xp_check_in, it) },
+                    earned.weeklyGoal.takeIf { it > 0 }?.let { stringResource(Res.string.summary_xp_week_goal, it) },
+                )
+                Text(
+                    if (parts.isEmpty()) stringResource(Res.string.summary_xp_none) else parts.joinToString(" · "),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                if (earned.session > 0 && earned.checkIn == 0) {
+                    Text(
+                        stringResource(Res.string.summary_xp_rate_hint, GamificationRules.CHECK_IN_XP),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+            }
+            if (xp.levelUp) {
+                Text(
+                    stringResource(Res.string.summary_level_up),
+                    style = MaterialTheme.typography.titleMedium,
+                    color = MaterialTheme.colorScheme.tertiary,
+                    modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite },
+                )
+            }
+            LevelProgress(xp.level, from = xp.from)
+            if (xp.badges.isNotEmpty()) {
+                Text(
+                    pluralStringResource(Res.plurals.summary_new_badges, xp.badges.size),
+                    style = MaterialTheme.typography.titleSmall,
+                )
+                xp.badges.forEach { badge ->
+                    BadgeTile(BadgeProgress(badge, badge.target, unlockedBy = earned.sessionId, unlockedOn = null), Modifier.fillMaxWidth(), showStatus = false)
+                }
             }
         }
     }

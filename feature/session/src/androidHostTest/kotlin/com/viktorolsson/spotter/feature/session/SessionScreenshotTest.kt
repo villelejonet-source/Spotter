@@ -1,5 +1,8 @@
 package com.viktorolsson.spotter.feature.session
 
+import kotlinx.datetime.LocalDateTime
+import com.viktorolsson.spotter.core.model.PlayedSession
+import com.viktorolsson.spotter.core.engine.Gamification
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
@@ -278,6 +281,15 @@ class SessionScreenshotTest {
     }
 
     @Test
+    fun summaryLevelUp_light() = capture("summary_level_up_light", dark = false) { SummaryWithXp() }
+
+    @Test
+    fun summaryLevelUp_dark() = capture("summary_level_up_dark", dark = true) { SummaryWithXp() }
+
+    @Test
+    fun summaryLevelUp_largeFont() = capture("summary_level_up_font_1_6", dark = false, fontScale = 1.6f) { SummaryWithXp() }
+
+    @Test
     fun session531_light() = capture("session_531_light", dark = false) { Session(fiveThreeOne = true) }
 
     @Test
@@ -285,4 +297,19 @@ class SessionScreenshotTest {
 
     @Test
     fun sessionLighter_dark() = capture("session_lighter_dark", dark = true) { Session(lighter = true) }
+
+    /** A workout that set records, reached level 3 and unlocked two badges. */
+    @Composable
+    private fun SummaryWithXp() {
+        val history = (1..3).map { day ->
+            PlayedSession(
+                day.toLong(), LocalDateTime(2026, 10, day * 2, 18, 0), 60, false, if (day == 3) 4 else null, null, 16, 2_000.0, setOf("bench"),
+                if (day == 3) listOf(PersonalRecordType.ESTIMATED_1RM, PersonalRecordType.VOLUME) else emptyList(),
+            )
+        }
+        SummaryScreen(
+            WorkoutSummary.of(PreviewData.session()), WeightUnit.KG, PreviewData.records, onDone = {}, feel = 4,
+            xp = SummaryXp.of(Gamification.progress(history, daysPerWeek = 3), 3),
+        )
+    }
 }

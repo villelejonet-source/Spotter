@@ -22,6 +22,10 @@ import com.viktorolsson.spotter.core.ui.theme.SpotterTheme
 import kotlinx.datetime.DateTimeUnit
 import kotlinx.datetime.LocalDate
 import kotlinx.datetime.plus
+import com.viktorolsson.spotter.core.engine.Gamification
+import com.viktorolsson.spotter.core.model.PersonalRecordType
+import com.viktorolsson.spotter.core.model.PlayedSession
+import kotlinx.datetime.atTime
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -124,4 +128,39 @@ class ProgressScreenshotTest {
             SpotterTheme(darkTheme = false, dynamicColor = false) { WeightDialog() }
         }
     }
+
+    /** Six weeks of three workouts a week, a few PRs along the way. */
+    private val progress = Gamification.progress(
+        (0 until 18).map { i ->
+            PlayedSession(
+                i.toLong(), LocalDate(2026, 9, 1).plus(i * 2 + i / 3, DateTimeUnit.DAY).atTime(if (i < 5) 6 else 18, 0), 55, i == 9, if (i == 9) 2 else 4, null,
+                16, 2_400.0, setOf("bench-$i"), if (i % 4 == 3) listOf(PersonalRecordType.ESTIMATED_1RM) else emptyList(),
+            )
+        },
+        daysPerWeek = 3,
+    )
+
+    private fun captureAchievements(name: String, dark: Boolean, fontScale: Float = 1f) = captureRoboImage(
+        "src/test/screenshots/$name.png",
+        roborazziComposeOptions = RoborazziComposeOptions { fontScale(fontScale) },
+    ) {
+        SpotterTheme(darkTheme = dark, dynamicColor = false) {
+            AchievementsScreen(AchievementsUiState(loading = false, progress = progress), onBack = {})
+        }
+    }
+
+    @Test
+    fun achievements_light() = captureAchievements("achievements_light", dark = false)
+
+    @Test
+    fun achievements_dark() = captureAchievements("achievements_dark", dark = true)
+
+    @Test
+    fun achievements_largeFont() = captureAchievements("achievements_font_1_6", dark = false, fontScale = 1.6f)
+
+    @Test
+    fun withLevels_light() = capture(
+        "progress_levels_light", dark = false,
+        full.copy(levels = LevelSummary(progress.level, progress.badges.count { it.unlocked }, progress.badges.size)),
+    )
 }

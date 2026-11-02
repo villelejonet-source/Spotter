@@ -32,6 +32,10 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import com.viktorolsson.spotter.feature.progress.resources.progress_levels_badges
+import com.viktorolsson.spotter.feature.progress.resources.progress_levels_open
+import com.viktorolsson.spotter.core.ui.component.LevelProgress
+import androidx.compose.ui.draw.clip
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -106,11 +110,12 @@ import com.viktorolsson.spotter.feature.progress.resources.progress_feel_low_day
 import com.viktorolsson.spotter.feature.progress.resources.progress_feel_none
 
 @Composable
-internal fun ProgressRoute(onOpenExercise: (String) -> Unit, viewModel: ProgressViewModel = koinViewModel()) {
+internal fun ProgressRoute(onOpenExercise: (String) -> Unit, onOpenLevels: () -> Unit, viewModel: ProgressViewModel = koinViewModel()) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     ProgressScreen(
         state = state,
         onOpenExercise = onOpenExercise,
+        onOpenLevels = onOpenLevels,
         onApply = viewModel::apply,
         onDismiss = viewModel::dismiss,
         onLogWeight = viewModel::logWeight,
@@ -125,6 +130,7 @@ internal fun ProgressScreen(
     onDismiss: (Long) -> Unit,
     /** Saves the typed weight; false when it isn't a weight in the accepted range. */
     onLogWeight: (String) -> Boolean,
+    onOpenLevels: () -> Unit = {},
 ) {
     var loggingWeight by rememberSaveable { mutableStateOf(false) }
     Scaffold(topBar = { SpotterTopBar(title = stringResource(Res.string.progress_title)) }) { padding ->
@@ -149,6 +155,7 @@ internal fun ProgressScreen(
                     )
                 }
             }
+            state.levels?.let { levels -> item(key = "levels") { LevelsCard(levels, onOpenLevels) } }
             if (state.isEmpty) {
                 item {
                     EmptyState(
@@ -352,3 +359,18 @@ internal fun LogWeightDialog(unit: WeightUnit, initial: String, onSave: (String)
 private const val ZONE_ALPHA = 0.16f
 private const val BAR_HEADROOM = 1.25
 private val BAR_HEIGHT = 8.dp
+
+/** The level and badge count; opens levels and badges. */
+@Composable
+private fun LevelsCard(levels: LevelSummary, onOpen: () -> Unit) {
+    val openLabel = stringResource(Res.string.progress_levels_open)
+    ContentCard(
+        Modifier.fillMaxWidth().clip(MaterialTheme.shapes.medium).clickable(onClickLabel = openLabel, role = Role.Button, onClick = onOpen),
+    ) {
+        LevelProgress(levels.level)
+        Text(
+            stringResource(Res.string.progress_levels_badges, levels.badgesUnlocked, levels.badgesTotal),
+            style = MaterialTheme.typography.bodyMedium,
+        )
+    }
+}

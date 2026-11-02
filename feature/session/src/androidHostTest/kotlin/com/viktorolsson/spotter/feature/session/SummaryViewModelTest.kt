@@ -48,6 +48,7 @@ class SummaryViewModelTest {
         workoutRepository = graph.workouts,
         historyRepository = graph.history,
         preferencesRepository = graph.preferences,
+        gamificationRepository = graph.gamification,
         errors = graph.errors,
     )
 

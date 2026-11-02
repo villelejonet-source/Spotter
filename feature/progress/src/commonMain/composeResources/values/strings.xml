@@ -26,4 +26,16 @@
     <string name="progress_lifts">Your lifts</string>
     <string name="progress_lift_meta">%1$s · last %2$s</string>
     <string name="progress_open_exercise">Open exercise history</string>
+    <string name="progress_levels_badges">%1$d of %2$d badges</string>
+    <string name="progress_levels_open">Open levels and badges</string>
+    <string name="achievements_title">Levels and badges</string>
+    <string name="achievements_xp_total">%1$s XP in total</string>
+    <string name="achievements_how_title">How to earn XP</string>
+    <string name="achievements_how_session">Finish a workout: %1$d XP, a lighter one too</string>
+    <string name="achievements_how_sets">Each working set: %1$d XP, up to %2$d sets</string>
+    <string name="achievements_how_records">Each PR: %1$d XP</string>
+    <string name="achievements_how_check_in">Check in before or rate after: %1$d XP</string>
+    <string name="achievements_how_week_goal">Reach your days a week: %1$d XP</string>
+    <string name="achievements_how_limits">Workouts under %1$d minutes don't count, and only %2$d a day earn workout XP. Missing a day never costs anything.</string>
+    <string name="achievements_badges">Badges · %1$d of %2$d</string>
 </resources>

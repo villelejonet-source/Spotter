@@ -55,6 +55,8 @@ import com.viktorolsson.spotter.core.ui.theme.Spacing
 import com.viktorolsson.spotter.core.ui.theme.supportsDynamicColor
 import com.viktorolsson.spotter.feature.settings.resources.Res
 import com.viktorolsson.spotter.feature.settings.resources.backup_change_password
+import com.viktorolsson.spotter.feature.settings.resources.settings_show_levels
+import com.viktorolsson.spotter.feature.settings.resources.settings_show_levels_summary
 import com.viktorolsson.spotter.feature.settings.resources.backup_delete
 import com.viktorolsson.spotter.feature.settings.resources.backup_delete_body
 import com.viktorolsson.spotter.feature.settings.resources.backup_delete_confirm
@@ -136,6 +138,7 @@ internal fun SettingsRoute(
         onRebuildPlan = onRebuildPlan,
         onThemeModeChange = { viewModel.setThemeMode(it) },
         onDynamicColorChange = { viewModel.setDynamicColor(it) },
+        onShowLevelsChange = { viewModel.setShowLevels(it) },
         onWeightUnitChange = { viewModel.setWeightUnit(it) },
         onDefaultRestChange = { viewModel.setDefaultRest(it) },
         onEffortScaleChange = { viewModel.setEffortScale(it) },
@@ -156,6 +159,7 @@ internal fun SettingsScreen(
     onWeightUnitChange: (WeightUnit) -> Unit,
     onDefaultRestChange: (Int) -> Unit,
     onEffortScaleChange: (EffortScale) -> Unit,
+    onShowLevelsChange: (Boolean) -> Unit = {},
     snackbarHostState: SnackbarHostState = remember { SnackbarHostState() },
 ) {
     var pickingRest by rememberSaveable { mutableStateOf(false) }
@@ -217,6 +221,17 @@ internal fun SettingsScreen(
                         }
                         Switch(checked = preferences.dynamicColor, onCheckedChange = onDynamicColorChange)
                     }
+                }
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Column(Modifier.weight(1f)) {
+                        Text(stringResource(Res.string.settings_show_levels), style = MaterialTheme.typography.bodyLarge)
+                        Text(
+                            stringResource(Res.string.settings_show_levels_summary),
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
+                    Switch(checked = preferences.showLevels, onCheckedChange = onShowLevelsChange)
                 }
             }
 

@@ -96,4 +96,31 @@
     <string name="badge_unlocked_on">Unlocked %1$s</string>
     <string name="badge_progress">%1$d% there</string>
     <string name="badge_locked_description">Locked</string>
+    <!-- Program cards: wording repeated in web/src/lib/labels.ts (PROGRAM_LABELS). -->
+    <string name="program_full_body">Full body</string>
+    <string name="program_upper_lower">Upper / Lower</string>
+    <string name="program_ppl">Push / Pull / Legs</string>
+    <string name="program_531">5/3/1</string>
+    <string name="program_full_body_pitch">Every session trains your whole body.</string>
+    <string name="program_upper_lower_pitch">Alternate upper-body and lower-body days.</string>
+    <string name="program_ppl_pitch">Pushing, pulling and leg days, with more sets for each muscle.</string>
+    <string name="program_531_pitch">Four barbell days built around the big lifts.</string>
+    <string name="program_full_body_for">New lifters, two or three days a week, and busy weeks. Each muscle gets trained every session, so a missed day costs little. Good for general fitness and fat loss.</string>
+    <string name="program_upper_lower_for">Some experience and four days a week. More work per muscle than full body, with time to recover between days. Good for strength and muscle.</string>
+    <string name="program_ppl_for">Building muscle with longer sessions. Best at six days, when each muscle is trained twice a week; at three days it's once a week.</string>
+    <string name="program_531_for">Getting stronger slowly and steadily on the bench, squat, deadlift and overhead press. Best once you know roughly what you lift.</string>
+    <string name="program_full_body_week">Full body A, B and C in turn</string>
+    <string name="program_upper_lower_week">Upper, Lower, Upper, Lower</string>
+    <string name="program_ppl_week">Push, Pull, Legs, then again at six days</string>
+    <string name="program_531_week">Press, Deadlift, Bench and Squat days</string>
+    <string name="program_split_progress">Add reps until you reach the top of the range, then add weight. Main lifts add weight each time you hit your reps when you're new or training for strength.</string>
+    <string name="program_531_progress">Each week is a percentage of your training max (90% of your estimated 1RM), the last set as many reps as you can, and every fourth week is lighter. The training max goes up after each cycle.</string>
+    <string name="program_heading_for">Good for</string>
+    <string name="program_heading_week">A week</string>
+    <string name="program_heading_progress">How it progresses</string>
+    <string name="program_days">%1$d days a week</string>
+    <string name="program_suits_you">Suits you</string>
+    <string name="program_current">Your plan</string>
+    <string name="program_needs_barbell">Needs a barbell. Add one to your equipment to use it.</string>
+    <string name="program_needs_three_days">Needs at least three days a week.</string>
 </resources>

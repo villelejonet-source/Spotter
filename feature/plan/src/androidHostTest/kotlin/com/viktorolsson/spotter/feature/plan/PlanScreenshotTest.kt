@@ -34,7 +34,7 @@ class PlanScreenshotTest {
             roborazziComposeOptions = RoborazziComposeOptions { fontScale(fontScale) },
         ) {
             SpotterTheme(darkTheme = dark, dynamicColor = false) {
-                PlanScreen(state, onBack = {}, onRebuild = {}, onStartDay = {})
+                PlanScreen(state, onBack = {}, onRebuild = {}, onOpenPrograms = {}, onStartDay = {})
             }
         }
 

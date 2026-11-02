@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { formatCheckIn, GOAL_LABELS, label, PR_LABELS, progressionReasonLabel, SPLIT_LABELS } from "./labels";
+import { formatCheckIn, GOAL_LABELS, label, planKindLabel, PR_LABELS, progressionReasonLabel, SPLIT_LABELS } from "./labels";
 import { formatDuration, formatRecord, formatSet, formatSetEffort, formatTarget, formatVolume, formatWeight, formatWeightValue } from "./model";
 
 describe("formatWeight", () => {
@@ -67,6 +67,13 @@ describe("labels", () => {
     expect(SPLIT_LABELS.PUSH_PULL_LEGS).toBe("Push / Pull / Legs");
     expect(PR_LABELS.ESTIMATED_1RM).toBe("Est. 1RM");
     expect(PR_LABELS.REPS_AT_WEIGHT).toBe("Rep record");
+  });
+
+  it("names a 5/3/1 plan 5/3/1, not Custom", () => {
+    const day = (trainingMax: number | null) => ({ exercises: [{ training_max_kg: null }, { training_max_kg: trainingMax }] });
+    expect(planKindLabel({ split_type: "CUSTOM", days: [day(null), day(100)] })).toBe("5/3/1");
+    expect(planKindLabel({ split_type: "CUSTOM", days: [day(null)] })).toBe("Custom");
+    expect(planKindLabel({ split_type: "UPPER_LOWER", days: [] })).toBe("Upper / Lower");
   });
 
   it("falls back to a readable name for unknown values", () => {

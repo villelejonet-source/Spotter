@@ -2,7 +2,7 @@ import Link from "next/link";
 import { Badge, Card, EmptyState, LinkButton, PageHeader } from "@/components/ui";
 import { getPlans } from "@/lib/data";
 import { formatFullDate } from "@/lib/dates";
-import { GOAL_LABELS, label, SPLIT_LABELS } from "@/lib/labels";
+import { GOAL_LABELS, label, planKindLabel } from "@/lib/labels";
 
 export const metadata = { title: "Plans" };
 
@@ -30,7 +30,7 @@ export default async function PlansPage() {
                     {p.is_active && <Badge tone="primary">Active</Badge>}
                   </div>
                   <div className="mt-1 text-xs text-muted">
-                    {label(SPLIT_LABELS, p.split_type)} · {label(GOAL_LABELS, p.goal)} · created {formatFullDate(p.created_at)}
+                    {planKindLabel(p)} · {label(GOAL_LABELS, p.goal)} · created {formatFullDate(p.created_at)}
                   </div>
                   <ul className="mt-4 space-y-1 text-sm">
                     {p.days.map((d) => (

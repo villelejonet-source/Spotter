@@ -41,7 +41,14 @@ import com.viktorolsson.spotter.core.model.EffortScale
 import com.viktorolsson.spotter.core.model.PlanDay
 import com.viktorolsson.spotter.core.model.PlanExercise
 import com.viktorolsson.spotter.core.model.isTimed
+import com.viktorolsson.spotter.core.model.Program
+import com.viktorolsson.spotter.core.model.program
 import com.viktorolsson.spotter.core.ui.component.ConfirmDialog
+import com.viktorolsson.spotter.core.ui.component.ContentCard
+import com.viktorolsson.spotter.core.ui.component.SecondaryButton
+import com.viktorolsson.spotter.core.ui.pitchRes
+import com.viktorolsson.spotter.feature.plan.resources.plan_program_custom
+import com.viktorolsson.spotter.feature.plan.resources.plan_programs
 import com.viktorolsson.spotter.core.ui.component.EmptyState
 import com.viktorolsson.spotter.core.ui.component.Eyebrow
 import com.viktorolsson.spotter.core.ui.component.LoadingState
@@ -70,6 +77,7 @@ import com.viktorolsson.spotter.feature.plan.resources.plan_title
 internal fun PlanRoute(
     onBack: () -> Unit,
     onRebuild: () -> Unit,
+    onOpenPrograms: () -> Unit,
     onOpenSession: (Long) -> Unit,
     viewModel: PlanViewModel = koinViewModel(),
 ) {
@@ -79,6 +87,7 @@ internal fun PlanRoute(
         state = state,
         onBack = onBack,
         onRebuild = onRebuild,
+        onOpenPrograms = onOpenPrograms,
         onStartDay = { viewModel.startDay(it, onOpenSession) },
     )
     inProgress?.let { running ->
@@ -97,6 +106,7 @@ internal fun PlanScreen(
     state: PlanUiState,
     onBack: () -> Unit,
     onRebuild: () -> Unit,
+    onOpenPrograms: () -> Unit,
     onStartDay: (planDayId: Long) -> Unit,
 ) {
     var confirmRebuild by rememberSaveable { mutableStateOf(false) }
@@ -130,6 +140,7 @@ internal fun PlanScreen(
                 verticalArrangement = Arrangement.spacedBy(Dimens.ListGap),
             ) {
                 item { SectionHeader(plan.name) }
+                item { ProgramSummary(plan.program(), onOpenPrograms) }
                 items(plan.days, key = { it.id }) { day ->
                     DayCard(day, isNext = day.id == state.nextDayId, effortScale = state.effortScale) { onStartDay(day.id) }
                 }
@@ -147,8 +158,9 @@ internal fun PlanScreen(
     }
 }
 
+/** A plan day and its exercises; [onStart] null leaves out the Start button (a preview). */
 @Composable
-private fun DayCard(day: PlanDay, isNext: Boolean, effortScale: EffortScale, onStart: () -> Unit) {
+internal fun DayCard(day: PlanDay, isNext: Boolean, effortScale: EffortScale, onStart: (() -> Unit)?) {
     // The next day stands out with the accent's border, like a selected option.
     Card(
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow),
@@ -169,10 +181,10 @@ private fun DayCard(day: PlanDay, isNext: Boolean, effortScale: EffortScale, onS
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                 }
-                if (isNext) {
-                    Button(onClick = onStart) { Text(stringResource(Res.string.plan_start_day)) }
-                } else {
-                    FilledTonalButton(onClick = onStart) { Text(stringResource(Res.string.plan_start_day)) }
+                when {
+                    onStart == null -> Unit
+                    isNext -> Button(onClick = onStart) { Text(stringResource(Res.string.plan_start_day)) }
+                    else -> FilledTonalButton(onClick = onStart) { Text(stringResource(Res.string.plan_start_day)) }
                 }
             }
             day.exercises.forEach { PlanExerciseRow(it, effortScale) }
@@ -199,6 +211,19 @@ internal fun PlanExerciseRow(exercise: PlanExercise, effortScale: EffortScale) {
             style = SpotterTheme.type.numberSmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
+    }
+}
+
+/** What kind of plan this is (the header above names it), and the way to the program cards. */
+@Composable
+private fun ProgramSummary(program: Program?, onOpenPrograms: () -> Unit) {
+    ContentCard {
+        Text(
+            stringResource(program?.pitchRes ?: Res.string.plan_program_custom),
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        SecondaryButton(stringResource(Res.string.plan_programs), onClick = onOpenPrograms, modifier = Modifier.fillMaxWidth())
     }
 }
 

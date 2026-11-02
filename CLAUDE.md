@@ -13,7 +13,8 @@ rules are how it keeps the repository safe. One repository holds every part:
 
 `README.md` has the module layout; `web/README.md` the website and Vercel setup;
 `docs/play-store/README.md` the Play Console steps and the version table;
-`docs/platform/infrastructure.md` hosting, accounts and the database workflow.
+`docs/platform/infrastructure.md` hosting, accounts and the database workflow;
+`docs/ideas.md` the idea backlog and open hand checks (add ideas there, remove them when built).
 
 ## Architecture: where things live
 

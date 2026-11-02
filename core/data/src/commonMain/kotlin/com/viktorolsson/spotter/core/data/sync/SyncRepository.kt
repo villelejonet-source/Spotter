@@ -41,6 +41,20 @@ data class SyncStatus(
 
 enum class SyncError { OFFLINE, FAILED }
 
+/**
+ * What the account screen needs: [SyncRepository] in the app, a fake in tests. Calls throw
+ * [AuthException]; any sign-in starts the first sync by itself.
+ */
+interface Accounts {
+    val status: Flow<SyncStatus>
+    suspend fun signIn(email: String, password: String)
+    suspend fun sendCode(email: String)
+    suspend fun sendPasswordReset(email: String)
+    suspend fun verifyCode(email: String, code: String, purpose: CodePurpose)
+    suspend fun updatePassword(password: String, nonce: String? = null)
+    fun finishPasswordRecovery()
+}
+
 /** Cloud backup and sync: sign-in, running a sync, and its status for the UI. */
 class SyncRepository(
     private val accounts: AccountService,
@@ -54,7 +68,7 @@ class SyncRepository(
     private val clock: Clock,
     device: DeviceIdentity,
     catalogVersion: suspend () -> Int,
-) {
+) : Accounts {
     private val engine = SyncEngine(store, remote, cursors, clock, catalogVersion, device = device::checkIn)
     private val mutex = Mutex()
     private val running = MutableStateFlow(false)
@@ -62,7 +76,7 @@ class SyncRepository(
     private val choice = MutableStateFlow<SyncOutcome.NeedsChoice?>(null)
     private var lastOpenSyncAt = 0L
 
-    val status: Flow<SyncStatus> = combine(accounts.account, cursors.cursor, running, error, choice) { account, cursor, running, error, choice ->
+    override val status: Flow<SyncStatus> = combine(accounts.account, cursors.cursor, running, error, choice) { account, cursor, running, error, choice ->
         SyncStatus(
             available = accounts.isAvailable,
             account = account,
@@ -91,26 +105,20 @@ class SyncRepository(
 
     fun handleDeeplink(url: String?) = accounts.handleDeeplink(url)
 
-    // Account calls throw AuthException. Any sign-in triggers the first sync by itself.
+    override suspend fun signIn(email: String, password: String) = accounts.signIn(email, password)
 
-    suspend fun signUp(email: String, password: String) = accounts.signUp(email, password)
+    override suspend fun sendCode(email: String) = accounts.sendCode(email)
 
-    suspend fun signIn(email: String, password: String) = accounts.signIn(email, password)
+    override suspend fun sendPasswordReset(email: String) = accounts.sendPasswordReset(email)
 
-    suspend fun sendCode(email: String) = accounts.sendCode(email)
+    override suspend fun verifyCode(email: String, code: String, purpose: CodePurpose) = accounts.verifyCode(email, code, purpose)
 
-    suspend fun resendConfirmation(email: String) = accounts.resendConfirmation(email)
-
-    suspend fun sendPasswordReset(email: String) = accounts.sendPasswordReset(email)
-
-    suspend fun verifyCode(email: String, code: String, purpose: CodePurpose) = accounts.verifyCode(email, code, purpose)
-
-    suspend fun updatePassword(password: String, nonce: String? = null) = accounts.updatePassword(password, nonce)
+    override suspend fun updatePassword(password: String, nonce: String?) = accounts.updatePassword(password, nonce)
 
     /** True after a password-reset link opened the app: ask for a new password. */
     val recoveringPassword: StateFlow<Boolean> get() = accounts.recovering
 
-    fun finishPasswordRecovery() = accounts.finishRecovery()
+    override fun finishPasswordRecovery() = accounts.finishRecovery()
 
     /** Runs a sync now if signed in. Returns false when it failed (worth retrying). */
     suspend fun syncNow(choice: FirstSyncChoice? = null): Boolean {

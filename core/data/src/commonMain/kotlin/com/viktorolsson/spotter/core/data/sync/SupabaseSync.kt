@@ -159,27 +159,20 @@ object SignInLinks {
 
 /** Why a sign-in, sign-up or password request failed, in terms the screens can explain. */
 enum class AuthProblem {
-    WRONG_CREDENTIALS, EMAIL_NOT_CONFIRMED, ALREADY_REGISTERED, CODE_INVALID, WEAK_PASSWORD, SAME_PASSWORD,
+    WRONG_CREDENTIALS, EMAIL_NOT_CONFIRMED, CODE_INVALID, WEAK_PASSWORD, SAME_PASSWORD,
     REAUTHENTICATION_NEEDED, RATE_LIMITED, INVALID_EMAIL, OFFLINE, OTHER,
 }
 
 class AuthException(val problem: AuthProblem, cause: Throwable? = null) : Exception(problem.name, cause)
 
-/** What the email code is for; each matches a Supabase email template. */
-enum class CodePurpose { SIGN_IN, SIGN_UP, RECOVERY }
-
-enum class SignUpResult {
-    /** The confirmation email is on its way; the code (or its link) finishes sign-up. */
-    CONFIRM_EMAIL,
-    /** The project doesn't require confirmation: already signed in. */
-    SIGNED_IN,
-}
+/** What the email code is for: signing in (which also makes new accounts), or a password reset. */
+enum class CodePurpose { SIGN_IN, RECOVERY }
 
 /**
- * Accounts are email + password, shared with the website. Every email (confirm sign-up,
- * sign-in code, password reset) has a link that opens the app (see [handleDeeplink]) and
- * a code that can be typed in instead (docs/platform/auth-emails.md). Accounts made before
- * passwords existed sign in with a code, and can set a password with "forgot password".
+ * Accounts are shared with the website. The way in is an emailed code: the same code signs
+ * in an existing account, makes a new one, and confirms one that never was. A password is
+ * optional, for those who set one. Every email has a link that opens the app (see
+ * [handleDeeplink]) and a code that can be typed in instead (docs/platform/auth-emails.md).
  */
 class AccountService(
     private val provider: SupabaseProvider,
@@ -216,17 +209,6 @@ class AccountService(
     @Volatile
     var signedInFromLink: Boolean = false
 
-    suspend fun signUp(email: String, password: String): SignUpResult = authCall {
-        val user = requireClient().auth.signUpWith(Email, redirectUrl = REDIRECT_URL) {
-            this.email = email.trim()
-            this.password = password
-        }
-        // With confirmation on, Supabase hides whether the address is taken: an existing
-        // account comes back without identities, and no email is sent.
-        if (user != null && user.identities?.isEmpty() == true) throw AuthException(AuthProblem.ALREADY_REGISTERED)
-        if (awaitAccount() != null) SignUpResult.SIGNED_IN else SignUpResult.CONFIRM_EMAIL
-    }
-
     suspend fun signIn(email: String, password: String) = authCall {
         requireClient().auth.signInWith(Email) {
             this.email = email.trim()
@@ -235,22 +217,14 @@ class AccountService(
     }
 
     /**
-     * Emails a sign-in code (and link) to an existing account. New accounts are made with
-     * [signUp]. An unknown address is treated as sent, so this doesn't reveal who has one.
+     * Emails a sign-in code (and link). An unknown address gets a new account, so sign-up
+     * and sign-in are the same step, and an unconfirmed one is confirmed by the code.
      */
     suspend fun sendCode(email: String) = authCall {
-        try {
-            requireClient().auth.signInWith(OTP, redirectUrl = REDIRECT_URL) {
-                this.email = email.trim()
-                createUser = false
-            }
-        } catch (e: AuthRestException) {
-            if (e.errorCode != AuthErrorCode.OtpDisabled) throw e
+        requireClient().auth.signInWith(OTP, redirectUrl = REDIRECT_URL) {
+            this.email = email.trim()
+            createUser = true
         }
-    }
-
-    suspend fun resendConfirmation(email: String) = authCall {
-        requireClient().auth.resendEmail(OtpType.Email.SIGNUP, email.trim())
     }
 
     suspend fun sendPasswordReset(email: String) = authCall {
@@ -260,7 +234,6 @@ class AccountService(
     suspend fun verifyCode(email: String, code: String, purpose: CodePurpose = CodePurpose.SIGN_IN): Unit = authCall {
         val type = when (purpose) {
             CodePurpose.SIGN_IN -> OtpType.Email.EMAIL
-            CodePurpose.SIGN_UP -> OtpType.Email.SIGNUP
             CodePurpose.RECOVERY -> OtpType.Email.RECOVERY
         }
         requireClient().auth.verifyEmailOtp(type = type, email = email.trim(), token = code.trim())
@@ -303,7 +276,6 @@ class AccountService(
     private fun AuthErrorCode?.toProblem() = when (this) {
         AuthErrorCode.InvalidCredentials -> AuthProblem.WRONG_CREDENTIALS
         AuthErrorCode.EmailNotConfirmed -> AuthProblem.EMAIL_NOT_CONFIRMED
-        AuthErrorCode.UserAlreadyExists, AuthErrorCode.EmailExists -> AuthProblem.ALREADY_REGISTERED
         AuthErrorCode.OtpExpired -> AuthProblem.CODE_INVALID
         AuthErrorCode.WeakPassword -> AuthProblem.WEAK_PASSWORD
         AuthErrorCode.SamePassword -> AuthProblem.SAME_PASSWORD

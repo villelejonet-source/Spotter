@@ -41,7 +41,13 @@ describe("middleware", () => {
   it("sends signed-out visitors to /login, recovery cookie or not", async () => {
     session.signedIn = false;
     expect(redirectTarget(await middleware(request("/reset-password", { [RECOVERY_COOKIE]: "1" })))).toBe("/login");
-    expect(redirectTarget(await middleware(request("/plans")))).toBe("/login");
+    expect(redirectTarget(await middleware(request("/")))).toBe("/login");
+  });
+
+  it("remembers the page a signed-out visitor wanted", async () => {
+    session.signedIn = false;
+    expect(redirectTarget(await middleware(request("/plans")))).toBe("/login?next=%2Fplans");
+    expect(redirectTarget(await middleware(request("/history/42?tab=sets")))).toBe("/login?next=%2Fhistory%2F42%3Ftab%3Dsets");
   });
 
   it("keeps the email-code and link endpoints reachable signed out", async () => {
@@ -54,15 +60,18 @@ describe("middleware", () => {
     expect(redirectTarget(await middleware(request("/privacy")))).toBeNull();
     session.signedIn = false;
     expect(redirectTarget(await middleware(request("/privacy")))).toBeNull();
-    expect(redirectTarget(await middleware(request("/privacy-not")))).toBe("/login");
+    expect(redirectTarget(await middleware(request("/privacy-not")))).toBe("/login?next=%2Fprivacy-not");
   });
 
   it("guards paths that merely look like static files", async () => {
     session.signedIn = false;
-    expect(redirectTarget(await middleware(request("/export.png")))).toBe("/login");
+    expect(redirectTarget(await middleware(request("/export.png")))).toBe("/login?next=%2Fexport.png");
   });
 
-  it("forwards signed-in users away from /login", async () => {
-    expect(redirectTarget(await middleware(request("/login?next=/x")))).toBe("/");
+  it("forwards signed-in users away from /login, to where they were going", async () => {
+    expect(redirectTarget(await middleware(request("/login")))).toBe("/");
+    expect(redirectTarget(await middleware(request("/login?next=/x")))).toBe("/x");
+    expect(redirectTarget(await middleware(request("/login?next=//evil.example")))).toBe("/");
+    expect(redirectTarget(await middleware(request("/signup")))).toBe("/");
   });
 });

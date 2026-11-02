@@ -209,7 +209,7 @@ fun SpotterApp(
             )
             onboardingScreen(
                 onDone = { navController.popBackStack<OnboardingRoute>(inclusive = true) },
-                onSignIn = { navController.navigate(AccountRoute(newAccount = it)) },
+                onSignIn = { navController.navigate(AccountRoute()) },
             )
             accountScreen(onDone = { navController.popBackStack<AccountRoute>(inclusive = true) })
             planScreen(

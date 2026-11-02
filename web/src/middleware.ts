@@ -1,7 +1,7 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 // Relative, not "@/lib/auth": vitest has no path aliases configured (see middleware.test.ts).
-import { RECOVERY_COOKIE } from "./lib/auth";
+import { RECOVERY_COOKIE, safeNext } from "./lib/auth";
 
 /**
  * Reachable signed out. /reset-password is not: the reset email's link or code signs in first.
@@ -43,15 +43,16 @@ export async function middleware(request: NextRequest) {
   const path = request.nextUrl.pathname;
   const isPublic = PUBLIC_PATHS.some((p) => path === p || path.startsWith(`${p}/`));
   if (!user && !isPublic) {
+    // Remember where they were going, so signing in lands there instead of on Today.
+    const wanted = path + request.nextUrl.search;
     const url = request.nextUrl.clone();
     url.pathname = "/login";
-    url.search = "";
+    // Not /reset-password: it needs the recovery cookie, which signing in doesn't set.
+    url.search = wanted === "/" || path === "/reset-password" ? "" : `?${new URLSearchParams({ next: wanted })}`;
     return redirectKeepingCookies(url, response);
   }
   if (user && SIGNED_OUT_ONLY.includes(path)) {
-    const url = request.nextUrl.clone();
-    url.pathname = "/";
-    url.search = "";
+    const url = new URL(safeNext(request.nextUrl.searchParams.get("next")), request.nextUrl);
     return redirectKeepingCookies(url, response);
   }
   if (path === "/reset-password" && !request.cookies.has(RECOVERY_COOKIE)) {

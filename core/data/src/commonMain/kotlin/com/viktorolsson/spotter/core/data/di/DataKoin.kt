@@ -1,8 +1,10 @@
 package com.viktorolsson.spotter.core.data.di
 
 import com.viktorolsson.spotter.core.data.DataGraph
+import com.viktorolsson.spotter.core.data.sync.Accounts
 import org.koin.core.module.Module
 import org.koin.core.qualifier.named
+import org.koin.dsl.bind
 import org.koin.dsl.module
 
 /** Scope for work that must outlive any screen, such as seeding and auto-save writes: `get(ApplicationScope)`. */
@@ -40,5 +42,5 @@ fun dataModule(graph: DataGraph): Module = module {
     single { graph.seeder }
     single { graph.startupMaintenance }
     single { graph.accounts }
-    single { graph.sync }
+    single { graph.sync } bind Accounts::class
 }

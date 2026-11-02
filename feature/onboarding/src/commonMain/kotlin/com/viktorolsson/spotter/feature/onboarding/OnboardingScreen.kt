@@ -120,7 +120,7 @@ import com.viktorolsson.spotter.feature.onboarding.resources.onb_weight
 @Composable
 internal fun OnboardingRoute(
     onDone: () -> Unit,
-    onSignIn: (newAccount: Boolean) -> Unit,
+    onSignIn: () -> Unit,
     viewModel: OnboardingViewModel = koinViewModel(),
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
@@ -129,8 +129,8 @@ internal fun OnboardingRoute(
         // Back on the welcome screen leaves the app as usual.
         state.welcome -> {
             WelcomeScreen(
-                onCreateAccount = { onSignIn(true) },
-                onSignIn = { onSignIn(false) },
+                onCreateAccount = onSignIn,
+                onSignIn = onSignIn,
                 onContinueWithout = viewModel::continueWithoutAccount,
             )
             return

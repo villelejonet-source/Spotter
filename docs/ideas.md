@@ -25,3 +25,11 @@ and delete it here in the same pull request.
   month, shown in December.
 - **Sync the "Levels and badges" switch** so the website hides them too. Today it's stored only
   on the phone; syncing it needs a `user_profile` column (expand, then contract).
+
+### Cardio
+- **Log cardio in the app**: a cardio entry (running, cycling, rowing, walking, …) with
+  duration, distance and optionally average heart rate or calories, logged on its own or as
+  part of a workout. Shows in history and on the website, and syncs like the rest (needs a
+  Room migration and a Supabase migration, expand then contract).
+- **Cardio in the workout rotation**: let a plan include cardio days or a cardio block at the
+  end of a lifting day, so the rotation suggests them alongside the lifting days.

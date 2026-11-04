@@ -22,6 +22,14 @@ and delete it here in the same pull request.
 
 ## Ideas
 
+### Plans
+- **Build and edit plans in the app**: today plans are built and edited on the website only;
+  the app generates one from the questionnaire or a program card. In the app, also: make a plan
+  from scratch (days, exercises, sets, rep range, RIR, starting weight, progression, 5/3/1),
+  edit the active plan's days and exercises, duplicate, delete, and switch between saved plans.
+  Same rules as the website's plan editor, built once in shared code for both phones; edits
+  sync like the rest, with a plan saved on the phone and the website at once merged by row.
+
 ### Cardio
 - **Log cardio in the app**: running, cycling, rowing, walking and so on, on its own or as part
   of a workout, with duration, distance and optionally average heart rate or calories. Shows

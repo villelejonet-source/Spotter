@@ -6,7 +6,7 @@ import com.viktorolsson.spotter.core.data.db.toModel
 import com.viktorolsson.spotter.core.data.repository.HistoryRepository
 import com.viktorolsson.spotter.core.data.repository.MutableClock
 import com.viktorolsson.spotter.core.data.repository.PlanRepository
-import com.viktorolsson.spotter.core.data.repository.PlanReviewChoice
+import com.viktorolsson.spotter.core.data.repository.LiftChoice
 import com.viktorolsson.spotter.core.data.repository.RecommendationRepository
 import com.viktorolsson.spotter.core.data.repository.UserProfileRepository
 import com.viktorolsson.spotter.core.data.repository.WorkoutRepository
@@ -26,6 +26,7 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.runTest
 import org.junit.After
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.junit.runner.RunWith
 import java.io.File
@@ -88,8 +89,8 @@ class RecommendationSyncTest {
         return Plan(0, "Test", SplitType.FULL_BODY, Goal.HYPERTROPHY, clock.now(), listOf(PlanDay(0, 0, "Full A", day), PlanDay(0, 1, "Full B", day)))
     }
 
-    /** Four weeks of bench stuck at 80 × 6 with little chest volume: a card adds a set to both bench slots. */
-    private suspend fun Phone.stallBench() = repeat(4) {
+    /** Seven weeks of bench stuck at 80 × 6 with little chest volume, every 4 days: old enough for suggestions. */
+    private suspend fun Phone.stallBench() = repeat(13) {
         val sessionId = workouts.startPlannedWorkout(plans.observeNextDay().first()!!.id)
         workouts.getSession(sessionId)!!.exercises.filter { it.exercise.id == BENCH }.flatMap { it.sets }.forEach {
             workouts.updateSetValues(it.id, 80.0, 6, null)
@@ -97,23 +98,22 @@ class RecommendationSyncTest {
         }
         clock.advanceSeconds(3600)
         workouts.finishWorkout(sessionId)
-        clock.advanceSeconds(7 * 86_400L - 3600)
+        clock.advanceSeconds(4 * 86_400L - 3600)
     }
 
     @Test
-    fun aCardMadeOnOnePhoneChangesTheSameRowsOnTheOther() = runTest {
+    fun aChoiceForAStalledLiftOnOnePhoneCoolsItOnTheOther() = runTest {
         val a = phone()
         a.plans.saveAsActive(plan(a.db))
         a.stallBench()
-        a.recommendations.refresh()
+        val bench = a.recommendations.observeProgressCheck().first()!!.stalled.single { it.plateau.slot.exercise.id == BENCH }
+        val moreSets = bench.options.single { it.action is RecommendationAction.AddSets }
+        a.recommendations.applyOptions(bench, listOf(moreSets))
         a.sync()
 
         val b = restoredPhone()
-        val card = b.active().single()
-        assertEquals(RecommendationType.ADD_VOLUME, card.type)
-        b.recommendations.apply(card.id)
-
         assertEquals(listOf(4, 4), b.benchSlots().map { it.sets })
+        assertTrue(b.recommendations.observeProgressCheck().first()!!.stalled.none { it.plateau.slot.exercise.id == BENCH })
     }
 
     @Test
@@ -124,7 +124,7 @@ class RecommendationSyncTest {
         a.sync()
         val b = restoredPhone()
 
-        // Both phones make the same card before either has seen the other's.
+        // Both phones make the same card (a lighter week, after seven weeks) before either has seen the other's.
         a.recommendations.refresh()
         b.recommendations.refresh()
         a.sync(); b.sync(); a.sync()
@@ -148,7 +148,7 @@ class RecommendationSyncTest {
         a.plans.saveAsActive(plan(a.db))
         val slot = a.benchSlots().first()
         val swap = RecommendationAction.SwapVariation(slot.id, BENCH, "Barbell Bench Press", "dumbbell-bench-press", "Dumbbell Bench Press", weeks = 5)
-        a.recommendations.applyPlanReview(listOf(PlanReviewChoice(BENCH, "Barbell Bench Press", swap)))
+        a.recommendations.applyChoices(listOf(LiftChoice(BENCH, "Barbell Bench Press", swap)))
         a.sync()
 
         val b = restoredPhone()

@@ -12,6 +12,19 @@ import com.github.takahirom.roborazzi.ThresholdValidator
 import com.github.takahirom.roborazzi.captureRoboImage
 import com.github.takahirom.roborazzi.fontScale
 import com.viktorolsson.spotter.core.data.repository.LoggedExerciseSummary
+import com.viktorolsson.spotter.core.data.repository.ProgressCheck
+import com.viktorolsson.spotter.core.engine.FixKind
+import com.viktorolsson.spotter.core.engine.LiftOption
+import com.viktorolsson.spotter.core.engine.LiftTrend
+import com.viktorolsson.spotter.core.engine.LoggedSet
+import com.viktorolsson.spotter.core.engine.PlanAge
+import com.viktorolsson.spotter.core.engine.PlanSlot
+import com.viktorolsson.spotter.core.engine.Plateau
+import com.viktorolsson.spotter.core.engine.StalledLift
+import com.viktorolsson.spotter.core.engine.SupportReason
+import com.viktorolsson.spotter.core.model.Muscle
+import com.viktorolsson.spotter.core.model.ProgressionRule
+import com.viktorolsson.spotter.core.model.RecommendationAction
 import com.viktorolsson.spotter.core.engine.Gamification
 import com.viktorolsson.spotter.core.model.Badge
 import com.viktorolsson.spotter.core.model.BodyWeightPoint
@@ -74,6 +87,22 @@ class ProgressScreenshotTest {
         lifts = lifts,
     )
 
+    private val bench = PreviewData.exercise()
+    private val squat = PreviewData.exercise("back-squat", "Back Squat", MovementPattern.SQUAT, primary = listOf(Muscle.QUADS, Muscle.GLUTES))
+    private val row = PreviewData.exercise("barbell-row", "Barbell Row", MovementPattern.HORIZONTAL_PULL, primary = listOf(Muscle.UPPER_BACK))
+    private val trends = listOf(LiftTrend(bench, 98.0, 98.4), LiftTrend(squat, 120.0, 126.0), LiftTrend(row, 80.0, 84.0))
+    private val stalledBench = StalledLift(
+        Plateau(PlanSlot(1, 1, "Upper A", bench, 3, 6, 10, 1, ProgressionRule.DOUBLE_PROGRESSION), LoggedSet(80.0, 6), sessions = 4, weeks = 4, missedTwice = false, historyDays = 49),
+        listOf(
+            LiftOption(FixKind.SUPPORT, RecommendationAction.AddExercise(1, "Upper A", "incline-barbell-bench-press", "Incline Barbell Bench Press", 3, 6, 10, 2, 120), SupportReason.UPPER_CHEST),
+            LiftOption(FixKind.SUPPORT, RecommendationAction.AddExercise(1, "Upper A", "close-grip-bench-press", "Close-Grip Bench Press", 3, 6, 10, 2, 120), SupportReason.TRICEPS),
+            LiftOption(FixKind.VARIATION, RecommendationAction.SwapVariation(1, bench.id, bench.name, "paused-bench-press", "Paused Bench Press", 5)),
+            LiftOption(FixKind.REP_RANGE, RecommendationAction.ChangeRepRange(1, 3, 6, 10, 4, 4, 6)),
+        ),
+    )
+    private val waiting = full.copy(check = ProgressCheck(PlanAge(sessions = 5, weeks = 2), emptyList(), emptyList()))
+    private val stalled = full.copy(check = ProgressCheck(PlanAge(sessions = 14, weeks = 7), trends, listOf(stalledBench)))
+
     private fun capture(name: String, dark: Boolean, state: ProgressUiState, fontScale: Float = 1f, dynamic: Boolean = false) =
         captureRoboImage(
             "src/test/screenshots/$name.png",
@@ -113,6 +142,23 @@ class ProgressScreenshotTest {
 
     @Test
     fun progress_largeFont() = capture("progress_font_1_6", dark = false, state = full, fontScale = 1.6f)
+
+    @Test
+    fun progressWaiting_light() = capture("progress_check_waiting_light", dark = false, state = waiting)
+
+    @Test
+    fun progressStalled_light() = capture("progress_check_stalled_light", dark = false, state = stalled)
+
+    @Test
+    fun progressStalled_dark() = capture("progress_check_stalled_dark", dark = true, state = stalled)
+
+    @Test
+    fun progressStalled_largeFont() = capture("progress_check_stalled_font_1_6", dark = false, state = stalled, fontScale = 1.6f)
+
+    @Test
+    fun progressAllMoving_light() = capture(
+        "progress_check_moving_light", dark = false, state = full.copy(check = ProgressCheck(PlanAge(14, 7), trends, emptyList())),
+    )
 
     @Test
     fun progress_empty() = capture("progress_empty_light", dark = false, state = ProgressUiState(loading = false))

@@ -98,10 +98,25 @@ import com.viktorolsson.spotter.feature.progress.resources.progress_weight_avera
 import com.viktorolsson.spotter.feature.progress.resources.progress_weight_empty
 import com.viktorolsson.spotter.feature.progress.resources.progress_weight_invalid
 import com.viktorolsson.spotter.feature.progress.resources.progress_weight_label
+import com.viktorolsson.spotter.feature.progress.resources.progress_upper_body
+import com.viktorolsson.spotter.feature.progress.resources.progress_lower_body
+import com.viktorolsson.spotter.feature.progress.resources.progress_main_lifts
+import com.viktorolsson.spotter.feature.progress.resources.progress_check_waiting
+import com.viktorolsson.spotter.feature.progress.resources.progress_all_moving
 import androidx.compose.foundation.layout.IntrinsicSize
 import com.viktorolsson.spotter.core.ui.component.StatTile
 import org.jetbrains.compose.resources.pluralStringResource
 import com.viktorolsson.spotter.core.model.FeelSummary
+import com.viktorolsson.spotter.core.engine.LiftOption
+import com.viktorolsson.spotter.core.engine.LiftTrend
+import com.viktorolsson.spotter.core.engine.PlanAge
+import com.viktorolsson.spotter.core.engine.PlanReviewEngine
+import com.viktorolsson.spotter.core.engine.StalledLift
+import com.viktorolsson.spotter.core.engine.isLowerBody
+import com.viktorolsson.spotter.core.model.formatChange
+import com.viktorolsson.spotter.core.ui.component.Delta
+import com.viktorolsson.spotter.core.ui.component.StalledLiftCard
+import kotlin.math.roundToInt
 import com.viktorolsson.spotter.feature.progress.resources.progress_feel
 import com.viktorolsson.spotter.feature.progress.resources.progress_feel_hint
 import com.viktorolsson.spotter.feature.progress.resources.progress_feel_before
@@ -119,6 +134,8 @@ internal fun ProgressRoute(onOpenExercise: (String) -> Unit, onOpenLevels: () ->
         onApply = viewModel::apply,
         onDismiss = viewModel::dismiss,
         onLogWeight = viewModel::logWeight,
+        onApplyOptions = viewModel::applyOptions,
+        onNotNow = viewModel::notNow,
     )
 }
 
@@ -131,6 +148,8 @@ internal fun ProgressScreen(
     /** Saves the typed weight; false when it isn't a weight in the accepted range. */
     onLogWeight: (String) -> Boolean,
     onOpenLevels: () -> Unit = {},
+    onApplyOptions: (StalledLift, List<LiftOption>) -> Unit = { _, _ -> },
+    onNotNow: (StalledLift) -> Unit = {},
 ) {
     var loggingWeight by rememberSaveable { mutableStateOf(false) }
     Scaffold(topBar = { SpotterTopBar(title = stringResource(Res.string.progress_title)) }) { padding ->
@@ -143,7 +162,9 @@ internal fun ProgressScreen(
             contentPadding = PaddingValues(Dimens.ScreenPadding),
             verticalArrangement = Arrangement.spacedBy(Dimens.SectionGap),
         ) {
-            if (state.recommendations.isNotEmpty()) {
+            // Before any workout there's nothing to say yet; the empty state below says it.
+            val check = state.check?.takeIf { !state.isEmpty }
+            if (state.recommendations.isNotEmpty() || check != null) {
                 item { SectionHeader(stringResource(Res.string.progress_recommendations)) }
                 items(state.recommendations, key = { "rec-${it.id}" }) { rec ->
                     RecommendationCard(
@@ -153,6 +174,23 @@ internal fun ProgressScreen(
                         onDismiss = { onDismiss(rec.id) },
                         modifier = Modifier.animateItem(),
                     )
+                }
+                when {
+                    check == null -> Unit
+                    !check.age.ready -> item(key = "check-waiting") { CheckWaiting(check.age) }
+                    else -> {
+                        if (check.trends.isNotEmpty()) item(key = "main-lifts") { MainLiftsCard(check.trends) }
+                        items(check.stalled, key = { "stalled-${it.plateau.slot.exercise.id}" }) { lift ->
+                            StalledLiftCard(
+                                lift = lift,
+                                unit = state.unit,
+                                onApply = { onApplyOptions(lift, it) },
+                                onNotNow = { onNotNow(lift) },
+                                modifier = Modifier.animateItem(),
+                            )
+                        }
+                        if (check.stalled.isEmpty()) item(key = "all-moving") { CheckNote(stringResource(Res.string.progress_all_moving)) }
+                    }
                 }
             }
             state.levels?.let { levels -> item(key = "levels") { LevelsCard(levels, onOpenLevels) } }
@@ -212,6 +250,40 @@ internal fun ProgressScreen(
             onSave = { text -> onLogWeight(text).also { saved -> if (saved) loggingWeight = false } },
             onDismiss = { loggingWeight = false },
         )
+    }
+}
+
+/** Why there are no plan suggestions yet: how far the plan is towards the wait. */
+@Composable
+private fun CheckWaiting(age: PlanAge) = CheckNote(
+    stringResource(
+        Res.string.progress_check_waiting,
+        minOf(age.sessions, PlanReviewEngine.MIN_PLAN_SESSIONS), PlanReviewEngine.MIN_PLAN_SESSIONS,
+        minOf(age.weeks, PlanReviewEngine.MIN_PLAN_WEEKS), PlanReviewEngine.MIN_PLAN_WEEKS,
+    ),
+)
+
+@Composable
+private fun CheckNote(text: String) =
+    Text(text, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+
+/** Each main lift's change over the last four weeks, upper body then lower body. */
+@Composable
+internal fun MainLiftsCard(trends: List<LiftTrend>) = ContentCard {
+    CardTitle(stringResource(Res.string.progress_main_lifts, (PlanReviewEngine.TREND_DAYS / 7).toInt()))
+    trends.groupBy { it.exercise.isLowerBody }.toList().sortedBy { it.first }.forEach { (lower, group) ->
+        Text(
+            stringResource(if (lower) Res.string.progress_lower_body else Res.string.progress_upper_body),
+            style = MaterialTheme.typography.labelLarge,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        group.forEach { trend ->
+            Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
+                Text(trend.exercise.name, style = MaterialTheme.typography.bodyLarge, modifier = Modifier.weight(1f))
+                val percent = (trend.change * 100).roundToInt()
+                Delta(formatChange(percent), improving = percent > 0)
+            }
+        }
     }
 }
 

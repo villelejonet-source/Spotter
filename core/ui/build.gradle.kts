@@ -8,6 +8,8 @@ kotlin {
     sourceSets {
         commonMain.dependencies {
             api(project(":core:model"))
+            // Stalled lifts and their options (StalledLift.kt), shared by Today, Progress and History.
+            implementation(project(":core:engine"))
             implementation(libs.vico.compose.m3)
             implementation(libs.compose.mp.material.icons.extended)
         }

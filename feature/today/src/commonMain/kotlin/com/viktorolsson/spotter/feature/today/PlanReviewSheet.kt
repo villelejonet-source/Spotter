@@ -6,14 +6,12 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Insights
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.Checkbox
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
@@ -29,27 +27,23 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
-import com.viktorolsson.spotter.core.data.repository.PlanReviewChoice
-import com.viktorolsson.spotter.core.engine.PlanReview
+import com.viktorolsson.spotter.core.engine.LiftOption
 import com.viktorolsson.spotter.core.engine.StalledLift
-import com.viktorolsson.spotter.core.engine.SupportReason
-import com.viktorolsson.spotter.core.model.RecommendationAction
+import com.viktorolsson.spotter.core.engine.PlanReview
 import com.viktorolsson.spotter.core.model.WeightUnit
 import com.viktorolsson.spotter.core.model.formatChange
-import com.viktorolsson.spotter.core.model.isTimed
 import com.viktorolsson.spotter.core.ui.component.CardTitle
 import com.viktorolsson.spotter.core.ui.component.Delta
-import com.viktorolsson.spotter.core.ui.formatSet
+import com.viktorolsson.spotter.core.ui.component.StalledLiftOptions
+import com.viktorolsson.spotter.core.ui.component.optionKey
 import com.viktorolsson.spotter.core.ui.formatShortDate
 import com.viktorolsson.spotter.core.ui.theme.Dimens
 import com.viktorolsson.spotter.core.ui.theme.Spacing
 import com.viktorolsson.spotter.feature.today.resources.*
 import com.viktorolsson.spotter.feature.today.resources.Res
 import kotlinx.datetime.daysUntil
-import org.jetbrains.compose.resources.StringResource
 import org.jetbrains.compose.resources.pluralStringResource
 import org.jetbrains.compose.resources.stringResource
 import kotlin.math.roundToInt
@@ -89,7 +83,7 @@ internal fun PlanReviewCard(review: PlanReview, today: kotlinx.datetime.LocalDat
 internal fun PlanReviewSheet(
     review: PlanReview,
     unit: WeightUnit,
-    onApply: (List<PlanReviewChoice>) -> Unit,
+    onApply: (List<Pair<StalledLift, LiftOption>>) -> Unit,
     onKeep: () -> Unit,
     onDismiss: () -> Unit,
 ) {
@@ -103,18 +97,14 @@ internal fun PlanReviewSheet(
 internal fun PlanReviewContent(
     review: PlanReview,
     unit: WeightUnit,
-    onApply: (List<PlanReviewChoice>) -> Unit,
+    onApply: (List<Pair<StalledLift, LiftOption>>) -> Unit,
     onKeep: () -> Unit,
     initiallyPicked: Set<String> = emptySet(),
 ) {
-    // Keyed by "stalled lift id|exercise id", so a variation and an accessory never clash.
     var picked by rememberSaveable { mutableStateOf(initiallyPicked) }
-    val choices = review.stalled.flatMap { lift ->
-        val id = lift.plateau.slot.exercise.id
-        val name = lift.plateau.slot.exercise.name
-        lift.supports.map { (_, action) -> "$id|${action.exerciseId}" to PlanReviewChoice(id, name, action) } +
-            listOfNotNull(lift.variation?.let { "$id|${it.toExerciseId}" to PlanReviewChoice(id, name, it) })
-    }.toMap()
+    val choices = review.stalled.flatMap { lift -> lift.options.map { optionKey(lift, it) to (lift to it) } }.toMap()
+    // Only what's still offered: the review is rebuilt as the plan changes.
+    val chosen = picked.mapNotNull(choices::get)
     fun toggle(key: String) {
         picked = if (key in picked) picked - key else picked + key
     }
@@ -139,7 +129,7 @@ internal fun PlanReviewContent(
 
         review.stalled.forEach { lift ->
             HorizontalDivider()
-            StalledLiftSection(lift, unit, picked, ::toggle)
+            StalledLiftOptions(lift, unit, picked, ::toggle)
         }
 
         Row(
@@ -148,74 +138,10 @@ internal fun PlanReviewContent(
         ) {
             TextButton(onClick = onKeep) { Text(stringResource(Res.string.review_keep)) }
             Button(
-                onClick = { onApply(picked.mapNotNull(choices::get)) },
-                enabled = picked.isNotEmpty(),
+                onClick = { onApply(chosen) },
+                enabled = chosen.isNotEmpty(),
                 modifier = Modifier.padding(start = Spacing.sm),
-            ) { Text(stringResource(Res.string.review_apply, picked.size)) }
+            ) { Text(stringResource(Res.string.review_apply, chosen.size)) }
         }
     }
 }
-
-@Composable
-private fun StalledLiftSection(lift: StalledLift, unit: WeightUnit, picked: Set<String>, onToggle: (String) -> Unit) {
-    val exercise = lift.plateau.slot.exercise
-    Column(verticalArrangement = Arrangement.spacedBy(Spacing.sm)) {
-        Text(stringResource(Res.string.review_stalled, exercise.name), style = MaterialTheme.typography.titleMedium)
-        lift.plateau.latest?.let { best ->
-            Text(
-                stringResource(Res.string.review_stalled_evidence, formatSet(best.weightKg, best.reps, unit, timed = exercise.isTimed), lift.plateau.sessions),
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-        }
-        lift.supports.forEach { (support, action) ->
-            ChoiceRow(
-                title = action.exerciseName,
-                body = stringResource(Res.string.review_add_to, stringResource(support.reason.label), action.dayName),
-                checked = "${exercise.id}|${action.exerciseId}" in picked,
-                onToggle = { onToggle("${exercise.id}|${action.exerciseId}") },
-            )
-        }
-        lift.variation?.let { swap: RecommendationAction.SwapVariation ->
-            ChoiceRow(
-                title = stringResource(Res.string.review_variation, swap.toName),
-                body = stringResource(Res.string.review_variation_body, swap.weeks, swap.fromName),
-                checked = "${exercise.id}|${swap.toExerciseId}" in picked,
-                onToggle = { onToggle("${exercise.id}|${swap.toExerciseId}") },
-            )
-        }
-    }
-}
-
-@Composable
-private fun ChoiceRow(title: String, body: String, checked: Boolean, onToggle: () -> Unit) {
-    Row(
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
-        modifier = Modifier.fillMaxWidth().toggleable(value = checked, role = Role.Checkbox, onValueChange = { onToggle() }),
-    ) {
-        Column(Modifier.weight(1f)) {
-            Text(title, style = MaterialTheme.typography.bodyLarge)
-            Text(body, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-        }
-        // The row is the toggle; the box only shows its state.
-        Checkbox(checked = checked, onCheckedChange = null)
-    }
-}
-
-private val SupportReason.label: StringResource
-    get() = when (this) {
-        SupportReason.UPPER_CHEST -> Res.string.support_upper_chest
-        SupportReason.TRICEPS -> Res.string.support_triceps
-        SupportReason.SHOULDERS -> Res.string.support_shoulders
-        SupportReason.SIDE_DELTS -> Res.string.support_side_delts
-        SupportReason.UPPER_BACK -> Res.string.support_upper_back
-        SupportReason.REAR_DELTS -> Res.string.support_rear_delts
-        SupportReason.LATS -> Res.string.support_lats
-        SupportReason.BICEPS -> Res.string.support_biceps
-        SupportReason.QUADS -> Res.string.support_quads
-        SupportReason.HAMSTRINGS -> Res.string.support_hamstrings
-        SupportReason.GLUTES -> Res.string.support_glutes
-        SupportReason.LOWER_BACK -> Res.string.support_lower_back
-        SupportReason.CORE -> Res.string.support_core
-    }

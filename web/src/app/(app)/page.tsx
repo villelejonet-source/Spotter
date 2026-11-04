@@ -2,16 +2,17 @@ import clsx from "clsx";
 import Link from "next/link";
 import { Suspense } from "react";
 import { AreaChartView } from "@/components/charts";
-import { LevelProgress } from "@/components/levels";
+import { LevelProgress, QuestList } from "@/components/levels";
 import { Sparkline } from "@/components/sparkline";
 import { TrainingHeatmap, heatmapStart } from "@/components/training-heatmap";
 import { Badge, Card, CardTitle, cardClass, Delta, EmptyState, LinkButton, PageHeader, Stat } from "@/components/ui";
 import { exerciseName } from "@/lib/catalog";
-import { getActivePlan, getCatalog, getFinishedSessionCount, getHasActivePlan, getPersonalRecords, getPlayerProgress, getPlanDay, getProfile, getScheduled, getSessionTimes, getSessions, getUnit, preload } from "@/lib/data";
+import { getActivePlan, getCatalog, getFinishedSessionCount, getHasActivePlan, getPersonalRecords, getPlayerProgress, getPlanDay, getProfile, getScheduled, getSessionTimes, getSessions, getShowLevels, getUnit, getYearInReview, preload } from "@/lib/data";
 import { formatDateValue, formatFullDate, formatRelative } from "@/lib/dates";
+import { reviewYear } from "@/lib/gamification";
 import { APP_BACKUP_PATH, FREE_WORKOUT, PR_LABELS, WORKOUT } from "@/lib/labels";
 import { formatDuration, formatPlanTarget, formatRecord, formatVolume, toUnit } from "@/lib/model";
-import { DAY_MS, fetchSince, finished, formatChange, localDate, nextPlanDay, percentChange, streakLabel, weeklyTotals, weekStreak, windowStart, workoutsPerDay } from "@/lib/stats";
+import { DAY_MS, dayKey, fetchSince, finished, formatChange, localDate, nextPlanDay, percentChange, streakLabel, weeklyTotals, weekStreak, windowStart, workoutsPerDay } from "@/lib/stats";
 
 export const metadata = { title: "Today" };
 
@@ -45,6 +46,7 @@ export default async function TodayPage({ searchParams }: { searchParams: Promis
     getSessions(RECENT),
     getPersonalRecords(RECENT),
     getPlayerProgress(),
+    getShowLevels(),
   );
   const [count, hasPlan] = await Promise.all([getFinishedSessionCount(), getHasActivePlan()]);
 
@@ -149,17 +151,39 @@ async function WeekStats({ total }: { total: number }) {
   );
 }
 
-/** The level and its bar (the app's Today card); opens Levels. */
+/**
+ * The level, its bar and this week's quests (the app's Today card); opens Levels. From
+ * December to mid-January a second card opens the year in review. Nothing when the profile
+ * turned levels off.
+ */
 async function LevelCard() {
-  const progress = await getPlayerProgress();
+  const year = reviewYear(dayKey(Date.now()));
+  const [show, progress, review] = await Promise.all([getShowLevels(), getPlayerProgress(), year == null ? null : getYearInReview(year)]);
+  if (!show) return null;
   const unlocked = progress.badges.filter((b) => b.unlockedBy != null).length;
   return (
-    <Link href="/levels" className={cardClass("mt-4 block transition hover:border-outline-strong")}>
-      <LevelProgress level={progress.level} />
-      <div className="mt-2 text-sm">
-        {unlocked} of {progress.badges.length} badges
-      </div>
-    </Link>
+    <>
+      <Link href="/levels" className={cardClass("mt-4 block transition hover:border-outline-strong")}>
+        <LevelProgress level={progress.level} />
+        <div className="mt-2 text-sm">
+          {unlocked} of {progress.badges.length} badges
+        </div>
+        {progress.thisWeek && (
+          <div className="mt-4 border-t border-outline pt-3">
+            <h2 className="label mb-2 text-muted">This week&apos;s quests</h2>
+            <QuestList week={progress.thisWeek} compact />
+          </div>
+        )}
+      </Link>
+      {review && (
+        <Link href={`/levels/${review.year}`} className={cardClass("mt-4 block transition hover:border-outline-strong")}>
+          <div className="label text-muted">Your {review.year} in training</div>
+          <div className="mt-1 text-lg font-semibold tracking-tight">
+            {review.workouts} workouts, level {review.levelStart} to {review.levelEnd}
+          </div>
+        </Link>
+      )}
+    </>
   );
 }
 

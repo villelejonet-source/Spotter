@@ -142,6 +142,7 @@ fun UserProfileEntity.toModel() = UserProfile(
     equipment = equipment,
     focusAreas = focusAreas,
     limitations = limitations,
+    showLevels = showLevels,
 )
 
 fun UserProfile.toEntity() = UserProfileEntity(
@@ -157,6 +158,7 @@ fun UserProfile.toEntity() = UserProfileEntity(
     equipment = equipment,
     focusAreas = focusAreas,
     limitations = limitations,
+    showLevels = showLevels,
 )
 
 fun RecordWithExercise.toModel() = PersonalRecord(

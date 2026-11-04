@@ -96,6 +96,26 @@
     <string name="badge_unlocked_on">Unlocked %1$s</string>
     <string name="badge_progress">%1$d% there</string>
     <string name="badge_locked_description">Locked</string>
+    <!-- Weekly quests and lift mastery: wording repeated in web/src/lib/labels.ts (questLabel) and components/levels.tsx. -->
+    <string name="quests_title">This week's quests</string>
+    <plurals name="quest_workouts">
+        <item quantity="one">Train once</item>
+        <item quantity="other">Train %1$d times</item>
+    </plurals>
+    <string name="quest_new_exercise">Try an exercise you've never done</string>
+    <string name="quest_check_ins">Check in %1$d times</string>
+    <string name="quest_records">Set a PR</string>
+    <string name="quest_sets">Log %1$d working sets</string>
+    <string name="quest_progress">%1$d / %2$d</string>
+    <string name="quest_done">Done · +%1$d XP</string>
+    <string name="mastery_title">Lift mastery</string>
+    <string name="mastery_best_next">Best %1$s · %2$s at %3$s</string>
+    <string name="mastery_best_top">Best %1$s · top tier</string>
+    <string name="mastery_not_done">Not done yet</string>
+    <string name="mastery_no_tier">No tier</string>
+    <string name="mastery_needs_weight">Add your body weight to see bronze, silver and gold for your main lifts.</string>
+    <string name="mastery_note">Your best estimated 1RM against your body weight. Gives no XP.</string>
+    <string name="share_action">Share</string>
     <!-- Program cards: wording repeated in web/src/lib/labels.ts (PROGRAM_LABELS). -->
     <string name="program_full_body">Full body</string>
     <string name="program_upper_lower">Upper / Lower</string>

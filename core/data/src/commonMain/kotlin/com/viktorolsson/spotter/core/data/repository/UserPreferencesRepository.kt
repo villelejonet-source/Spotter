@@ -15,6 +15,8 @@ import com.viktorolsson.spotter.core.model.WeightUnit
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import kotlinx.datetime.LocalDate
 
 class UserPreferencesRepository(
@@ -88,9 +90,43 @@ class UserPreferencesRepository(
         dataStore.edit { it[Keys.ONBOARDING_COMPLETED] = done }
     }
 
+    /**
+     * Like the unit, the switch is one setting with the synced profile's `showLevels`: it's
+     * set in both here, and [reconcileShowLevels] brings the profile's value back after a sync.
+     * Before there's a profile it's kept here, and handed over once onboarding makes one.
+     */
     suspend fun setShowLevels(show: Boolean) {
-        dataStore.edit { it[Keys.SHOW_LEVELS] = show }
+        reconcile.withLock {
+            val profile = profileDao.get()
+            dataStore.edit {
+                it[Keys.SHOW_LEVELS] = show
+                if (profile != null) it[Keys.SHOW_LEVELS_IN_PROFILE] = true
+            }
+            if (profile != null && profile.showLevels != show) profileDao.upsert(profile.copy(showLevels = show))
+        }
     }
+
+    /**
+     * Brings the switch and the profile into step (on start and after each sync). The switch
+     * used to live on the phone only, so the first time a phone that had turned it off has a
+     * profile, that choice goes into the profile; from then on the profile wins.
+     */
+    suspend fun reconcileShowLevels() = reconcile.withLock {
+        var profile = profileDao.get() ?: return@withLock
+        val prefs = dataStore.data.first()
+        if (prefs[Keys.SHOW_LEVELS_IN_PROFILE] != true) {
+            if (prefs[Keys.SHOW_LEVELS] == false && profile.showLevels) {
+                profile = profile.copy(showLevels = false)
+                profileDao.upsert(profile)
+            }
+            dataStore.edit { it[Keys.SHOW_LEVELS_IN_PROFILE] = true }
+        }
+        if ((prefs[Keys.SHOW_LEVELS] ?: defaults.showLevels) != profile.showLevels) {
+            dataStore.edit { it[Keys.SHOW_LEVELS] = profile.showLevels }
+        }
+    }
+
+    private val reconcile = Mutex()
 
     suspend fun setLevelsIntroSeen() {
         dataStore.edit { it[Keys.LEVELS_INTRO_SEEN] = true }
@@ -112,6 +148,8 @@ class UserPreferencesRepository(
         val PLAN_REVIEW_SNOOZED_UNTIL = longPreferencesKey("plan_review_snoozed_until_epoch_day")
         val SHOW_LEVELS = booleanPreferencesKey("show_levels")
         val LEVELS_INTRO_SEEN = booleanPreferencesKey("levels_intro_seen")
+        /** The switch has been handed to the profile (see [reconcileShowLevels]). */
+        val SHOW_LEVELS_IN_PROFILE = booleanPreferencesKey("show_levels_in_profile")
     }
 }
 

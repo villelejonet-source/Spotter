@@ -94,6 +94,14 @@ export type Database = {
                   Relationships: [
                     
                   ]
+                },"v_lift_best": {
+                  Row: {
+                    "best_e1rm_kg": number | null,"exercise_id": string | null,"user_id": string
+                  }
+                  ComputedFields: never
+                  Relationships: [
+                    
+                  ]
                 },"v_personal_record": {
                   Row: {
                     "achieved_at": number | null,"exercise_id": string | null,"reps": number | null,"session_id": string | null,"sync_id": string,"type": string | null,"updated_at": number,"user_id": string,"value": number | null,"weight_kg": number | null
@@ -152,14 +160,14 @@ export type Database = {
                   ]
                 },"v_profile": {
                   Row: {
-                    "birth_date_epoch_day": number | null,"body_weight_kg": number | null,"days_per_week": number | null,"equipment": string | null,"experience": string | null,"focus_areas": string | null,"goal": string | null,"height_cm": number | null,"limitations": string | null,"session_length_minutes": number | null,"sex": string | null,"sync_id": string,"units": string | null,"updated_at": number,"user_id": string
+                    "birth_date_epoch_day": number | null,"body_weight_kg": number | null,"days_per_week": number | null,"equipment": string | null,"experience": string | null,"focus_areas": string | null,"goal": string | null,"height_cm": number | null,"limitations": string | null,"session_length_minutes": number | null,"sex": string | null,"show_levels": boolean | null,"sync_id": string,"units": string | null,"updated_at": number,"user_id": string
                   }
                   ComputedFields: never
                   Insert: {
-                           "birth_date_epoch_day"?: never,"body_weight_kg"?: never,"days_per_week"?: never,"equipment"?: never,"experience"?: never,"focus_areas"?: never,"goal"?: never,"height_cm"?: never,"limitations"?: never,"session_length_minutes"?: never,"sex"?: never,"sync_id"?: string | null,"units"?: never,"updated_at"?: number | null,"user_id"?: string | null
+                           "birth_date_epoch_day"?: never,"body_weight_kg"?: never,"days_per_week"?: never,"equipment"?: never,"experience"?: never,"focus_areas"?: never,"goal"?: never,"height_cm"?: never,"limitations"?: never,"session_length_minutes"?: never,"sex"?: never,"show_levels"?: never,"sync_id"?: string | null,"units"?: never,"updated_at"?: number | null,"user_id"?: string | null
                          }
                         Update: {
-                           "birth_date_epoch_day"?: never,"body_weight_kg"?: never,"days_per_week"?: never,"equipment"?: never,"experience"?: never,"focus_areas"?: never,"goal"?: never,"height_cm"?: never,"limitations"?: never,"session_length_minutes"?: never,"sex"?: never,"sync_id"?: string | null,"units"?: never,"updated_at"?: number | null,"user_id"?: string | null
+                           "birth_date_epoch_day"?: never,"body_weight_kg"?: never,"days_per_week"?: never,"equipment"?: never,"experience"?: never,"focus_areas"?: never,"goal"?: never,"height_cm"?: never,"limitations"?: never,"session_length_minutes"?: never,"sex"?: never,"show_levels"?: never,"sync_id"?: string | null,"units"?: never,"updated_at"?: number | null,"user_id"?: string | null
                          }
                         Relationships: [
                     

@@ -4,12 +4,17 @@ import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { describe, expect, it } from "vitest";
 import { countsTowardsChange, feelSummary, isRoughDay } from "./check-ins";
-import { levelFor, playerProgress, type PlayedSession } from "./gamification";
+import { BADGES, levelFor, mastery, playerProgress, questsFor, reviewYear, yearInReview, type MasteryLift, type PlayedSession, type QuestKind } from "./gamification";
 import { epley, isTimed, type PersonalRecordType } from "./model";
 import { parseDecimal } from "./number-input";
 import { exerciseProgress, formatChange, percentChange, weekStreak } from "./stats";
 
 interface FixtureSet { weightKg: number | null; reps: number | null; warmup?: boolean }
+
+type FixtureSession = Pick<PlayedSession, "start" | "minutes" | "workingSets"> & { id: number } & Partial<Omit<PlayedSession, "id" | "records">> & { records?: PersonalRecordType[] };
+
+const played = (sessions: FixtureSession[]): PlayedSession[] =>
+  sessions.map((s) => ({ lighter: false, readiness: null, feel: null, volumeKg: 0, exerciseIds: [], records: [], ...s, id: String(s.id) }));
 
 const fixtures: {
   timedExerciseIds: string[];
@@ -25,12 +30,30 @@ const fixtures: {
     histories: {
       name: string;
       daysPerWeek: number | null;
-      sessions: (Pick<PlayedSession, "start" | "minutes" | "workingSets"> & { id: number } & Partial<Omit<PlayedSession, "id" | "records">> & { records?: PersonalRecordType[] })[];
-      xp: { id: number; session: number; sets: number; records: number; checkIn: number; weeklyGoal: number }[];
+      sessions: FixtureSession[];
+      xp: { id: number; session: number; sets: number; records: number; checkIn: number; weeklyGoal: number; quests?: number }[];
       totalXp: number;
       level: number;
       unlocked: Record<string, number>;
       progress: Record<string, number>;
+      today?: string;
+      thisWeek?: { weekStart: string; quests: { kind: QuestKind; target: number; current: number; doneBy: number | null }[] } | null;
+    }[];
+    badges: { id: string; metric: string; target: number }[];
+    questWeeks: { weekStart: string; daysPerWeek: number | null; quests: { kind: QuestKind; target: number }[] | null }[];
+    mastery: {
+      name: string;
+      sex: string;
+      bodyWeightKg: number | null;
+      bestKg: Partial<Record<MasteryLift, number>>;
+      lifts: { lift: MasteryLift; tier: string | null; nextTier: string | null; nextKg: number | null }[] | null;
+    }[];
+    reviewYear: { today: string; year: number | null }[];
+    yearInReview: {
+      name: string;
+      daysPerWeek: number | null;
+      sessions: FixtureSession[];
+      years: Record<string, Record<string, unknown> | null>;
     }[];
   };
 } = JSON.parse(readFileSync(resolve(__dirname, "../../../core/model/fixtures/training-math.json"), "utf8"));
@@ -97,26 +120,57 @@ describe("training-math.json", () => {
     expect(levelFor(xp)).toEqual({ number: level, title, xpIntoLevel, xpForNext });
   });
 
-  it.each(fixtures.gamification.histories)("gamification: $name", ({ daysPerWeek, sessions, xp, totalXp, level, unlocked, progress }) => {
-    const played: PlayedSession[] = sessions.map((s) => ({
-      lighter: false,
-      readiness: null,
-      feel: null,
-      volumeKg: 0,
-      exerciseIds: [],
-      records: [],
-      ...s,
-      id: String(s.id),
-    }));
-    const actual = playerProgress(played, daysPerWeek);
+  it.each(fixtures.gamification.histories)("gamification: $name", ({ daysPerWeek, sessions, xp, totalXp, level, unlocked, progress, today, thisWeek }) => {
+    const actual = playerProgress(played(sessions), daysPerWeek, today ?? null);
     expect(actual.sessions).toEqual(
-      xp.map(({ id, ...x }) => ({ sessionId: String(id), ...x, total: x.session + x.sets + x.records + x.checkIn + x.weeklyGoal })),
+      xp.map(({ id, quests = 0, ...x }) => ({ sessionId: String(id), ...x, quests, total: x.session + x.sets + x.records + x.checkIn + x.weeklyGoal + quests })),
     );
     expect(actual.totalXp).toBe(totalXp);
     expect(actual.level.number).toBe(level);
     expect(Object.fromEntries(actual.badges.filter((b) => b.unlockedBy != null).map((b) => [b.badge, Number(b.unlockedBy)]))).toEqual(unlocked);
     for (const [badge, current] of Object.entries(progress)) {
       expect(actual.badges.find((b) => b.badge === badge)?.current, badge).toBeCloseTo(current, 4);
+    }
+    if (today != null) {
+      expect(actual.thisWeek).toEqual(
+        thisWeek == null
+          ? null
+          : {
+              weekStart: thisWeek.weekStart,
+              quests: thisWeek.quests.map(({ kind, target, current, doneBy }) => ({ quest: { kind, target }, current, doneBy: doneBy == null ? null : String(doneBy) })),
+            },
+      );
+    }
+  });
+
+  it("pins every badge", () => {
+    expect(BADGES.map(([id, metric, target]) => ({ id, metric, target }))).toEqual(fixtures.gamification.badges);
+  });
+
+  it.each(fixtures.gamification.questWeeks)("quests for $weekStart", ({ weekStart, daysPerWeek, quests }) => {
+    expect(questsFor(weekStart, daysPerWeek)).toEqual(quests);
+  });
+
+  it.each(fixtures.gamification.mastery)("mastery: $name", ({ sex, bodyWeightKg, bestKg, lifts }) => {
+    const actual = mastery(bestKg, sex, bodyWeightKg);
+    if (lifts == null) return expect(actual).toBeNull();
+    expect(actual?.map(({ lift, tier, nextTier }) => ({ lift, tier, nextTier }))).toEqual(lifts.map(({ lift, tier, nextTier }) => ({ lift, tier, nextTier })));
+    lifts.forEach((want, i) => {
+      if (want.nextKg == null) expect(actual?.[i].nextKg, want.lift).toBeNull();
+      else expect(actual?.[i].nextKg, want.lift).toBeCloseTo(want.nextKg, 4);
+    });
+  });
+
+  it.each(fixtures.gamification.reviewYear)("review year on $today", ({ today, year }) => {
+    expect(reviewYear(today)).toBe(year);
+  });
+
+  it.each(fixtures.gamification.yearInReview)("year in review: $name", ({ daysPerWeek, sessions, years }) => {
+    const all = played(sessions);
+    const progress = playerProgress(all, daysPerWeek);
+    for (const [year, expected] of Object.entries(years)) {
+      const review = yearInReview(Number(year), all, progress);
+      expect(review == null ? null : { ...review, year: undefined }, year).toEqual(expected == null ? null : { ...expected, year: undefined });
     }
   });
 });

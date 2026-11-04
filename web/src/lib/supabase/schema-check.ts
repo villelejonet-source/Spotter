@@ -17,7 +17,7 @@ import type {
   SessionSummaryRow,
   SetEntryRow,
 } from "@/lib/model";
-import type { SetWithExercise } from "@/lib/queries";
+import type { LiftBestRow, SessionPlayRow, SetWithExercise } from "@/lib/queries";
 import type { Database } from "./database.types";
 
 type Views = Database["public"]["Views"];
@@ -52,4 +52,6 @@ export type SchemaCheck = [
   Expect<Matches<PersonalRecordRow, "v_personal_record">>,
   Expect<Matches<ScheduledRow, "v_scheduled_session">>,
   Expect<Matches<BodyWeightRow, "v_body_weight">>,
+  Expect<Matches<SessionPlayRow, "v_session_play">>,
+  Expect<Matches<LiftBestRow, "v_lift_best">>,
 ];

@@ -2,6 +2,7 @@ package com.viktorolsson.spotter.feature.today
 
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.IntrinsicSize
@@ -31,36 +32,27 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
-import com.viktorolsson.spotter.feature.today.resources.today_levels_open
-import com.viktorolsson.spotter.feature.today.resources.today_levels_badges
-import com.viktorolsson.spotter.feature.today.resources.today_levels_got_it
-import com.viktorolsson.spotter.feature.today.resources.today_levels_intro_body
-import com.viktorolsson.spotter.feature.today.resources.today_levels_intro
-import com.viktorolsson.spotter.core.ui.component.LevelProgress
-import androidx.compose.ui.semantics.Role
-import androidx.compose.ui.draw.clip
-import androidx.compose.foundation.clickable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.Offset
-import org.jetbrains.compose.resources.StringResource
-import org.jetbrains.compose.resources.pluralStringResource
-import org.jetbrains.compose.resources.stringResource
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import org.koin.compose.viewmodel.koinViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.viktorolsson.spotter.core.engine.GamificationRules
 import com.viktorolsson.spotter.core.engine.PlanGenerator
 import com.viktorolsson.spotter.core.engine.PlanReview
 import com.viktorolsson.spotter.core.model.PlanDay
-import com.viktorolsson.spotter.core.model.WeightUnit
 import com.viktorolsson.spotter.core.model.ScheduledWorkout
+import com.viktorolsson.spotter.core.model.WeightUnit
+import com.viktorolsson.spotter.core.model.YearInReview
 import com.viktorolsson.spotter.core.model.formatChange
 import com.viktorolsson.spotter.core.ui.component.ContentCard
 import com.viktorolsson.spotter.core.ui.component.DashboardCard
@@ -68,35 +60,23 @@ import com.viktorolsson.spotter.core.ui.component.DashboardStat
 import com.viktorolsson.spotter.core.ui.component.Delta
 import com.viktorolsson.spotter.core.ui.component.Eyebrow
 import com.viktorolsson.spotter.core.ui.component.HeatmapLegend
+import com.viktorolsson.spotter.core.ui.component.LevelProgress
 import com.viktorolsson.spotter.core.ui.component.LoadingState
 import com.viktorolsson.spotter.core.ui.component.PrimaryButton
 import com.viktorolsson.spotter.core.ui.component.ProgressRing
+import com.viktorolsson.spotter.core.ui.component.QuestList
 import com.viktorolsson.spotter.core.ui.component.SecondaryButton
 import com.viktorolsson.spotter.core.ui.component.SpotterTopBar
 import com.viktorolsson.spotter.core.ui.component.TrainingHeatmap
-import com.viktorolsson.spotter.core.ui.formatExerciseCount
 import com.viktorolsson.spotter.core.ui.formatCount
-import com.viktorolsson.spotter.core.ui.formatShortDate
+import com.viktorolsson.spotter.core.ui.formatExerciseCount
 import com.viktorolsson.spotter.core.ui.formatPlanTarget
+import com.viktorolsson.spotter.core.ui.formatShortDate
 import com.viktorolsson.spotter.core.ui.formatTotal
 import com.viktorolsson.spotter.core.ui.theme.Dimens
 import com.viktorolsson.spotter.core.ui.theme.Spacing
 import com.viktorolsson.spotter.core.ui.theme.SpotterTheme
 import com.viktorolsson.spotter.feature.today.resources.Res
-import com.viktorolsson.spotter.feature.today.resources.today_heatmap_more
-import com.viktorolsson.spotter.feature.today.resources.today_heatmap_less
-import com.viktorolsson.spotter.feature.today.resources.today_heatmap_summary
-import com.viktorolsson.spotter.feature.today.resources.today_heatmap_title
-import com.viktorolsson.spotter.feature.today.resources.today_stat_total_hint
-import com.viktorolsson.spotter.feature.today.resources.today_stat_total
-import com.viktorolsson.spotter.feature.today.resources.today_stat_streak_hint
-import com.viktorolsson.spotter.feature.today.resources.today_stat_streak
-import com.viktorolsson.spotter.feature.today.resources.today_stat_volume_hint
-import com.viktorolsson.spotter.feature.today.resources.today_stat_volume
-import com.viktorolsson.spotter.feature.today.resources.today_stat_workouts_hint
-import com.viktorolsson.spotter.feature.today.resources.today_stat_week_goal_hint
-import com.viktorolsson.spotter.feature.today.resources.today_stat_week
-import com.viktorolsson.spotter.feature.today.resources.today_ring_description
 import com.viktorolsson.spotter.feature.today.resources.today_coming_up
 import com.viktorolsson.spotter.feature.today.resources.today_day_meta
 import com.viktorolsson.spotter.feature.today.resources.today_deload_body
@@ -104,17 +84,44 @@ import com.viktorolsson.spotter.feature.today.resources.today_deload_title
 import com.viktorolsson.spotter.feature.today.resources.today_empty_workout
 import com.viktorolsson.spotter.feature.today.resources.today_free_workout
 import com.viktorolsson.spotter.feature.today.resources.today_free_workout_body
+import com.viktorolsson.spotter.feature.today.resources.today_heatmap_less
+import com.viktorolsson.spotter.feature.today.resources.today_heatmap_more
+import com.viktorolsson.spotter.feature.today.resources.today_heatmap_summary
+import com.viktorolsson.spotter.feature.today.resources.today_heatmap_title
+import com.viktorolsson.spotter.feature.today.resources.today_levels_badges
+import com.viktorolsson.spotter.feature.today.resources.today_levels_got_it
+import com.viktorolsson.spotter.feature.today.resources.today_levels_intro
+import com.viktorolsson.spotter.feature.today.resources.today_levels_intro_body
+import com.viktorolsson.spotter.feature.today.resources.today_levels_open
 import com.viktorolsson.spotter.feature.today.resources.today_more_exercises
 import com.viktorolsson.spotter.feature.today.resources.today_next_label
 import com.viktorolsson.spotter.feature.today.resources.today_no_plan_action
 import com.viktorolsson.spotter.feature.today.resources.today_no_plan_body
 import com.viktorolsson.spotter.feature.today.resources.today_no_plan_title
+import com.viktorolsson.spotter.feature.today.resources.today_quests
 import com.viktorolsson.spotter.feature.today.resources.today_resume_workout
+import com.viktorolsson.spotter.feature.today.resources.today_ring_description
 import com.viktorolsson.spotter.feature.today.resources.today_scheduled_done
 import com.viktorolsson.spotter.feature.today.resources.today_scheduled_label
 import com.viktorolsson.spotter.feature.today.resources.today_start_workout
+import com.viktorolsson.spotter.feature.today.resources.today_stat_streak
+import com.viktorolsson.spotter.feature.today.resources.today_stat_streak_hint
+import com.viktorolsson.spotter.feature.today.resources.today_stat_total
+import com.viktorolsson.spotter.feature.today.resources.today_stat_total_hint
+import com.viktorolsson.spotter.feature.today.resources.today_stat_volume
+import com.viktorolsson.spotter.feature.today.resources.today_stat_volume_hint
+import com.viktorolsson.spotter.feature.today.resources.today_stat_week
+import com.viktorolsson.spotter.feature.today.resources.today_stat_week_goal_hint
+import com.viktorolsson.spotter.feature.today.resources.today_stat_workouts_hint
 import com.viktorolsson.spotter.feature.today.resources.today_title
 import com.viktorolsson.spotter.feature.today.resources.today_view_plan
+import com.viktorolsson.spotter.feature.today.resources.today_year_eyebrow
+import com.viktorolsson.spotter.feature.today.resources.today_year_open
+import com.viktorolsson.spotter.feature.today.resources.today_year_summary
+import org.jetbrains.compose.resources.StringResource
+import org.jetbrains.compose.resources.pluralStringResource
+import org.jetbrains.compose.resources.stringResource
+import org.koin.compose.viewmodel.koinViewModel
 
 @Composable
 internal fun TodayRoute(
@@ -122,6 +129,7 @@ internal fun TodayRoute(
     onOpenPlan: () -> Unit,
     onBuildPlan: () -> Unit,
     onOpenLevels: () -> Unit,
+    onOpenYearInReview: (Int) -> Unit,
     viewModel: TodayViewModel = koinViewModel(),
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
@@ -145,6 +153,7 @@ internal fun TodayRoute(
             onOpenLevels()
         },
         onLevelsIntroSeen = viewModel::levelsIntroSeen,
+        onOpenYearInReview = onOpenYearInReview,
     )
     if (checkingIn) {
         CheckInSheet(
@@ -182,6 +191,7 @@ internal fun TodayScreen(
     level: TodayLevel? = null,
     onOpenLevels: () -> Unit = {},
     onLevelsIntroSeen: () -> Unit = {},
+    onOpenYearInReview: (Int) -> Unit = {},
 ) {
     val next = uiState.nextDay
     val scheduled = uiState.scheduledToday
@@ -226,7 +236,10 @@ internal fun TodayScreen(
                 !uiState.hasPlan -> NoPlanCard(onBuildPlan)
             }
             if (dashboard != null) {
-                if (level != null) LevelCard(level, onOpenLevels, onLevelsIntroSeen)
+                if (level != null) {
+                    LevelCard(level, onOpenLevels, onLevelsIntroSeen)
+                    level.yearInReview?.let { YearInReviewCard(it) { onOpenYearInReview(it.year) } }
+                }
                 Stats(dashboard)
                 TrainingDays(dashboard)
             }
@@ -297,6 +310,26 @@ internal fun LevelCard(level: TodayLevel, onOpen: () -> Unit, onIntroSeen: () ->
             )
             if (level.intro) TextButton(onClick = onIntroSeen) { Text(stringResource(Res.string.today_levels_got_it)) }
         }
+        level.quests?.let { quests ->
+            HorizontalDivider(Modifier.padding(vertical = Spacing.xs))
+            Eyebrow(stringResource(Res.string.today_quests))
+            QuestList(quests, GamificationRules.QUEST_XP, compact = true)
+        }
+    }
+}
+
+/** From December to mid-January: the year in numbers, opening the year in review. */
+@Composable
+internal fun YearInReviewCard(review: YearInReview, onOpen: () -> Unit) {
+    val openLabel = stringResource(Res.string.today_year_open)
+    ContentCard(
+        Modifier.fillMaxWidth().clip(MaterialTheme.shapes.medium).clickable(onClickLabel = openLabel, role = Role.Button, onClick = onOpen),
+    ) {
+        Eyebrow(stringResource(Res.string.today_year_eyebrow, review.year))
+        Text(
+            pluralStringResource(Res.plurals.today_year_summary, review.workouts, review.workouts, review.levelStart, review.levelEnd),
+            style = MaterialTheme.typography.titleMedium,
+        )
     }
 }
 

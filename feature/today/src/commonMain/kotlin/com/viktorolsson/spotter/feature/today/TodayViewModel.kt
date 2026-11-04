@@ -16,6 +16,8 @@ import com.viktorolsson.spotter.core.data.repository.UserProfileRepository
 import com.viktorolsson.spotter.core.data.repository.WorkoutRepository
 import com.viktorolsson.spotter.core.engine.PlanReview
 import com.viktorolsson.spotter.core.model.Level
+import com.viktorolsson.spotter.core.model.WeekQuests
+import com.viktorolsson.spotter.core.model.YearInReview
 import com.viktorolsson.spotter.core.model.PlanDay
 import com.viktorolsson.spotter.core.model.ScheduledWorkout
 import com.viktorolsson.spotter.core.model.TrainedDay
@@ -76,6 +78,10 @@ data class TodayLevel(
     val badgesTotal: Int,
     /** First time since levels arrived: say what they are. */
     val intro: Boolean,
+    /** This week's quests; null before quests began. */
+    val quests: WeekQuests? = null,
+    /** From December 1 to January 15, the year to look back on. */
+    val yearInReview: YearInReview? = null,
 )
 
 /** The training numbers above the fold: this week, volume, streak and the heatmap. */
@@ -127,9 +133,13 @@ class TodayViewModel(
     private val clock: Clock,
 ) : ViewModel() {
     /** Null when levels are switched off in Settings. */
-    val level: StateFlow<TodayLevel?> = combine(gamificationRepository.observeProgress(), preferencesRepository.preferences) { progress, prefs ->
+    val level: StateFlow<TodayLevel?> = combine(gamificationRepository.observeLevels(), preferencesRepository.preferences) { levels, prefs ->
         if (!prefs.showLevels) return@combine null
-        TodayLevel(progress.level, progress.badges.count { it.unlocked }, progress.badges.size, intro = !prefs.levelsIntroSeen)
+        val progress = levels.progress
+        TodayLevel(
+            progress.level, progress.badges.count { it.unlocked }, progress.badges.size, intro = !prefs.levelsIntroSeen,
+            quests = progress.thisWeek, yearInReview = levels.yearInReview,
+        )
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
 
     fun levelsIntroSeen() = viewModelScope.launchReporting(errors) { preferencesRepository.setLevelsIntroSeen() }

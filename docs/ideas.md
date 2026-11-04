@@ -10,21 +10,25 @@ and delete it here in the same pull request.
   (Today's "New: levels and badges" note, a level that matches the history), finish a workout
   with a PR (XP card, bar, new badges, +25 XP after rating it), a level-up (confetti once),
   the Settings switch hiding it all, and the same level on a second phone after sync.
+- **Quests, mastery, year in review and share cards** (levels complete): quests count from
+  the week of 9 November 2026 only; finish all three in a week (Today, summary XP, website
+  match); log body weight and check the mastery tiers in the app and on the website; set the
+  phone's date to December for the year-in-review card and screen; share from a level-up
+  summary and from the year in review on Android and iOS (the share sheet opens with the
+  image); turn the switch off on one phone and see the other phone and the website hide levels
+  after a sync, and the other way round from the website's Profile.
 - **Levels and badges on the website** (#78): Today's level card and Progress → Levels show
   the same level, XP and badges as the app; the badge grid stacks at phone width.
 
 ## Ideas
 
-### Levels and badges
-- **Weekly quests**: two or three small goals that change every Monday ("3 workouts", "try a
-  new exercise", "check in every time"), with bonus XP. Worked out from history like the rest.
-- **Lift mastery**: bronze, silver and gold per lift, from the estimated 1RM relative to body
-  weight (needs body weight logged; per sex and lift).
-- **Shareable level-up card**: an image of the new level or badge to share from the summary.
-- **Year in review** ("Spotter Wrapped"): workouts, volume, PRs, badges and the strongest
-  month, shown in December.
-- **Sync the "Levels and badges" switch** so the website hides them too. Today it's stored only
-  on the phone; syncing it needs a `user_profile` column (expand, then contract).
+### Plans
+- **Build and edit plans in the app**: today plans are built and edited on the website only;
+  the app generates one from the questionnaire or a program card. In the app, also: make a plan
+  from scratch (days, exercises, sets, rep range, RIR, starting weight, progression, 5/3/1),
+  edit the active plan's days and exercises, duplicate, delete, and switch between saved plans.
+  Same rules as the website's plan editor, built once in shared code for both phones; edits
+  sync like the rest, with a plan saved on the phone and the website at once merged by row.
 
 ### Cardio
 - **Log cardio in the app**: running, cycling, rowing, walking and so on, on its own or as part

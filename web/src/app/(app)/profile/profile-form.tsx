@@ -38,6 +38,7 @@ function defaultProfile(): ProfileDraft {
     equipment: [],
     focus_areas: [],
     limitations: [],
+    show_levels: true,
   };
 }
 
@@ -166,6 +167,13 @@ export function ProfileForm(props: { initial: ProfileDraft; version: number; cre
       <ChipGroup label="Equipment you have">
         <Toggles options={EQUIPMENT} labels={EQUIPMENT_LABELS} value={p.equipment} onChange={(equipment) => set({ equipment })} />
       </ChipGroup>
+      <label className="tap flex items-start gap-3 text-sm">
+        <input type="checkbox" className="mt-1 size-5 shrink-0" checked={p.show_levels} onChange={(e) => set({ show_levels: e.target.checked })} />
+        <span>
+          Show levels and badges
+          <span className="block text-xs text-muted">XP, quests, badges and lift mastery, here and in the app.</span>
+        </span>
+      </label>
       <p className="text-xs text-muted">
         {props.create
           ? "The app builds your first plan from this when you sign in there."

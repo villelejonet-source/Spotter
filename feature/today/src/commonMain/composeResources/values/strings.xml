@@ -84,4 +84,11 @@
     <string name="today_levels_got_it">Got it</string>
     <string name="today_levels_badges">%1$d of %2$d badges</string>
     <string name="today_levels_open">Open levels and badges</string>
+    <string name="today_quests">This week's quests</string>
+    <string name="today_year_eyebrow">Your %1$d in training</string>
+    <plurals name="today_year_summary">
+        <item quantity="one">%1$d workout, level %2$d to %3$d</item>
+        <item quantity="other">%1$d workouts, level %2$d to %3$d</item>
+    </plurals>
+    <string name="today_year_open">Open your year in review</string>
 </resources>

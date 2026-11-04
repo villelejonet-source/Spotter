@@ -106,6 +106,9 @@ data class PlayedSessionRow(
     val volumeKg: Double,
 )
 
+/** An exercise's best of something (an estimated 1RM, say). */
+data class ExerciseBestRow(val exerciseId: String, val value: Double)
+
 /** An exercise with at least one completed working set in a finished workout. */
 data class SessionExerciseIdRow(val sessionId: Long, val exerciseId: String)
 

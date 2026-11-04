@@ -133,4 +133,12 @@
     <string name="badge_night_owl_how">Start 5 workouts at 9 pm or later</string>
     <string name="badge_explorer">Explorer</string>
     <string name="badge_explorer_how">Train 20 different exercises</string>
+    <!-- Lift mastery: repeated in web/src/lib/labels.ts (MASTERY_LIFT_LABELS, MASTERY_TIER_LABELS). -->
+    <string name="mastery_lift_squat">Squat</string>
+    <string name="mastery_lift_bench_press">Bench press</string>
+    <string name="mastery_lift_deadlift">Deadlift</string>
+    <string name="mastery_lift_overhead_press">Overhead press</string>
+    <string name="mastery_tier_bronze">Bronze</string>
+    <string name="mastery_tier_silver">Silver</string>
+    <string name="mastery_tier_gold">Gold</string>
 </resources>

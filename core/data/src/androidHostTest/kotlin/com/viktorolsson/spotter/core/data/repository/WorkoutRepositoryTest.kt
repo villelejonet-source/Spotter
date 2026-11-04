@@ -359,5 +359,9 @@ class MutableClock(private var now: Instant) : Clock {
     fun advanceSeconds(seconds: Long) {
         now += seconds.seconds
     }
+
+    fun set(instant: Instant) {
+        now = instant
+    }
     override fun now(): Instant = now
 }

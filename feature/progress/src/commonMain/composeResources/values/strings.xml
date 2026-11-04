@@ -38,4 +38,23 @@
     <string name="achievements_how_week_goal">Reach your days a week: %1$d XP</string>
     <string name="achievements_how_limits">Workouts under %1$d minutes don't count, and only %2$d a day earn workout XP. Missing a day never costs anything.</string>
     <string name="achievements_badges">Badges · %1$d of %2$d</string>
+    <string name="achievements_how_quests">Finish a weekly quest: %1$d XP</string>
+    <string name="achievements_quests_note">New quests every Monday, %1$d XP each.</string>
+    <string name="achievements_year_open">Your %1$d in training</string>
+    <string name="year_title">Your %1$d</string>
+    <string name="year_heading">Your %1$d in training</string>
+    <string name="year_levels">Level %1$d to level %2$d</string>
+    <string name="year_workouts">Workouts</string>
+    <string name="year_time">Time</string>
+    <string name="year_hours">%1$d h</string>
+    <string name="year_volume">Volume</string>
+    <string name="year_records">PRs</string>
+    <string name="year_xp">XP earned</string>
+    <string name="year_strongest_month">Strongest month</string>
+    <string name="year_favourite">Favourite exercise</string>
+    <string name="year_badges">Badges unlocked</string>
+    <string name="year_no_badges">None this year, there's always next year.</string>
+    <string name="year_empty_title">No workouts in %1$d</string>
+    <string name="year_empty">Finish a workout of 10 minutes or more and it counts here.</string>
+    <string name="year_share_text">My %1$d in Spotter: %2$d workouts, level %3$d to level %4$d.</string>
 </resources>

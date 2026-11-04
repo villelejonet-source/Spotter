@@ -61,6 +61,8 @@ export interface ProfileRow {
   focus_areas: string;
   limitations: string;
   updated_at: number;
+  /** Levels and badges shown (the app's switch, synced in the profile). */
+  show_levels: boolean;
 }
 
 export interface PlanRow {

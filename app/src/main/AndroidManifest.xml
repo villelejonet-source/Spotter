@@ -31,6 +31,18 @@
             </intent-filter>
         </activity>
 
+        <!-- Share cards (core/ui Share.android.kt): images in the cache's share/ folder, handed to
+             the app the person picks through a one-off read grant. -->
+        <provider
+            android:name="androidx.core.content.FileProvider"
+            android:authorities="${applicationId}.share"
+            android:exported="false"
+            android:grantUriPermissions="true">
+            <meta-data
+                android:name="android.support.FILE_PROVIDER_PATHS"
+                android:resource="@xml/share_paths" />
+        </provider>
+
         <!-- WorkManager is initialised by SpotterApplication (Koin worker factory). -->
         <provider
             android:name="androidx.startup.InitializationProvider"

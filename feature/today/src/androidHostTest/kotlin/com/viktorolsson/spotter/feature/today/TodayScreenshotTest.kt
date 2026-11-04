@@ -1,18 +1,19 @@
 package com.viktorolsson.spotter.feature.today
 
-import androidx.test.ext.junit.runners.AndroidJUnit4
-import androidx.compose.ui.test.junit4.v2.createComposeRule
-import com.github.takahirom.roborazzi.ExperimentalRoborazziApi
-import com.github.takahirom.roborazzi.RobolectricDeviceQualifiers
-import com.github.takahirom.roborazzi.RoborazziComposeOptions
-import com.github.takahirom.roborazzi.captureRoboImage
-import com.github.takahirom.roborazzi.fontScale
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Surface
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.unit.dp
+import androidx.test.ext.junit.runners.AndroidJUnit4
+import com.github.takahirom.roborazzi.ExperimentalRoborazziApi
+import com.github.takahirom.roborazzi.RobolectricDeviceQualifiers
+import com.github.takahirom.roborazzi.RoborazziComposeOptions
+import com.github.takahirom.roborazzi.captureRoboImage
+import com.github.takahirom.roborazzi.fontScale
+import com.viktorolsson.spotter.core.engine.Gamification
 import com.viktorolsson.spotter.core.engine.LiftTrend
 import com.viktorolsson.spotter.core.engine.LoggedSet
 import com.viktorolsson.spotter.core.engine.PlanReview
@@ -25,24 +26,28 @@ import com.viktorolsson.spotter.core.model.Mechanics
 import com.viktorolsson.spotter.core.model.MovementPattern
 import com.viktorolsson.spotter.core.model.Muscle
 import com.viktorolsson.spotter.core.model.ProgressionRule
+import com.viktorolsson.spotter.core.model.Quest
+import com.viktorolsson.spotter.core.model.QuestKind
+import com.viktorolsson.spotter.core.model.QuestProgress
 import com.viktorolsson.spotter.core.model.RecommendationAction
 import com.viktorolsson.spotter.core.model.ScheduledWorkout
 import com.viktorolsson.spotter.core.model.TrainedDay
+import com.viktorolsson.spotter.core.model.WeekQuests
 import com.viktorolsson.spotter.core.model.WeightUnit
+import com.viktorolsson.spotter.core.model.YearInReview
 import com.viktorolsson.spotter.core.model.weekStreak
 import com.viktorolsson.spotter.core.model.weeklyTotals
 import com.viktorolsson.spotter.core.ui.PreviewData
 import com.viktorolsson.spotter.core.ui.theme.SpotterTheme
-import org.junit.Rule
-import com.viktorolsson.spotter.core.engine.Gamification
-import org.junit.Test
-import org.junit.runner.RunWith
-import org.robolectric.annotation.Config
-import org.robolectric.annotation.GraphicsMode
 import kotlinx.datetime.DateTimeUnit
 import kotlinx.datetime.LocalDate
 import kotlinx.datetime.isoDayNumber
 import kotlinx.datetime.minus
+import org.junit.Rule
+import org.junit.Test
+import org.junit.runner.RunWith
+import org.robolectric.annotation.Config
+import org.robolectric.annotation.GraphicsMode
 
 @OptIn(ExperimentalRoborazziApi::class)
 @RunWith(AndroidJUnit4::class)
@@ -107,6 +112,28 @@ class TodayScreenshotTest {
 
     @Test
     fun levelIntro_largeFont() = capture("today_level_intro_font_1_6", false, next(), fontScale = 1.6f, level = level(intro = true))
+
+    /** Mid-week in December: two quests along, one done, and the year in review. */
+    private val questLevel = level(intro = false).copy(
+        quests = WeekQuests(
+            LocalDate(2026, 11, 30),
+            listOf(
+                QuestProgress(Quest(QuestKind.WORKOUTS, 3), 2, null),
+                QuestProgress(Quest(QuestKind.CHECK_INS, 3), 3, 7),
+                QuestProgress(Quest(QuestKind.RECORDS, 1), 0, null),
+            ),
+        ),
+        yearInReview = YearInReview(2026, 142, 7_950, 812_400.0, 37, 31_200, 1, 23, emptyList(), 10, "barbell-bench-press"),
+    )
+
+    @Test
+    fun quests_light() = capture("today_quests_light", false, next(), level = questLevel)
+
+    @Test
+    fun quests_dark() = capture("today_quests_dark", true, next(), level = questLevel)
+
+    @Test
+    fun quests_largeFont() = capture("today_quests_font_1_6", false, next(), fontScale = 1.6f, level = questLevel)
 
     /** Bench stalled at 80 × 6 for four weeks, with three helpers and a variation to pick from. */
     private val review = run {

@@ -11,5 +11,9 @@ kotlin {
             implementation(libs.vico.compose.m3)
             implementation(libs.compose.mp.material.icons.extended)
         }
+        // FileProvider, for share cards (Share.android.kt).
+        androidMain.dependencies {
+            implementation(libs.androidx.core.ktx)
+        }
     }
 }

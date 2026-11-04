@@ -6,9 +6,10 @@
 import "server-only";
 import { cache } from "react";
 import { buildCatalog } from "./catalog";
-import { playedSession, playerProgress } from "./gamification";
+import { MASTERY_LIFTS, mastery, playedSession, playerProgress, yearInReview } from "./gamification";
 import type { WeightUnit } from "./model";
 import * as q from "./queries";
+import { dayKey } from "./stats";
 import { requireUser } from "./supabase/server";
 
 export type { PlanTree, ProgressSetRow, SessionDetail, SetWithExercise } from "./queries";
@@ -49,10 +50,36 @@ export const getSessions = (query: q.SessionsQuery = {}) => sessionsCached(query
 /** When each session happened, oldest first, from [since] (epoch ms) or all time. */
 export const getSessionTimes = cache(async (since?: number) => q.sessionTimes(await client(), since));
 
-/** XP, level and badges, worked out from every finished workout (one small row each). */
+const getPlayed = cache(async () => (await q.sessionPlay(await client())).map(playedSession));
+
+/**
+ * XP, level, badges and this week's quests, worked out from every finished workout (one
+ * small row each).
+ */
 export const getPlayerProgress = cache(async () => {
-  const [rows, profile] = await Promise.all([q.sessionPlay(await client()), getProfile()]);
-  return playerProgress(rows.map(playedSession), profile?.days_per_week ?? null);
+  const [played, profile] = await Promise.all([getPlayed(), getProfile()]);
+  return playerProgress(played, profile?.days_per_week ?? null, dayKey(Date.now()));
+});
+
+/** Levels and badges are shown unless the profile's switch turned them off. */
+export const getShowLevels = cache(async () => (await getProfile())?.show_levels ?? true);
+
+/** Each mastery lift's tier: the best 1RMs of only its exercises, against the profile's weight. */
+export const getMastery = cache(async () => {
+  const [best, profile] = await Promise.all([q.liftBests(await client(), MASTERY_LIFTS.flatMap(([, ids]) => ids)), getProfile()]);
+  const byLift = Object.fromEntries(
+    MASTERY_LIFTS.flatMap(([lift, ids]) => {
+      const values = ids.map((id) => best.get(id)).filter((v) => v != null);
+      return values.length > 0 ? [[lift, Math.max(...values)]] : [];
+    }),
+  );
+  return mastery(byLift, profile?.sex ?? null, profile?.body_weight_kg ?? null);
+});
+
+/** A year of training (null when nothing counted that year). */
+export const getYearInReview = cache(async (year: number) => {
+  const [played, progress] = await Promise.all([getPlayed(), getPlayerProgress()]);
+  return yearInReview(year, played, progress);
 });
 
 export const getFinishedSessionCount = cache(async () => q.finishedSessionCount(await client()));

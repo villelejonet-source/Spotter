@@ -7,6 +7,7 @@ import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.longPreferencesKey
 import com.viktorolsson.spotter.core.data.repository.PlanRepository
 import com.viktorolsson.spotter.core.data.repository.RecommendationRepository
+import com.viktorolsson.spotter.core.data.repository.UserPreferencesRepository
 import com.viktorolsson.spotter.core.data.seed.ExerciseSeeder
 import kotlinx.coroutines.flow.first
 import kotlin.time.Clock
@@ -24,10 +25,12 @@ class StartupMaintenance(
     private val seeder: ExerciseSeeder,
     private val plans: PlanRepository,
     private val recommendations: RecommendationRepository,
+    private val preferences: UserPreferencesRepository,
     private val clock: Clock,
 ) {
     suspend fun run() {
         seeder.seedIfNeeded()
+        preferences.reconcileShowLevels()
         val marks = dataStore.data.first()
         if (marks[HOLDS_CONVERTED] != true) {
             plans.convertHoldsToSeconds()

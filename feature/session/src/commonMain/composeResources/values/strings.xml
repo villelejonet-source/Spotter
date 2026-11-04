@@ -112,6 +112,9 @@
     <string name="summary_xp_records">PRs +%1$d</string>
     <string name="summary_xp_check_in">Check-in +%1$d</string>
     <string name="summary_xp_week_goal">Week goal +%1$d</string>
+    <string name="summary_xp_quests">Quests +%1$d</string>
+    <string name="summary_share_level">I just reached %1$s in Spotter.</string>
+    <string name="summary_share_badges">New badge in Spotter.</string>
     <string name="summary_xp_none">Too short to earn XP: 10 minutes and one working set count.</string>
     <string name="summary_xp_rate_hint">Rate how it went for +%1$d XP.</string>
     <string name="summary_level_up">Level up!</string>

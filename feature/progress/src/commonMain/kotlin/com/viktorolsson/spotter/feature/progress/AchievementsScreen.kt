@@ -13,6 +13,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
@@ -20,52 +21,88 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewModelScope
 import com.viktorolsson.spotter.core.data.repository.GamificationRepository
+import com.viktorolsson.spotter.core.data.repository.UserPreferencesRepository
 import com.viktorolsson.spotter.core.engine.GamificationRules
+import com.viktorolsson.spotter.core.model.Mastery
 import com.viktorolsson.spotter.core.model.PlayerProgress
+import com.viktorolsson.spotter.core.model.WeightUnit
+import com.viktorolsson.spotter.core.model.YearInReview
 import com.viktorolsson.spotter.core.ui.component.BadgeTile
 import com.viktorolsson.spotter.core.ui.component.CardTitle
 import com.viktorolsson.spotter.core.ui.component.ContentCard
 import com.viktorolsson.spotter.core.ui.component.LevelProgress
 import com.viktorolsson.spotter.core.ui.component.LoadingState
+import com.viktorolsson.spotter.core.ui.component.MasteryList
+import com.viktorolsson.spotter.core.ui.component.PrimaryButton
+import com.viktorolsson.spotter.core.ui.component.QuestList
 import com.viktorolsson.spotter.core.ui.component.SectionHeader
 import com.viktorolsson.spotter.core.ui.component.SpotterTopBar
 import com.viktorolsson.spotter.core.ui.formatCount
+import com.viktorolsson.spotter.core.ui.resources.Res as CoreRes
+import com.viktorolsson.spotter.core.ui.resources.mastery_needs_weight
+import com.viktorolsson.spotter.core.ui.resources.mastery_note
+import com.viktorolsson.spotter.core.ui.resources.mastery_title
+import com.viktorolsson.spotter.core.ui.resources.quests_title
 import com.viktorolsson.spotter.core.ui.theme.Dimens
 import com.viktorolsson.spotter.feature.progress.resources.Res
 import com.viktorolsson.spotter.feature.progress.resources.achievements_badges
 import com.viktorolsson.spotter.feature.progress.resources.achievements_how_check_in
 import com.viktorolsson.spotter.feature.progress.resources.achievements_how_limits
+import com.viktorolsson.spotter.feature.progress.resources.achievements_how_quests
 import com.viktorolsson.spotter.feature.progress.resources.achievements_how_records
 import com.viktorolsson.spotter.feature.progress.resources.achievements_how_session
 import com.viktorolsson.spotter.feature.progress.resources.achievements_how_sets
 import com.viktorolsson.spotter.feature.progress.resources.achievements_how_title
 import com.viktorolsson.spotter.feature.progress.resources.achievements_how_week_goal
+import com.viktorolsson.spotter.feature.progress.resources.achievements_quests_note
 import com.viktorolsson.spotter.feature.progress.resources.achievements_title
 import com.viktorolsson.spotter.feature.progress.resources.achievements_xp_total
+import com.viktorolsson.spotter.feature.progress.resources.achievements_year_open
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
 import org.jetbrains.compose.resources.stringResource
 import org.koin.compose.viewmodel.koinViewModel
 
-data class AchievementsUiState(val loading: Boolean = true, val progress: PlayerProgress? = null)
+data class AchievementsUiState(
+    val loading: Boolean = true,
+    val progress: PlayerProgress? = null,
+    val mastery: Mastery = Mastery(null),
+    val unit: WeightUnit = WeightUnit.KG,
+    /** From December 1 to January 15, the year to look back on. */
+    val yearInReview: YearInReview? = null,
+    /** Levels were switched off (on another phone, say) while this screen was open. */
+    val hidden: Boolean = false,
+)
 
-class AchievementsViewModel(gamificationRepository: GamificationRepository) : ViewModel() {
-    val uiState: StateFlow<AchievementsUiState> = gamificationRepository.observeProgress()
-        .map { AchievementsUiState(loading = false, progress = it) }
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), AchievementsUiState())
+class AchievementsViewModel(
+    gamificationRepository: GamificationRepository,
+    preferencesRepository: UserPreferencesRepository,
+) : ViewModel() {
+    val uiState: StateFlow<AchievementsUiState> = combine(
+        gamificationRepository.observeLevels(),
+        gamificationRepository.observeMastery(),
+        preferencesRepository.preferences,
+    ) { levels, mastery, prefs ->
+        AchievementsUiState(false, levels.progress, mastery, prefs.weightUnit, levels.yearInReview, hidden = !prefs.showLevels)
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), AchievementsUiState())
 }
 
 @Composable
-internal fun AchievementsRoute(onBack: () -> Unit, viewModel: AchievementsViewModel = koinViewModel()) {
+internal fun AchievementsRoute(onBack: () -> Unit, onOpenYearInReview: (Int) -> Unit, viewModel: AchievementsViewModel = koinViewModel()) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
-    AchievementsScreen(state, onBack)
+    // Its entries on Today and Progress go when levels are off; so does the screen itself.
+    LaunchedEffect(state.hidden) { if (state.hidden) onBack() }
+    AchievementsScreen(state, onBack, onOpenYearInReview)
 }
 
-/** The level, how XP is earned, and every badge: unlocked with its date, locked with how far along. */
+/**
+ * The level, this week's quests, how XP is earned, lift mastery, and every badge: unlocked
+ * with its date, locked with how far along.
+ */
 @Composable
-internal fun AchievementsScreen(state: AchievementsUiState, onBack: () -> Unit) {
+internal fun AchievementsScreen(state: AchievementsUiState, onBack: () -> Unit, onOpenYearInReview: (Int) -> Unit = {}) {
     Scaffold(topBar = { SpotterTopBar(title = stringResource(Res.string.achievements_title), onBack = onBack) }) { padding ->
         val progress = state.progress
         if (state.loading || progress == null) {
@@ -89,7 +126,26 @@ internal fun AchievementsScreen(state: AchievementsUiState, onBack: () -> Unit) 
                     )
                 }
             }
+            state.yearInReview?.let { year ->
+                item(key = "year", span = { GridItemSpan(maxLineSpan) }) {
+                    PrimaryButton(stringResource(Res.string.achievements_year_open, year.year), { onOpenYearInReview(year.year) }, Modifier.fillMaxWidth())
+                }
+            }
+            progress.thisWeek?.let { week ->
+                item(key = "quests", span = { GridItemSpan(maxLineSpan) }) {
+                    ContentCard(Modifier.fillMaxWidth()) {
+                        CardTitle(stringResource(CoreRes.string.quests_title))
+                        QuestList(week, GamificationRules.QUEST_XP)
+                        Text(
+                            stringResource(Res.string.achievements_quests_note, GamificationRules.QUEST_XP),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
+                }
+            }
             item(key = "how", span = { GridItemSpan(maxLineSpan) }) { HowCard() }
+            item(key = "mastery", span = { GridItemSpan(maxLineSpan) }) { MasteryCard(state.mastery, state.unit) }
             item(key = "badges", span = { GridItemSpan(maxLineSpan) }) {
                 SectionHeader(stringResource(Res.string.achievements_badges, progress.badges.count { it.unlocked }, progress.badges.size))
             }
@@ -108,12 +164,31 @@ private fun HowCard() {
             stringResource(Res.string.achievements_how_records, GamificationRules.RECORD_XP),
             stringResource(Res.string.achievements_how_check_in, GamificationRules.CHECK_IN_XP),
             stringResource(Res.string.achievements_how_week_goal, GamificationRules.WEEKLY_GOAL_XP),
+            stringResource(Res.string.achievements_how_quests, GamificationRules.QUEST_XP),
         ).forEach { Text(it, style = MaterialTheme.typography.bodyMedium) }
         Text(
             stringResource(Res.string.achievements_how_limits, GamificationRules.MIN_MINUTES, GamificationRules.XP_SESSIONS_PER_DAY),
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
+    }
+}
+
+@Composable
+private fun MasteryCard(mastery: Mastery, unit: WeightUnit) {
+    ContentCard(Modifier.fillMaxWidth()) {
+        CardTitle(stringResource(CoreRes.string.mastery_title))
+        val lifts = mastery.lifts
+        if (lifts == null) {
+            Text(stringResource(CoreRes.string.mastery_needs_weight), style = MaterialTheme.typography.bodyMedium)
+        } else {
+            MasteryList(lifts, unit)
+            Text(
+                stringResource(CoreRes.string.mastery_note),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
     }
 }
 

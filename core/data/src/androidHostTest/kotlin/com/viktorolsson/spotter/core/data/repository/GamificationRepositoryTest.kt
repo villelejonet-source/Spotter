@@ -6,11 +6,22 @@ import com.viktorolsson.spotter.core.data.seed.SeedExercise
 import com.viktorolsson.spotter.core.data.seed.parseExerciseSeed
 import com.viktorolsson.spotter.core.data.testDatabase
 import com.viktorolsson.spotter.core.model.Badge
+import com.viktorolsson.spotter.core.model.Equipment
+import com.viktorolsson.spotter.core.model.ExperienceLevel
+import com.viktorolsson.spotter.core.model.Goal
+import com.viktorolsson.spotter.core.model.MasteryLift
+import com.viktorolsson.spotter.core.model.MasteryTier
+import com.viktorolsson.spotter.core.model.QuestKind
+import com.viktorolsson.spotter.core.model.Sex
+import com.viktorolsson.spotter.core.model.UserProfile
+import com.viktorolsson.spotter.core.model.WeightUnit
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.runTest
+import kotlinx.datetime.LocalDate
 import kotlinx.datetime.TimeZone
 import org.junit.After
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNull
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -22,6 +33,7 @@ class GamificationRepositoryTest {
     private lateinit var db: SpotterDatabase
     private lateinit var workouts: WorkoutRepository
     private lateinit var gamification: GamificationRepository
+    private lateinit var profiles: UserProfileRepository
     private val clock = MutableClock(Instant.parse("2026-10-05T16:00:00Z"))
 
     @Before
@@ -30,7 +42,8 @@ class GamificationRepositoryTest {
         val seed = parseExerciseSeed(File("catalog/exercises.json").readText())
         db.exerciseDao().upsertAll(seed.exercises.map(SeedExercise::toEntity))
         workouts = WorkoutRepository(db, db.workoutDao(), db.planDao(), db.exerciseDao(), testPreferences(db), clock)
-        gamification = GamificationRepository(db.workoutDao(), UserProfileRepository(db.userProfileDao()))
+        profiles = UserProfileRepository(db.userProfileDao())
+        gamification = GamificationRepository(db.workoutDao(), profiles, clock)
     }
 
     @After
@@ -81,5 +94,46 @@ class GamificationRepositoryTest {
     fun anUnfinishedWorkoutDoesNotCount() = runTest {
         workouts.startEmptyWorkout()
         assertEquals(emptyList<Any>(), gamification.observeProgress(TimeZone.UTC).first().sessions)
+    }
+
+    @Test
+    fun masteryCountsAFirstWorkoutAgainstTheProfilesWeight() = runTest {
+        assertNull(gamification.observeMastery().first().lifts) // no profile, no body weight
+        profiles.save(
+            UserProfile(
+                Sex.MALE, 180.0, LocalDate(1990, 1, 1), 80.0, WeightUnit.KG, ExperienceLevel.NEW, Goal.STRENGTH,
+                3, 60, Equipment.entries.toSet(), emptySet(), emptySet(),
+            ),
+        )
+        logWorkout("back-squat", 100.0 to 5, 60.0 to 0)
+        logWorkout("paused-squat", 110.0 to 1)
+
+        val squat = gamification.observeMastery().first().lifts!!.single { it.lift == MasteryLift.SQUAT }
+        // 100 × 5 is an estimated 116.7 kg, better than the paused single; 1.46 × body weight.
+        assertEquals(116.667, squat.bestKg!!, 0.001)
+        assertEquals(MasteryTier.BRONZE, squat.tier)
+        assertEquals(120.0, squat.nextKg!!, 0.001)
+    }
+
+    @Test
+    fun thisWeeksQuestsCountTheWeeksWorkouts() = runTest {
+        clock.set(Instant.parse("2026-11-09T08:00:00Z")) // the Monday quests began
+        logWorkout("barbell-bench-press", 80.0 to 8)
+
+        val week = gamification.observeProgress(TimeZone.UTC).first().thisWeek!!
+        assertEquals(LocalDate(2026, 11, 9), week.weekStart)
+        assertEquals(1, week.quests.single { it.quest.kind == QuestKind.WORKOUTS }.current)
+    }
+
+    @Test
+    fun theYearInReviewShowsInDecember() = runTest {
+        logWorkout("barbell-bench-press", 80.0 to 8)
+        assertNull(gamification.observeLevels(zone = TimeZone.UTC).first().yearInReview) // October
+
+        clock.set(Instant.parse("2026-12-02T08:00:00Z"))
+        val review = gamification.observeLevels(zone = TimeZone.UTC).first().yearInReview!!
+        assertEquals(2026, review.year)
+        assertEquals(1, review.workouts)
+        assertEquals("barbell-bench-press", review.favouriteExercise)
     }
 }

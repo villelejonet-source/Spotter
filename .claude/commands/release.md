@@ -31,6 +31,10 @@ Arguments: $ARGUMENTS
    production. Check read-only with `supabase migration list --project-ref gaherwthntdonrsuowbh`
    (local and remote columns must match). A missing one stops the release. Applying it is a
    separate step that needs the user's OK.
+7. **Weekly quests start date.** The first release with quests must ship on or before the
+   week `GamificationRules.QUESTS_FROM` (and `RULES.questsFrom` on the website) names, a
+   Monday. If it ships later, move both to the release week's Monday, together with the
+   fixture's quest cases, so quests don't pay out for weeks before the update.
 
 ## 2. Bump and write notes
 

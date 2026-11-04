@@ -42,14 +42,21 @@ import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.stateDescription
+import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.viktorolsson.spotter.core.model.Badge
 import com.viktorolsson.spotter.core.model.BadgeMetric
 import com.viktorolsson.spotter.core.model.BadgeProgress
 import com.viktorolsson.spotter.core.model.Level
+import com.viktorolsson.spotter.core.model.LiftMastery
+import com.viktorolsson.spotter.core.model.Quest
+import com.viktorolsson.spotter.core.model.QuestKind
+import com.viktorolsson.spotter.core.model.WeekQuests
+import com.viktorolsson.spotter.core.model.WeightUnit
 import com.viktorolsson.spotter.core.ui.formatCount
 import com.viktorolsson.spotter.core.ui.formatShortDate
+import com.viktorolsson.spotter.core.ui.formatWeight
 import com.viktorolsson.spotter.core.ui.howRes
 import com.viktorolsson.spotter.core.ui.labelRes
 import com.viktorolsson.spotter.core.ui.resources.Res
@@ -59,8 +66,20 @@ import com.viktorolsson.spotter.core.ui.resources.badge_unlocked_on
 import com.viktorolsson.spotter.core.ui.resources.level_bar_description
 import com.viktorolsson.spotter.core.ui.resources.level_heading
 import com.viktorolsson.spotter.core.ui.resources.level_to_next
+import com.viktorolsson.spotter.core.ui.resources.mastery_best_next
+import com.viktorolsson.spotter.core.ui.resources.mastery_best_top
+import com.viktorolsson.spotter.core.ui.resources.mastery_no_tier
+import com.viktorolsson.spotter.core.ui.resources.mastery_not_done
+import com.viktorolsson.spotter.core.ui.resources.quest_check_ins
+import com.viktorolsson.spotter.core.ui.resources.quest_done
+import com.viktorolsson.spotter.core.ui.resources.quest_new_exercise
+import com.viktorolsson.spotter.core.ui.resources.quest_progress
+import com.viktorolsson.spotter.core.ui.resources.quest_records
+import com.viktorolsson.spotter.core.ui.resources.quest_sets
+import com.viktorolsson.spotter.core.ui.resources.quest_workouts
 import com.viktorolsson.spotter.core.ui.theme.Dimens
 import com.viktorolsson.spotter.core.ui.theme.Spacing
+import org.jetbrains.compose.resources.pluralStringResource
 import org.jetbrains.compose.resources.stringResource
 import kotlin.math.roundToInt
 
@@ -174,5 +193,108 @@ fun BadgeTile(progress: BadgeProgress, modifier: Modifier = Modifier, showStatus
     }
 }
 
+/** A quest as it reads: "Train 3 times". */
+@Composable
+fun questLabel(quest: Quest): String = when (quest.kind) {
+    QuestKind.WORKOUTS -> pluralStringResource(Res.plurals.quest_workouts, quest.target, quest.target)
+    QuestKind.NEW_EXERCISE -> stringResource(Res.string.quest_new_exercise)
+    QuestKind.CHECK_INS -> stringResource(Res.string.quest_check_ins, quest.target)
+    QuestKind.RECORDS -> stringResource(Res.string.quest_records)
+    QuestKind.SETS -> stringResource(Res.string.quest_sets, quest.target)
+}
+
+/**
+ * This week's quests, each with how far along it is; a finished one is struck through with
+ * the [questXp] it paid. [compact] leaves the bars out (Today's card).
+ */
+@Composable
+fun QuestList(week: WeekQuests, questXp: Int, modifier: Modifier = Modifier, compact: Boolean = false) {
+    Column(modifier, verticalArrangement = Arrangement.spacedBy(Spacing.sm)) {
+        week.quests.forEach { progress ->
+            Column(Modifier.semantics(mergeDescendants = true) {}, verticalArrangement = Arrangement.spacedBy(Spacing.xs)) {
+                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(Spacing.sm)) {
+                    Text(
+                        questLabel(progress.quest),
+                        style = MaterialTheme.typography.bodyMedium,
+                        textDecoration = if (progress.done) TextDecoration.LineThrough else null,
+                        color = if (progress.done) MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.onSurface,
+                        modifier = Modifier.weight(1f),
+                    )
+                    Text(
+                        if (progress.done) stringResource(Res.string.quest_done, questXp)
+                        else stringResource(Res.string.quest_progress, progress.current, progress.quest.target),
+                        style = MaterialTheme.typography.labelMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+                if (!compact) QuestBar(progress.current.toFloat() / progress.quest.target)
+            }
+        }
+    }
+}
+
+@Composable
+private fun QuestBar(fraction: Float) {
+    Box(
+        Modifier
+            .fillMaxWidth()
+            .height(QUEST_BAR_HEIGHT)
+            .clip(MaterialTheme.shapes.extraSmall)
+            .background(MaterialTheme.colorScheme.surfaceContainerHighest)
+            .clearAndSetSemantics {},
+    ) {
+        Box(
+            Modifier
+                .fillMaxSize()
+                .graphicsLayer {
+                    scaleX = fraction.coerceIn(0f, 1f)
+                    transformOrigin = TransformOrigin(0f, 0.5f)
+                }
+                .background(MaterialTheme.colorScheme.primary),
+        )
+    }
+}
+
+/** Each mastery lift with its tier, its best estimated 1RM and what the next tier needs. */
+@Composable
+fun MasteryList(lifts: List<LiftMastery>, unit: WeightUnit, modifier: Modifier = Modifier) {
+    Column(modifier, verticalArrangement = Arrangement.spacedBy(Spacing.md)) {
+        lifts.forEach { lift ->
+            Row(
+                Modifier.fillMaxWidth().semantics(mergeDescendants = true) {},
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
+            ) {
+                Column(Modifier.weight(1f)) {
+                    Text(stringResource(lift.lift.labelRes), style = MaterialTheme.typography.titleSmall)
+                    val best = lift.bestKg
+                    val next = lift.nextTier
+                    val nextKg = lift.nextKg
+                    Text(
+                        when {
+                            best == null -> stringResource(Res.string.mastery_not_done)
+                            next == null || nextKg == null -> stringResource(Res.string.mastery_best_top, formatWeight(best, unit))
+                            else -> stringResource(Res.string.mastery_best_next, formatWeight(best, unit), stringResource(next.labelRes), formatWeight(nextKg, unit))
+                        },
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+                val tier = lift.tier
+                Text(
+                    stringResource(tier?.labelRes ?: Res.string.mastery_no_tier),
+                    style = MaterialTheme.typography.labelLarge,
+                    color = if (tier != null) MaterialTheme.colorScheme.onTertiaryContainer else MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier
+                        .clip(MaterialTheme.shapes.small)
+                        .background(if (tier != null) MaterialTheme.colorScheme.tertiaryContainer else MaterialTheme.colorScheme.surfaceContainerHigh)
+                        .padding(horizontal = Spacing.sm, vertical = Spacing.xs),
+                )
+            }
+        }
+    }
+}
+
 private const val BAR_MILLIS = 900
+private val QUEST_BAR_HEIGHT = 6.dp
 private val BAR_HEIGHT = 8.dp

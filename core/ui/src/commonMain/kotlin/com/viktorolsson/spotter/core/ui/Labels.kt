@@ -8,6 +8,8 @@ import com.viktorolsson.spotter.core.model.Badge
 import com.viktorolsson.spotter.core.model.BodyArea
 import com.viktorolsson.spotter.core.model.EffortScale
 import com.viktorolsson.spotter.core.model.LevelTitle
+import com.viktorolsson.spotter.core.model.MasteryLift
+import com.viktorolsson.spotter.core.model.MasteryTier
 import com.viktorolsson.spotter.core.model.Equipment
 import com.viktorolsson.spotter.core.model.MovementPattern
 import com.viktorolsson.spotter.core.model.MuscleGroup
@@ -156,6 +158,21 @@ val Badge.labelRes: StringResource
         Badge.EARLY_BIRD -> Res.string.badge_early_bird
         Badge.NIGHT_OWL -> Res.string.badge_night_owl
         Badge.EXPLORER -> Res.string.badge_explorer
+    }
+
+val MasteryLift.labelRes: StringResource
+    get() = when (this) {
+        MasteryLift.SQUAT -> Res.string.mastery_lift_squat
+        MasteryLift.BENCH_PRESS -> Res.string.mastery_lift_bench_press
+        MasteryLift.DEADLIFT -> Res.string.mastery_lift_deadlift
+        MasteryLift.OVERHEAD_PRESS -> Res.string.mastery_lift_overhead_press
+    }
+
+val MasteryTier.labelRes: StringResource
+    get() = when (this) {
+        MasteryTier.BRONZE -> Res.string.mastery_tier_bronze
+        MasteryTier.SILVER -> Res.string.mastery_tier_silver
+        MasteryTier.GOLD -> Res.string.mastery_tier_gold
     }
 
 /** How to earn the badge. */

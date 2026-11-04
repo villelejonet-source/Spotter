@@ -4,7 +4,7 @@
 // Enum values are the app's enum names (core/model); `label()` falls back to a readable
 // form of the name so an enum value the web doesn't know yet still shows something.
 
-import type { Badge, LevelTitle } from "./gamification";
+import type { Badge, LevelTitle, MasteryLift, MasteryTier, Quest } from "./gamification";
 import type { Goal, PersonalRecordType, PlanExerciseRow, PlanRow, ProgressionRule, SetType, SplitType } from "./model";
 
 /** "FRONT_DELTS" → "Front delts": the fallback for an unknown enum value. */
@@ -294,4 +294,33 @@ export const BADGE_LABELS: Record<Badge, { name: string; how: string }> = {
   EARLY_BIRD: { name: "Early Bird", how: "Start 5 workouts before 7 am" },
   NIGHT_OWL: { name: "Night Owl", how: "Start 5 workouts at 9 pm or later" },
   EXPLORER: { name: "Explorer", how: "Train 20 different exercises" },
+};
+
+/** A weekly quest as the app words it (feature/today strings.xml, quest_*). */
+export function questLabel({ kind, target }: Quest): string {
+  switch (kind) {
+    case "WORKOUTS":
+      return target === 1 ? "Train once" : `Train ${target} times`;
+    case "NEW_EXERCISE":
+      return "Try an exercise you've never done";
+    case "CHECK_INS":
+      return `Check in ${target} times`;
+    case "RECORDS":
+      return "Set a PR";
+    case "SETS":
+      return `Log ${target} working sets`;
+  }
+}
+
+export const MASTERY_LIFT_LABELS: Record<MasteryLift, string> = {
+  SQUAT: "Squat",
+  BENCH_PRESS: "Bench press",
+  DEADLIFT: "Deadlift",
+  OVERHEAD_PRESS: "Overhead press",
+};
+
+export const MASTERY_TIER_LABELS: Record<MasteryTier, string> = {
+  BRONZE: "Bronze",
+  SILVER: "Silver",
+  GOLD: "Gold",
 };

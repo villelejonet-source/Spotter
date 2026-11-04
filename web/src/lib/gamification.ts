@@ -20,6 +20,14 @@ export const RULES = {
   comebackDays: 21,
   earlyBeforeHour: 7,
   lateFromHour: 21,
+  /** The first week with quests (a Monday), so the update didn't pay for weeks already trained. */
+  questsFrom: "2026-11-09",
+  questXp: 50,
+  questWorkouts: 3,
+  questCheckIns: 3,
+  questSets: 40,
+  /** The year in review shows through this day of January. */
+  reviewUntilJanuary: 15,
 } as const;
 
 const RECORD_TYPES: PersonalRecordType[] = ["ESTIMATED_1RM", "REPS_AT_WEIGHT", "VOLUME"];
@@ -49,6 +57,8 @@ export interface SessionXp {
   records: number;
   checkIn: number;
   weeklyGoal: number;
+  /** Weekly quests this workout finished. */
+  quests: number;
   total: number;
 }
 
@@ -131,6 +141,29 @@ export interface PlayerProgress {
   /** Every workout's XP, oldest first. */
   sessions: SessionXp[];
   badges: BadgeProgress[];
+  /** The quests of the week containing the day asked about; null before quests began. */
+  thisWeek: WeekQuests | null;
+}
+
+export type QuestKind = "WORKOUTS" | "NEW_EXERCISE" | "CHECK_INS" | "RECORDS" | "SETS";
+
+export interface Quest {
+  kind: QuestKind;
+  target: number;
+}
+
+export interface QuestProgress {
+  quest: Quest;
+  /** Never past the target. */
+  current: number;
+  /** The workout that finished it, null while open. */
+  doneBy: string | null;
+}
+
+export interface WeekQuests {
+  /** "2026-11-09", a Monday. */
+  weekStart: string;
+  quests: QuestProgress[];
 }
 
 const DAY_MS = 86_400_000;
@@ -180,18 +213,55 @@ export function levelFor(totalXp: number): Level {
   return { number: n, title, xpIntoLevel: totalXp - from, xpForNext: xpToReach(n + 1) - from };
 }
 
+const ROTATING_QUESTS: QuestKind[] = ["NEW_EXERCISE", "CHECK_INS", "RECORDS", "SETS"];
+
+const questTarget = (kind: QuestKind): number =>
+  ({ WORKOUTS: RULES.questWorkouts, NEW_EXERCISE: 1, RECORDS: 1, CHECK_INS: RULES.questCheckIns, SETS: RULES.questSets })[kind];
+
+/**
+ * The week's quests (as the app's Gamification.questsFor): the workouts one, then two of the
+ * others in turn, moving on one each week. Null before quests began.
+ */
+export function questsFor(weekStart: string, daysPerWeek: number | null): Quest[] | null {
+  if (weekStart < RULES.questsFrom) return null;
+  const turn = Math.floor(dateValue(weekStart) / DAY_MS / 7);
+  const workouts = daysPerWeek != null && daysPerWeek >= 1 && daysPerWeek <= 7 ? daysPerWeek : RULES.questWorkouts;
+  const pick = (kind: QuestKind): Quest => ({ kind, target: questTarget(kind) });
+  return [
+    { kind: "WORKOUTS", target: workouts },
+    pick(ROTATING_QUESTS[turn % ROTATING_QUESTS.length]),
+    pick(ROTATING_QUESTS[(turn + 1) % ROTATING_QUESTS.length]),
+  ];
+}
+
+const openQuests = (weekStart: string, daysPerWeek: number | null): QuestProgress[] | null =>
+  questsFor(weekStart, daysPerWeek)?.map((quest) => ({ quest, current: 0, doneBy: null })) ?? null;
+
+/** "2026-10-26" for a date value. */
+const isoDate = (date: number) => new Date(date).toISOString().slice(0, 10);
+
+/** Monday of the week containing a "2026-10-26" date. */
+export function weekOf(date: string): string {
+  return isoDate(mondayOf(dateValue(date)));
+}
+
 export function counts(session: PlayedSession): boolean {
   return session.minutes >= RULES.minMinutes && session.workingSets > 0;
 }
 
-/** [daysPerWeek]: the profile's weekly goal; null or 0 means no goal bonus. */
-export function playerProgress(sessions: PlayedSession[], daysPerWeek: number | null): PlayerProgress {
+/**
+ * [daysPerWeek]: the profile's weekly goal; null or 0 means no goal bonus. [today]
+ * ("2026-11-12"): the day whose week thisWeek shows; null leaves it out.
+ */
+export function playerProgress(sessions: PlayedSession[], daysPerWeek: number | null, today: string | null = null): PlayerProgress {
   const values = new Map<BadgeMetric, number>(BADGES.map(([, metric]) => [metric, 0]));
   const unlocked = new Map<Badge, { by: string; on: string }>();
   const bump = (metric: BadgeMetric, by: number) => values.set(metric, values.get(metric)! + by);
   const exercises = new Set<string>();
   const xpSessionsOnDay = new Map<string, number>();
   const daysInWeek = new Map<number, Set<string>>();
+  const weeks = new Map<string, QuestProgress[] | null>();
+  const seenExercises = new Set<string>();
   const xp: SessionXp[] = [];
   let lastDate: number | null = null;
   let lastWeek: number | null = null;
@@ -200,7 +270,7 @@ export function playerProgress(sessions: PlayedSession[], daysPerWeek: number | 
   const ordered = [...sessions].sort((a, b) => (a.start < b.start ? -1 : a.start > b.start ? 1 : a.id < b.id ? -1 : a.id > b.id ? 1 : 0));
   for (const s of ordered) {
     if (!counts(s)) {
-      xp.push({ sessionId: s.id, session: 0, sets: 0, records: 0, checkIn: 0, weeklyGoal: 0, total: 0 });
+      xp.push({ sessionId: s.id, session: 0, sets: 0, records: 0, checkIn: 0, weeklyGoal: 0, quests: 0, total: 0 });
       continue;
     }
     const day = s.start.slice(0, 10);
@@ -216,6 +286,27 @@ export function playerProgress(sessions: PlayedSession[], daysPerWeek: number | 
     const goalHit = daysPerWeek != null && daysPerWeek > 0 && !days.has(day) && days.size + 1 === daysPerWeek;
     days.add(day);
 
+    const newExercise = s.exerciseIds.some((id) => !seenExercises.has(id));
+    for (const id of s.exerciseIds) seenExercises.add(id);
+    const weekStart = isoDate(week);
+    if (!weeks.has(weekStart)) weeks.set(weekStart, openQuests(weekStart, daysPerWeek));
+    let questXp = 0;
+    for (const progress of weeks.get(weekStart) ?? []) {
+      if (progress.doneBy != null) continue;
+      const add = {
+        WORKOUTS: 1,
+        NEW_EXERCISE: newExercise ? 1 : 0,
+        CHECK_INS: s.readiness != null || s.feel != null ? 1 : 0,
+        RECORDS: s.records.length,
+        SETS: s.workingSets,
+      }[progress.quest.kind];
+      progress.current = Math.min(progress.current + add, progress.quest.target);
+      if (progress.current >= progress.quest.target) {
+        progress.doneBy = s.id;
+        questXp += RULES.questXp;
+      }
+    }
+
     const entry = {
       sessionId: s.id,
       session: earnsBase ? RULES.sessionXp : 0,
@@ -223,8 +314,9 @@ export function playerProgress(sessions: PlayedSession[], daysPerWeek: number | 
       records: RULES.recordXp * s.records.length,
       checkIn: earnsBase && (s.readiness != null || s.feel != null) ? RULES.checkInXp : 0,
       weeklyGoal: goalHit ? RULES.weeklyGoalXp : 0,
+      quests: questXp,
     };
-    xp.push({ ...entry, total: entry.session + entry.sets + entry.records + entry.checkIn + entry.weeklyGoal });
+    xp.push({ ...entry, total: entry.session + entry.sets + entry.records + entry.checkIn + entry.weeklyGoal + entry.quests });
 
     run = lastWeek === week ? run : lastWeek === week - 7 * DAY_MS ? run + 1 : 1;
     const comeback = lastDate != null && (date - lastDate) / DAY_MS >= RULES.comebackDays;
@@ -250,6 +342,8 @@ export function playerProgress(sessions: PlayedSession[], daysPerWeek: number | 
   }
 
   const totalXp = xp.reduce((sum, s) => sum + s.total, 0);
+  const thisWeekStart = today == null ? null : weekOf(today);
+  const thisWeekQuests = thisWeekStart == null ? null : (weeks.get(thisWeekStart) ?? openQuests(thisWeekStart, daysPerWeek));
   return {
     totalXp,
     level: levelFor(totalXp),
@@ -261,5 +355,123 @@ export function playerProgress(sessions: PlayedSession[], daysPerWeek: number | 
       unlockedBy: unlocked.get(badge)?.by ?? null,
       unlockedOn: unlocked.get(badge)?.on ?? null,
     })),
+    thisWeek: thisWeekStart != null && thisWeekQuests != null ? { weekStart: thisWeekStart, quests: thisWeekQuests } : null,
+  };
+}
+
+// ---- Lift mastery ----
+
+export type MasteryLift = "SQUAT" | "BENCH_PRESS" | "DEADLIFT" | "OVERHEAD_PRESS";
+export type MasteryTier = "BRONZE" | "SILVER" | "GOLD";
+export type Sex = "FEMALE" | "MALE";
+
+const TIERS: MasteryTier[] = ["BRONZE", "SILVER", "GOLD"];
+
+/** The app's MasteryLift: each lift's tier comes from the best 1RM of any of its exercises. */
+export const MASTERY_LIFTS: [MasteryLift, string[]][] = [
+  ["SQUAT", ["back-squat", "paused-squat"]],
+  ["BENCH_PRESS", ["barbell-bench-press", "paused-bench-press"]],
+  ["DEADLIFT", ["deadlift", "sumo-deadlift", "paused-deadlift"]],
+  ["OVERHEAD_PRESS", ["overhead-press"]],
+];
+
+/** Bronze, silver and gold, as best estimated 1RM ÷ body weight (the app's GamificationRules.MASTERY). */
+export const MASTERY: Record<Sex, Record<MasteryLift, [number, number, number]>> = {
+  MALE: { SQUAT: [1.0, 1.5, 2.0], BENCH_PRESS: [0.75, 1.0, 1.5], DEADLIFT: [1.25, 1.75, 2.25], OVERHEAD_PRESS: [0.5, 0.75, 1.0] },
+  FEMALE: { SQUAT: [0.75, 1.0, 1.5], BENCH_PRESS: [0.5, 0.75, 1.0], DEADLIFT: [1.0, 1.25, 1.75], OVERHEAD_PRESS: [0.35, 0.5, 0.65] },
+};
+
+export interface LiftMastery {
+  lift: MasteryLift;
+  bestKg: number | null;
+  ratio: number | null;
+  tier: MasteryTier | null;
+  /** The next tier and the 1RM it needs; null at gold. */
+  nextTier: MasteryTier | null;
+  nextKg: number | null;
+}
+
+/** Null without a body weight to rate against. */
+export function mastery(bestKg: Partial<Record<MasteryLift, number>>, sex: string | null, bodyWeightKg: number | null): LiftMastery[] | null {
+  if ((sex !== "MALE" && sex !== "FEMALE") || bodyWeightKg == null || bodyWeightKg <= 0) return null;
+  return MASTERY_LIFTS.map(([lift]) => {
+    const thresholds = MASTERY[sex][lift];
+    const best = (bestKg[lift] ?? 0) > 0 ? bestKg[lift]! : null;
+    const ratio = best == null ? null : best / bodyWeightKg;
+    const reached = ratio == null ? -1 : thresholds.findLastIndex((t) => ratio >= t);
+    const next = TIERS[reached + 1] ?? null;
+    return {
+      lift,
+      bestKg: best,
+      ratio,
+      tier: TIERS[reached] ?? null,
+      nextTier: next,
+      nextKg: next == null ? null : thresholds[reached + 1] * bodyWeightKg,
+    };
+  });
+}
+
+// ---- Year in review ----
+
+export interface YearInReview {
+  year: number;
+  workouts: number;
+  minutes: number;
+  volumeKg: number;
+  records: number;
+  xp: number;
+  levelStart: number;
+  levelEnd: number;
+  /** Unlocked during the year, in badge order. */
+  badges: Badge[];
+  /** 1–12, the month with the most volume (the earliest on a tie). */
+  strongestMonth: number | null;
+  /** The exercise in the most workouts (the first id on a tie). */
+  favouriteExercise: string | null;
+}
+
+/** The year to look back on ("2026-12-01" → 2026, until January 15 the year before), else null. */
+export function reviewYear(today: string): number | null {
+  const year = Number(today.slice(0, 4));
+  const month = Number(today.slice(5, 7));
+  const day = Number(today.slice(8, 10));
+  if (month === 12) return year;
+  if (month === 1 && day <= RULES.reviewUntilJanuary) return year - 1;
+  return null;
+}
+
+/** [progress] is playerProgress over the same [sessions]. Null when no workout that year counted. */
+export function yearInReview(year: number, sessions: PlayedSession[], progress: PlayerProgress): YearInReview | null {
+  const counted = sessions.filter(counts);
+  const yearOf = (s: PlayedSession) => Number(s.start.slice(0, 4));
+  const inYear = counted.filter((s) => yearOf(s) === year);
+  if (inYear.length === 0) return null;
+  const xpOf = new Map(progress.sessions.map((s) => [s.sessionId, s.total]));
+  const sumXp = (list: PlayedSession[]) => list.reduce((sum, s) => sum + (xpOf.get(s.id) ?? 0), 0);
+  const xpBefore = sumXp(counted.filter((s) => yearOf(s) < year));
+  const xp = sumXp(inYear);
+
+  const volumeByMonth = new Map<number, number>();
+  const usage = new Map<string, number>();
+  for (const s of inYear) {
+    const month = Number(s.start.slice(5, 7));
+    volumeByMonth.set(month, (volumeByMonth.get(month) ?? 0) + s.volumeKg);
+    for (const id of new Set(s.exerciseIds)) usage.set(id, (usage.get(id) ?? 0) + 1);
+  }
+  const top = <K extends number | string>(entries: [K, number][]): K | null =>
+    entries.filter(([, v]) => v > 0).sort(([ka, a], [kb, b]) => b - a || (ka < kb ? -1 : ka > kb ? 1 : 0))[0]?.[0] ?? null;
+
+  return {
+    year,
+    workouts: inYear.length,
+    minutes: inYear.reduce((sum, s) => sum + s.minutes, 0),
+    volumeKg: inYear.reduce((sum, s) => sum + s.volumeKg, 0),
+    records: inYear.reduce((sum, s) => sum + s.records.length, 0),
+    xp,
+    levelStart: levelFor(xpBefore).number,
+    levelEnd: levelFor(xpBefore + xp).number,
+    badges: progress.badges.filter((b) => b.unlockedOn != null && Number(b.unlockedOn.slice(0, 4)) === year).map((b) => b.badge),
+    strongestMonth: top([...volumeByMonth]),
+    favouriteExercise: top([...usage]),
   };
 }

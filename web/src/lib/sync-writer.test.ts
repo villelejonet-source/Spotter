@@ -93,6 +93,7 @@ describe("payloads match the Room entities", () => {
         equipment: [],
         focus_areas: [],
         limitations: [],
+        show_levels: true,
       }),
     ],
     ["body_weight_entry", bodyWeightPayload(20000, 70)],
@@ -284,7 +285,7 @@ describe("validation messages are in the user's words", () => {
     expect(firstIssue(exerciseDraftSchema.safeParse({ ...exercise, rest_seconds: 901 }))).toBe("Use a rest from 0 to 15 minutes.");
     expect(firstIssue(exerciseDraftSchema.safeParse({ ...exercise, starting_weight_kg: -1 }))).toBe("Use a starting weight from 0 to 1000 kg.");
     expect(firstIssue(bodyWeightSchema.safeParse({ epoch_day: -1, weight_kg: 70 }))).toBe("Pick a valid date.");
-    const profile = { sex: "FEMALE", height_cm: 170, birth_date_epoch_day: 11000, body_weight_kg: 60, units: "KG", experience: "NEW", goal: "STRENGTH", days_per_week: 3, session_length_minutes: 45, equipment: [], focus_areas: [], limitations: [] };
+    const profile = { sex: "FEMALE", height_cm: 170, birth_date_epoch_day: 11000, body_weight_kg: 60, units: "KG", experience: "NEW", goal: "STRENGTH", days_per_week: 3, session_length_minutes: 45, equipment: [], focus_areas: [], limitations: [], show_levels: true };
     expect(firstIssue(profileSchema.safeParse({ ...profile, days_per_week: 9 }))).toBe("Pick how many days a week you train.");
     expect(firstIssue(profileSchema.safeParse({ ...profile, session_length_minutes: 7 }))).toBe("Pick a session length.");
     expect(firstIssue(profileSchema.safeParse({ ...profile, birth_date_epoch_day: 99_999 }))).toBe("Enter a valid birth date.");
@@ -309,7 +310,7 @@ describe("body weight range matches the app (30–300 kg)", () => {
   });
 
   it("applies the same range to the profile", () => {
-    const profile = { sex: "FEMALE", height_cm: 170, birth_date_epoch_day: 11000, body_weight_kg: 29, units: "KG", experience: "NEW", goal: "STRENGTH", days_per_week: 3, session_length_minutes: 45, equipment: [], focus_areas: [], limitations: [] };
+    const profile = { sex: "FEMALE", height_cm: 170, birth_date_epoch_day: 11000, body_weight_kg: 29, units: "KG", experience: "NEW", goal: "STRENGTH", days_per_week: 3, session_length_minutes: 45, equipment: [], focus_areas: [], limitations: [], show_levels: true };
     expect(firstIssue(profileSchema.safeParse(profile))).toBe("Enter a body weight between 30 and 300 kg.");
     expect(profileSchema.safeParse({ ...profile, body_weight_kg: 30 }).success).toBe(true);
   });

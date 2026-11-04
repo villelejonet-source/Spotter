@@ -440,6 +440,21 @@ class SyncEngineTest {
     }
 
     @Test
+    fun theLevelsSwitchFollowsTheProfile() = runTest {
+        val a = device()
+        a.profiles.save(profile)
+        a.prefs.setShowLevels(false)
+        assertEquals(false, a.profiles.get()!!.showLevels)
+        a.sync()
+
+        val b = device()
+        b.sync()
+        assertEquals(false, b.profiles.get()!!.showLevels)
+        b.prefs.reconcileShowLevels() // as SyncRepository does after a sync
+        assertEquals(false, b.prefs.preferences.first().showLevels)
+    }
+
+    @Test
     fun aLargeBackupIsAppliedPageByPage() = runTest {
         val a = device()
         a.planFor(profile)

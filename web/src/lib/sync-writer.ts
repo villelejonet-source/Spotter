@@ -356,6 +356,7 @@ export const profileSchema = z.object({
   equipment: z.array(z.enum(EQUIPMENT)),
   focus_areas: z.array(z.enum(BODY_AREAS)),
   limitations: z.array(z.enum(LIMITATIONS)),
+  show_levels: z.boolean(),
 });
 export type ProfileDraft = z.infer<typeof profileSchema>;
 
@@ -389,6 +390,7 @@ export function profileDraftFrom(p: ProfileRow): ProfileDraft {
     equipment: list(p.equipment),
     focus_areas: list(p.focus_areas),
     limitations: list(p.limitations),
+    show_levels: p.show_levels,
   };
 }
 
@@ -407,6 +409,9 @@ export function profilePayload(p: ProfileDraft) {
     equipment: p.equipment.join(","),
     focusAreas: p.focus_areas.join(","),
     limitations: p.limitations.join(","),
+    // Room's Boolean column, as the app writes it. The full payload always carries it, so a
+    // website save never drops the app's choice.
+    showLevels: p.show_levels ? 1 : 0,
   };
 }
 

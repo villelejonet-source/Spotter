@@ -55,8 +55,10 @@ import com.viktorolsson.spotter.feature.plan.planScreen
 import com.viktorolsson.spotter.feature.plan.programPreviewScreen
 import com.viktorolsson.spotter.feature.plan.programsScreen
 import com.viktorolsson.spotter.feature.progress.AchievementsRoute
+import com.viktorolsson.spotter.feature.progress.YearInReviewRoute
 import com.viktorolsson.spotter.feature.progress.achievementsScreen
 import com.viktorolsson.spotter.feature.progress.progressScreen
+import com.viktorolsson.spotter.feature.progress.yearInReviewScreen
 import com.viktorolsson.spotter.feature.session.SessionRoute
 import com.viktorolsson.spotter.feature.session.SummaryRoute
 import com.viktorolsson.spotter.feature.session.sessionScreen
@@ -189,13 +191,18 @@ fun SpotterApp(
                 onOpenPlan = { navController.navigate(PlanRoute) },
                 onBuildPlan = { navController.navigate(OnboardingRoute()) },
                 onOpenLevels = { navController.navigate(AchievementsRoute) },
+                onOpenYearInReview = { navController.navigate(YearInReviewRoute(it)) },
             )
             historyScreen(onOpenWorkout = { navController.navigate(WorkoutDetailRoute(it)) })
             progressScreen(
                 onOpenExercise = { navController.navigate(ExerciseHistoryRoute(it)) },
                 onOpenLevels = { navController.navigate(AchievementsRoute) },
             )
-            achievementsScreen(onBack = { navController.popBackStack<AchievementsRoute>(inclusive = true) })
+            achievementsScreen(
+                onBack = { navController.popBackStack<AchievementsRoute>(inclusive = true) },
+                onOpenYearInReview = { navController.navigate(YearInReviewRoute(it)) },
+            )
+            yearInReviewScreen(onBack = { navController.popBackStack<YearInReviewRoute>(inclusive = true) })
             workoutDetailScreen(
                 onBack = { navController.popBackStack<WorkoutDetailRoute>(inclusive = true) },
                 onOpenExercise = { navController.navigate(ExerciseHistoryRoute(it)) },

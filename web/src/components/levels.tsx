@@ -2,8 +2,10 @@
 // level heading and bar, and a badge tile. Server components: nothing here is interactive.
 import clsx from "clsx";
 import { formatDateValue } from "@/lib/dates";
-import type { BadgeProgress, Level } from "@/lib/gamification";
-import { BADGE_LABELS, LEVEL_TITLE_LABELS } from "@/lib/labels";
+import type { BadgeProgress, Level, LiftMastery, WeekQuests } from "@/lib/gamification";
+import { RULES } from "@/lib/gamification";
+import { BADGE_LABELS, LEVEL_TITLE_LABELS, MASTERY_LIFT_LABELS, MASTERY_TIER_LABELS, questLabel } from "@/lib/labels";
+import { formatWeight, type WeightUnit } from "@/lib/model";
 import { LOCALE } from "@/lib/tz";
 
 const integer = new Intl.NumberFormat(LOCALE, { maximumFractionDigits: 0 });
@@ -58,6 +60,59 @@ export function BadgeTile({ badge }: { badge: BadgeProgress }) {
           : `${Math.round((badge.current / badge.target) * 100)}% there`}
       </p>
     </div>
+  );
+}
+
+/** This week's quests, each with how far along it is (the app's QuestList). */
+export function QuestList({ week, compact = false }: { week: WeekQuests; compact?: boolean }) {
+  return (
+    <ul className={clsx("space-y-2", compact ? "text-sm" : "text-[0.9375rem]")}>
+      {week.quests.map(({ quest, current, doneBy }) => (
+        <li key={quest.kind}>
+          <div className="flex items-baseline justify-between gap-3">
+            <span className={doneBy != null ? "text-muted line-through" : undefined}>{questLabel(quest)}</span>
+            <span className="shrink-0 font-mono text-xs tabular-nums text-muted">
+              {doneBy != null ? `Done · +${RULES.questXp} XP` : `${current} / ${quest.target}`}
+            </span>
+          </div>
+          {!compact && (
+            <div className="mt-1 h-1.5 overflow-hidden rounded-full bg-surface-high" aria-hidden="true">
+              <div className="h-full origin-left rounded-full bg-primary" style={{ transform: `scaleX(${Math.min(current / quest.target, 1)})` }} />
+            </div>
+          )}
+        </li>
+      ))}
+    </ul>
+  );
+}
+
+/** Each mastery lift's tier and what the next one needs, in the user's unit. */
+export function MasteryList({ lifts, unit }: { lifts: LiftMastery[]; unit: WeightUnit }) {
+  return (
+    <ul className="divide-y divide-outline">
+      {lifts.map((m) => (
+        <li key={m.lift} className="flex items-center justify-between gap-3 py-2.5 first:pt-0 last:pb-0">
+          <div className="min-w-0">
+            <div className="font-medium">{MASTERY_LIFT_LABELS[m.lift]}</div>
+            <div className="text-xs text-muted">
+              {m.bestKg == null
+                ? "Not done yet"
+                : m.nextTier == null
+                  ? `Best ${formatWeight(m.bestKg, unit)} · top tier`
+                  : `Best ${formatWeight(m.bestKg, unit)} · ${MASTERY_TIER_LABELS[m.nextTier]} at ${formatWeight(m.nextKg!, unit)}`}
+            </div>
+          </div>
+          <span
+            className={clsx(
+              "shrink-0 rounded-full px-2.5 py-1 font-mono text-xs",
+              m.tier == null ? "border border-outline text-muted" : "bg-tertiary-container text-on-tertiary-container",
+            )}
+          >
+            {m.tier == null ? "No tier" : MASTERY_TIER_LABELS[m.tier]}
+          </span>
+        </li>
+      ))}
+    </ul>
   );
 }
 

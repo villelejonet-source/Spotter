@@ -131,6 +131,8 @@
       {
         "name": "a first workout",
         "daysPerWeek": 3,
+        "today": "2026-10-28",
+        "thisWeek": null,
         "sessions": [
           { "id": 1, "start": "2026-10-26T18:00", "minutes": 60, "readiness": 4, "workingSets": 12, "volumeKg": 2000, "exerciseIds": ["a", "b", "c"] }
         ],
@@ -221,6 +223,173 @@
         "level": 3,
         "unlocked": { "FIRST_REP": 1, "STREAK_4": 4, "EARLY_BIRD": 5, "COMEBACK_KID": 5, "LISTENED_TO_YOUR_BODY": 5 },
         "progress": { "TEN_DOWN": 6, "STREAK_12": 4, "NIGHT_OWL": 1, "EXPLORER": 2 }
+      },
+      {
+        "name": "quests pay once each, on the workout that finishes them; weeks before quests began have none",
+        "daysPerWeek": 2,
+        "today": "2026-11-12",
+        "sessions": [
+          { "id": 1, "start": "2026-11-06T18:00", "minutes": 60, "workingSets": 30, "records": ["ESTIMATED_1RM"], "exerciseIds": ["a"] },
+          { "id": 2, "start": "2026-11-09T18:00", "minutes": 30, "workingSets": 20, "exerciseIds": ["a"] },
+          { "id": 3, "start": "2026-11-11T18:00", "minutes": 30, "workingSets": 25, "readiness": 4, "records": ["VOLUME"], "exerciseIds": ["b"] },
+          { "id": 4, "start": "2026-11-12T18:00", "minutes": 30, "workingSets": 10, "exerciseIds": ["a"] }
+        ],
+        "xp": [
+          { "id": 1, "session": 100, "sets": 125, "records": 50, "checkIn": 0, "weeklyGoal": 0, "quests": 0 },
+          { "id": 2, "session": 100, "sets": 100, "records": 0, "checkIn": 0, "weeklyGoal": 0, "quests": 0 },
+          { "id": 3, "session": 100, "sets": 125, "records": 50, "checkIn": 25, "weeklyGoal": 150, "quests": 150 },
+          { "id": 4, "session": 100, "sets": 50, "records": 0, "checkIn": 0, "weeklyGoal": 0, "quests": 0 }
+        ],
+        "totalXp": 1225,
+        "level": 4,
+        "unlocked": { "FIRST_REP": 1, "FIRST_PR": 1 },
+        "progress": { "TEN_DOWN": 4 },
+        "thisWeek": {
+          "weekStart": "2026-11-09",
+          "quests": [
+            { "kind": "WORKOUTS", "target": 2, "current": 2, "doneBy": 3 },
+            { "kind": "RECORDS", "target": 1, "current": 1, "doneBy": 3 },
+            { "kind": "SETS", "target": 40, "current": 40, "doneBy": 3 }
+          ]
+        }
+      },
+      {
+        "name": "a new exercise is one no counted workout had; check-ins and workouts add up over the week",
+        "daysPerWeek": null,
+        "today": "2026-11-29",
+        "sessions": [
+          { "id": 1, "start": "2026-11-20T18:00", "minutes": 40, "workingSets": 6, "feel": 4, "exerciseIds": ["a", "b"] },
+          { "id": 2, "start": "2026-11-23T18:00", "minutes": 5, "workingSets": 6, "readiness": 3, "exerciseIds": ["c"] },
+          { "id": 3, "start": "2026-11-24T18:00", "minutes": 40, "workingSets": 6, "readiness": 3, "exerciseIds": ["a"] },
+          { "id": 4, "start": "2026-11-25T18:00", "minutes": 40, "workingSets": 6, "feel": 5, "exerciseIds": ["a", "c"] },
+          { "id": 5, "start": "2026-11-26T07:30", "minutes": 40, "workingSets": 6, "readiness": 4, "exerciseIds": ["a"] }
+        ],
+        "xp": [
+          { "id": 1, "session": 100, "sets": 30, "records": 0, "checkIn": 25, "weeklyGoal": 0, "quests": 50 },
+          { "id": 2, "session": 0, "sets": 0, "records": 0, "checkIn": 0, "weeklyGoal": 0, "quests": 0 },
+          { "id": 3, "session": 100, "sets": 30, "records": 0, "checkIn": 25, "weeklyGoal": 0, "quests": 0 },
+          { "id": 4, "session": 100, "sets": 30, "records": 0, "checkIn": 25, "weeklyGoal": 0, "quests": 50 },
+          { "id": 5, "session": 100, "sets": 30, "records": 0, "checkIn": 25, "weeklyGoal": 0, "quests": 100 }
+        ],
+        "totalXp": 820,
+        "level": 3,
+        "unlocked": { "FIRST_REP": 1 },
+        "progress": { "EXPLORER": 3, "TEN_DOWN": 4 },
+        "thisWeek": {
+          "weekStart": "2026-11-23",
+          "quests": [
+            { "kind": "WORKOUTS", "target": 3, "current": 3, "doneBy": 5 },
+            { "kind": "NEW_EXERCISE", "target": 1, "current": 1, "doneBy": 4 },
+            { "kind": "CHECK_INS", "target": 3, "current": 3, "doneBy": 5 }
+          ]
+        }
+      },
+      {
+        "name": "a new week's quests start at nothing",
+        "daysPerWeek": 4,
+        "today": "2026-12-01",
+        "sessions": [
+          { "id": 1, "start": "2026-11-27T18:00", "minutes": 30, "workingSets": 2 }
+        ],
+        "xp": [{ "id": 1, "session": 100, "sets": 10, "records": 0, "checkIn": 0, "weeklyGoal": 0, "quests": 0 }],
+        "totalXp": 110,
+        "level": 1,
+        "unlocked": { "FIRST_REP": 1 },
+        "progress": {},
+        "thisWeek": {
+          "weekStart": "2026-11-30",
+          "quests": [
+            { "kind": "WORKOUTS", "target": 4, "current": 0, "doneBy": null },
+            { "kind": "CHECK_INS", "target": 3, "current": 0, "doneBy": null },
+            { "kind": "RECORDS", "target": 1, "current": 0, "doneBy": null }
+          ]
+        }
+      }
+    ],
+    "badges": [
+      { "id": "FIRST_REP", "metric": "WORKOUTS", "target": 1 },
+      { "id": "TEN_DOWN", "metric": "WORKOUTS", "target": 10 },
+      { "id": "HALF_CENTURY", "metric": "WORKOUTS", "target": 50 },
+      { "id": "CENTURION", "metric": "WORKOUTS", "target": 100 },
+      { "id": "CLUB_250", "metric": "WORKOUTS", "target": 250 },
+      { "id": "FIRST_PR", "metric": "RECORDS", "target": 1 },
+      { "id": "PR_HUNTER", "metric": "RECORDS", "target": 10 },
+      { "id": "RECORD_MACHINE", "metric": "RECORDS", "target": 50 },
+      { "id": "TRIPLE_THREAT", "metric": "TRIPLE_THREATS", "target": 1 },
+      { "id": "STREAK_4", "metric": "WEEK_STREAK", "target": 4 },
+      { "id": "STREAK_12", "metric": "WEEK_STREAK", "target": 12 },
+      { "id": "STREAK_26", "metric": "WEEK_STREAK", "target": 26 },
+      { "id": "STREAK_52", "metric": "WEEK_STREAK", "target": 52 },
+      { "id": "GRAND_PIANO", "metric": "VOLUME_KG", "target": 500 },
+      { "id": "CAR", "metric": "VOLUME_KG", "target": 1500 },
+      { "id": "ELEPHANT", "metric": "VOLUME_KG", "target": 6000 },
+      { "id": "BLUE_WHALE", "metric": "VOLUME_KG", "target": 150000 },
+      { "id": "EIFFEL_TOWER", "metric": "VOLUME_KG", "target": 7300000 },
+      { "id": "LISTENED_TO_YOUR_BODY", "metric": "LISTENED", "target": 1 },
+      { "id": "COMEBACK_KID", "metric": "COMEBACKS", "target": 1 },
+      { "id": "EARLY_BIRD", "metric": "EARLY_STARTS", "target": 5 },
+      { "id": "NIGHT_OWL", "metric": "LATE_STARTS", "target": 5 },
+      { "id": "EXPLORER", "metric": "EXERCISES", "target": 20 }
+    ],
+    "questWeeks": [
+      { "weekStart": "2026-11-02", "daysPerWeek": 3, "quests": null },
+      { "weekStart": "2026-11-09", "daysPerWeek": 4, "quests": [{ "kind": "WORKOUTS", "target": 4 }, { "kind": "RECORDS", "target": 1 }, { "kind": "SETS", "target": 40 }] },
+      { "weekStart": "2026-11-16", "daysPerWeek": null, "quests": [{ "kind": "WORKOUTS", "target": 3 }, { "kind": "SETS", "target": 40 }, { "kind": "NEW_EXERCISE", "target": 1 }] },
+      { "weekStart": "2026-11-23", "daysPerWeek": 0, "quests": [{ "kind": "WORKOUTS", "target": 3 }, { "kind": "NEW_EXERCISE", "target": 1 }, { "kind": "CHECK_INS", "target": 3 }] },
+      { "weekStart": "2026-11-30", "daysPerWeek": 9, "quests": [{ "kind": "WORKOUTS", "target": 3 }, { "kind": "CHECK_INS", "target": 3 }, { "kind": "RECORDS", "target": 1 }] }
+    ],
+    "mastery": [
+      { "name": "no body weight, nothing to rate against", "sex": "MALE", "bodyWeightKg": null, "bestKg": { "SQUAT": 100 }, "lifts": null },
+      { "name": "a body weight of 0 counts as none", "sex": "FEMALE", "bodyWeightKg": 0, "bestKg": { "SQUAT": 100 }, "lifts": null },
+      {
+        "name": "men: a tier is reached at its threshold, gold has nothing next, an untried lift has no tier",
+        "sex": "MALE",
+        "bodyWeightKg": 80,
+        "bestKg": { "SQUAT": 120, "BENCH_PRESS": 59.9, "DEADLIFT": 180 },
+        "lifts": [
+          { "lift": "SQUAT", "tier": "SILVER", "nextTier": "GOLD", "nextKg": 160 },
+          { "lift": "BENCH_PRESS", "tier": null, "nextTier": "BRONZE", "nextKg": 60 },
+          { "lift": "DEADLIFT", "tier": "GOLD", "nextTier": null, "nextKg": null },
+          { "lift": "OVERHEAD_PRESS", "tier": null, "nextTier": "BRONZE", "nextKg": 40 }
+        ]
+      },
+      {
+        "name": "women have their own standards",
+        "sex": "FEMALE",
+        "bodyWeightKg": 60,
+        "bestKg": { "SQUAT": 45, "BENCH_PRESS": 60, "DEADLIFT": 74, "OVERHEAD_PRESS": 40 },
+        "lifts": [
+          { "lift": "SQUAT", "tier": "BRONZE", "nextTier": "SILVER", "nextKg": 60 },
+          { "lift": "BENCH_PRESS", "tier": "GOLD", "nextTier": null, "nextKg": null },
+          { "lift": "DEADLIFT", "tier": "BRONZE", "nextTier": "SILVER", "nextKg": 75 },
+          { "lift": "OVERHEAD_PRESS", "tier": "GOLD", "nextTier": null, "nextKg": null }
+        ]
+      }
+    ],
+    "reviewYear": [
+      { "today": "2026-11-30", "year": null },
+      { "today": "2026-12-01", "year": 2026 },
+      { "today": "2027-01-15", "year": 2026 },
+      { "today": "2027-01-16", "year": null }
+    ],
+    "yearInReview": [
+      {
+        "name": "a year counts its own workouts; the level starts where the year before left it",
+        "daysPerWeek": null,
+        "sessions": [
+          { "id": 1, "start": "2025-12-30T18:00", "minutes": 40, "workingSets": 10, "volumeKg": 1000, "exerciseIds": ["a"] },
+          { "id": 2, "start": "2026-01-05T18:00", "minutes": 40, "workingSets": 10, "volumeKg": 2000, "exerciseIds": ["a", "b"], "records": ["VOLUME"] },
+          { "id": 3, "start": "2026-03-10T18:00", "minutes": 40, "workingSets": 10, "volumeKg": 1500, "exerciseIds": ["b"] },
+          { "id": 4, "start": "2026-03-12T18:00", "minutes": 40, "workingSets": 10, "volumeKg": 1000, "exerciseIds": ["c", "b"] },
+          { "id": 5, "start": "2026-04-01T18:00", "minutes": 5, "workingSets": 10, "volumeKg": 9000, "exerciseIds": ["d"] }
+        ],
+        "years": {
+          "2024": null,
+          "2026": {
+            "workouts": 3, "minutes": 120, "volumeKg": 4500, "records": 1, "xp": 500, "levelStart": 1, "levelEnd": 3,
+            "badges": ["FIRST_PR", "CAR", "COMEBACK_KID"], "strongestMonth": 3, "favouriteExercise": "b"
+          }
+        }
       }
     ]
   }

@@ -3,10 +3,13 @@ package com.viktorolsson.spotter.core.engine
 import com.viktorolsson.spotter.core.model.Badge
 import com.viktorolsson.spotter.core.model.ExerciseSessionLog
 import com.viktorolsson.spotter.core.model.FeelSummary
+import com.viktorolsson.spotter.core.model.MasteryLift
+import com.viktorolsson.spotter.core.model.MasteryTier
 import com.viktorolsson.spotter.core.model.NumberInput
 import com.viktorolsson.spotter.core.model.PersonalRecordType
 import com.viktorolsson.spotter.core.model.PlayedSession
 import com.viktorolsson.spotter.core.model.SetType
+import com.viktorolsson.spotter.core.model.Sex
 import com.viktorolsson.spotter.core.model.TIMED_EXERCISE_IDS
 import com.viktorolsson.spotter.core.model.WorkoutSet
 import com.viktorolsson.spotter.core.model.countsTowardsChange
@@ -45,7 +48,67 @@ class TrainingMathFixturesTest {
     )
 
     @Serializable
-    private data class GamificationCases(val levels: List<LevelCase>, val histories: List<HistoryCase>)
+    private data class GamificationCases(
+        val levels: List<LevelCase>,
+        val histories: List<HistoryCase>,
+        val badges: List<BadgeCase>,
+        val questWeeks: List<QuestWeekCase>,
+        val mastery: List<MasteryCase>,
+        val reviewYear: List<ReviewYearCase>,
+        val yearInReview: List<YearInReviewCase>,
+    )
+
+    @Serializable
+    private data class BadgeCase(val id: String, val metric: String, val target: Double)
+
+    @Serializable
+    private data class QuestWeekCase(val weekStart: LocalDate, val daysPerWeek: Int?, val quests: List<QuestTarget>?)
+
+    @Serializable
+    private data class QuestTarget(val kind: String, val target: Int)
+
+    @Serializable
+    private data class QuestCase(val kind: String, val target: Int, val current: Int, val doneBy: Long?)
+
+    @Serializable
+    private data class WeekCase(val weekStart: LocalDate, val quests: List<QuestCase>)
+
+    @Serializable
+    private data class MasteryCase(
+        val name: String,
+        val sex: Sex,
+        val bodyWeightKg: Double?,
+        val bestKg: Map<MasteryLift, Double>,
+        val lifts: List<LiftCase>?,
+    )
+
+    @Serializable
+    private data class LiftCase(val lift: MasteryLift, val tier: MasteryTier?, val nextTier: MasteryTier?, val nextKg: Double?)
+
+    @Serializable
+    private data class ReviewYearCase(val today: LocalDate, val year: Int?)
+
+    @Serializable
+    private data class YearInReviewCase(
+        val name: String,
+        val daysPerWeek: Int?,
+        val sessions: List<HistorySession>,
+        val years: Map<String, ReviewCase?>,
+    )
+
+    @Serializable
+    private data class ReviewCase(
+        val workouts: Int,
+        val minutes: Int,
+        val volumeKg: Double,
+        val records: Int,
+        val xp: Int,
+        val levelStart: Int,
+        val levelEnd: Int,
+        val badges: List<String>,
+        val strongestMonth: Int?,
+        val favouriteExercise: String?,
+    )
 
     @Serializable
     private data class LevelCase(val xp: Int, val level: Int, val title: String, val xpIntoLevel: Int, val xpForNext: Int)
@@ -60,6 +123,9 @@ class TrainingMathFixturesTest {
         val level: Int,
         val unlocked: Map<String, Long>,
         val progress: Map<String, Double>,
+        /** The week [Gamification.progress] reports; checked only when there's a day to ask about. */
+        val today: LocalDate? = null,
+        val thisWeek: WeekCase? = null,
     )
 
     @Serializable
@@ -77,7 +143,18 @@ class TrainingMathFixturesTest {
     )
 
     @Serializable
-    private data class XpCase(val id: Long, val session: Int, val sets: Int, val records: Int, val checkIn: Int, val weeklyGoal: Int)
+    private data class XpCase(
+        val id: Long,
+        val session: Int,
+        val sets: Int,
+        val records: Int,
+        val checkIn: Int,
+        val weeklyGoal: Int,
+        val quests: Int = 0,
+    )
+
+    private fun HistorySession.played() =
+        PlayedSession(id, start, minutes, lighter, readiness, feel, workingSets, volumeKg, exerciseIds, records)
 
     @Serializable
     private data class CheckInCase(
@@ -210,18 +287,10 @@ class TrainingMathFixturesTest {
 
     @Test
     fun gamificationHistories() = fixtures.gamification.histories.forEach { case ->
-        val progress = Gamification.progress(
-            case.sessions.map {
-                PlayedSession(
-                    it.id, it.start, it.minutes, it.lighter, it.readiness, it.feel,
-                    it.workingSets, it.volumeKg, it.exerciseIds, it.records,
-                )
-            },
-            case.daysPerWeek,
-        )
+        val progress = Gamification.progress(case.sessions.map { it.played() }, case.daysPerWeek, case.today)
         assertEquals(
             case.xp,
-            progress.sessions.map { XpCase(it.sessionId, it.session, it.sets, it.records, it.checkIn, it.weeklyGoal) },
+            progress.sessions.map { XpCase(it.sessionId, it.session, it.sets, it.records, it.checkIn, it.weeklyGoal, it.quests) },
             "${case.name}: XP",
         )
         assertEquals(case.totalXp, progress.totalXp, "${case.name}: total")
@@ -233,6 +302,67 @@ class TrainingMathFixturesTest {
         )
         case.progress.forEach { (badge, current) ->
             assertClose(current, progress.badges.single { it.badge == Badge.valueOf(badge) }.current, "${case.name}: $badge")
+        }
+        if (case.today != null) {
+            assertEquals(
+                case.thisWeek,
+                progress.thisWeek?.let { week ->
+                    WeekCase(week.weekStart, week.quests.map { QuestCase(it.quest.kind.name, it.quest.target, it.current, it.doneBy) })
+                },
+                "${case.name}: this week",
+            )
+        }
+    }
+
+    @Test
+    fun everyBadge() = assertEquals(
+        fixtures.gamification.badges,
+        Badge.entries.map { BadgeCase(it.name, it.metric.name, it.target) },
+    )
+
+    @Test
+    fun questWeeks() = fixtures.gamification.questWeeks.forEach { case ->
+        assertEquals(
+            case.quests,
+            Gamification.questsFor(case.weekStart, case.daysPerWeek)?.map { QuestTarget(it.kind.name, it.target) },
+            "quests for ${case.weekStart}",
+        )
+    }
+
+    @Test
+    fun mastery() = fixtures.gamification.mastery.forEach { case ->
+        val lifts = Gamification.mastery(case.bestKg, case.sex, case.bodyWeightKg).lifts
+        val expected = case.lifts ?: return@forEach assertEquals(null, lifts, case.name)
+        if (lifts == null) fail("${case.name}: expected lifts")
+        assertEquals(expected.map { it.lift }, lifts.map { it.lift }, case.name)
+        expected.zip(lifts).forEach { (want, got) ->
+            assertEquals(want.tier, got.tier, "${case.name}: ${want.lift} tier")
+            assertEquals(want.nextTier, got.nextTier, "${case.name}: ${want.lift} next")
+            assertClose(want.nextKg, got.nextKg, "${case.name}: ${want.lift} next kg")
+        }
+    }
+
+    @Test
+    fun reviewYears() = fixtures.gamification.reviewYear.forEach { case ->
+        assertEquals(case.year, Gamification.reviewYear(case.today), "review year on ${case.today}")
+    }
+
+    @Test
+    fun yearsInReview() = fixtures.gamification.yearInReview.forEach { case ->
+        val sessions = case.sessions.map { it.played() }
+        val progress = Gamification.progress(sessions, case.daysPerWeek)
+        case.years.forEach { (year, expected) ->
+            val review = Gamification.yearInReview(year.toInt(), sessions, progress)
+            assertEquals(
+                expected,
+                review?.let {
+                    ReviewCase(
+                        it.workouts, it.minutes, it.volumeKg, it.records, it.xp, it.levelStart, it.levelEnd,
+                        it.badges.map { badge -> badge.name }, it.strongestMonth, it.favouriteExercise,
+                    )
+                },
+                "${case.name}: $year",
+            )
         }
     }
 }

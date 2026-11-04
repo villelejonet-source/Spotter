@@ -8,7 +8,24 @@ into the new version's entry and writes the store notes from it. Versions are th
 
 ## Unreleased
 
+### App
+- Weekly quests: three small goals every Monday ("Train 3 times", "Set a PR", "Try an exercise
+  you've never done"), 50 XP each, on Today and on Levels and badges. They start with this
+  update's week, so earlier weeks don't change your level.
+- Lift mastery: bronze, silver and gold for squat, bench press, deadlift and overhead press,
+  from your best estimated 1RM against your body weight (on Levels and badges; gives no XP).
+- Your year in review: from December 1 to January 15, Today has a card with your workouts,
+  time, volume, PRs, strongest month, favourite exercise and the badges you unlocked.
+- Share a level-up, a new badge or your year in review as an image, from the workout summary
+  and the year in review.
+- The "Levels and badges" switch in Settings now syncs: turning it off hides levels on your
+  other phones and the website too.
+
 ### Website
+- Levels: this week's quests on Today and on the Levels page, lift mastery on the Levels page,
+  and your year in review (Today links to it from December 1 to January 15).
+- Profile has a "Show levels and badges" switch, the same one as in the app; turned off, the
+  website hides levels too.
 - Today appears sooner after the site has been idle: the page no longer waits for your whole
   plan before showing, and the sign-in check runs next to the database.
 - Plans: a 5/3/1 plan is called 5/3/1 in the plan list, not Custom.

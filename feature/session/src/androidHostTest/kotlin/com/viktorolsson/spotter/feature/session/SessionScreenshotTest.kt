@@ -290,6 +290,9 @@ class SessionScreenshotTest {
     fun summaryLevelUp_largeFont() = capture("summary_level_up_font_1_6", dark = false, fontScale = 1.6f) { SummaryWithXp() }
 
     @Test
+    fun summaryQuests_light() = capture("summary_quests_light", dark = false) { SummaryWithXp(questWeek = true) }
+
+    @Test
     fun session531_light() = capture("session_531_light", dark = false) { Session(fiveThreeOne = true) }
 
     @Test
@@ -298,12 +301,15 @@ class SessionScreenshotTest {
     @Test
     fun sessionLighter_dark() = capture("session_lighter_dark", dark = true) { Session(lighter = true) }
 
-    /** A workout that set records, reached level 3 and unlocked two badges. */
+    /**
+     * A workout that set records, reached level 3 and unlocked two badges; in a [questWeek]
+     * it also finishes that week's three quests.
+     */
     @Composable
-    private fun SummaryWithXp() {
+    private fun SummaryWithXp(questWeek: Boolean = false) {
         val history = (1..3).map { day ->
             PlayedSession(
-                day.toLong(), LocalDateTime(2026, 10, day * 2, 18, 0), 60, false, if (day == 3) 4 else null, null, 16, 2_000.0, setOf("bench"),
+                day.toLong(), LocalDateTime(2026, if (questWeek) 11 else 10, if (questWeek) 7 + day * 2 else day * 2, 18, 0), 60, false, if (day == 3) 4 else null, null, 16, 2_000.0, setOf("bench"),
                 if (day == 3) listOf(PersonalRecordType.ESTIMATED_1RM, PersonalRecordType.VOLUME) else emptyList(),
             )
         }

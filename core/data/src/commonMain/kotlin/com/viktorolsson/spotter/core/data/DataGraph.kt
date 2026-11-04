@@ -65,7 +65,7 @@ class DataGraph(
     val preferences by lazy { UserPreferencesRepository(dataStore, database.userProfileDao()) }
     val exercises by lazy { ExerciseRepository(database.exerciseDao()) }
     val history by lazy { HistoryRepository(database.workoutDao(), clock) }
-    val gamification by lazy { GamificationRepository(database.workoutDao(), userProfiles) }
+    val gamification by lazy { GamificationRepository(database.workoutDao(), userProfiles, clock) }
     val plans by lazy { PlanRepository(database, database.planDao()) }
     val bodyWeight by lazy { BodyWeightRepository(database, database.userProfileDao()) }
     val restTimer by lazy { RestTimerRepository(dataStore, clock) }
@@ -80,7 +80,7 @@ class DataGraph(
         )
     }
     val seeder by lazy { ExerciseSeeder(catalog, database.exerciseDao(), dataStore) }
-    val startupMaintenance by lazy { StartupMaintenance(dataStore, seeder, plans, recommendations, clock) }
+    val startupMaintenance by lazy { StartupMaintenance(dataStore, seeder, plans, recommendations, preferences, clock) }
 
     val supabase by lazy { SupabaseProvider(supabaseConfig, sessionStore, scope) }
     val accounts by lazy { AccountService(supabase, scope, errors) }

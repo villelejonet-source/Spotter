@@ -181,13 +181,14 @@ class SyncRepository(
 
     /**
      * After a successful sync: a restored profile means setup is done, and the profile's
-     * units (the synced source of truth) are mirrored into the unit preference.
+     * units and levels switch (the synced source of truth) are mirrored into the preferences.
      */
     private suspend fun finishRestore() {
         val profile = profiles.get() ?: return
         val prefs = preferences.preferences.first()
         if (!prefs.onboardingCompleted) preferences.setOnboardingCompleted(true)
         if (prefs.weightUnit != profile.units) preferences.setWeightUnit(profile.units)
+        preferences.reconcileShowLevels()
     }
 
     private companion object {

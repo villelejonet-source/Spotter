@@ -1,14 +1,14 @@
 package com.viktorolsson.spotter.feature.session
 
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -27,14 +27,12 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
-import kotlin.math.roundToInt
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import org.jetbrains.compose.resources.pluralStringResource
-import org.jetbrains.compose.resources.stringResource
+import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.heading
+import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.semantics
-import org.koin.compose.viewmodel.koinViewModel
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -44,65 +42,76 @@ import com.viktorolsson.spotter.core.data.AppErrors
 import com.viktorolsson.spotter.core.data.Failure
 import com.viktorolsson.spotter.core.data.launchReporting
 import com.viktorolsson.spotter.core.data.repository.GamificationRepository
+import com.viktorolsson.spotter.core.data.repository.HistoryRepository
+import com.viktorolsson.spotter.core.data.repository.UserPreferencesRepository
+import com.viktorolsson.spotter.core.data.repository.WorkoutRepository
 import com.viktorolsson.spotter.core.engine.Gamification
 import com.viktorolsson.spotter.core.engine.GamificationRules
 import com.viktorolsson.spotter.core.model.Badge
 import com.viktorolsson.spotter.core.model.BadgeProgress
 import com.viktorolsson.spotter.core.model.Level
+import com.viktorolsson.spotter.core.model.PersonalRecord
 import com.viktorolsson.spotter.core.model.PlayerProgress
 import com.viktorolsson.spotter.core.model.SessionXp
+import com.viktorolsson.spotter.core.model.WeightUnit
+import com.viktorolsson.spotter.core.model.WorkoutSummary
 import com.viktorolsson.spotter.core.ui.component.BadgeTile
+import com.viktorolsson.spotter.core.ui.component.Confetti
+import com.viktorolsson.spotter.core.ui.component.ContentCard
+import com.viktorolsson.spotter.core.ui.component.ErrorState
+import com.viktorolsson.spotter.core.ui.component.FeelPicker
 import com.viktorolsson.spotter.core.ui.component.LevelProgress
+import com.viktorolsson.spotter.core.ui.component.LoadingState
+import com.viktorolsson.spotter.core.ui.component.PrimaryButton
+import com.viktorolsson.spotter.core.ui.component.RecordsCard
+import com.viktorolsson.spotter.core.ui.component.ShareButton
+import com.viktorolsson.spotter.core.ui.component.StatTile
+import com.viktorolsson.spotter.core.ui.component.captureForShare
+import com.viktorolsson.spotter.core.ui.component.levelHeading
+import com.viktorolsson.spotter.core.ui.component.rememberImageSharer
+import com.viktorolsson.spotter.core.ui.component.rememberShareCapture
+import com.viktorolsson.spotter.core.ui.formatClock
 import com.viktorolsson.spotter.core.ui.formatCount
+import com.viktorolsson.spotter.core.ui.formatSet
+import com.viktorolsson.spotter.core.ui.formatSetCount
+import com.viktorolsson.spotter.core.ui.formatTotal
+import com.viktorolsson.spotter.core.ui.theme.Dimens
+import com.viktorolsson.spotter.core.ui.theme.Spacing
 import com.viktorolsson.spotter.core.ui.theme.SpotterTheme
-import androidx.compose.ui.semantics.LiveRegionMode
-import androidx.compose.ui.semantics.liveRegion
+import com.viktorolsson.spotter.feature.session.resources.Res
+import com.viktorolsson.spotter.feature.session.resources.summary_done
+import com.viktorolsson.spotter.feature.session.resources.summary_duration
+import com.viktorolsson.spotter.feature.session.resources.summary_effort
+import com.viktorolsson.spotter.feature.session.resources.summary_effort_unset
+import com.viktorolsson.spotter.feature.session.resources.summary_effort_value
+import com.viktorolsson.spotter.feature.session.resources.summary_exercise_line
+import com.viktorolsson.spotter.feature.session.resources.summary_feel_title
 import com.viktorolsson.spotter.feature.session.resources.summary_level_up
 import com.viktorolsson.spotter.feature.session.resources.summary_new_badges
+import com.viktorolsson.spotter.feature.session.resources.summary_new_prs
+import com.viktorolsson.spotter.feature.session.resources.summary_sets
+import com.viktorolsson.spotter.feature.session.resources.summary_share_badges
+import com.viktorolsson.spotter.feature.session.resources.summary_share_level
+import com.viktorolsson.spotter.feature.session.resources.summary_title
+import com.viktorolsson.spotter.feature.session.resources.summary_volume
 import com.viktorolsson.spotter.feature.session.resources.summary_xp_check_in
 import com.viktorolsson.spotter.feature.session.resources.summary_xp_none
+import com.viktorolsson.spotter.feature.session.resources.summary_xp_quests
 import com.viktorolsson.spotter.feature.session.resources.summary_xp_rate_hint
 import com.viktorolsson.spotter.feature.session.resources.summary_xp_records
 import com.viktorolsson.spotter.feature.session.resources.summary_xp_session
 import com.viktorolsson.spotter.feature.session.resources.summary_xp_sets
 import com.viktorolsson.spotter.feature.session.resources.summary_xp_title
 import com.viktorolsson.spotter.feature.session.resources.summary_xp_week_goal
-import com.viktorolsson.spotter.core.data.repository.HistoryRepository
-import com.viktorolsson.spotter.core.data.repository.UserPreferencesRepository
-import com.viktorolsson.spotter.core.data.repository.WorkoutRepository
-import com.viktorolsson.spotter.core.model.PersonalRecord
-import com.viktorolsson.spotter.core.model.WeightUnit
-import com.viktorolsson.spotter.core.model.WorkoutSummary
-import com.viktorolsson.spotter.core.ui.component.Confetti
-import com.viktorolsson.spotter.core.ui.component.ContentCard
-import com.viktorolsson.spotter.core.ui.component.ErrorState
-import com.viktorolsson.spotter.core.ui.component.FeelPicker
-import com.viktorolsson.spotter.core.ui.component.LoadingState
-import com.viktorolsson.spotter.core.ui.component.PrimaryButton
-import com.viktorolsson.spotter.core.ui.component.RecordsCard
-import com.viktorolsson.spotter.core.ui.component.StatTile
-import com.viktorolsson.spotter.core.ui.formatClock
-import com.viktorolsson.spotter.core.ui.formatSet
-import com.viktorolsson.spotter.core.ui.formatSetCount
-import com.viktorolsson.spotter.core.ui.formatTotal
-import com.viktorolsson.spotter.core.ui.theme.Dimens
-import com.viktorolsson.spotter.core.ui.theme.Spacing
+import kotlin.math.roundToInt
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
-import com.viktorolsson.spotter.feature.session.resources.Res
-import com.viktorolsson.spotter.feature.session.resources.summary_done
-import com.viktorolsson.spotter.feature.session.resources.summary_duration
-import com.viktorolsson.spotter.feature.session.resources.summary_exercise_line
-import com.viktorolsson.spotter.feature.session.resources.summary_new_prs
-import com.viktorolsson.spotter.feature.session.resources.summary_sets
-import com.viktorolsson.spotter.feature.session.resources.summary_title
-import com.viktorolsson.spotter.feature.session.resources.summary_volume
-import com.viktorolsson.spotter.feature.session.resources.summary_effort
-import com.viktorolsson.spotter.feature.session.resources.summary_effort_unset
-import com.viktorolsson.spotter.feature.session.resources.summary_effort_value
-import com.viktorolsson.spotter.feature.session.resources.summary_feel_title
+import org.jetbrains.compose.resources.getString
+import org.jetbrains.compose.resources.pluralStringResource
+import org.jetbrains.compose.resources.stringResource
+import org.koin.compose.viewmodel.koinViewModel
 
 /** What this workout did for the level: its XP, the level now and the badges it unlocked. */
 data class SummaryXp(
@@ -172,6 +181,9 @@ class SummaryViewModel(
     fun rateEffort(effort: Int) = viewModelScope.launchReporting(errors, Failure.SAVE) {
         workoutRepository.setSessionEffort(sessionId, effort)
     }
+
+    /** Runs a share; a failure is shown, not swallowed. */
+    fun share(block: suspend () -> Unit) = viewModelScope.launchReporting(errors, Failure.ACTION) { block() }
 }
 
 @Composable
@@ -187,7 +199,7 @@ internal fun SummaryRoute(onDone: () -> Unit, viewModel: SummaryViewModel = koin
             SummaryScreen(
                 summary, uiState.unit, uiState.records, onDone,
                 feel = uiState.feel, effort = uiState.effort, onFeel = viewModel::rateFeel, onEffort = viewModel::rateEffort,
-                xp = uiState.xp,
+                xp = uiState.xp, onShare = viewModel::share,
             )
             val levelUp = uiState.xp?.levelUp == true
             if (uiState.records.isNotEmpty() || levelUp) Confetti(key = uiState.records.size to levelUp)
@@ -206,6 +218,7 @@ internal fun SummaryScreen(
     onFeel: (Int) -> Unit = {},
     onEffort: (Int) -> Unit = {},
     xp: SummaryXp? = null,
+    onShare: (suspend () -> Unit) -> Unit = {},
 ) {
     Scaffold(
         bottomBar = {
@@ -246,7 +259,7 @@ internal fun SummaryScreen(
                     StatTile(stringResource(Res.string.summary_sets), summary.completedSets.toString(), Modifier.weight(1f))
                 }
             }
-            if (xp != null) item(key = "xp") { XpCard(xp) }
+            if (xp != null) item(key = "xp") { ShareableXpCard(xp, onShare) }
             item(key = "rating") { RatingCard(feel, effort, onFeel, onEffort) }
             if (records.isNotEmpty()) {
                 item(key = "records") {
@@ -269,11 +282,32 @@ internal fun SummaryScreen(
     }
 }
 
+/** The XP card, with Share under it after a level-up or a new badge: the card is the image. */
+@Composable
+private fun ShareableXpCard(xp: SummaryXp, onShare: (suspend () -> Unit) -> Unit) {
+    if (!xp.levelUp && xp.badges.isEmpty()) return XpCard(xp)
+    val capture = rememberShareCapture()
+    val sharer = rememberImageSharer()
+    val title = levelHeading(xp.level)
+    Column(verticalArrangement = Arrangement.spacedBy(Spacing.sm)) {
+        XpCard(xp, Modifier.captureForShare(capture))
+        ShareButton(
+            onClick = {
+                onShare {
+                    val text = if (xp.levelUp) getString(Res.string.summary_share_level, title) else getString(Res.string.summary_share_badges)
+                    sharer.share(capture.image(), text)
+                }
+            },
+            modifier = Modifier.fillMaxWidth(),
+        )
+    }
+}
+
 /** "+275 XP", where it came from, the level bar filling up and any badges this workout unlocked. */
 @Composable
-private fun XpCard(xp: SummaryXp) {
+private fun XpCard(xp: SummaryXp, modifier: Modifier = Modifier) {
     val earned = xp.earned
-    ContentCard(Modifier.fillMaxWidth()) {
+    ContentCard(modifier.fillMaxWidth()) {
         Column(verticalArrangement = Arrangement.spacedBy(Spacing.md)) {
             Column(verticalArrangement = Arrangement.spacedBy(Spacing.xs)) {
                 Text(
@@ -288,6 +322,7 @@ private fun XpCard(xp: SummaryXp) {
                     earned.records.takeIf { it > 0 }?.let { stringResource(Res.string.summary_xp_records, it) },
                     earned.checkIn.takeIf { it > 0 }?.let { stringResource(Res.string.summary_xp_check_in, it) },
                     earned.weeklyGoal.takeIf { it > 0 }?.let { stringResource(Res.string.summary_xp_week_goal, it) },
+                    earned.quests.takeIf { it > 0 }?.let { stringResource(Res.string.summary_xp_quests, it) },
                 )
                 Text(
                     if (parts.isEmpty()) stringResource(Res.string.summary_xp_none) else parts.joinToString(" · "),

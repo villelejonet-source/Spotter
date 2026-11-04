@@ -29,6 +29,8 @@ data class UserProfileEntity(
     val equipment: Set<Equipment>,
     val focusAreas: Set<BodyArea>,
     val limitations: Set<Limitation>,
+    @ColumnInfo(defaultValue = "1")
+    val showLevels: Boolean = true,
     /** Global id for cloud sync; assigned by a database trigger (see SyncSchema). */
     val syncId: String? = null,
     /** Time of the last local change (ms), maintained by a database trigger. */

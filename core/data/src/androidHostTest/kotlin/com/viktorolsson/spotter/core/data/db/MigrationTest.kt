@@ -236,6 +236,26 @@ class MigrationTest {
     }
 
     @Test
+    fun migrate10To11ShowsLevelsByDefaultAndKeepsTriggers() {
+        helper.createDatabase(10).use { db ->
+            SyncSchema.createTriggers(db)
+            db.execSQL(
+                "INSERT INTO user_profile (id, sex, heightCm, birthDate, bodyWeightKg, units, experience, goal, daysPerWeek, sessionLengthMinutes, equipment, focusAreas, limitations) " +
+                    "VALUES (1, 'MALE', 180.0, 7300, 80.0, 'KG', 'NEW', 'STRENGTH', 3, 60, 'BARBELL', '', '')",
+            )
+        }
+        helper.runMigrationsAndValidate(11).use { db ->
+            // An existing profile shows levels, as before the switch synced, and keeps its sync id.
+            db.query("SELECT showLevels, syncId FROM user_profile WHERE id = 1").use {
+                it.moveToFirst(); assertEquals(1, it.getInt(0)); assertEquals("user-profile", it.getString(1))
+            }
+            assertTrue(SyncSchema.triggersInstalled(db))
+            db.execSQL("UPDATE user_profile SET showLevels = 0 WHERE id = 1")
+            db.query("SELECT showLevels FROM user_profile WHERE id = 1").use { it.moveToFirst(); assertEquals(0, it.getInt(0)) }
+        }
+    }
+
+    @Test
     fun migratingFrom6InstallsTheScheduledSessionTriggers() {
         helper.createDatabase(6).use { SyncSchema.createTriggers(it, upTo = 6) }
         helper.runMigrationsAndValidate(8).use { db ->

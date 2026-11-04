@@ -15,6 +15,8 @@ data class UserProfile(
     val equipment: Set<Equipment>,
     val focusAreas: Set<BodyArea>,
     val limitations: Set<Limitation>,
+    /** Levels and badges shown; synced, so the website and other phones follow. */
+    val showLevels: Boolean = true,
 )
 
 data class BodyWeightEntry(

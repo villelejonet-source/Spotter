@@ -35,8 +35,10 @@ data class SessionXp(
     val records: Int,
     val checkIn: Int,
     val weeklyGoal: Int,
+    /** Weekly quests this workout finished. */
+    val quests: Int = 0,
 ) {
-    val total: Int get() = session + sets + records + checkIn + weeklyGoal
+    val total: Int get() = session + sets + records + checkIn + weeklyGoal + quests
 }
 
 /** Titles, each held from [fromLevel] until the next one. */
@@ -124,8 +126,80 @@ data class PlayerProgress(
     val sessions: List<SessionXp>,
     /** Every badge, in [Badge] order. */
     val badges: List<BadgeProgress>,
+    /** The quests of the week containing the day asked about; null before quests began. */
+    val thisWeek: WeekQuests? = null,
 ) {
     fun xpFor(sessionId: Long): SessionXp? = sessions.firstOrNull { it.sessionId == sessionId }
 
     fun unlockedBy(sessionId: Long): List<Badge> = badges.filter { it.unlockedBy == sessionId }.map { it.badge }
 }
+
+/** What a weekly quest counts, over the week's workouts that count. */
+enum class QuestKind {
+    WORKOUTS,
+    /** Workouts with an exercise never done before. */
+    NEW_EXERCISE,
+    /** Workouts with a check-in, before or after. */
+    CHECK_INS,
+    RECORDS,
+    /** Working sets. */
+    SETS,
+}
+
+data class Quest(val kind: QuestKind, val target: Int)
+
+data class QuestProgress(
+    val quest: Quest,
+    /** Never past the target. */
+    val current: Int,
+    /** The workout that finished it; null while it's open. */
+    val doneBy: Long?,
+) {
+    val done: Boolean get() = doneBy != null
+}
+
+/** Three quests a week, the same on every phone and the website (see `Gamification.questsFor`). */
+data class WeekQuests(val weekStart: LocalDate, val quests: List<QuestProgress>)
+
+/** The lifts mastery rates, each from the best estimated 1RM of any of its exercises. */
+enum class MasteryLift(val exerciseIds: List<String>) {
+    SQUAT(listOf("back-squat", "paused-squat")),
+    BENCH_PRESS(listOf("barbell-bench-press", "paused-bench-press")),
+    DEADLIFT(listOf("deadlift", "sumo-deadlift", "paused-deadlift")),
+    OVERHEAD_PRESS(listOf("overhead-press")),
+}
+
+enum class MasteryTier { BRONZE, SILVER, GOLD }
+
+data class LiftMastery(
+    val lift: MasteryLift,
+    /** Best estimated 1RM; null when the lift was never done. */
+    val bestKg: Double?,
+    /** Best 1RM ÷ body weight. */
+    val ratio: Double?,
+    val tier: MasteryTier?,
+    /** The next tier and the 1RM it needs; null at gold. */
+    val nextTier: MasteryTier?,
+    val nextKg: Double?,
+)
+
+/** Null [lifts] when there's no body weight to rate them against. */
+data class Mastery(val lifts: List<LiftMastery>?)
+
+/** A year of training, shown from December 1 to January 15 (see `Gamification.reviewYear`). */
+data class YearInReview(
+    val year: Int,
+    val workouts: Int,
+    val minutes: Int,
+    val volumeKg: Double,
+    val records: Int,
+    val xp: Int,
+    val levelStart: Int,
+    val levelEnd: Int,
+    /** Badges unlocked during the year, in [Badge] order. */
+    val badges: List<Badge>,
+    /** 1–12, the month with the most volume (the earliest on a tie); null without volume. */
+    val strongestMonth: Int?,
+    /** The exercise in the most workouts (the first id on a tie). */
+    val favouriteExercise: String?,
+)

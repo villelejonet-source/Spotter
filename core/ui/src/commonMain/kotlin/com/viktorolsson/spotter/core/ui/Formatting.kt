@@ -137,6 +137,9 @@ fun formatAxisDate(date: LocalDate): String = formatDateSkeleton(date, "dMMM")
 /** "October 2026" */
 fun formatMonthYear(month: YearMonth): String = formatDateSkeleton(month.firstDay, "yMMMM")
 
+/** "October" */
+fun formatMonthName(month: YearMonth): String = formatDateSkeleton(month.firstDay, "MMMM")
+
 /** "Sat 3 Oct, 14:05" */
 @Composable
 fun formatShortDateTime(instant: Instant): String =

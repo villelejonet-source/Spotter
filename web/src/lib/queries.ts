@@ -202,6 +202,19 @@ export async function sessionPlay(client: OwnClient): Promise<SessionPlayRow[]> 
   return selectAll<SessionPlayRow>(client, "v_session_play", { key: "started_at", tiebreak: "sync_id", columns: SESSION_PLAY_COLUMNS });
 }
 
+/** Best estimated 1RM by exercise, for [exerciseIds] only (v_lift_best, worked out on the server). */
+export async function liftBests(client: OwnClient, exerciseIds: string[]): Promise<Map<string, number>> {
+  const rows = await selectAll<LiftBestRow>(client, "v_lift_best", { key: "exercise_id", columns: LIFT_BEST_COLUMNS, filter: (q) => q.in("exercise_id", exerciseIds) });
+  return new Map(rows.map((r) => [r.exercise_id, Number(r.best_e1rm_kg)]));
+}
+
+export interface LiftBestRow {
+  exercise_id: string;
+  best_e1rm_kg: number;
+}
+
+export const LIFT_BEST_COLUMNS = "exercise_id,best_e1rm_kg";
+
 /** Finished workouts, all time. */
 export function finishedSessionCount(client: OwnClient): Promise<number> {
   return count(client, "v_session_summary", (q) => q.not("ended_at", "is", null));

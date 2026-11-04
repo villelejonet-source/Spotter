@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Only the share cards' folder (core/ui Share.android.kt) is served, nothing else in the cache. -->
+<paths>
+    <cache-path name="share" path="share/" />
+</paths>

@@ -1,5 +1,6 @@
 package com.viktorolsson.spotter.feature.progress
 
+import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.test.ext.junit.runners.AndroidJUnit4
@@ -11,21 +12,28 @@ import com.github.takahirom.roborazzi.ThresholdValidator
 import com.github.takahirom.roborazzi.captureRoboImage
 import com.github.takahirom.roborazzi.fontScale
 import com.viktorolsson.spotter.core.data.repository.LoggedExerciseSummary
-import androidx.compose.material3.Surface
+import com.viktorolsson.spotter.core.engine.Gamification
+import com.viktorolsson.spotter.core.model.Badge
 import com.viktorolsson.spotter.core.model.BodyWeightPoint
 import com.viktorolsson.spotter.core.model.FeelSummary
+import com.viktorolsson.spotter.core.model.MasteryLift
 import com.viktorolsson.spotter.core.model.MovementPattern
 import com.viktorolsson.spotter.core.model.MuscleGroup
 import com.viktorolsson.spotter.core.model.MuscleVolume
+import com.viktorolsson.spotter.core.model.PersonalRecordType
+import com.viktorolsson.spotter.core.model.PlayedSession
+import com.viktorolsson.spotter.core.model.Quest
+import com.viktorolsson.spotter.core.model.QuestKind
+import com.viktorolsson.spotter.core.model.QuestProgress
+import com.viktorolsson.spotter.core.model.Sex
+import com.viktorolsson.spotter.core.model.WeekQuests
+import com.viktorolsson.spotter.core.model.YearInReview
 import com.viktorolsson.spotter.core.ui.PreviewData
 import com.viktorolsson.spotter.core.ui.theme.SpotterTheme
 import kotlinx.datetime.DateTimeUnit
 import kotlinx.datetime.LocalDate
-import kotlinx.datetime.plus
-import com.viktorolsson.spotter.core.engine.Gamification
-import com.viktorolsson.spotter.core.model.PersonalRecordType
-import com.viktorolsson.spotter.core.model.PlayedSession
 import kotlinx.datetime.atTime
+import kotlinx.datetime.plus
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -129,6 +137,15 @@ class ProgressScreenshotTest {
         }
     }
 
+    private val questWeek = WeekQuests(
+        LocalDate(2026, 11, 9),
+        listOf(
+            QuestProgress(Quest(QuestKind.WORKOUTS, 3), 1, null),
+            QuestProgress(Quest(QuestKind.RECORDS, 1), 1, 4),
+            QuestProgress(Quest(QuestKind.SETS, 40), 16, null),
+        ),
+    )
+
     /** Six weeks of three workouts a week, a few PRs along the way. */
     private val progress = Gamification.progress(
         (0 until 18).map { i ->
@@ -138,6 +155,14 @@ class ProgressScreenshotTest {
             )
         },
         daysPerWeek = 3,
+        today = LocalDate(2026, 11, 11),
+    ).let { it.copy(thisWeek = questWeek) }
+
+    /** An 80 kg man: a silver squat, a bronze bench, an untried overhead press. */
+    private val mastery = Gamification.mastery(
+        mapOf(MasteryLift.SQUAT to 125.0, MasteryLift.BENCH_PRESS to 72.5, MasteryLift.DEADLIFT to 150.0),
+        Sex.MALE,
+        80.0,
     )
 
     private fun captureAchievements(name: String, dark: Boolean, fontScale: Float = 1f) = captureRoboImage(
@@ -145,7 +170,7 @@ class ProgressScreenshotTest {
         roborazziComposeOptions = RoborazziComposeOptions { fontScale(fontScale) },
     ) {
         SpotterTheme(darkTheme = dark, dynamicColor = false) {
-            AchievementsScreen(AchievementsUiState(loading = false, progress = progress), onBack = {})
+            AchievementsScreen(AchievementsUiState(loading = false, progress = progress, mastery = mastery), onBack = {})
         }
     }
 
@@ -163,4 +188,40 @@ class ProgressScreenshotTest {
         "progress_levels_light", dark = false,
         full.copy(levels = LevelSummary(progress.level, progress.badges.count { it.unlocked }, progress.badges.size)),
     )
+
+    @Test
+    fun achievementsNoWeight_light() = captureRoboImage("src/test/screenshots/achievements_no_weight_light.png") {
+        SpotterTheme(darkTheme = false, dynamicColor = false) {
+            AchievementsScreen(AchievementsUiState(loading = false, progress = progress), onBack = {})
+        }
+    }
+
+    private val year = YearInReview(2026, 142, 7_950, 812_400.0, 37, 31_200, 1, 23, listOf(Badge.FIRST_REP, Badge.STREAK_12, Badge.ELEPHANT), 10, "barbell-bench-press")
+
+    private fun captureYear(name: String, dark: Boolean, fontScale: Float = 1f, review: YearInReview? = year) = captureRoboImage(
+        "src/test/screenshots/$name.png",
+        roborazziComposeOptions = RoborazziComposeOptions { fontScale(fontScale) },
+    ) {
+        SpotterTheme(darkTheme = dark, dynamicColor = false) {
+            YearInReviewScreen(
+                YearInReviewUiState(
+                    loading = false, year = 2026, review = review,
+                    badges = progress.badges.filter { it.unlocked }.take(3), favouriteName = "Barbell Bench Press",
+                ),
+                onBack = {},
+            )
+        }
+    }
+
+    @Test
+    fun yearInReview_light() = captureYear("year_in_review_light", dark = false)
+
+    @Test
+    fun yearInReview_dark() = captureYear("year_in_review_dark", dark = true)
+
+    @Test
+    fun yearInReview_largeFont() = captureYear("year_in_review_font_1_6", dark = false, fontScale = 1.6f)
+
+    @Test
+    fun yearInReviewEmpty_light() = captureYear("year_in_review_empty_light", dark = false, review = null)
 }

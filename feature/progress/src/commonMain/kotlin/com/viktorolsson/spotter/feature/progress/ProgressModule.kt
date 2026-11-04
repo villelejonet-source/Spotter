@@ -7,4 +7,5 @@ import org.koin.dsl.module
 val progressModule = module {
     viewModelOf(::ProgressViewModel)
     viewModelOf(::AchievementsViewModel)
+    viewModelOf(::YearInReviewViewModel)
 }

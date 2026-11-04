@@ -12,6 +12,7 @@ import com.viktorolsson.spotter.core.data.db.entity.ExerciseSessionRef
 import com.viktorolsson.spotter.core.data.db.entity.HistorySet
 import com.viktorolsson.spotter.core.data.db.entity.LoggedExercise
 import com.viktorolsson.spotter.core.data.db.entity.PersonalRecordEntity
+import com.viktorolsson.spotter.core.data.db.entity.ExerciseBestRow
 import com.viktorolsson.spotter.core.data.db.entity.PlayedSessionRow
 import com.viktorolsson.spotter.core.data.db.entity.RecordWithExercise
 import com.viktorolsson.spotter.core.data.db.entity.SessionExerciseEntity
@@ -313,6 +314,24 @@ interface WorkoutDao {
 
     @Query("SELECT sessionId, type FROM personal_record WHERE sessionId IS NOT NULL")
     fun observeRecordTypes(): Flow<List<SessionRecordRow>>
+
+    /**
+     * The best estimated 1RM (Epley, a single is its own) of each of [exerciseIds] done in a
+     * finished workout, from the sets rather than the records: a first workout sets no record.
+     */
+    @Query(
+        """
+        SELECT sx.exerciseId,
+            MAX(CASE WHEN se.reps <= 1 THEN se.weightKg ELSE se.weightKg * (1 + se.reps / 30.0) END) AS value
+        FROM set_entry se
+        JOIN session_exercise sx ON se.sessionExerciseId = sx.id
+        JOIN workout_session ws ON sx.sessionId = ws.id
+        WHERE ws.endedAt IS NOT NULL AND se.completedAt IS NOT NULL AND se.setType != 'WARMUP'
+          AND se.reps > 0 AND se.weightKg IS NOT NULL AND sx.exerciseId IN (:exerciseIds)
+        GROUP BY sx.exerciseId
+        """,
+    )
+    fun observeBestEstimatedOneRepMaxes(exerciseIds: List<String>): Flow<List<ExerciseBestRow>>
 
     @Query(
         """

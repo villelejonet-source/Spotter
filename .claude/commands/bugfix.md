@@ -26,13 +26,15 @@ Follow CLAUDE.md. A bug fix **always starts with a failing test**. In order:
 5. **Fix the cause**, not the symptom, in shared code unless the bug is truly platform-specific.
    Look for the same mistake elsewhere (`git grep`) and fix those too, each with a test.
 6. **Run the test again:** it passes. Then every check in CLAUDE.md, "Build and test".
-7. **CHANGELOG.md:** a line under "Unreleased" → "Fixed", saying what the user saw.
-8. **PR:**
+7. **Design review:** run `/design-review` and apply only the suggestions that hold up; re-run
+   the checks they affect.
+8. **CHANGELOG.md:** a line under "Unreleased" → "Fixed", saying what the user saw.
+9. **PR:**
    - the bug;
    - the cause;
    - the fix;
    - the test and that it failed first (with the message);
-   - what was checked;
+   - what was checked, and the design review (applied, and skipped with why);
    - how to check it by hand.
 
    Don't merge without the user's go-ahead.

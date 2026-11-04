@@ -1,5 +1,7 @@
 package com.viktorolsson.spotter.feature.history
 
+import com.viktorolsson.spotter.core.engine.StalledLift
+import com.viktorolsson.spotter.core.engine.LiftOption
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -175,6 +177,8 @@ data class ExerciseHistoryUiState(
     val unit: WeightUnit = WeightUnit.KG,
     val metric: ExerciseMetric = ExerciseMetric.ONE_REP_MAX,
     val recommendations: List<Recommendation> = emptyList(),
+    /** This lift, when it has stalled in the plan, with what could help it. */
+    val stalled: StalledLift? = null,
     /** Most reps achieved at each weight, heaviest first. */
     val repRecords: List<Pair<Double, Int>> = emptyList(),
 ) {
@@ -216,8 +220,13 @@ class ExerciseHistoryViewModel(
         )
     }
 
-    val uiState: StateFlow<ExerciseHistoryUiState> = combine(base, recommendationRepository.observeActive()) { state, recs ->
-        state.copy(recommendations = recs.filter { it.exerciseId == exerciseId })
+    val uiState: StateFlow<ExerciseHistoryUiState> = combine(
+        base, recommendationRepository.observeActive(), recommendationRepository.observeProgressCheck(),
+    ) { state, recs, check ->
+        state.copy(
+            recommendations = recs.filter { it.exerciseId == exerciseId },
+            stalled = check?.stalled?.firstOrNull { it.plateau.slot.exercise.id == exerciseId },
+        )
     }
         .flowOn(Dispatchers.Default)
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), ExerciseHistoryUiState())
@@ -225,6 +234,11 @@ class ExerciseHistoryViewModel(
     fun apply(id: Long) = viewModelScope.launchReporting(errors) { recommendationRepository.apply(id) }
 
     fun dismiss(id: Long) = viewModelScope.launchReporting(errors) { recommendationRepository.dismiss(id) }
+
+    fun applyOptions(lift: StalledLift, options: List<LiftOption>) =
+        viewModelScope.launchReporting(errors, Failure.SAVE) { recommendationRepository.applyOptions(lift, options) }
+
+    fun notNow(lift: StalledLift) = viewModelScope.launchReporting(errors, Failure.SAVE) { recommendationRepository.dismissStalled(lift) }
 
     fun setMetric(value: ExerciseMetric) {
         metric.value = value

@@ -3,14 +3,18 @@ package com.viktorolsson.spotter.feature.progress
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.viktorolsson.spotter.core.data.AppErrors
+import com.viktorolsson.spotter.core.data.Failure
 import com.viktorolsson.spotter.core.data.launchReporting
 import com.viktorolsson.spotter.core.data.repository.BodyWeightRepository
 import com.viktorolsson.spotter.core.data.repository.GamificationRepository
 import com.viktorolsson.spotter.core.data.repository.HistoryRepository
 import com.viktorolsson.spotter.core.data.repository.LoggedExerciseSummary
+import com.viktorolsson.spotter.core.data.repository.ProgressCheck
 import com.viktorolsson.spotter.core.data.repository.RecommendationRepository
 import com.viktorolsson.spotter.core.data.repository.UserPreferencesRepository
 import com.viktorolsson.spotter.core.data.repository.UserProfileRepository
+import com.viktorolsson.spotter.core.engine.LiftOption
+import com.viktorolsson.spotter.core.engine.StalledLift
 import com.viktorolsson.spotter.core.model.FeelSummary
 import com.viktorolsson.spotter.core.model.Level
 import com.viktorolsson.spotter.core.model.BodyWeightPoint
@@ -39,6 +43,8 @@ data class ProgressUiState(
     val lifts: List<LoggedExerciseSummary> = emptyList(),
     val unit: WeightUnit = WeightUnit.KG,
     val recommendations: List<Recommendation> = emptyList(),
+    /** The plan's main lifts and stalls; null without a plan. */
+    val check: ProgressCheck? = null,
     /** How recent workouts felt; null until one is rated. */
     val feel: FeelSummary? = null,
     /** Null when levels are switched off. */
@@ -74,14 +80,19 @@ class ProgressViewModel(
     }
 
     val uiState: StateFlow<ProgressUiState> = combine(
-        base, recommendationRepository.observeActive(), historyRepository.observeFeel(), levels,
-    ) { state, recs, feel, levels ->
-        state.copy(recommendations = recs, feel = feel, levels = levels)
+        base, recommendationRepository.observeActive(), recommendationRepository.observeProgressCheck(), historyRepository.observeFeel(), levels,
+    ) { state, recs, check, feel, levels ->
+        state.copy(recommendations = recs, check = check, feel = feel, levels = levels)
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), ProgressUiState())
 
     fun apply(id: Long) = viewModelScope.launchReporting(errors) { recommendationRepository.apply(id) }
 
     fun dismiss(id: Long) = viewModelScope.launchReporting(errors) { recommendationRepository.dismiss(id) }
+
+    fun applyOptions(lift: StalledLift, options: List<LiftOption>) =
+        viewModelScope.launchReporting(errors, Failure.SAVE) { recommendationRepository.applyOptions(lift, options) }
+
+    fun notNow(lift: StalledLift) = viewModelScope.launchReporting(errors, Failure.SAVE) { recommendationRepository.dismissStalled(lift) }
 
     /** Saves today's body weight; returns false (and saves nothing) for text outside the accepted range. */
     fun logWeight(text: String): Boolean {

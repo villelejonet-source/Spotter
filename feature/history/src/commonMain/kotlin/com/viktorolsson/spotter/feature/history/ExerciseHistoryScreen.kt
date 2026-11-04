@@ -1,5 +1,8 @@
 package com.viktorolsson.spotter.feature.history
 
+import com.viktorolsson.spotter.core.ui.component.StalledLiftCard
+import com.viktorolsson.spotter.core.engine.StalledLift
+import com.viktorolsson.spotter.core.engine.LiftOption
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.IntrinsicSize
@@ -79,6 +82,8 @@ internal fun ExerciseHistoryRoute(onBack: () -> Unit, viewModel: ExerciseHistory
         onMetric = viewModel::setMetric,
         onApply = viewModel::apply,
         onDismiss = viewModel::dismiss,
+        onApplyOptions = viewModel::applyOptions,
+        onNotNow = viewModel::notNow,
     )
 }
 
@@ -89,6 +94,8 @@ internal fun ExerciseHistoryScreen(
     onMetric: (ExerciseMetric) -> Unit,
     onApply: (Long) -> Unit,
     onDismiss: (Long) -> Unit,
+    onApplyOptions: (StalledLift, List<LiftOption>) -> Unit = { _, _ -> },
+    onNotNow: (StalledLift) -> Unit = {},
 ) {
     val unit = state.unit
     val timed = state.exercise?.isTimed == true
@@ -114,6 +121,11 @@ internal fun ExerciseHistoryScreen(
                         onApply = { onApply(rec.id) },
                         onDismiss = { onDismiss(rec.id) },
                     )
+                }
+                state.stalled?.let { lift ->
+                    item(key = "stalled") {
+                        StalledLiftCard(lift, unit, onApply = { onApplyOptions(lift, it) }, onNotNow = { onNotNow(lift) })
+                    }
                 }
                 item {
                     Row(horizontalArrangement = Arrangement.spacedBy(Spacing.sm)) {

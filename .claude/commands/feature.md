@@ -35,10 +35,12 @@ Follow CLAUDE.md. In order:
    new or re-recorded screenshot goldens for UI changes (say so in the PR).
 6. **Check:** every command in CLAUDE.md, "Build and test", plus the database checks if the
    schema changed. Warnings are errors. Run the app on Android and, for UI changes, iOS.
-7. **CHANGELOG.md:** a line under "Unreleased", in words a user would use.
-8. **PR:**
+7. **Design review:** run `/design-review` and apply only the suggestions that hold up; re-run
+   the checks they affect.
+8. **CHANGELOG.md:** a line under "Unreleased", in words a user would use.
+9. **PR:**
    - what changed and why;
-   - what was checked;
+   - what was checked, and the design review (applied, and skipped with why);
    - **what to test by hand** on a phone (a short numbered list);
    - anything not done.
 

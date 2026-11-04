@@ -52,6 +52,9 @@ Every feature is built **once, in shared Kotlin, for both phones**. The layers, 
 3. **Implement on a branch**, never on `main`: `git switch -c <type>/<short-name>`.
 4. **Add or update tests** for the behaviour that changed.
 5. **Run the checks** (next section). All must pass; warnings count as failures.
+   Then **`/design-review`**: a fresh agent asks how the change could be built better (no
+   redundant or dead code, nothing that makes the next addition harder). Apply only the
+   suggestions that are real concerns, skip the rest with a reason, and re-run the checks.
 6. **Update `CHANGELOG.md`** under "Unreleased" for anything a user or the website would notice.
 7. **Open a pull request** and **summarise**: what changed, what was checked, and a short list
    of what the user should test by hand on a phone.

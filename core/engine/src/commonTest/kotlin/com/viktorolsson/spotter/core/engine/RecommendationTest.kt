@@ -50,11 +50,10 @@ class RecommendationTest {
         equipment: Set<Equipment> = Fixtures.fullGym,
         limitations: Set<Limitation> = emptySet(),
         recentRir: List<Int> = emptyList(),
-        planDays: List<Pair<Long, String>> = plan.map { it.planDayId to it.dayName }.distinct(),
         lastDeloadEnd: LocalDate? = today.minus(10, DateTimeUnit.DAY),
         applied: List<AppliedVariation> = emptyList(),
     ) = RecommendationContext(
-        today, plan, planDays, history, trainingDates, lastDeloadEnd, volume, recentRir, library, equipment, limitations, applied,
+        today, plan, history, trainingDates, lastDeloadEnd, volume, recentRir, library, equipment, limitations, applied,
     )
 
     @Test
@@ -121,41 +120,27 @@ class RecommendationTest {
         assertNull(RecommendationEngine.detectPlateau(bench, flat(80.0, 8, sessions = 6)))
     }
 
-    /** The PLAN.md example: bench stuck → weak-point accessory on the same day, with the evidence. */
+    /** Twelve sessions over seven weeks: old enough for plan suggestions. */
+    private val sevenWeeks = List(12) { today.minus(it * 4L, DateTimeUnit.DAY) }
+
     @Test
-    fun `stalled bench with enough volume gets a weak-point accessory on its day`() {
-        val plan = listOf(slot("barbell-bench-press", 1), slot("barbell-row", 2), slot("back-squat", 3, dayId = 2, dayName = "Lower A"))
-        val drafts = RecommendationEngine.evaluate(ctx(plan, mapOf("barbell-bench-press" to flat(80.0, 5, sessions = 5))))
-        // Chest, back and legs each sit on one day here, so frequency cards come too; this is the bench card.
-        val rec = drafts.single { it.exerciseId == "barbell-bench-press" }
-        assertEquals(RecommendationType.ADD_ACCESSORY, rec.type)
-        val action = rec.payload.action as RecommendationAction.AddExercise
-        assertEquals("close-grip-bench-press", action.exerciseId)
-        assertEquals(1L to "Upper A", action.planDayId to action.dayName)
-        val evidence = rec.payload.evidence
-        assertEquals(listOf<Any?>("Barbell Bench Press", 80.0, 5, 4), listOf(evidence.exerciseName, evidence.weightKg, evidence.reps, evidence.sessions))
+    fun `stalled lifts and lonely muscles make no cards of their own`() {
+        // An upper/lower plan: chest only on the upper day, legs only on the lower day.
+        val plan = listOf(
+            slot("barbell-bench-press", 1), slot("barbell-row", 2),
+            slot("back-squat", 3, dayId = 2, dayName = "Lower A"), slot("romanian-deadlift", 4, dayId = 2, dayName = "Lower A"),
+        )
+        val history = mapOf("barbell-bench-press" to flat(80.0, 5, sessions = 5))
+        assertTrue(RecommendationEngine.evaluate(ctx(plan, history, trainingDates = sevenWeeks)).isEmpty())
+        assertTrue(RecommendationEngine.evaluate(ctx(plan, history, volume = volumes(MuscleGroup.CHEST))).isEmpty())
     }
 
     @Test
-    fun `accessories respect equipment - limitations and what's already in the plan`() {
-        val bench = slot("dumbbell-bench-press", 1)
-        val noBarbell = ctx(listOf(bench), emptyMap(), equipment = setOf(Equipment.DUMBBELL, Equipment.BENCH, Equipment.DIP_STATION))
-        assertEquals("triceps-dip", RecommendationEngine.accessoryFor(bench, noBarbell)!!.id)
-        val shoulder = noBarbell.copy(limitations = setOf(Limitation.SHOULDER))
-        assertEquals("dumbbell-front-raise", RecommendationEngine.accessoryFor(bench, shoulder)!!.id)
-        val withCloseGrip = ctx(listOf(slot("barbell-bench-press", 1), slot("close-grip-bench-press", 2)), emptyMap())
-        assertEquals("paused-bench-press", RecommendationEngine.accessoryFor(slot("barbell-bench-press", 1), withCloseGrip)!!.id)
-    }
-
-    @Test
-    fun `stalled with too little weekly volume adds sets first`() {
+    fun `too little weekly volume adds a set to the lift and one more for the muscle`() {
         val plan = listOf(slot("barbell-bench-press", 1), slot("incline-dumbbell-press", 2), slot("barbell-row", 3))
-        val rec = RecommendationEngine.evaluate(
-            ctx(plan, mapOf("barbell-bench-press" to flat(80.0, 5, sessions = 4)), volume = volumes(MuscleGroup.CHEST)),
-        ).single()
-        assertEquals(RecommendationType.ADD_VOLUME, rec.type)
-        assertEquals(listOf(1L, 2L), (rec.payload.action as RecommendationAction.AddSets).planExerciseIds)
-        assertEquals(MuscleGroup.CHEST, rec.payload.evidence.group)
+        val add = assertNotNull(RecommendationEngine.moreSets(plan[0], ctx(plan, emptyMap(), volume = volumes(MuscleGroup.CHEST))))
+        assertEquals(listOf(1L, 2L), add.planExerciseIds)
+        assertNull(RecommendationEngine.moreSets(plan[0], ctx(plan, emptyMap())))
     }
 
     @Test
@@ -163,18 +148,17 @@ class RecommendationTest {
         // The PLAN.md example: 5 × 5 → 4 × 8.
         val squat = slot("back-squat", 1, sets = 5, repMin = 3, repMax = 6, rule = ProgressionRule.LINEAR)
         val history = listOf(ExerciseExposure(today.minus(8, DateTimeUnit.WEEK), List(5) { LoggedSet(90.0, 5) })) + flat(100.0, 5, sessions = 4)
-        val rec = RecommendationEngine.evaluate(ctx(listOf(squat), mapOf("back-squat" to history))).single()
-        assertEquals(RecommendationType.CHANGE_REP_RANGE, rec.type)
-        val action = rec.payload.action as RecommendationAction.ChangeRepRange
+        val plateau = assertNotNull(RecommendationEngine.detectPlateau(squat, history))
+        val action = assertNotNull(RecommendationEngine.repRangeChange(plateau))
         assertEquals(listOf(4, 8, 10), listOf(action.sets, action.repMin, action.repMax))
+        // Four weeks in the range is too soon.
+        assertNull(RecommendationEngine.repRangeChange(assertNotNull(RecommendationEngine.detectPlateau(squat, flat(100.0, 5, sessions = 4)))))
     }
 
     @Test
-    fun `isolation lifts with no accessory get a variation - and a reminder to switch back later`() {
+    fun `a variation block ends with a reminder to switch back`() {
         val raise = slot("dumbbell-lateral-raise", 7, repMin = 10, repMax = 15)
-        val rec = RecommendationEngine.evaluate(ctx(listOf(raise), mapOf("dumbbell-lateral-raise" to flat(8.0, 12, sessions = 4)))).single()
-        assertEquals(RecommendationType.VARIATION, rec.type)
-        val swap = rec.payload.action as RecommendationAction.SwapVariation
+        val swap = assertNotNull(RecommendationEngine.variationFor(raise, ctx(listOf(raise), emptyMap())))
         assertEquals("cable-lateral-raise", swap.toExerciseId)
 
         val afterBlock = ctx(
@@ -186,26 +170,27 @@ class RecommendationTest {
         val backAction = back.payload.action as RecommendationAction.SwapVariation
         assertTrue(backAction.returning)
         assertEquals("dumbbell-lateral-raise", backAction.toExerciseId)
+        assertTrue(RecommendationEngine.evaluate(afterBlock.copy(appliedVariations = listOf(AppliedVariation(swap, today.minus(4, DateTimeUnit.WEEK))))).isEmpty())
     }
 
     @Test
-    fun `several stalled lifts at once suggest a deload instead of per-lift changes`() {
+    fun `several stalled lifts at once suggest a deload once the plan is old enough`() {
         val plan = listOf(slot("barbell-bench-press", 1), slot("barbell-row", 2), slot("back-squat", 3), slot("deadlift", 4))
         val history = plan.associate { it.exercise.id to flat(80.0, 6, sessions = 4) }
-        val recs = RecommendationEngine.evaluate(ctx(plan, history))
+        val recs = RecommendationEngine.evaluate(ctx(plan, history, trainingDates = sevenWeeks))
         assertEquals(listOf(RecommendationType.DELOAD), recs.map { it.type })
         assertEquals(DeloadReason.SEVERAL_PLATEAUS, recs.single().payload.evidence.deloadReason)
         assertEquals(4, recs.single().payload.evidence.lifts.size)
+        // Four sessions in: too early to read stalls as a plan problem.
+        assertTrue(RecommendationEngine.evaluate(ctx(plan, history)).isEmpty())
     }
 
     @Test
-    fun `a dismissed or running deload no longer holds back per-lift fixes - a running one holds everything`() {
+    fun `a dismissed or running deload holds the deload back`() {
         val plan = listOf(slot("barbell-bench-press", 1), slot("barbell-row", 2), slot("back-squat", 3), slot("deadlift", 4))
         val history = plan.associate { it.exercise.id to flat(80.0, 6, sessions = 4) }
-        val handled = RecommendationEngine.evaluate(ctx(plan, history).copy(deloadRecentlyHandled = true))
-        assertTrue(handled.none { it.type == RecommendationType.DELOAD })
-        assertEquals(4, handled.count { it.exerciseId != null })
-        assertTrue(RecommendationEngine.evaluate(ctx(plan, history).copy(deloadActive = true)).isEmpty())
+        assertTrue(RecommendationEngine.evaluate(ctx(plan, history, trainingDates = sevenWeeks).copy(deloadRecentlyHandled = true)).isEmpty())
+        assertTrue(RecommendationEngine.evaluate(ctx(plan, history, trainingDates = sevenWeeks).copy(deloadActive = true)).isEmpty())
     }
 
     @Test
@@ -248,34 +233,8 @@ class RecommendationTest {
     }
 
     @Test
-    fun `a major muscle trained on one day a week gets added to another day`() {
-        val plan = listOf(
-            slot("barbell-bench-press", 1, dayId = 1, dayName = "Day A"),
-            slot("barbell-row", 2, dayId = 1, dayName = "Day A"),
-            slot("back-squat", 3, dayId = 2, dayName = "Day B"),
-            slot("romanian-deadlift", 4, dayId = 2, dayName = "Day B"),
-            slot("barbell-hip-thrust", 5, dayId = 2, dayName = "Day B"),
-            slot("lat-pulldown", 6, dayId = 2, dayName = "Day B"),
-            slot("overhead-press", 7, dayId = 1, dayName = "Day A"),
-            slot("dumbbell-lateral-raise", 8, dayId = 2, dayName = "Day B"),
-        )
-        val dates = listOf(today, today.minus(1, DateTimeUnit.WEEK))
-        val recs = RecommendationEngine.evaluate(ctx(plan, emptyMap(), trainingDates = dates))
-        val chest = recs.single { it.payload.evidence.group == MuscleGroup.CHEST }
-        assertEquals(RecommendationType.INCREASE_FREQUENCY, chest.type)
-        val add = chest.payload.action as RecommendationAction.AddExercise
-        assertEquals("Day B", add.dayName)
-        assertTrue(byId.getValue(add.exerciseId).primaryMuscles.any { MuscleGroup.of(it) == MuscleGroup.CHEST })
-        // Quads and hamstrings are only on Day B too.
-        assertTrue(recs.any { it.payload.evidence.group == MuscleGroup.QUADS })
-        // Not before two weeks of training.
-        assertTrue(RecommendationEngine.evaluate(ctx(plan, emptyMap(), trainingDates = listOf(today))).isEmpty())
-    }
-
-    @Test
     fun `payload survives a JSON round trip`() {
-        val plan = listOf(slot("barbell-bench-press", 1))
-        val rec = RecommendationEngine.evaluate(ctx(plan, mapOf("barbell-bench-press" to flat(80.0, 5, sessions = 4)))).single()
+        val rec = RecommendationEngine.evaluate(ctx(listOf(slot("barbell-bench-press", 1)), emptyMap()).copy(recentLowDays = 3)).single()
         assertEquals(rec.payload, com.viktorolsson.spotter.core.model.RecommendationPayload.decode(rec.payload.encode()))
     }
 }

@@ -1,12 +1,13 @@
 package com.viktorolsson.spotter.core.engine
 
+import com.viktorolsson.spotter.core.model.BodyArea
 import com.viktorolsson.spotter.core.model.DeloadReason
 import com.viktorolsson.spotter.core.model.Equipment
 import com.viktorolsson.spotter.core.model.Exercise
 import com.viktorolsson.spotter.core.model.ExperienceLevel
+import com.viktorolsson.spotter.core.model.Goal
 import com.viktorolsson.spotter.core.model.Limitation
 import com.viktorolsson.spotter.core.model.Mechanics
-import com.viktorolsson.spotter.core.model.MovementPattern
 import com.viktorolsson.spotter.core.model.MuscleGroup
 import com.viktorolsson.spotter.core.model.MuscleVolume
 import com.viktorolsson.spotter.core.model.ProgressionRule
@@ -71,8 +72,6 @@ data class AppliedVariation(val action: RecommendationAction.SwapVariation, val 
 data class RecommendationContext(
     val today: LocalDate,
     val plan: List<PlanSlot>,
-    /** Plan days in order: id to name. */
-    val planDays: List<Pair<Long, String>>,
     /** Per exercise id, oldest first. */
     val history: Map<String, List<ExerciseExposure>>,
     /** Dates of finished, non-deload sessions. */
@@ -91,6 +90,15 @@ data class RecommendationContext(
     val deloadRecentlyHandled: Boolean = false,
     /** Finished workouts in the last [RecommendationEngine.LOW_DAYS_WINDOW] days with a low check-in or rating (1–2). */
     val recentLowDays: Int = 0,
+    val goal: Goal? = null,
+    val experience: ExperienceLevel? = null,
+    val focusAreas: Set<BodyArea> = emptySet(),
+    /** When the active plan started; null counts from the first workout. */
+    val planStarted: LocalDate? = null,
+    /** Per stalled lift's exercise id, the changes applied to help it before. */
+    val tried: Map<String, List<TriedFix>> = emptyMap(),
+    /** Lifts changed or dismissed recently: given time before they're judged again. */
+    val cooling: Set<String> = emptySet(),
 )
 
 data class RecommendationDraft(
@@ -124,55 +132,25 @@ object RecommendationEngine {
     /** Days looked back over for low check-ins, and how many low workouts in them suggest a deload. */
     const val LOW_DAYS_WINDOW = 10
     private const val LOW_DAYS_FOR_DELOAD = 3
-    private const val MIN_TRAINING_WEEKS_FOR_PLAN_CHECKS = 2
     private const val VARIATION_WEEKS = 5
 
     /** A Monday; whole weeks since it number the calendar weeks. */
     private val WEEK_ORIGIN = LocalDate(2000, 1, 3)
 
     /**
-     * Weak-point accessories by movement pattern, in order of preference. Applies to
-     * every exercise of the pattern (barbell, dumbbell or machine).
+     * The cards stored and synced: a lighter week and switching back after a variation.
+     * They come early, since they're about recovery, not the plan. Changes for stalled lifts
+     * come from [PlanReviewEngine], once the plan has had time to work.
      */
-    val weakPointAccessories: Map<MovementPattern, List<String>> = mapOf(
-        MovementPattern.HORIZONTAL_PUSH to listOf(
-            "close-grip-bench-press", "paused-bench-press", "dumbbell-bench-press", "skull-crusher",
-            "triceps-dip", "dumbbell-front-raise", "barbell-row",
-        ),
-        MovementPattern.VERTICAL_PUSH to listOf(
-            "push-press", "dumbbell-lateral-raise", "cable-lateral-raise", "triceps-pushdown", "face-pull", "barbell-row",
-        ),
-        MovementPattern.SQUAT to listOf("paused-squat", "front-squat", "leg-press", "bulgarian-split-squat", "plank"),
-        MovementPattern.HINGE to listOf("romanian-deadlift", "deficit-deadlift", "rack-pull", "back-extension", "barbell-row"),
-        MovementPattern.VERTICAL_PULL to listOf(
-            "negative-pull-up", "lat-pulldown", "seated-cable-row", "one-arm-dumbbell-row", "ez-bar-curl", "dumbbell-curl",
-        ),
-        MovementPattern.HORIZONTAL_PULL to listOf("chest-supported-dumbbell-row", "face-pull", "lat-pulldown", "dumbbell-curl"),
-        MovementPattern.LUNGE to listOf("leg-press", "step-up", "barbell-hip-thrust", "goblet-squat"),
-        MovementPattern.HIP_THRUST to listOf("romanian-deadlift", "hip-abduction-machine", "bulgarian-split-squat", "cable-glute-kickback"),
-    )
-
-    /** Groups worth hitting at least twice a week. */
-    private val majorGroups = setOf(
-        MuscleGroup.CHEST, MuscleGroup.BACK, MuscleGroup.SHOULDERS, MuscleGroup.QUADS, MuscleGroup.HAMSTRINGS, MuscleGroup.GLUTES,
-    )
-
     fun evaluate(ctx: RecommendationContext): List<RecommendationDraft> {
         if (ctx.deloadActive) return returnFromVariations(ctx)
-        val drafts = mutableListOf<RecommendationDraft>()
-        val plateaus = ctx.plan
+        // Several stalled lifts are a plan signal, so they wait for the plan to be old enough too.
+        val plateaus = if (!PlanReviewEngine.planAge(ctx).ready) emptyList() else ctx.plan
             .filter { !it.fiveThreeOne }
             .distinctBy { it.exercise.id }
             .mapNotNull { slot -> detectPlateau(slot, ctx.history[slot.exercise.id].orEmpty()) }
-
-        if (!ctx.deloadRecentlyHandled) deload(ctx, plateaus)?.let { drafts += it }
-        // During a suggested deload, per-lift changes wait: rest first, then reassess.
-        if (drafts.isEmpty()) {
-            plateaus.forEach { plateau -> diagnose(plateau, ctx)?.let { drafts += it } }
-            drafts += frequency(ctx)
-        }
-        drafts += returnFromVariations(ctx)
-        return drafts
+        val deload = if (ctx.deloadRecentlyHandled) null else deload(ctx, plateaus)
+        return listOfNotNull(deload) + returnFromVariations(ctx)
     }
 
     /**
@@ -209,55 +187,29 @@ object RecommendationEngine {
         return sets.count { it.reps < floor } * 2 > sets.size
     }
 
-    private fun evidence(p: Plateau) = RecommendationEvidence(
-        exerciseName = p.slot.exercise.name,
-        weightKg = p.latest?.weightKg,
-        reps = p.latest?.reps,
-        sessions = p.sessions,
-        weeks = p.weeks,
-        missedTwice = p.missedTwice,
-    )
-
-    /** Picks one fix per stalled lift: volume, then rep range, then accessory, then variation. */
-    private fun diagnose(p: Plateau, ctx: RecommendationContext): RecommendationDraft? {
-        val slot = p.slot
+    /** One more set for the stalled lift's muscle when it gets less than its weekly target. */
+    fun moreSets(slot: PlanSlot, ctx: RecommendationContext): RecommendationAction.AddSets? {
         val groups = slot.exercise.primaryMuscles.map(MuscleGroup::of).toSet()
-        val under = ctx.weeklyVolume.firstOrNull { it.group in groups && it.status == VolumeStatus.UNDER }
-        if (under != null) {
-            val targets = ctx.plan.filter { s -> s.exercise.primaryMuscles.any { MuscleGroup.of(it) == under.group } }.take(2)
-            return RecommendationDraft(
-                RecommendationType.ADD_VOLUME,
-                slot.exercise.id,
-                RecommendationPayload(
-                    RecommendationAction.AddSets(targets.map { it.planExerciseId }, targets.map { it.exercise.name }),
-                    evidence(p).copy(group = under.group, groupSets = under.sets, targetLow = under.targetLow, targetHigh = under.targetHigh),
-                ),
-            )
+        val under = ctx.weeklyVolume.firstOrNull { it.group in groups && it.status == VolumeStatus.UNDER } ?: return null
+        val targets = listOf(slot) + ctx.plan.filter { s ->
+            s.planExerciseId != slot.planExerciseId && s.exercise.primaryMuscles.any { MuscleGroup.of(it) == under.group }
+        }.take(1)
+        return RecommendationAction.AddSets(targets.map { it.planExerciseId }, targets.map { it.exercise.name })
+    }
+
+    /**
+     * A block in another rep range for a lift that has sat in one for [LONG_IN_RANGE_DAYS]:
+     * heavy work moves to 8–10, light work to 6–10, the middle to 4–6 with a set more.
+     */
+    fun repRangeChange(p: Plateau): RecommendationAction.ChangeRepRange? {
+        val slot = p.slot
+        if (p.historyDays < LONG_IN_RANGE_DAYS || slot.exercise.isTimed) return null
+        val (sets, min, max) = when {
+            slot.repMax <= 6 -> Triple((slot.sets - 1).coerceAtLeast(3), 8, 10)
+            slot.repMin >= 10 -> Triple(slot.sets, 6, 10)
+            else -> Triple(slot.sets + 1, 4, 6)
         }
-        if (p.historyDays >= LONG_IN_RANGE_DAYS && !slot.exercise.isTimed) {
-            val (sets, min, max) = when {
-                slot.repMax <= 6 -> Triple((slot.sets - 1).coerceAtLeast(3), 8, 10)
-                slot.repMin >= 10 -> Triple(slot.sets, 6, 10)
-                else -> Triple(slot.sets + 1, 4, 6)
-            }
-            return RecommendationDraft(
-                RecommendationType.CHANGE_REP_RANGE,
-                slot.exercise.id,
-                RecommendationPayload(
-                    RecommendationAction.ChangeRepRange(slot.planExerciseId, slot.sets, slot.repMin, slot.repMax, sets, min, max),
-                    evidence(p).copy(weeks = (p.historyDays / 7).toInt()),
-                ),
-            )
-        }
-        accessoryFor(slot, ctx)?.let { accessory ->
-            return RecommendationDraft(
-                RecommendationType.ADD_ACCESSORY,
-                slot.exercise.id,
-                RecommendationPayload(addAccessory(slot, accessory), evidence(p)),
-            )
-        }
-        val swap = variationFor(slot, ctx) ?: return null
-        return RecommendationDraft(RecommendationType.VARIATION, slot.exercise.id, RecommendationPayload(swap, evidence(p)))
+        return RecommendationAction.ChangeRepRange(slot.planExerciseId, slot.sets, slot.repMin, slot.repMax, sets, min, max)
     }
 
     /** Adds [accessory] to [slot]'s day: 3 sets, moderate reps, a couple of reps in reserve. */
@@ -291,58 +243,6 @@ object RecommendationEngine {
         return RecommendationAction.SwapVariation(
             slot.planExerciseId, slot.exercise.id, slot.exercise.name, variant.id, variant.name, VARIATION_WEEKS,
         )
-    }
-
-    private fun usable(ex: Exercise, ctx: RecommendationContext): Boolean {
-        val banned = ctx.limitations.flatMap { Rules.excludedFor[it].orEmpty() }
-        return ex.id !in banned && ctx.equipment.containsAll(ex.equipment)
-    }
-
-    /** First weak-point accessory the user can do that isn't already in the plan. */
-    fun accessoryFor(slot: PlanSlot, ctx: RecommendationContext): Exercise? {
-        if (slot.exercise.mechanics != Mechanics.COMPOUND) return null
-        val inPlan = ctx.plan.map { it.exercise.id }.toSet()
-        val byId = ctx.library.associateBy { it.id }
-        return weakPointAccessories[slot.exercise.movementPattern].orEmpty()
-            .mapNotNull { byId[it] }
-            .firstOrNull { it.id != slot.exercise.id && it.id !in inPlan && usable(it, ctx) }
-    }
-
-    /** Major groups trained on only one plan day get a second exercise on another day. */
-    private fun frequency(ctx: RecommendationContext): List<RecommendationDraft> {
-        if (ctx.planDays.size < 2 || trainingWeeks(ctx) < MIN_TRAINING_WEEKS_FOR_PLAN_CHECKS) return emptyList()
-        val daysByGroup = majorGroups.associateWith { group ->
-            ctx.plan.filter { slot -> slot.exercise.primaryMuscles.any { MuscleGroup.of(it) == group } }.map { it.planDayId }.toSet()
-        }
-        val inPlan = ctx.plan.map { it.exercise.id }.toSet()
-        return daysByGroup.filter { (_, days) -> days.size == 1 }.mapNotNull { (group, days) ->
-            val day = ctx.planDays
-                .filter { it.first !in days }
-                .minByOrNull { (id, _) -> ctx.plan.count { it.planDayId == id } } ?: return@mapNotNull null
-            val exercise = ctx.library
-                .filter { ex -> ex.primaryMuscles.any { MuscleGroup.of(it) == group } && ex.id !in inPlan && usable(ex, ctx) && !ex.isCustom }
-                .maxWithOrNull(compareBy<Exercise>({ it.id in Rules.staples }, { -it.difficulty.ordinal }).thenByDescending { it.id })
-                ?: return@mapNotNull null
-            val compound = exercise.mechanics == Mechanics.COMPOUND
-            RecommendationDraft(
-                RecommendationType.INCREASE_FREQUENCY,
-                null,
-                RecommendationPayload(
-                    RecommendationAction.AddExercise(
-                        planDayId = day.first,
-                        dayName = day.second,
-                        exerciseId = exercise.id,
-                        exerciseName = exercise.name,
-                        sets = 3,
-                        repMin = if (compound) 8 else 10,
-                        repMax = if (compound) 12 else 15,
-                        targetRir = 2,
-                        restSeconds = if (compound) 120 else 90,
-                    ),
-                    RecommendationEvidence(group = group),
-                ),
-            )
-        }
     }
 
     /**
@@ -380,9 +280,6 @@ object RecommendationEngine {
             .filter { date -> ctx.lastDeloadEnd == null || date > ctx.lastDeloadEnd }
             .map { WEEK_ORIGIN.until(it, DateTimeUnit.WEEK) }
             .distinct().size
-
-    private fun trainingWeeks(ctx: RecommendationContext): Int =
-        ctx.trainingDates.map { WEEK_ORIGIN.until(it, DateTimeUnit.WEEK) }.distinct().size
 
     /** Variation blocks end after their planned weeks: suggest switching back. */
     private fun returnFromVariations(ctx: RecommendationContext): List<RecommendationDraft> =

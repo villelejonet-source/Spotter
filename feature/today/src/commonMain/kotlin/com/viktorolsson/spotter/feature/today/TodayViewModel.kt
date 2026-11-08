@@ -8,13 +8,14 @@ import com.viktorolsson.spotter.core.data.launchReporting
 import com.viktorolsson.spotter.core.data.repository.GamificationRepository
 import com.viktorolsson.spotter.core.data.repository.HistoryRepository
 import com.viktorolsson.spotter.core.data.repository.PlanRepository
-import com.viktorolsson.spotter.core.data.repository.PlanReviewChoice
 import com.viktorolsson.spotter.core.data.repository.RecommendationRepository
 import com.viktorolsson.spotter.core.data.repository.ScheduleRepository
 import com.viktorolsson.spotter.core.data.repository.UserPreferencesRepository
 import com.viktorolsson.spotter.core.data.repository.UserProfileRepository
 import com.viktorolsson.spotter.core.data.repository.WorkoutRepository
+import com.viktorolsson.spotter.core.engine.LiftOption
 import com.viktorolsson.spotter.core.engine.PlanReview
+import com.viktorolsson.spotter.core.engine.StalledLift
 import com.viktorolsson.spotter.core.model.Level
 import com.viktorolsson.spotter.core.model.WeekQuests
 import com.viktorolsson.spotter.core.model.YearInReview
@@ -148,8 +149,8 @@ class TodayViewModel(
     val review: StateFlow<PlanReview?> = recommendationRepository.observePlanReview()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
 
-    fun applyReview(choices: List<PlanReviewChoice>) = viewModelScope.launchReporting(errors, Failure.SAVE) {
-        recommendationRepository.applyPlanReview(choices)
+    fun applyReview(picks: List<Pair<StalledLift, LiftOption>>) = viewModelScope.launchReporting(errors, Failure.SAVE) {
+        recommendationRepository.applyPlanReview(picks)
     }
 
     fun keepPlan() = viewModelScope.launchReporting(errors, Failure.SAVE) { recommendationRepository.keepPlan() }

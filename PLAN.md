@@ -137,22 +137,18 @@ Experience scales volume: new lifters start at the low end, advanced lifters at 
 - **Body weight:** trend chart with a 7-day moving average.
 
 ## Plateau detection and improvement recommendations
-These rules live in `core/engine` and run after each session:
-- **Plateau signal:** no estimated-1RM or rep improvement for an exercise in 3+ exposures over 3+ weeks, or a failed progression target twice in a row.
-- **Diagnosis**, then a recommendation built from data tables (not hard-coded per lift), so it applies to every exercise:
-  - Each main lift maps to its **weak-point accessories** by movement pattern and muscles involved. For example:
-    - Bench → close-grip bench, paused bench, DB press, triceps (dips, skull crushers), front delts, rows for stability.
-    - Squat → paused squat, front squat, leg press, Bulgarian split squat, core work.
-    - Deadlift → RDL, deficit or block pulls, back extensions, rows.
-    - Overhead press → push press, lateral raises, triceps, upper back.
-    - Pull-up → negatives, lat pulldown, rows, biceps.
-  - **Volume check:** if weekly sets for the muscles involved are below target, add sets.
-  - **Recovery check:** if RIR trends to 0 and performance falls across several lifts, suggest a deload week.
-  - **Rep-range change:** if you have been stuck in the same range for a long time, suggest switching (e.g. 5×5 → 4×8 for a block).
-  - **Frequency:** if a muscle is trained only once a week, suggest twice.
-  - **Variation:** swap to a close variant for 4–6 weeks, then return.
-- Recommendations appear as cards in Progress and on the related exercise screen, with "Apply to plan" or "Dismiss". Each card explains *why* (e.g. "Bench 80 kg × 5 for 4 sessions").
-- A plan review shows on Today after 4 weeks and 8 sessions on the plan (or since the last review) when a main lift has stalled, or after 2 weeks when 2+ stall together. For each stalled lift it offers supporting exercises for the muscles around it (`SupportingLifts`: e.g. bench → incline press, triceps, shoulders) and a variation swap. Applying, or keeping the plan, starts the next 4-week window; "Later" hides it for a week.
+These rules live in `core/engine` and run as workouts finish:
+- **Wait for the plan to work:** no plan suggestions until the current plan has 6 weeks and 12 sessions (`PlanReviewEngine.planAge`). A new plan restarts the wait; Progress says how far along it is.
+- **Plateau signal:** no estimated-1RM or rep improvement for a main (compound) lift in 3+ exposures over 3+ weeks, or a failed progression target twice in a row.
+- **Options per stalled lift** (`PlanReviewEngine.stalledLifts`), built from data tables, not per-lift code:
+  - **Supporting exercises** for the muscles around the lift (`SupportingLifts`: bench → incline press, triceps, shoulders; squat → quads, hamstrings, core; and so on), added to the lift's own day.
+  - **Variation:** a close variant for 5 weeks, then a card to switch back. Not for new lifters.
+  - **Rep-range change** after 6+ weeks in one range (e.g. 5×5 → 4×8 for a block), not again within 8 weeks.
+  - **Another set** when the muscle is under its weekly target (not for general fitness or fat loss).
+  - Ordered for the goal (strength: rep range and variation first; size: sets and supports first), with kinds tried before last, and lifts in the focus areas first.
+- Progress shows the main lifts' change over 4 weeks, upper and lower body, and a card per stalled lift: tick options and apply, or "Not now". Applying or "Not now" leaves the lift alone for 4 weeks, on every phone. The exercise screen shows the same card.
+- The plan review on Today brings the same options up every 4 weeks once the plan is old enough; "Later" hides it for a week.
+- **Recovery** stays early, as stored cards: a lighter week when performance falls with sets near failure, after 3 low check-ins in 10 days, or after 6 weeks of steady training (several stalled lifts at once too, once the plan is old enough).
 
 ## Theming
 Material 3 theme with light, dark and "follow system" settings, plus dynamic color on Android 12+ and a branded fallback palette. Both themes, and large text, get Roborazzi screenshot tests.

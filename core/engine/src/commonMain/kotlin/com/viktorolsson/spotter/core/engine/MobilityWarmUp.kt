@@ -1,6 +1,7 @@
 package com.viktorolsson.spotter.core.engine
 
-import com.viktorolsson.spotter.core.model.BodyArea
+import com.viktorolsson.spotter.core.model.LOWER_BODY_MUSCLES
+import com.viktorolsson.spotter.core.model.UPPER_BODY_MUSCLES
 import com.viktorolsson.spotter.core.model.Exercise
 import com.viktorolsson.spotter.core.model.MovementPattern
 import com.viktorolsson.spotter.core.model.Muscle
@@ -52,8 +53,8 @@ object MobilityWarmUp {
             val weight = sets.coerceAtLeast(1).toDouble() / exercise.primaryMuscles.size.coerceAtLeast(1)
             exercise.primaryMuscles.forEach {
                 when (it) {
-                    in UPPER_MUSCLES -> upper += weight
-                    in LOWER_MUSCLES -> lower += weight
+                    in UPPER_BODY_MUSCLES -> upper += weight
+                    in LOWER_BODY_MUSCLES -> lower += weight
                     else -> Unit
                 }
             }
@@ -89,10 +90,6 @@ object MobilityWarmUp {
                 .thenBy { drills.indexOf(it) },
         )
     }
-
-    private val UPPER_MUSCLES =
-        BodyArea.CHEST.muscles + BodyArea.SHOULDERS.muscles + BodyArea.ARMS.muscles + BodyArea.BACK.muscles - Muscle.LOWER_BACK
-    private val LOWER_MUSCLES = BodyArea.LEGS.muscles + BodyArea.GLUTES.muscles + Muscle.LOWER_BACK
 
     private val GENERAL = listOf(
         MobilityDrill.JUMPING_JACKS, MobilityDrill.INCHWORM, MobilityDrill.ARM_CIRCLES,

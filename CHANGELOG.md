@@ -9,6 +9,13 @@ into the new version's entry and writes the store notes from it. Versions are th
 ## Unreleased
 
 ### App
+- Suggestions on Progress now wait until a plan has had time to work (6 weeks and 12
+  sessions), then focus on lifts that have stalled: exercises that help that lift (incline
+  press and triceps work for a stalled bench, all on the lift's own day), a variation, a new
+  rep range or another set, ordered for your goal, with what you've already tried last. Pick
+  any, or "Not now" for four weeks. Progress also shows how each main lift moved over the last
+  four weeks. No more "train chest twice a week" on a lower-body day. A lighter week after
+  low check-ins still comes early.
 - Weekly quests: three small goals every Monday ("Train 3 times", "Set a PR", "Try an exercise
   you've never done"), 50 XP each, on Today and on Levels and badges. They start with this
   update's week, so earlier weeks don't change your level.

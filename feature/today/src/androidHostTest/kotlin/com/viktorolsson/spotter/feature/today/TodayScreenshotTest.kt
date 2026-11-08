@@ -19,10 +19,10 @@ import com.viktorolsson.spotter.core.engine.LoggedSet
 import com.viktorolsson.spotter.core.engine.PlanReview
 import com.viktorolsson.spotter.core.engine.PlanSlot
 import com.viktorolsson.spotter.core.engine.Plateau
+import com.viktorolsson.spotter.core.engine.FixKind
+import com.viktorolsson.spotter.core.engine.LiftOption
 import com.viktorolsson.spotter.core.engine.StalledLift
 import com.viktorolsson.spotter.core.engine.SupportReason
-import com.viktorolsson.spotter.core.engine.SupportingExercise
-import com.viktorolsson.spotter.core.model.Mechanics
 import com.viktorolsson.spotter.core.model.MovementPattern
 import com.viktorolsson.spotter.core.model.Muscle
 import com.viktorolsson.spotter.core.model.ProgressionRule
@@ -140,9 +140,8 @@ class TodayScreenshotTest {
         val bench = PreviewData.exercise()
         val row = PreviewData.exercise("barbell-row", "Barbell Row", MovementPattern.HORIZONTAL_PULL, primary = listOf(Muscle.UPPER_BACK))
         val slot = PlanSlot(1, 1, "Upper A", bench, 3, 6, 10, 1, ProgressionRule.DOUBLE_PROGRESSION)
-        fun add(id: String, name: String, reason: SupportReason, mechanics: Mechanics = Mechanics.COMPOUND) =
-            SupportingExercise(PreviewData.exercise(id, name, mechanics = mechanics), reason) to
-                RecommendationAction.AddExercise(1, "Upper A", id, name, 3, 6, 10, 2, 120)
+        fun add(id: String, name: String, reason: SupportReason) =
+            LiftOption(FixKind.SUPPORT, RecommendationAction.AddExercise(1, "Upper A", id, name, 3, 6, 10, 2, 120), reason)
         PlanReview(
             since = today.minus(28, DateTimeUnit.DAY),
             sessions = 11,
@@ -154,8 +153,8 @@ class TodayScreenshotTest {
                         add("incline-barbell-bench-press", "Incline Barbell Bench Press", SupportReason.UPPER_CHEST),
                         add("close-grip-bench-press", "Close-Grip Bench Press", SupportReason.TRICEPS),
                         add("seated-dumbbell-shoulder-press", "Seated Dumbbell Shoulder Press", SupportReason.SHOULDERS),
+                        LiftOption(FixKind.VARIATION, RecommendationAction.SwapVariation(1, bench.id, bench.name, "paused-bench-press", "Paused Bench Press", 5)),
                     ),
-                    RecommendationAction.SwapVariation(1, bench.id, bench.name, "paused-bench-press", "Paused Bench Press", 5),
                 ),
             ),
         )
@@ -170,7 +169,7 @@ class TodayScreenshotTest {
     ) {
         SpotterTheme(darkTheme = dark) {
             Surface {
-                PlanReviewContent(review, WeightUnit.KG, onApply = {}, onKeep = {}, initiallyPicked = setOf("barbell-bench-press|close-grip-bench-press"))
+                PlanReviewContent(review, WeightUnit.KG, onApply = {}, onKeep = {}, initiallyPicked = setOf("barbell-bench-press|SUPPORT|close-grip-bench-press"))
             }
         }
     }

@@ -10,3 +10,10 @@ enum class BodyArea(val muscles: Set<Muscle>) {
     GLUTES(setOf(Muscle.GLUTES)),
     CORE(setOf(Muscle.ABS, Muscle.OBLIQUES)),
 }
+
+/** Legs, glutes and lower back: the lower body, for warm-ups and grouping lifts. */
+val LOWER_BODY_MUSCLES: Set<Muscle> = BodyArea.LEGS.muscles + BodyArea.GLUTES.muscles + Muscle.LOWER_BACK
+
+/** Chest, shoulders, arms and the back above the lower back. Core is neither. */
+val UPPER_BODY_MUSCLES: Set<Muscle> =
+    BodyArea.CHEST.muscles + BodyArea.SHOULDERS.muscles + BodyArea.ARMS.muscles + BodyArea.BACK.muscles - Muscle.LOWER_BACK

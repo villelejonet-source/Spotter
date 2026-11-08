@@ -5,17 +5,23 @@ import androidx.room.Room
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.viktorolsson.spotter.core.data.db.SpotterDatabase
+import com.viktorolsson.spotter.core.data.db.entity.RecommendationEntity
 import com.viktorolsson.spotter.core.data.db.toModel
 import com.viktorolsson.spotter.core.data.seed.SeedExercise
 import com.viktorolsson.spotter.core.data.seed.parseExerciseSeed
 import com.viktorolsson.spotter.core.data.testDatabase
+import com.viktorolsson.spotter.core.engine.FixKind
 import com.viktorolsson.spotter.core.model.Goal
+import com.viktorolsson.spotter.core.model.MuscleGroup
 import com.viktorolsson.spotter.core.model.Plan
 import com.viktorolsson.spotter.core.model.PlanDay
 import com.viktorolsson.spotter.core.model.PlanExercise
 import com.viktorolsson.spotter.core.model.ProgressionReason
 import com.viktorolsson.spotter.core.model.ProgressionRule
 import com.viktorolsson.spotter.core.model.RecommendationAction
+import com.viktorolsson.spotter.core.model.RecommendationEvidence
+import com.viktorolsson.spotter.core.model.RecommendationPayload
+import com.viktorolsson.spotter.core.model.RecommendationStatus
 import com.viktorolsson.spotter.core.model.RecommendationType
 import com.viktorolsson.spotter.core.model.SplitType
 import kotlinx.coroutines.flow.first
@@ -66,7 +72,7 @@ class RecommendationRepositoryTest {
     @After
     fun tearDown() = db.close()
 
-    /** Two full-body days so frequency is fine and the bench plateau is the only signal. */
+    /** Two full-body days; the bench plateau is the only signal. */
     private suspend fun fullBodyPlan(): Plan {
         suspend fun ex(id: String, position: Int, sets: Int = 3) = PlanExercise(
             0, db.exerciseDao().getById(id)!!.toModel(), position, sets, 6, 12, 1, 120, ProgressionRule.DOUBLE_PROGRESSION, null, 60.0,
@@ -82,7 +88,7 @@ class RecommendationRepositoryTest {
      * One planned workout where bench is 80 × [reps] on every set and everything else is
      * skipped, plus [extraChestSets] of pec deck so weekly chest volume can be on target.
      */
-    private suspend fun stalledBenchWorkout(reps: Int = 6, extraChestSets: Int = 0) {
+    private suspend fun stalledBenchWorkout(reps: Int = 6, extraChestSets: Int = 0, daysApart: Long = 7) {
         val day = plans.observeNextDay().first()!!
         val sessionId = workouts.startPlannedWorkout(day.id)
         if (extraChestSets > 0) workouts.addExercises(sessionId, listOf("pec-deck"), defaultSetCount = extraChestSets)
@@ -97,30 +103,76 @@ class RecommendationRepositoryTest {
         }
         clock.advanceSeconds(3600)
         workouts.finishWorkout(session.id)
-        clock.advanceSeconds(7 * 86_400L - 3600)
+        clock.advanceSeconds(daysApart * 86_400L - 3600)
+    }
+
+    /** [sessions] stalled bench workouts every 4 days, with enough chest volume. */
+    private suspend fun stallBench(sessions: Int) = repeat(sessions) { stalledBenchWorkout(extraChestSets = 8, daysApart = 4) }
+
+    private suspend fun stalledBench() = recommendations.observeProgressCheck().first()!!.stalled.singleOrNull { it.plateau.slot.exercise.id == BENCH }
+
+    @Test
+    fun stalledLiftsWaitForSixWeeksAndTwelveSessionsOnThePlan() = runTest {
+        stallBench(8)
+        val early = recommendations.observeProgressCheck().first()!!
+        assertEquals(8, early.age.sessions)
+        assertFalse(early.age.ready)
+        assertTrue(early.stalled.isEmpty())
+        // And no card for bench either: stalled lifts no longer make cards of their own.
+        recommendations.refresh()
+        assertTrue(recommendations.observeActive().first().none { it.exerciseId == BENCH })
+
+        stallBench(5)
+        assertTrue(recommendations.observeProgressCheck().first()!!.age.ready)
+        val bench = stalledBench()!!
+        val adds = bench.options.mapNotNull { it.action as? RecommendationAction.AddExercise }
+        assertEquals(listOf("incline-barbell-bench-press", "close-grip-bench-press"), adds.take(2).map { it.exerciseId })
+        assertEquals(bench.plateau.slot.planDayId, adds.first().planDayId)
     }
 
     @Test
-    fun aPlanReviewComesAfterFourWeeksAndApplyingItChangesThePlanOnce() = runTest {
-        repeat(4) { stalledBenchWorkout(extraChestSets = 8) }
-        assertNull(recommendations.observePlanReview().first()) // 4 sessions: too few
-        repeat(4) { stalledBenchWorkout(extraChestSets = 8) }
-        val review = recommendations.observePlanReview().first()!!
-        val bench = review.stalled.single { it.plateau.slot.exercise.id == "barbell-bench-press" }
-        val picks = bench.supports.map { it.second }.filter { it.exerciseId in setOf("incline-barbell-bench-press", "close-grip-bench-press") }
-        assertEquals(2, picks.size)
-
-        recommendations.applyPlanReview(picks.map { PlanReviewChoice("barbell-bench-press", "Barbell Bench Press", it) })
-        val day = plans.observeActivePlan().first()!!.days.first { it.id == picks.first().planDayId }
+    fun applyingChoicesChangesThePlanAndTheLiftCoolsDown() = runTest {
+        stallBench(13)
+        val bench = stalledBench()!!
+        val picks = bench.options.filter { it.kind == FixKind.SUPPORT }.take(2)
+        recommendations.applyOptions(bench, picks)
+        val day = plans.observeActivePlan().first()!!.days.first { it.id == bench.plateau.slot.planDayId }
         assertEquals(listOf("incline-barbell-bench-press", "close-grip-bench-press"), day.exercises.takeLast(2).map { it.exercise.id })
-        // Reviewed today: no new review, and no single card for bench during the cooldown.
+        assertNull(stalledBench())
+
+        // Four weeks on and still stuck: something not tried yet comes first.
+        stallBench(8)
+        val again = stalledBench()!!
+        assertNotEquals(FixKind.SUPPORT, again.options.first().kind)
+    }
+
+    @Test
+    fun notNowHidesAStalledLiftForTheCooldown() = runTest {
+        stallBench(13)
+        recommendations.dismissStalled(stalledBench()!!)
+        assertNull(stalledBench())
+        clock.advanceSeconds(27 * 86_400L)
+        assertNull(stalledBench())
+        clock.advanceSeconds(2 * 86_400L)
+        assertNotNull(stalledBench())
+    }
+
+    @Test
+    fun theReviewComesOnceThePlanIsOldEnoughAndApplyingItChangesThePlanOnce() = runTest {
+        stallBench(8)
+        assertNull(recommendations.observePlanReview().first()) // four weeks in, but too early for this plan
+        stallBench(5)
+        val review = recommendations.observePlanReview().first()!!
+        val bench = review.stalled.single { it.plateau.slot.exercise.id == BENCH }
+        recommendations.applyPlanReview(bench.options.filter { it.kind == FixKind.SUPPORT }.take(2).map { bench to it })
+        // Reviewed today, and bench is cooling down on Progress too.
         assertNull(recommendations.observePlanReview().first())
-        assertTrue(recommendations.observeActive().first().none { it.exerciseId == "barbell-bench-press" })
+        assertNull(stalledBench())
     }
 
     @Test
     fun laterHidesThePlanReviewForAWeek() = runTest {
-        repeat(8) { stalledBenchWorkout(extraChestSets = 8) }
+        stallBench(13)
         assertNotNull(recommendations.observePlanReview().first())
         recommendations.snoozePlanReview()
         assertNull(recommendations.observePlanReview().first())
@@ -134,47 +186,26 @@ class RecommendationRepositoryTest {
     }
 
     @Test
-    fun stalledBenchWithTooLittleChestVolumeAddsSetsToBothBenchSlots() = runTest {
-        repeat(4) { stalledBenchWorkout() } // 3 chest sets a week, target 10–20
+    fun anOldFrequencyCardIsRemovedOnRefresh() = runTest {
+        stalledBenchWorkout()
+        db.recommendationDao().insert(
+            listOf(
+                RecommendationEntity(
+                    type = RecommendationType.INCREASE_FREQUENCY,
+                    exerciseId = null,
+                    payload = RecommendationPayload(
+                        RecommendationAction.AddExercise(1, "Full B", "pec-deck", "Pec Deck", 3, 10, 15, 2, 90),
+                        RecommendationEvidence(group = MuscleGroup.CHEST),
+                    ).encode(),
+                    createdAt = clock.now(),
+                    status = RecommendationStatus.ACTIVE,
+                    dedupKey = "frequency|CHEST",
+                ),
+            ),
+        )
+        assertEquals(1, recommendations.observeActive().first().size)
         recommendations.refresh()
-        val rec = recommendations.observeActive().first().single { it.exerciseId == "barbell-bench-press" }
-        assertEquals(RecommendationType.ADD_VOLUME, rec.type)
-        recommendations.apply(rec.id)
-        val benchSets = plans.observeActivePlan().first()!!.days.map { day -> day.exercises.first { it.exercise.id == "barbell-bench-press" }.sets }
-        assertEquals(listOf(4, 4), benchSets)
-    }
-
-    @Test
-    fun stalledBenchGetsAnAccessoryThatApplyAddsToThePlan() = runTest {
-        repeat(4) { stalledBenchWorkout(extraChestSets = 8) } // 11 chest sets a week: volume is fine
-        recommendations.refresh()
-        val active = recommendations.observeActive().first()
-        val rec = active.single { it.exerciseId == "barbell-bench-press" }
-        assertEquals(RecommendationType.ADD_ACCESSORY, rec.type)
-        val action = rec.payload.action as RecommendationAction.AddExercise
-        assertEquals("close-grip-bench-press", action.exerciseId)
-        assertEquals(3, rec.payload.evidence.sessions)
-
-        recommendations.apply(rec.id)
-        val day = plans.observeActivePlan().first()!!.days.first { it.id == action.planDayId }
-        assertEquals("close-grip-bench-press", day.exercises.last().exercise.id)
-        assertTrue(recommendations.observeActive().first().none { it.id == rec.id })
-
-        // Still stalled, but just applied: not suggested again during the cooldown.
-        recommendations.refresh()
-        assertTrue(recommendations.observeActive().first().none { it.exerciseId == "barbell-bench-press" })
-    }
-
-    @Test
-    fun dismissedSuggestionsStayDismissedAndRefreshDoesNotDuplicate() = runTest {
-        repeat(4) { stalledBenchWorkout(extraChestSets = 8) }
-        recommendations.refresh()
-        recommendations.refresh()
-        val bench = recommendations.observeActive().first().filter { it.exerciseId == "barbell-bench-press" }
-        assertEquals(1, bench.size)
-        recommendations.dismiss(bench.single().id)
-        recommendations.refresh()
-        assertTrue(recommendations.observeActive().first().none { it.exerciseId == "barbell-bench-press" })
+        assertTrue(recommendations.observeActive().first().isEmpty())
     }
 
     @Test
@@ -342,15 +373,7 @@ class RecommendationRepositoryTest {
         }
     }
 
-    @Test
-    fun dismissingADeloadLetsPerLiftFixesThrough() = runTest {
-        repeat(6) { stalledBenchWorkout(extraChestSets = 8) }
-        recommendations.refresh()
-        val deload = recommendations.observeActive().first().single { it.type == RecommendationType.DELOAD }
-        assertTrue(recommendations.observeActive().first().none { it.exerciseId == "barbell-bench-press" })
-        recommendations.dismiss(deload.id) // re-evaluates by itself
-        val active = recommendations.observeActive().first()
-        assertTrue(active.none { it.type == RecommendationType.DELOAD })
-        assertEquals(RecommendationType.ADD_ACCESSORY, active.single { it.exerciseId == "barbell-bench-press" }.type)
+    private companion object {
+        const val BENCH = "barbell-bench-press"
     }
 }

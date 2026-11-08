@@ -8,26 +8,6 @@ into the new version's entry and writes the store notes from it. Versions are th
 
 ## Unreleased
 
-### App
-- Suggestions on Progress now wait until a plan has had time to work (6 weeks and 12
-  sessions), then focus on lifts that have stalled: exercises that help that lift (incline
-  press and triceps work for a stalled bench, all on the lift's own day), a variation, a new
-  rep range or another set, ordered for your goal, with what you've already tried last. Pick
-  any, or "Not now" for four weeks. Progress also shows how each main lift moved over the last
-  four weeks. No more "train chest twice a week" on a lower-body day. A lighter week after
-  low check-ins still comes early.
-- Weekly quests: three small goals every Monday ("Train 3 times", "Set a PR", "Try an exercise
-  you've never done"), 50 XP each, on Today and on Levels and badges. They start with this
-  update's week, so earlier weeks don't change your level.
-- Lift mastery: bronze, silver and gold for squat, bench press, deadlift and overhead press,
-  from your best estimated 1RM against your body weight (on Levels and badges; gives no XP).
-- Your year in review: from December 1 to January 15, Today has a card with your workouts,
-  time, volume, PRs, strongest month, favourite exercise and the badges you unlocked.
-- Share a level-up, a new badge or your year in review as an image, from the workout summary
-  and the year in review.
-- The "Levels and badges" switch in Settings now syncs: turning it off hides levels on your
-  other phones and the website too.
-
 ### Website
 - Levels: this week's quests on Today and on the Levels page, lift mastery on the Levels page,
   and your year in review (Today links to it from December 1 to January 15).
@@ -85,6 +65,31 @@ into the new version's entry and writes the store notes from it. Versions are th
 - Fixed a crash on iOS whenever the app logged a warning, such as a failed sync (#27).
 - Builds without cloud backup no longer show account buttons that couldn't work (#21).
 - The app has its icon on iOS too (it showed a blank placeholder).
+
+## 1.4.0 (12) — 2026-11-08
+
+### Added
+- Suggestions on Progress now wait until a plan has had time to work (6 weeks and 12
+  sessions), then focus on lifts that have stalled: exercises that help that lift (incline
+  press and triceps work for a stalled bench, all on the lift's own day), a variation, a new
+  rep range or another set, ordered for your goal, with what you've already tried last. Pick
+  any, or "Not now" for four weeks. Progress also shows how each main lift moved over the last
+  four weeks. No more "train chest twice a week" on a lower-body day. A lighter week after
+  low check-ins still comes early.
+- Weekly quests: three small goals every Monday ("Train 3 times", "Set a PR", "Try an exercise
+  you've never done"), 50 XP each, on Today and on Levels and badges. They start with this
+  update's week, so earlier weeks don't change your level.
+- Lift mastery: bronze, silver and gold for squat, bench press, deadlift and overhead press,
+  from your best estimated 1RM against your body weight (on Levels and badges; gives no XP).
+- Your year in review: from December 1 to January 15, Today has a card with your workouts,
+  time, volume, PRs, strongest month, favourite exercise and the badges you unlocked.
+- Share a level-up, a new badge or your year in review as an image, from the workout summary
+  and the year in review.
+- The "Levels and badges" switch in Settings now syncs: turning it off hides levels on your
+  other phones and the website too.
+
+### Also in this release (from 1.3.0, which was never uploaded)
+- Everything under 1.3.0 below.
 
 ## 1.3.0 (11) — 2026-11-02
 

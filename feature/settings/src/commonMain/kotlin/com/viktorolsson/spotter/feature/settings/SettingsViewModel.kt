@@ -6,6 +6,8 @@ import com.viktorolsson.spotter.core.data.launchReporting
 import com.viktorolsson.spotter.core.data.logWarn
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.viktorolsson.spotter.core.data.health.HealthRepository
+import com.viktorolsson.spotter.core.data.health.HealthState
 import com.viktorolsson.spotter.core.data.repository.PlanRepository
 import com.viktorolsson.spotter.core.data.repository.UserPreferencesRepository
 import com.viktorolsson.spotter.core.data.sync.SyncRepository
@@ -31,6 +33,7 @@ class SettingsViewModel(
     private val preferencesRepository: UserPreferencesRepository,
     planRepository: PlanRepository,
     private val syncRepository: SyncRepository,
+    private val healthRepository: HealthRepository,
     private val errors: AppErrors,
 ) : ViewModel() {
     val syncStatus: StateFlow<SyncStatus> = syncRepository.status
@@ -80,4 +83,13 @@ class SettingsViewModel(
     fun setDefaultRest(seconds: Int) = viewModelScope.launchReporting(errors) { preferencesRepository.setDefaultRestSeconds(seconds) }
 
     fun setEffortScale(scale: EffortScale) = viewModelScope.launchReporting(errors) { preferencesRepository.setEffortScale(scale) }
+
+    val health: StateFlow<HealthState> = healthRepository.state
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), HealthState())
+
+    /** Access to the health store changes outside the app, so the screen asks each time it's shown. */
+    fun refreshHealth() = viewModelScope.launchReporting(errors, Failure.ACTION) { healthRepository.refresh() }
+
+    /** On only once the person has given access (the screen asks first); off needs nothing. */
+    fun setSavingWorkouts(on: Boolean) = viewModelScope.launchReporting(errors) { healthRepository.setSavingWorkouts(on) }
 }

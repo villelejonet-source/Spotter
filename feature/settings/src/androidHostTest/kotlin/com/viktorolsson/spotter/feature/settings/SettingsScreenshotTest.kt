@@ -7,10 +7,12 @@ import com.github.takahirom.roborazzi.RobolectricDeviceQualifiers
 import com.github.takahirom.roborazzi.RoborazziComposeOptions
 import com.github.takahirom.roborazzi.captureRoboImage
 import com.github.takahirom.roborazzi.fontScale
+import com.viktorolsson.spotter.core.data.health.HealthState
 import com.viktorolsson.spotter.core.data.sync.Account
 import com.viktorolsson.spotter.core.data.sync.SyncError
 import com.viktorolsson.spotter.core.data.sync.SyncStatus
 import com.viktorolsson.spotter.core.model.EffortScale
+import com.viktorolsson.spotter.core.model.HealthAvailability
 import com.viktorolsson.spotter.core.model.ThemeMode
 import com.viktorolsson.spotter.core.model.UserPreferences
 import com.viktorolsson.spotter.core.ui.PreviewData
@@ -31,7 +33,14 @@ class SettingsScreenshotTest {
     @get:Rule
     val compose = createComposeRule()
 
-    private fun capture(name: String, dark: Boolean, syncStatus: SyncStatus = SyncStatus(), fontScale: Float = 1f, dynamic: Boolean = false) =
+    private fun capture(
+        name: String,
+        dark: Boolean,
+        syncStatus: SyncStatus = SyncStatus(),
+        fontScale: Float = 1f,
+        dynamic: Boolean = false,
+        health: HealthState = HealthState(),
+    ) =
         captureRoboImage(
             "src/test/screenshots/$name.png",
             roborazziComposeOptions = RoborazziComposeOptions { fontScale(fontScale) },
@@ -44,6 +53,7 @@ class SettingsScreenshotTest {
                     sync = SyncActions({}, {}, {}, {}, {}),
                     onOpenPlan = {}, onRebuildPlan = {}, onThemeModeChange = {}, onDynamicColorChange = {},
                     onWeightUnitChange = {}, onDefaultRestChange = {}, onEffortScaleChange = {},
+                    health = health,
                 )
             }
         }
@@ -73,5 +83,20 @@ class SettingsScreenshotTest {
     fun settings_backupError() = capture(
         "settings_backup_error_light", dark = false,
         syncStatus = SyncStatus(available = true, account = Account("user-1", "you@example.com"), error = SyncError.OFFLINE),
+    )
+
+    // The health section is the last one, so these are taken on a tall screen to have it in view.
+    @Test
+    @Config(qualifiers = "w411dp-h1400dp-xxhdpi")
+    fun settings_healthOn() = capture(
+        "settings_health_on_light", dark = false,
+        health = HealthState(HealthAvailability.AVAILABLE, savingWorkouts = true),
+    )
+
+    @Test
+    @Config(qualifiers = "w411dp-h1400dp-xxhdpi")
+    fun settings_healthNeedsInstall_dark() = capture(
+        "settings_health_install_dark", dark = true,
+        health = HealthState(HealthAvailability.NEEDS_INSTALL),
     )
 }

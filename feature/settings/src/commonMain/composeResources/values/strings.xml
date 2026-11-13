@@ -30,6 +30,12 @@
     <string name="settings_effort_off_summary">Log weight and reps only</string>
     <string name="settings_effort_rir_summary">Reps in reserve: how many more reps you could have done (0 = failure)</string>
     <string name="settings_effort_rpe_summary">How hard the set felt, 1–10 (10 = nothing left, 8 = two reps left)</string>
+    <string name="health_section">Health Connect</string>
+    <string name="health_save_workouts">Save workouts to Health Connect</string>
+    <string name="health_save_workouts_summary">Each finished workout is added with its time and estimated calories, so Fitbit and other health apps count it</string>
+    <string name="health_manage">Open Health Connect</string>
+    <string name="health_install_summary">Health Connect lets Spotter share finished workouts with Fitbit and other health apps. It needs to be installed or updated first.</string>
+    <string name="health_install">Get Health Connect</string>
     <string name="settings_privacy_note">Your training data stays on this device unless you turn on cloud backup.</string>
     <string name="backup_section">Backup &amp; sync</string>
     <string name="backup_intro">Not backed up. Your training is only stored on this phone: if you lose the phone or uninstall Spotter, it's gone. A free account keeps it safe and syncs it between phones.</string>

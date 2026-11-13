@@ -9,6 +9,7 @@ import androidx.room.TypeConverters
 import androidx.sqlite.SQLiteConnection
 import androidx.sqlite.SQLiteDriver
 import com.viktorolsson.spotter.core.data.db.dao.ExerciseDao
+import com.viktorolsson.spotter.core.data.db.dao.HealthExportDao
 import com.viktorolsson.spotter.core.data.db.dao.PlanDao
 import com.viktorolsson.spotter.core.data.db.dao.RecommendationDao
 import com.viktorolsson.spotter.core.data.db.dao.ScheduleDao
@@ -17,6 +18,7 @@ import com.viktorolsson.spotter.core.data.db.dao.WorkoutDao
 import com.viktorolsson.spotter.core.data.db.entity.BodyWeightEntryEntity
 import com.viktorolsson.spotter.core.data.db.entity.ExerciseEntity
 import com.viktorolsson.spotter.core.data.db.entity.ExerciseSimilarityEntity
+import com.viktorolsson.spotter.core.data.db.entity.HealthExportEntity
 import com.viktorolsson.spotter.core.data.db.entity.PersonalRecordEntity
 import com.viktorolsson.spotter.core.data.db.entity.PlanDayEntity
 import com.viktorolsson.spotter.core.data.db.entity.PlanEntity
@@ -37,7 +39,7 @@ import kotlinx.coroutines.IO
  * exported JSON in `core/data/schemas` is what migration tests run against.
  */
 @Database(
-    version = 11,
+    version = 12,
     exportSchema = true,
     autoMigrations = [
         AutoMigration(from = 1, to = 2), // session_exercise.restSeconds
@@ -49,6 +51,7 @@ import kotlinx.coroutines.IO
         AutoMigration(from = 8, to = 9, spec = SyncSchema.TriggerSpec::class), // workout_session.readiness/feel
         AutoMigration(from = 9, to = 10, spec = SyncSchema.TriggerSpec::class), // 5/3/1: plan_exercise.trainingMaxKg/cycleWeek, session_exercise.cycleWeek, set_entry.isAmrap
         AutoMigration(from = 10, to = 11, spec = SyncSchema.TriggerSpec::class), // user_profile.showLevels
+        AutoMigration(from = 11, to = 12, spec = SyncSchema.TriggerSpec::class), // health_export (this phone only, not synced)
     ],
     entities = [
         UserProfileEntity::class,
@@ -66,6 +69,7 @@ import kotlinx.coroutines.IO
         ScheduledSessionEntity::class,
         SyncTombstoneEntity::class,
         SyncStateEntity::class,
+        HealthExportEntity::class,
     ],
 )
 @TypeConverters(Converters::class)
@@ -77,6 +81,7 @@ abstract class SpotterDatabase : RoomDatabase() {
     abstract fun planDao(): PlanDao
     abstract fun recommendationDao(): RecommendationDao
     abstract fun scheduleDao(): ScheduleDao
+    abstract fun healthExportDao(): HealthExportDao
 
     companion object {
         const val NAME = "spotter.db"

@@ -92,7 +92,9 @@ seen before, on any track. Then add the build to the table above.
    - **Data safety**: see below.
    - **Data deletion**: the same URL (section "Deleting your data" describes in-app and email deletion).
    - **Foreground service permissions**: declare `FOREGROUND_SERVICE_SPECIAL_USE` with the text below.
-   - **Health apps declaration**: Spotter is a fitness app. It doesn't use Health Connect or sensors.
+   - **Health apps declaration**: Spotter is a fitness app. From the first release with "Save
+     workouts to Health Connect" it writes to Health Connect and reads nothing; see below. It
+     doesn't use sensors.
    - **Content rating**: questionnaire, category "Health & fitness"; no user-generated content.
    - **Target audience**: 18+ (strength training guidance).
    - **Ads**: no ads.
@@ -115,6 +117,22 @@ current recording is `docs/play-store/foreground-service-demo.mp4` on your machi
 the file is uploaded to Play Console by hand under the foreground-service declaration.
 Keep a copy with the upload key.
 
+### Health Connect declaration
+
+Needed before the first release whose bundle has the `android.permission.health.*`
+permissions (Play Console → App content → Health apps; the Health Connect questions are part
+of that form). Declare exactly the permissions in `core/data/src/androidMain/AndroidManifest.xml`:
+
+| Permission | Use case to enter |
+|---|---|
+| `WRITE_EXERCISE` | Fitness tracking. When the user turns on "Save workouts to Health Connect", each strength workout they finish in Spotter is written as an exercise session (type, start, end, title), so their other health apps count it. |
+| `WRITE_ACTIVE_CALORIES_BURNED` | Fitness tracking. The same workout's estimated active calories, calculated on the device from the logged sets and the user's profile. |
+
+Nothing is read. The privacy policy linked in Play must be the one the app opens from Health
+Connect's permission screen (`HealthPrivacyActivity`): both are
+https://spotter.northstarsolutions.se/privacy. Add a read permission here, in the manifest and
+in the policy together.
+
 ### Data safety answers
 
 - **Does the app collect or share user data?** Yes, collected (only with the optional cloud
@@ -135,6 +153,8 @@ Keep a copy with the upload key.
 - No analytics or tracking services, no ads, no data sold or shared (the usage overview reads
   the backup database directly). Training data isn't in Google cloud backup
   (`data_extraction_rules.xml`).
+- Writing workouts to Health Connect is on the device, at the user's request, and isn't
+  collection or sharing in the Data safety sense: nothing is transmitted off the device.
 
 ### Account deletion (required because the app has accounts)
 

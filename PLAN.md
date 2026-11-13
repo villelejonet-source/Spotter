@@ -150,6 +150,12 @@ These rules live in `core/engine` and run as workouts finish:
 - The plan review on Today brings the same options up every 4 weeks once the plan is old enough; "Later" hides it for a week.
 - **Recovery** stays early, as stored cards: a lighter week when performance falls with sets near failure, after 3 low check-ins in 10 days, or after 6 weeks of steady training (several stalled lifts at once too, once the plan is old enough).
 
+## Health Connect (Android)
+- **Out:** with "Save workouts to Health Connect" on in Profile, each finished workout is written as a strength-training session with its start, end and name, plus estimated active calories. Workouts ended from the moment it's turned on, not older ones.
+- **Calories** (`WorkoutEnergy` in `core/engine`) are an estimate, not a measurement: (MET − 1) × resting energy × time. Resting energy is Mifflin-St Jeor from sex, weight, height and age. MET is 3.5, 5 or 6 by how heavy the session was: working sets per ten minutes, how close to failure, and the share of compound lifts; a lighter session is always 3.5. A workout left open counts until five minutes after its last ticked set, four hours at most.
+- **Kept in step by itself** (`HealthRepository`): a change after finishing rewrites the record, and deleting the workout (in the app, on the website or on another phone) removes it. Turning the switch off leaves what's already there.
+- Nothing is read yet, and nothing about it leaves the phone. iOS has no health store yet (HealthKit later).
+
 ## Theming
 Material 3 theme with light, dark and "follow system" settings, plus dynamic color on Android 12+ and a branded fallback palette. Both themes, and large text, get Roborazzi screenshot tests.
 
@@ -173,7 +179,7 @@ Material 3 theme with light, dark and "follow system" settings, plus dynamic col
 **Later ideas:**
 - Exercise images or GIFs (text cues ship in 0.10.0)
 - Body measurements and progress photos
-- Health Connect sync
+- Health Connect: read sleep, HRV and resting heart rate for a readiness suggestion before a workout (saving workouts to it is built, see "Health Connect")
 - Home-screen widget
 - Training-day reminders
 - Wear OS rest timer
@@ -181,7 +187,7 @@ Material 3 theme with light, dark and "follow system" settings, plus dynamic col
 - Program templates (5/3/1, PHUL)
 - Sharing workouts
 
-**Privacy and safety:** no analytics or tracking services (the privacy policy, `docs/play-store/privacy-policy.md`, says exactly what is collected). Health data stays on the device unless the user signs in to cloud backup, and then only in their own row-level-secured Supabase rows. Show a "consult a professional" note for limitations, and make no medical claims.
+**Privacy and safety:** no analytics or tracking services (the privacy policy, `docs/play-store/privacy-policy.md`, says exactly what is collected). Health data stays on the device unless the user signs in to cloud backup, and then only in their own row-level-secured Supabase rows; with Health Connect turned on, finished workouts are also written to Health Connect on the same phone. Show a "consult a professional" note for limitations, and make no medical claims.
 
 ## Platform roadmap
 The website, scheduled sessions, personal trainers, iOS and freemium: `docs/platform/infrastructure.md`, "Roadmap".

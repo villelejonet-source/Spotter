@@ -2,7 +2,7 @@ import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 
 // Shared data layer: Room schema and DAOs, repositories, cloud sync and accounts, for the
 // Android app and iOS. What differs per platform is in androidMain (the Android DataGraph,
-// WorkManager background sync, the encrypted session store) and iosMain (the iOS DataGraph).
+// WorkManager background sync, the encrypted session store, Health Connect) and iosMain (the iOS DataGraph).
 plugins {
     alias(libs.plugins.kotlin.multiplatform)
     alias(libs.plugins.android.kotlin.multiplatform.library)
@@ -56,6 +56,8 @@ kotlin {
             implementation(libs.androidx.security.crypto)
             implementation(libs.androidx.work.runtime)
             implementation(libs.koin.androidx.workmanager)
+            // Finished workouts are saved to Health Connect (HealthConnectStore).
+            implementation(libs.androidx.health.connect)
         }
         iosMain.dependencies {
             implementation(libs.ktor.client.darwin)

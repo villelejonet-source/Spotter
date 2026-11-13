@@ -66,7 +66,8 @@ object WorkoutEnergy {
     /**
      * Active kilocalories: the energy above resting, (MET − 1) × resting rate × time. The
      * resting rate is Mifflin-St Jeor from sex, weight, height and age. Null when the session
-     * isn't finished or the profile has no usable weight or height.
+     * isn't finished or the profile has no usable weight or height. It uses the profile as it
+     * is now: pricing an old workout (a backfill) needs the body weight of its day passed in.
      */
     fun activeKcal(session: WorkoutSession, profile: UserProfile): Int? {
         val trained = (trainedUntil(session) ?: return null) - session.startedAt

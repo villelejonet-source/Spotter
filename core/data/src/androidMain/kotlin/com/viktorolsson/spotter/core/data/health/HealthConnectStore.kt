@@ -40,6 +40,8 @@ class HealthConnectStore(private val context: Context) : HealthStore {
 
     override suspend fun writeWorkout(workout: HealthWorkout) {
         client.insertRecords(workout.toRecords(ZoneId.systemDefault()))
+        // Inserting only replaces what's written now, so calories from an earlier version go by hand.
+        if (workout.activeKcal == null) client.deleteRecords(ActiveCaloriesBurnedRecord::class, emptyList(), listOf(workout.id))
     }
 
     override suspend fun deleteWorkout(id: String) {

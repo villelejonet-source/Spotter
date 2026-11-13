@@ -49,13 +49,15 @@ class FakeHealthStore : HealthStore {
     var availability = HealthAvailability.AVAILABLE
     var canWrite = true
     var failing = false
+    /** Ids the store refuses, however often they're tried. */
+    var refused = emptySet<String>()
     val saved = MutableStateFlow<Map<String, HealthWorkout>>(emptyMap())
     var writes = 0
 
     override suspend fun availability() = availability
     override suspend fun canWriteWorkouts() = canWrite
     override suspend fun writeWorkout(workout: HealthWorkout) {
-        if (failing) error("Health store unavailable")
+        if (failing || workout.id in refused) error("Health store unavailable")
         writes++
         saved.update { it + (workout.id to workout) }
     }
@@ -75,6 +77,7 @@ class HealthRepositoryTest {
     private val store = FakeHealthStore()
     private val start = Instant.parse("2026-11-13T17:00:00Z")
     private val clock = MutableClock(start)
+    private var restoring = false
 
     @Before
     fun setUp() = runTest {
@@ -91,7 +94,7 @@ class HealthRepositoryTest {
                 equipment = emptySet(), focusAreas = emptySet(), limitations = emptySet(),
             ),
         )
-        health = HealthRepository(store, db.healthExportDao(), db.workoutDao(), profiles, preferences, clock, AppErrors())
+        health = HealthRepository(store, db.healthExportDao(), db.workoutDao(), profiles, preferences, clock, AppErrors(), restoring = { restoring })
     }
 
     @After
@@ -260,12 +263,106 @@ class HealthRepositoryTest {
         health.setSavingWorkouts(true)
         val id = benchWorkout()
         store.failing = true
-        assertTrue(runCatching { reconcile() }.isFailure)
+        reconcile()
+        assertTrue(store.saved.value.isEmpty())
 
         store.failing = false
         reconcile()
 
         assertEquals(setOf(syncId(id)), store.saved.value.keys)
+    }
+
+    /** One workout the health store keeps refusing must not stop the others, or the deletes. */
+    @Test
+    fun aRefusedWorkoutDoesNotHoldUpTheRest() = runTest {
+        health.setSavingWorkouts(true)
+        val gone = benchWorkout()
+        reconcile()
+        val refused = benchWorkout()
+        val fine = benchWorkout()
+        store.refused = setOf(syncId(refused))
+        workouts.deleteFinishedWorkout(gone)
+        reconcile()
+
+        assertEquals(setOf(syncId(fine)), store.saved.value.keys)
+
+        store.refused = emptySet()
+        reconcile()
+        assertEquals(setOf(syncId(refused), syncId(fine)), store.saved.value.keys)
+    }
+
+    /**
+     * Restoring a backup empties the workouts and pulls the same ones back. That must not take
+     * them out of the health store: they ended before the switch's "since" and would never return.
+     */
+    @Test
+    fun restoringABackupLeavesSavedWorkoutsInTheHealthStore() = runTest {
+        health.setSavingWorkouts(true)
+        val id = benchWorkout()
+        reconcile()
+        val saved = syncId(id)
+        val rows = db.sql.query("SELECT startedAt, endedAt, updatedAt FROM workout_session WHERE id = $id").use {
+            it.moveToFirst(); Triple(it.getLong(0), it.getLong(1), it.getLong(2))
+        }
+
+        restoring = true
+        db.sql.execSQL("UPDATE sync_state SET applying = 1 WHERE id = 1")
+        db.sql.execSQL("DELETE FROM workout_session")
+        reconcile()
+        assertEquals(setOf(saved), store.saved.value.keys)
+
+        // The session is back before its sets: still nothing is taken out.
+        db.sql.execSQL(
+            "INSERT INTO workout_session (id, startedAt, endedAt, planDayId, notes, perceivedDifficulty, syncId, updatedAt) " +
+                "VALUES ($id, ${rows.first}, ${rows.second}, NULL, NULL, NULL, '$saved', ${rows.third})",
+        )
+        reconcile()
+        assertEquals(setOf(saved), store.saved.value.keys)
+
+        // Its sets follow, and the restore ends.
+        db.sql.execSQL(
+            "INSERT INTO session_exercise (id, sessionId, exerciseId, position, substitutedFromExerciseId, supersetGroup, notes) " +
+                "VALUES (90, $id, 'barbell-bench-press', 0, NULL, NULL, NULL)",
+        )
+        db.sql.execSQL(
+            "INSERT INTO set_entry (sessionExerciseId, position, weightKg, reps, rir, rpe, setType, completedAt, notes) " +
+                "VALUES (90, 0, 80.0, 8, NULL, NULL, 'WORKING', ${rows.second - 60_000}, NULL)",
+        )
+        db.sql.execSQL("UPDATE sync_state SET applying = 0 WHERE id = 1")
+        restoring = false
+        reconcile()
+
+        assertEquals(setOf(saved), store.saved.value.keys)
+    }
+
+    /** A workout deleted while a restore was running is still removed once it's over. */
+    @Test
+    fun aDeleteDuringARestoreIsCaughtUpAfterwards() = runTest {
+        health.setSavingWorkouts(true)
+        val id = benchWorkout()
+        reconcile()
+
+        restoring = true
+        workouts.deleteFinishedWorkout(id)
+        reconcile()
+        assertEquals(1, store.saved.value.size)
+
+        restoring = false
+        reconcile()
+        assertTrue(store.saved.value.isEmpty())
+    }
+
+    /** A saved workout that later has nothing ticked (its sets were removed elsewhere) is taken back out. */
+    @Test
+    fun aSavedWorkoutThatLosesItsSetsIsRemoved() = runTest {
+        health.setSavingWorkouts(true)
+        benchWorkout()
+        reconcile()
+
+        db.sql.execSQL("DELETE FROM set_entry")
+        reconcile()
+
+        assertTrue(store.saved.value.isEmpty())
     }
 
     @Test

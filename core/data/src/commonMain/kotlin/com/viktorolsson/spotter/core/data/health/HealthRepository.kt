@@ -45,6 +45,11 @@ class HealthRepository(
     private val preferences: UserPreferencesRepository,
     private val clock: Clock,
     private val errors: AppErrors,
+    /**
+     * A backup is being restored over this phone's data: its workouts are gone for a moment
+     * and come back as the same ones, so nothing is removed from the health store meanwhile.
+     */
+    private val restoring: suspend () -> Boolean = { false },
 ) {
     private data class Access(val availability: HealthAvailability, val canWrite: Boolean)
 
@@ -54,7 +59,10 @@ class HealthRepository(
         HealthState(access.availability, savingWorkouts = prefs.healthExportSince != null && access.canWrite)
     }.distinctUntilChanged()
 
-    /** Asks the store again: access is given and taken back outside the app. */
+    /**
+     * Asks the store again: access is given and taken back outside the app. [state] says
+     * "unsupported" until this has run once, so a screen that shows it calls this when shown.
+     */
     suspend fun refresh() {
         access.value = currentAccess()
     }
@@ -78,45 +86,76 @@ class HealthRepository(
     suspend fun run() {
         preferences.preferences.map { it.healthExportSince }.distinctUntilChanged()
             .flatMapLatest { since -> if (since == null) emptyFlow() else dao.observeFinishedSessions(since).distinctUntilChanged() }
-            .collect { finished ->
-                try {
-                    reconcile(finished)
-                } catch (e: CancellationException) {
-                    throw e
-                } catch (e: Exception) {
-                    // Nothing for the person to do; it's tried again on the next change or start.
-                    errors.noticed(e, "HealthRepository")
-                }
-            }
+            .collect { finished -> attempt { reconcile(finished) } }
     }
 
-    /** Brings the health store in step with [finished] (what `observeFinishedSessions` gave). */
+    /**
+     * Brings the health store in step with [finished] (what `observeFinishedSessions` gave).
+     * Each workout stands alone: one the store refuses is reported and tried again next time,
+     * without holding up the others.
+     */
     internal suspend fun reconcile(finished: List<FinishedSessionRow>) {
         if (!currentAccess().canWrite) return
         val saved = dao.getAll().associate { it.sessionSyncId to it.state }
         val profile = profiles.get()
-        finished.filter { saved[it.syncId] != it.state }.forEach { row ->
-            val session = workoutDao.getSessionWithExercises(row.id)?.toModel() ?: return@forEach
-            val end = WorkoutEnergy.trainedUntil(session)?.takeIf { it > session.startedAt } ?: return@forEach
-            // A workout finished with nothing ticked isn't training worth telling other apps
-            // about; one whose sets a sync hasn't delivered yet comes back when they arrive.
-            if (session.exercises.none { ex -> ex.sets.any { it.isCompleted } }) return@forEach
-            store.writeWorkout(
-                HealthWorkout(
-                    id = row.syncId,
-                    // Later writes always win, whatever changed.
-                    version = clock.now().toEpochMilliseconds(),
-                    title = session.planDayName,
-                    start = session.startedAt,
-                    end = end,
-                    activeKcal = profile?.let { WorkoutEnergy.activeKcal(session, it) },
-                ),
-            )
-            dao.upsert(HealthExportEntity(row.syncId, row.state))
+        // During a restore a workout can be missing, or back without its sets yet: neither means it's gone.
+        val mayRemove = !restoring()
+        finished.filter { saved[it.syncId] != it.exportState }.forEach { row ->
+            attempt {
+                val workout = workoutDao.getSessionWithExercises(row.id)?.toModel()?.let { session ->
+                    val end = WorkoutEnergy.trainedUntil(session)?.takeIf { it > session.startedAt }
+                    // A workout finished with nothing ticked isn't training worth telling other
+                    // apps about; one whose sets a sync hasn't delivered yet comes back when
+                    // they arrive.
+                    if (end == null || session.exercises.none { ex -> ex.sets.any { it.isCompleted } }) return@let null
+                    HealthWorkout(
+                        id = row.syncId,
+                        // Later writes always win, whatever changed.
+                        version = clock.now().toEpochMilliseconds(),
+                        title = session.planDayName,
+                        start = session.startedAt,
+                        end = end,
+                        activeKcal = profile?.let { WorkoutEnergy.activeKcal(session, it) },
+                    )
+                }
+                when {
+                    workout != null -> {
+                        store.writeWorkout(workout)
+                        dao.upsert(HealthExportEntity(row.syncId, row.exportState))
+                    }
+                    // Saved earlier, and no longer a workout to save: take it back out.
+                    row.syncId in saved && mayRemove -> remove(row.syncId)
+                }
+            }
         }
-        (saved.keys - finished.map { it.syncId }.toSet()).forEach { id ->
-            store.deleteWorkout(id)
-            dao.delete(id)
+        if (mayRemove) {
+            (saved.keys - finished.map { it.syncId }.toSet()).forEach { id -> attempt { remove(id) } }
         }
+    }
+
+    private suspend fun remove(id: String) {
+        store.deleteWorkout(id)
+        dao.delete(id)
+    }
+
+    private suspend fun attempt(block: suspend () -> Unit) {
+        try {
+            block()
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            // Nothing for the person to do; it's tried again on the next change or app start.
+            errors.noticed(e, "HealthRepository")
+        }
+    }
+
+    /**
+     * What a saved workout is compared by. Raise [EXPORT_FORMAT] when a release writes more
+     * about a workout (segments, a better calorie figure), and every saved one is written again.
+     */
+    private val FinishedSessionRow.exportState: Long get() = state + EXPORT_FORMAT
+
+    private companion object {
+        const val EXPORT_FORMAT = 0L
     }
 }

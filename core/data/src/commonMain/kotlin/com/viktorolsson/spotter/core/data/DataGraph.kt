@@ -84,7 +84,13 @@ class DataGraph(
             userProfiles, history, preferences, clock,
         )
     }
-    val health by lazy { HealthRepository(healthStore, database.healthExportDao(), database.workoutDao(), userProfiles, preferences, clock, errors) }
+    private val syncCursors by lazy { SyncCursorStore(dataStore) }
+    val health by lazy {
+        HealthRepository(
+            healthStore, database.healthExportDao(), database.workoutDao(), userProfiles, preferences, clock, errors,
+            restoring = { syncCursors.get().restoring },
+        )
+    }
     val seeder by lazy { ExerciseSeeder(catalog, database.exerciseDao(), dataStore) }
     val startupMaintenance by lazy { StartupMaintenance(dataStore, seeder, plans, recommendations, preferences, clock) }
 
@@ -93,7 +99,7 @@ class DataGraph(
     val deviceIdentity by lazy { DeviceIdentity(deviceStore, appBuild, database) }
     val sync by lazy {
         SyncRepository(
-            accounts, SupabaseSyncRemote(supabase), LocalSyncStore(database), SyncCursorStore(dataStore),
+            accounts, SupabaseSyncRemote(supabase), LocalSyncStore(database), syncCursors,
             preferences, userProfiles, syncScheduler, scope, clock, deviceIdentity, seeder::appliedVersion,
         )
     }

@@ -155,6 +155,14 @@ These rules live in `core/engine` and run as workouts finish:
 - **Calories** (`WorkoutEnergy` in `core/engine`) are an estimate, not a measurement: (MET − 1) × resting energy × time. Resting energy is Mifflin-St Jeor from sex, weight, height and age. MET is 3.5, 5 or 6 by how heavy the session was: working sets per ten minutes, how close to failure, and the share of compound lifts; a lighter session is always 3.5. A workout left open counts until five minutes after its last ticked set, four hours at most.
 - **Kept in step by itself** (`HealthRepository`): a change after finishing rewrites the record, and deleting the workout (in the app, on the website or on another phone) removes it. Turning the switch off leaves what's already there.
 - Nothing is read yet, and nothing about it leaves the phone. iOS has no health store yet (HealthKit later).
+- **Restoring a backup** empties the workouts and pulls the same ones back; nothing is removed from Health Connect while that runs.
+- **What's fixed for good** once released: a workout's record id in Health Connect is its sync id, and its version is the time it was written (so later versions must keep using time). Everything else can change: `health_export` is rebuilt from the workouts, and raising `EXPORT_FORMAT` in `HealthRepository` rewrites every saved workout.
+- **For the next steps** (from the review of the first one):
+  - Reading: return what was read or nothing; HealthKit never says whether reading is allowed. Today must call `HealthRepository.refresh()` before it shows the state. Each read permission needs a manifest line, a Play declaration and a line in the privacy policy.
+  - A "connect" card on Today needs the permission request that now lives in `feature/settings` (`rememberHealthStoreActions`); move it to `core/ui` then, taking the kinds of access to ask for.
+  - Heart rate that arrives after a workout doesn't change what the export compares, so that feature needs its own reason to save again. A backfill must pass each workout's body weight of the day to `WorkoutEnergy`.
+  - Showing calories in the app or on the website: store the figure with the workout then, so it matches what Health Connect got.
+  - HealthKit: the section's wording says "Health Connect"; iOS needs its own.
 
 ## Theming
 Material 3 theme with light, dark and "follow system" settings, plus dynamic color on Android 12+ and a branded fallback palette. Both themes, and large text, get Roborazzi screenshot tests.

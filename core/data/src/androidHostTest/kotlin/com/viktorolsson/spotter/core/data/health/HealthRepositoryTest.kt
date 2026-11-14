@@ -19,6 +19,7 @@ import com.viktorolsson.spotter.core.model.HealthWorkout
 import com.viktorolsson.spotter.core.model.Sex
 import com.viktorolsson.spotter.core.model.UserProfile
 import com.viktorolsson.spotter.core.model.WeightUnit
+import kotlinx.coroutines.CoroutineExceptionHandler
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -29,7 +30,7 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.withContext
-import kotlinx.coroutines.withTimeout
+import kotlinx.coroutines.withTimeoutOrNull
 import kotlinx.datetime.LocalDate
 import org.junit.After
 import org.junit.Assert.assertEquals
@@ -48,7 +49,7 @@ import kotlin.time.Instant
 class FakeHealthStore : HealthStore {
     var availability = HealthAvailability.AVAILABLE
     var canWrite = true
-    var failing = false
+    @Volatile var failing = false
     /** Ids the store refuses, however often they're tried. */
     var refused = emptySet<String>()
     val saved = MutableStateFlow<Map<String, HealthWorkout>>(emptyMap())
@@ -392,20 +393,28 @@ class HealthRepositoryTest {
     /** The whole loop as the app runs it: finish a workout and it turns up, delete it and it goes, a failure in between is survived. */
     @Test
     fun runningKeepsTheHealthStoreInStepByItself() = runTest {
-        val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
+        var stopped: Throwable? = null
+        val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default + CoroutineExceptionHandler { _, e -> stopped = e })
         try {
-            scope.launch { health.run() }
+            val running = scope.launch { health.run() }
+            // Says what it saw when the store never gets there, since this only fails on slower machines.
+            suspend fun awaitSaved(ids: Set<String>) {
+                withContext(Dispatchers.Default) { withTimeoutOrNull(30.seconds) { store.saved.first { it.keys == ids } } }
+                    ?: error(
+                        "Health store has ${store.saved.value.keys}, expected $ids. Recorded: ${db.healthExportDao().getAll()}. " +
+                            "Watching: ${running.isActive}, stopped by: $stopped",
+                    )
+            }
             health.setSavingWorkouts(true)
 
             store.failing = true
             val first = benchWorkout()
             store.failing = false
             val second = benchWorkout()
-            val both = setOf(syncId(first), syncId(second))
-            withContext(Dispatchers.Default) { withTimeout(10.seconds) { store.saved.first { it.keys == both } } }
+            awaitSaved(setOf(syncId(first), syncId(second)))
 
             workouts.deleteFinishedWorkout(first)
-            withContext(Dispatchers.Default) { withTimeout(10.seconds) { store.saved.first { it.keys == setOf(syncId(second)) } } }
+            awaitSaved(setOf(syncId(second)))
         } finally {
             scope.cancel()
         }

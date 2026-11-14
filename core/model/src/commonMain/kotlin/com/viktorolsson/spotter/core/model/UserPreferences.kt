@@ -18,6 +18,8 @@ data class UserPreferences(
     val showLevels: Boolean = true,
     /** The one-time "levels are here" note on Today has been seen. */
     val levelsIntroSeen: Boolean = false,
+    /** Finished workouts are saved to the phone's health store, those ended from this moment on. */
+    val healthExportSince: kotlin.time.Instant? = null,
 ) {
     fun isDeload(today: kotlinx.datetime.LocalDate): Boolean = deloadUntil != null && today <= deloadUntil
 }

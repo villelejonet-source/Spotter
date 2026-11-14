@@ -35,10 +35,13 @@ import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.tooling.preview.Preview
 import org.koin.compose.viewmodel.koinViewModel
+import androidx.lifecycle.compose.LifecycleResumeEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.viktorolsson.spotter.core.data.health.HealthState
 import com.viktorolsson.spotter.core.data.sync.SyncError
 import com.viktorolsson.spotter.core.data.sync.SyncStatus
 import com.viktorolsson.spotter.core.model.EffortScale
+import com.viktorolsson.spotter.core.model.HealthAvailability
 import com.viktorolsson.spotter.core.model.ThemeMode
 import com.viktorolsson.spotter.core.model.UserPreferences
 import com.viktorolsson.spotter.core.model.WeightUnit
@@ -75,6 +78,12 @@ import com.viktorolsson.spotter.feature.settings.resources.backup_sign_out_title
 import com.viktorolsson.spotter.feature.settings.resources.backup_signed_in_as
 import com.viktorolsson.spotter.feature.settings.resources.backup_sync_now
 import com.viktorolsson.spotter.feature.settings.resources.backup_syncing
+import com.viktorolsson.spotter.feature.settings.resources.health_install
+import com.viktorolsson.spotter.feature.settings.resources.health_install_summary
+import com.viktorolsson.spotter.feature.settings.resources.health_manage
+import com.viktorolsson.spotter.feature.settings.resources.health_save_workouts
+import com.viktorolsson.spotter.feature.settings.resources.health_save_workouts_summary
+import com.viktorolsson.spotter.feature.settings.resources.health_section
 import com.viktorolsson.spotter.feature.settings.resources.profile_title
 import com.viktorolsson.spotter.feature.settings.resources.settings_build_plan
 import com.viktorolsson.spotter.feature.settings.resources.settings_default_rest
@@ -117,6 +126,12 @@ internal fun SettingsRoute(
     val planName by viewModel.planName.collectAsStateWithLifecycle()
     val syncStatus by viewModel.syncStatus.collectAsStateWithLifecycle()
     val message by viewModel.message.collectAsStateWithLifecycle()
+    val health by viewModel.health.collectAsStateWithLifecycle()
+    val healthStore = rememberHealthStoreActions { allowed -> if (allowed) viewModel.setSavingWorkouts(true) else viewModel.refreshHealth() }
+    LifecycleResumeEffect(viewModel) {
+        viewModel.refreshHealth()
+        onPauseOrDispose {}
+    }
     val snackbar = remember { SnackbarHostState() }
     LaunchedEffect(message) {
         val text = message ?: return@LaunchedEffect
@@ -142,6 +157,10 @@ internal fun SettingsRoute(
         onWeightUnitChange = { viewModel.setWeightUnit(it) },
         onDefaultRestChange = { viewModel.setDefaultRest(it) },
         onEffortScaleChange = { viewModel.setEffortScale(it) },
+        health = health,
+        // Turning it on goes through the health store's permission screen first.
+        onSavingWorkoutsChange = { on -> if (on) healthStore.requestAccess() else viewModel.setSavingWorkouts(false) },
+        onOpenHealthStore = healthStore.open,
         snackbarHostState = snackbar,
     )
 }
@@ -160,6 +179,9 @@ internal fun SettingsScreen(
     onDefaultRestChange: (Int) -> Unit,
     onEffortScaleChange: (EffortScale) -> Unit,
     onShowLevelsChange: (Boolean) -> Unit = {},
+    health: HealthState = HealthState(),
+    onSavingWorkoutsChange: (Boolean) -> Unit = {},
+    onOpenHealthStore: () -> Unit = {},
     snackbarHostState: SnackbarHostState = remember { SnackbarHostState() },
 ) {
     var pickingRest by rememberSaveable { mutableStateOf(false) }
@@ -280,6 +302,8 @@ internal fun SettingsScreen(
                 )
             }
 
+            if (health.availability != HealthAvailability.UNSUPPORTED) HealthSection(health, onSavingWorkoutsChange, onOpenHealthStore)
+
             Text(
                 stringResource(Res.string.settings_privacy_note),
                 style = MaterialTheme.typography.bodySmall,
@@ -295,6 +319,29 @@ internal fun SettingsScreen(
             onSelect = { onDefaultRestChange(it); pickingRest = false },
             onDismiss = { pickingRest = false },
         )
+    }
+}
+
+@Composable
+private fun HealthSection(health: HealthState, onSavingWorkoutsChange: (Boolean) -> Unit, onOpen: () -> Unit) {
+    SectionHeader(stringResource(Res.string.health_section), Modifier.padding(top = Spacing.sm))
+    ContentCard(Modifier.fillMaxWidth()) {
+        if (health.availability == HealthAvailability.NEEDS_INSTALL) {
+            Text(
+                stringResource(Res.string.health_install_summary),
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            OutlinedButton(onClick = onOpen) { Text(stringResource(Res.string.health_install)) }
+        } else {
+            SettingRow(
+                title = stringResource(Res.string.health_save_workouts),
+                summary = stringResource(Res.string.health_save_workouts_summary),
+            ) {
+                Switch(checked = health.savingWorkouts, onCheckedChange = onSavingWorkoutsChange)
+            }
+            TextButton(onClick = onOpen) { Text(stringResource(Res.string.health_manage)) }
+        }
     }
 }
 

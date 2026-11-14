@@ -256,6 +256,26 @@ class MigrationTest {
     }
 
     @Test
+    fun migrate11To12AddsTheHealthExportTableAndKeepsWorkoutsAndTriggers() {
+        helper.createDatabase(11).use { db ->
+            SyncSchema.createTriggers(db)
+            db.execSQL("INSERT INTO workout_session (id, startedAt, endedAt, planDayId, notes, perceivedDifficulty) VALUES (1, 0, 3600000, NULL, NULL, 7)")
+        }
+        helper.runMigrationsAndValidate(12).use { db ->
+            val syncId = db.query("SELECT syncId, perceivedDifficulty FROM workout_session WHERE id = 1").use {
+                it.moveToFirst(); assertEquals(7, it.getInt(1)); it.getString(0)!!
+            }
+            assertTrue(SyncSchema.triggersInstalled(db))
+            // Nothing has been saved to the health store yet, and the table stays on this phone:
+            // no sync columns, so writing to it leaves no trace for sync.
+            db.query("SELECT COUNT(*) FROM health_export").use { it.moveToFirst(); assertEquals(0, it.getInt(0)) }
+            db.execSQL("INSERT INTO health_export (sessionSyncId, state) VALUES ('$syncId', 1)")
+            db.execSQL("DELETE FROM health_export")
+            db.query("SELECT COUNT(*) FROM sync_tombstone").use { it.moveToFirst(); assertEquals(0, it.getInt(0)) }
+        }
+    }
+
+    @Test
     fun migratingFrom6InstallsTheScheduledSessionTriggers() {
         helper.createDatabase(6).use { SyncSchema.createTriggers(it, upTo = 6) }
         helper.runMigrationsAndValidate(8).use { db ->

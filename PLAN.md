@@ -150,6 +150,20 @@ These rules live in `core/engine` and run as workouts finish:
 - The plan review on Today brings the same options up every 4 weeks once the plan is old enough; "Later" hides it for a week.
 - **Recovery** stays early, as stored cards: a lighter week when performance falls with sets near failure, after 3 low check-ins in 10 days, or after 6 weeks of steady training (several stalled lifts at once too, once the plan is old enough).
 
+## Health Connect (Android)
+- **Out:** with "Save workouts to Health Connect" on in Profile, each finished workout is written as a strength-training session with its start, end and name, plus estimated active calories. Workouts ended from the moment it's turned on, not older ones.
+- **Calories** (`WorkoutEnergy` in `core/engine`) are an estimate, not a measurement: (MET − 1) × resting energy × time. Resting energy is Mifflin-St Jeor from sex, weight, height and age. MET is 3.5, 5 or 6 by how heavy the session was: working sets per ten minutes, how close to failure, and the share of compound lifts; a lighter session is always 3.5. A workout left open counts until five minutes after its last ticked set, four hours at most.
+- **Kept in step by itself** (`HealthRepository`): a change after finishing rewrites the record, and deleting the workout (in the app, on the website or on another phone) removes it. Turning the switch off leaves what's already there.
+- Nothing is read yet, and nothing about it leaves the phone. iOS has no health store yet (HealthKit later).
+- **Restoring a backup** empties the workouts and pulls the same ones back; nothing is removed from Health Connect while that runs.
+- **What's fixed for good** once released: a workout's record id in Health Connect is its sync id, and its version is the time it was written (so later versions must keep using time). Everything else can change: `health_export` is rebuilt from the workouts, and raising `EXPORT_FORMAT` in `HealthRepository` rewrites every saved workout.
+- **For the next steps** (from the review of the first one):
+  - Reading: return what was read or nothing; HealthKit never says whether reading is allowed. Today must call `HealthRepository.refresh()` before it shows the state. Each read permission needs a manifest line, a Play declaration and a line in the privacy policy.
+  - A "connect" card on Today needs the permission request that now lives in `feature/settings` (`rememberHealthStoreActions`); move it to `core/ui` then, taking the kinds of access to ask for.
+  - Heart rate that arrives after a workout doesn't change what the export compares, so that feature needs its own reason to save again. A backfill must pass each workout's body weight of the day to `WorkoutEnergy`.
+  - Showing calories in the app or on the website: store the figure with the workout then, so it matches what Health Connect got.
+  - HealthKit: the section's wording says "Health Connect"; iOS needs its own.
+
 ## Theming
 Material 3 theme with light, dark and "follow system" settings, plus dynamic color on Android 12+ and a branded fallback palette. Both themes, and large text, get Roborazzi screenshot tests.
 
@@ -173,7 +187,7 @@ Material 3 theme with light, dark and "follow system" settings, plus dynamic col
 **Later ideas:**
 - Exercise images or GIFs (text cues ship in 0.10.0)
 - Body measurements and progress photos
-- Health Connect sync
+- Health Connect: read sleep, HRV and resting heart rate for a readiness suggestion before a workout (saving workouts to it is built, see "Health Connect")
 - Home-screen widget
 - Training-day reminders
 - Wear OS rest timer
@@ -181,7 +195,7 @@ Material 3 theme with light, dark and "follow system" settings, plus dynamic col
 - Program templates (5/3/1, PHUL)
 - Sharing workouts
 
-**Privacy and safety:** no analytics or tracking services (the privacy policy, `docs/play-store/privacy-policy.md`, says exactly what is collected). Health data stays on the device unless the user signs in to cloud backup, and then only in their own row-level-secured Supabase rows. Show a "consult a professional" note for limitations, and make no medical claims.
+**Privacy and safety:** no analytics or tracking services (the privacy policy, `docs/play-store/privacy-policy.md`, says exactly what is collected). Health data stays on the device unless the user signs in to cloud backup, and then only in their own row-level-secured Supabase rows; with Health Connect turned on, finished workouts are also written to Health Connect on the same phone. Show a "consult a professional" note for limitations, and make no medical claims.
 
 ## Platform roadmap
 The website, scheduled sessions, personal trainers, iOS and freemium: `docs/platform/infrastructure.md`, "Roadmap".

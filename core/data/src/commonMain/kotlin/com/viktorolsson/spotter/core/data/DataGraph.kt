@@ -4,6 +4,9 @@ import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import com.russhwolf.settings.Settings
 import com.viktorolsson.spotter.core.data.db.SpotterDatabase
+import com.viktorolsson.spotter.core.data.health.HealthRepository
+import com.viktorolsson.spotter.core.data.health.HealthStore
+import com.viktorolsson.spotter.core.data.health.NoHealthStore
 import com.viktorolsson.spotter.core.data.repository.BodyWeightRepository
 import com.viktorolsson.spotter.core.data.repository.ExerciseRepository
 import com.viktorolsson.spotter.core.data.repository.GamificationRepository
@@ -48,6 +51,8 @@ class DataGraph(
     private val appBuild: AppBuild,
     private val catalog: CatalogSource,
     private val syncScheduler: SyncScheduler,
+    /** The phone's health store; Android passes Health Connect, iOS has none yet. */
+    private val healthStore: HealthStore = NoHealthStore,
     val clock: Clock = Clock.System,
     /** Tests pass their own; the app gets [scope]'s default. */
     applicationScope: CoroutineScope? = null,
@@ -79,6 +84,13 @@ class DataGraph(
             userProfiles, history, preferences, clock,
         )
     }
+    private val syncCursors by lazy { SyncCursorStore(dataStore) }
+    val health by lazy {
+        HealthRepository(
+            healthStore, database.healthExportDao(), database.workoutDao(), userProfiles, preferences, clock, errors,
+            restoring = { syncCursors.get().restoring },
+        )
+    }
     val seeder by lazy { ExerciseSeeder(catalog, database.exerciseDao(), dataStore) }
     val startupMaintenance by lazy { StartupMaintenance(dataStore, seeder, plans, recommendations, preferences, clock) }
 
@@ -87,7 +99,7 @@ class DataGraph(
     val deviceIdentity by lazy { DeviceIdentity(deviceStore, appBuild, database) }
     val sync by lazy {
         SyncRepository(
-            accounts, SupabaseSyncRemote(supabase), LocalSyncStore(database), SyncCursorStore(dataStore),
+            accounts, SupabaseSyncRemote(supabase), LocalSyncStore(database), syncCursors,
             preferences, userProfiles, syncScheduler, scope, clock, deviceIdentity, seeder::appliedVersion,
         )
     }
@@ -96,10 +108,12 @@ class DataGraph(
      * What both apps do once at launch, after Koin has started. Sync is made eagerly so it
      * starts as soon as a signed-in session is restored (the Supabase client it needs is built
      * lazily, off the main thread); then seeding, one-off conversions and daily refreshes, each
-     * of which returns early when there's nothing to do.
+     * of which returns early when there's nothing to do. Saving workouts to the health store
+     * keeps watching for as long as the app runs.
      */
     fun onAppStart() {
         sync
         scope.launch { startupMaintenance.run() }
+        scope.launch { health.run() }
     }
 }

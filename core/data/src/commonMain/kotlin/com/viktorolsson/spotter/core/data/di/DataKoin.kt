@@ -37,6 +37,7 @@ fun dataModule(graph: DataGraph): Module = module {
     single { graph.workouts }
     single { graph.schedule }
     single { graph.recommendations }
+    single { graph.health }
     single { graph.seeder }
     single { graph.startupMaintenance }
     single { graph.accounts }

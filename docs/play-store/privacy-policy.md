@@ -1,6 +1,6 @@
 # Spotter privacy policy
 
-_Last updated: 25 October 2026_
+_Last updated: 13 November 2026_
 
 Spotter is a workout logging app. This policy explains what happens to your data.
 
@@ -34,6 +34,16 @@ profile. They're read straight from the backup database; nothing is sent to an a
 service, and they're never shared or used for advertising. If you never sign in, none of
 this exists: nothing leaves your phone.
 
+**Health Connect (Android, optional).** If you turn on "Save workouts to Health Connect" in
+Profile and allow it, Spotter writes each workout you finish to Health Connect on your phone:
+that it was strength training, when it started and ended, its name, and an estimate of the
+active calories, worked out on your phone from the sets you logged and your sex, age, height
+and body weight. Other apps you've allowed in Health Connect, such as Fitbit, can then read
+it. Spotter reads nothing from Health Connect. Deleting a workout in Spotter removes it from
+Health Connect too. You can turn it off in Profile, or take the permission back in Health
+Connect, at any time; workouts already written stay there until you delete them. Nothing
+about this is sent to Spotter's servers.
+
 **Spotter on the web.** With the same account you can sign in on the Spotter website
 (spotter.northstarsolutions.se) to see
 your backed-up training and edit your plans; plan changes sync back to your phone. The
@@ -42,11 +52,12 @@ but doesn't store it. The website sets only the cookie that keeps you signed in.
 
 **What Spotter doesn't do.** No analytics or tracking services, no advertising, no tracking
 across apps or websites, no selling or sharing of data with anyone. Spotter doesn't access
-your location, contacts, photos or sensors.
+your location, contacts, photos or sensors, and reads no health data from other apps.
 
 **Permissions.** Notifications (to show the rest timer and tell you when rest is over),
 a foreground service (to keep the timer running with the screen off), vibration and a
-wake lock (for the rest alert), and internet access (only used for the optional cloud backup).
+wake lock (for the rest alert), internet access (only used for the optional cloud backup), and, only if you turn it on,
+writing exercise and active calories to Health Connect.
 
 **Deleting your data.** To delete your Spotter account and cloud backup, do either of these:
 

@@ -31,6 +31,27 @@
             </intent-filter>
         </activity>
 
+        <!-- Health Connect's "privacy policy" link on its permission screen: an intent before
+             Android 14, the permission-usage screen from 14 on. Both open the policy. -->
+        <activity
+            android:name=".HealthPrivacyActivity"
+            android:exported="true"
+            android:theme="@android:style/Theme.NoDisplay">
+            <intent-filter>
+                <action android:name="androidx.health.ACTION_SHOW_PERMISSIONS_RATIONALE" />
+            </intent-filter>
+        </activity>
+        <activity-alias
+            android:name="ViewPermissionUsageActivity"
+            android:exported="true"
+            android:permission="android.permission.START_VIEW_PERMISSION_USAGE"
+            android:targetActivity=".HealthPrivacyActivity">
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW_PERMISSION_USAGE" />
+                <category android:name="android.intent.category.HEALTH_PERMISSIONS" />
+            </intent-filter>
+        </activity-alias>
+
         <!-- Share cards (core/ui Share.android.kt): images in the cache's share/ folder, handed to
              the app the person picks through a one-off read grant. -->
         <provider

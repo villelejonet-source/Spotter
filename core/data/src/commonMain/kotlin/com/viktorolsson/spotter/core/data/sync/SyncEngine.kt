@@ -113,8 +113,10 @@ class SyncEngine(
                 !backupExists && phoneHasData && fromLink && choice == null -> return SyncOutcome.NeedsChoice(fromLink = true)
                 // Restore: drop this phone's own data first (often just a fresh onboarding plan).
                 backupExists && (!phoneHasData || choice == FirstSyncChoice.USE_BACKUP) -> {
-                    store.wipe()
+                    // Marked before the wipe, so nothing watching the data (HealthRepository)
+                    // takes the emptied tables for the person deleting everything.
                     cursors.save(cursor.copy(restoring = true))
+                    store.wipe()
                 }
             }
             // Everything local counts as unpushed the first time.

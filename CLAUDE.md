@@ -34,8 +34,8 @@ Every feature is built **once, in shared Kotlin, for both phones**. The layers, 
   callbacks), with the platform part in `androidMain`/`iosMain`.
 - Platform code needs a stated reason in a comment: what the platform does differently. Today
   that's the rest-timer service and notifications, WorkManager, the encrypted session store /
-  Keychain, keep-screen-on, dynamic color, locale formatting, opening the email app and the
-  share sheet for share cards.
+  Keychain, keep-screen-on, dynamic color, locale formatting, opening the email app, the
+  share sheet for share cards, and Health Connect (`HealthStore`).
 - Both apps start the same way: `spotterModules()` for Koin and `DataGraph.onAppStart()`.
   Android's `MainActivity` and iOS both host `SpotterRoot`.
 - Rules the website repeats (1RM, volume, best set, typed decimals, timed exercises) are pinned

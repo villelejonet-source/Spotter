@@ -8,6 +8,7 @@ import androidx.sqlite.driver.AndroidSQLiteDriver
 import com.russhwolf.settings.SharedPreferencesSettings
 import com.viktorolsson.spotter.core.data.DataGraph
 import com.viktorolsson.spotter.core.data.db.SpotterDatabase
+import com.viktorolsson.spotter.core.data.health.HealthConnectStore
 import com.viktorolsson.spotter.core.data.sync.AndroidSessionStore
 import com.viktorolsson.spotter.core.data.sync.AppBuild
 import com.viktorolsson.spotter.core.data.sync.DeviceIdentity
@@ -19,7 +20,8 @@ import org.koin.core.module.Module
 import org.koin.dsl.module
 
 /**
- * The shared [DataGraph], built from Android's storage, Keystore session store and WorkManager.
+ * The shared [DataGraph], built from Android's storage, Keystore session store, WorkManager and
+ * Health Connect.
  * Make one per process (the app does, in `Application.onCreate`).
  */
 fun androidDataGraph(context: Context, supabaseConfig: SupabaseConfig, appBuild: AppBuild): DataGraph = DataGraph(
@@ -34,6 +36,7 @@ fun androidDataGraph(context: Context, supabaseConfig: SupabaseConfig, appBuild:
     appBuild = appBuild,
     catalog = { context.assets.open("exercises.json").bufferedReader().use { it.readText() } },
     syncScheduler = WorkManagerSyncScheduler(context),
+    healthStore = HealthConnectStore(context),
 )
 
 /** [dataModule] for [graph], plus the WorkManager worker that syncs in the background. */

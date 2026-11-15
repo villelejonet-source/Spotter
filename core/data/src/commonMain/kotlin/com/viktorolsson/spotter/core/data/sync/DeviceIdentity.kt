@@ -23,6 +23,8 @@ class DeviceIdentity(
     private val build: AppBuild,
     private val db: SpotterDatabase,
 ) {
+    suspend fun id(): String = withContext(Dispatchers.IO) { deviceId(store()) }
+
     suspend fun checkIn(): DeviceCheckIn = withContext(Dispatchers.IO) {
         DeviceCheckIn(
             deviceId = deviceId(store()),

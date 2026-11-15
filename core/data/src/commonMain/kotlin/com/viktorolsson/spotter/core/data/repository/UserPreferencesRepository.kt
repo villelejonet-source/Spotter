@@ -18,6 +18,7 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.datetime.LocalDate
+import kotlin.time.Instant
 
 class UserPreferencesRepository(
     private val dataStore: DataStore<Preferences>,
@@ -41,6 +42,8 @@ class UserPreferencesRepository(
             planReviewSnoozedUntil = prefs[Keys.PLAN_REVIEW_SNOOZED_UNTIL]?.let(LocalDate::fromEpochDays),
             showLevels = prefs[Keys.SHOW_LEVELS] ?: defaults.showLevels,
             levelsIntroSeen = prefs[Keys.LEVELS_INTRO_SEEN] ?: defaults.levelsIntroSeen,
+            healthExportSince = prefs[Keys.HEALTH_EXPORT_SINCE]?.let(Instant::fromEpochMilliseconds),
+            healthExportDevice = prefs[Keys.HEALTH_EXPORT_DEVICE],
         )
     }
 
@@ -132,6 +135,19 @@ class UserPreferencesRepository(
         dataStore.edit { it[Keys.LEVELS_INTRO_SEEN] = true }
     }
 
+    /** Saving workouts to the health store of the phone [device]: on from [since], off when null. */
+    suspend fun setHealthExportSince(since: Instant?, device: String) {
+        dataStore.edit {
+            if (since == null) {
+                it.remove(Keys.HEALTH_EXPORT_SINCE)
+                it.remove(Keys.HEALTH_EXPORT_DEVICE)
+            } else {
+                it[Keys.HEALTH_EXPORT_SINCE] = since.toEpochMilliseconds()
+                it[Keys.HEALTH_EXPORT_DEVICE] = device
+            }
+        }
+    }
+
     /** The current unit preference, for callers that only need it once. */
     suspend fun weightUnit(): WeightUnit = preferences.first().weightUnit
 
@@ -148,6 +164,8 @@ class UserPreferencesRepository(
         val PLAN_REVIEW_SNOOZED_UNTIL = longPreferencesKey("plan_review_snoozed_until_epoch_day")
         val SHOW_LEVELS = booleanPreferencesKey("show_levels")
         val LEVELS_INTRO_SEEN = booleanPreferencesKey("levels_intro_seen")
+        val HEALTH_EXPORT_SINCE = longPreferencesKey("health_export_since_epoch_ms")
+        val HEALTH_EXPORT_DEVICE = stringPreferencesKey("health_export_device")
         /** The switch has been handed to the profile (see [reconcileShowLevels]). */
         val SHOW_LEVELS_IN_PROFILE = booleanPreferencesKey("show_levels_in_profile")
     }

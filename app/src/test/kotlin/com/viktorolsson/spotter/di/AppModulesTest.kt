@@ -17,6 +17,7 @@ import com.viktorolsson.spotter.core.data.db.dao.ScheduleDao
 import com.viktorolsson.spotter.core.data.db.dao.UserProfileDao
 import com.viktorolsson.spotter.core.data.db.dao.WorkoutDao
 import com.viktorolsson.spotter.core.data.di.ApplicationScope
+import com.viktorolsson.spotter.core.data.health.HealthRepository
 import com.viktorolsson.spotter.core.data.repository.BodyWeightRepository
 import com.viktorolsson.spotter.core.data.repository.ExerciseRepository
 import com.viktorolsson.spotter.core.data.repository.GamificationRepository
@@ -65,7 +66,7 @@ class AppModulesTest {
         UserProfileRepository::class, UserPreferencesRepository::class, ExerciseRepository::class, HistoryRepository::class, GamificationRepository::class,
         PlanRepository::class, BodyWeightRepository::class, RestTimerRepository::class, WorkoutRepository::class,
         ScheduleRepository::class, RecommendationRepository::class, ExerciseSeeder::class, StartupMaintenance::class,
-        AccountService::class, SyncRepository::class,
+        AccountService::class, SyncRepository::class, HealthRepository::class,
     )
 
     @Test

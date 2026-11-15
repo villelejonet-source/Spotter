@@ -9,5 +9,9 @@ kotlin {
             // Icons outside the core set (see KmpFeatureConventionPlugin).
             implementation(libs.compose.mp.material.icons.extended)
         }
+        // Health Connect's permission screen is launched for a result (HealthConnect.android.kt).
+        androidMain.dependencies {
+            implementation(libs.androidx.activity.compose)
+        }
     }
 }

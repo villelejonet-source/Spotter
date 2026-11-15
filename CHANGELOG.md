@@ -8,17 +8,6 @@ into the new version's entry and writes the store notes from it. Versions are th
 
 ## Unreleased
 
-### Added
-- Save workouts to Health Connect (Android): turn it on in Profile and each workout you finish
-  is added to Health Connect with its time and estimated calories, so Fitbit and other health
-  apps count it. Deleting a workout removes it there too. If Spotter hasn't been allowed, Profile says
-  where to allow it.
-- Recovery on Today (Android): turn on "Use sleep and recovery" in Profile and Spotter reads
-  last night's sleep, heart rate variability and resting heart rate from Health Connect. Today
-  shows how recovered you look and why, and the check-in before a workout suggests keeping
-  it as planned, going lighter or resting. You can always answer for yourself instead. What
-  it reads is never stored or sent anywhere.
-
 ### Website
 - Levels: this week's quests on Today and on the Levels page, lift mastery on the Levels page,
   and your year in review (Today links to it from December 1 to January 15).
@@ -76,6 +65,19 @@ into the new version's entry and writes the store notes from it. Versions are th
 - Fixed a crash on iOS whenever the app logged a warning, such as a failed sync (#27).
 - Builds without cloud backup no longer show account buttons that couldn't work (#21).
 - The app has its icon on iOS too (it showed a blank placeholder).
+
+## 1.5.0 (13) — 2026-11-15
+
+### Added
+- Save workouts to Health Connect (Android): turn it on in Profile and each workout you finish
+  is added to Health Connect with its time and estimated calories, so Fitbit and other health
+  apps count it. Deleting a workout removes it there too. If Spotter hasn't been allowed, Profile says
+  where to allow it.
+- Recovery on Today (Android): turn on "Use sleep and recovery" in Profile and Spotter reads
+  last night's sleep, heart rate variability and resting heart rate from Health Connect. Today
+  shows how recovered you look and why, and the check-in before a workout suggests keeping
+  it as planned, going lighter or resting. You can always answer for yourself instead. What
+  it reads is never stored or sent anywhere.
 
 ## 1.4.0 (12) — 2026-11-08
 

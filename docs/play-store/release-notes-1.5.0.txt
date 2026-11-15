@@ -1,0 +1,5 @@
+<en-US>
+• Health Connect: each workout you finish can be saved with its time and estimated calories, so Fitbit and other health apps count it
+• Recovery on Today: Spotter can read last night's sleep, heart rate variability and resting heart rate, and suggest a lighter session or rest before a workout
+• Both are off until you turn them on in Profile. What Spotter reads is never stored or sent anywhere
+</en-US>

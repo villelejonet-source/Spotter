@@ -22,6 +22,7 @@ personal accounts.
 | 10 | 1.2.1 | The bug sweep (#52–#71): restoring keeps workouts of deleted plans, suggestions on two phones, "None" progression, 0-rep sets, weighted holds and bodyweight plateaus, Today across midnight, a missed-sync race, double taps and set entry. Never uploaded; superseded by 1.3.0, which includes it. Release notes: `release-notes-1.2.1.txt`. |
 | 11 | 1.3.0 | Levels and badges (#76–#77), 5/3/1 (#75), workout check-ins and lighter sessions (#73), progress that accounts for how you felt (#74), program cards and switching without the questionnaire (#81), plus 1.2.1's fixes. Never uploaded; superseded by 1.4.0, which includes it. Release notes: `release-notes-1.3.0.txt`. |
 | 12 | 1.4.0 | 1.3.0, plus weekly quests, lift mastery, year in review and share cards (#86), and progress suggestions that wait for the plan and help stalled lifts (#88). Built from `dccdc4d` (tag `android-v1.4.0`); uploaded and live in production since 2026-11-08. Release notes: `release-notes-1.4.0.txt`. |
+| 13 | 1.5.0 | Health Connect in both directions: saving finished workouts with estimated calories (#90), and recovery from sleep, heart rate variability and resting heart rate with a suggestion before a workout (#91). Needs the Health apps declaration (below) before upload. Not uploaded yet; tag `android-v1.5.0` when it is. Release notes: `release-notes-1.5.0.txt`. |
 
 Tag each uploaded build so it can be rebuilt exactly: `git tag android-v1.0.1 <commit>` from
 1.0.1 on (room for `ios-v…` tags later); earlier builds use `vX.Y.Z`. The `/release` Claude

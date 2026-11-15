@@ -14,20 +14,13 @@ interface HealthExportDao {
      * The finished workouts the health store should have: those ended since [since], and any
      * saved before. `state` changes when what's saved from a workout does (its end and its
      * sets), so feel, effort and notes don't count, and sets that a sync delivers after their
-     * session do. Emits on every such change, made here or by a sync.
+     * session do.
      */
-    @Query(
-        """
-        SELECT s.id, s.syncId, s.endedAt + COALESCE((
-            SELECT SUM(st.updatedAt) FROM set_entry st
-            JOIN session_exercise se ON se.id = st.sessionExerciseId WHERE se.sessionId = s.id
-        ), 0) AS state
-        FROM workout_session s
-        WHERE s.endedAt IS NOT NULL AND s.syncId IS NOT NULL
-            AND (s.endedAt >= :since OR s.syncId IN (SELECT sessionSyncId FROM health_export))
-        ORDER BY s.endedAt
-        """,
-    )
+    @Query(FINISHED_SESSIONS)
+    suspend fun finishedSessions(since: Instant): List<FinishedSessionRow>
+
+    /** [finishedSessions], again on every change to it, made here or by a sync. */
+    @Query(FINISHED_SESSIONS)
     fun observeFinishedSessions(since: Instant): Flow<List<FinishedSessionRow>>
 
     @Query("SELECT * FROM health_export")
@@ -38,4 +31,18 @@ interface HealthExportDao {
 
     @Query("DELETE FROM health_export WHERE sessionSyncId = :sessionSyncId")
     suspend fun delete(sessionSyncId: String)
+
+    @Query("DELETE FROM health_export")
+    suspend fun clear()
 }
+
+private const val FINISHED_SESSIONS = """
+    SELECT s.id, s.syncId, s.endedAt + COALESCE((
+        SELECT SUM(st.updatedAt) FROM set_entry st
+        JOIN session_exercise se ON se.id = st.sessionExerciseId WHERE se.sessionId = s.id
+    ), 0) AS state
+    FROM workout_session s
+    WHERE s.endedAt IS NOT NULL AND s.syncId IS NOT NULL
+        AND (s.endedAt >= :since OR s.syncId IN (SELECT sessionSyncId FROM health_export))
+    ORDER BY s.endedAt
+"""

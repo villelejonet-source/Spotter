@@ -5,8 +5,7 @@ import com.viktorolsson.spotter.core.model.SetType
 import com.viktorolsson.spotter.core.model.Sex
 import com.viktorolsson.spotter.core.model.UserProfile
 import com.viktorolsson.spotter.core.model.WorkoutSession
-import kotlinx.datetime.TimeZone
-import kotlinx.datetime.toLocalDateTime
+import kotlinx.datetime.LocalDate
 import kotlinx.datetime.yearsUntil
 import kotlin.math.roundToInt
 import kotlin.time.Duration
@@ -66,13 +65,14 @@ object WorkoutEnergy {
     /**
      * Active kilocalories: the energy above resting, (MET − 1) × resting rate × time. The
      * resting rate is Mifflin-St Jeor from sex, weight, height and age. Null when the session
-     * isn't finished or the profile has no usable weight or height. It uses the profile as it
-     * is now: pricing an old workout (a backfill) needs the body weight of its day passed in.
+     * isn't finished or the profile has no usable weight or height. [profile] is
+     * the profile as it was on [day], the day of the workout (`UserProfileRepository.on`), so an
+     * old workout priced again gets the same figure.
      */
-    fun activeKcal(session: WorkoutSession, profile: UserProfile): Int? {
+    fun activeKcal(session: WorkoutSession, profile: UserProfile, day: LocalDate): Int? {
         val trained = (trainedUntil(session) ?: return null) - session.startedAt
         if (profile.bodyWeightKg <= 0 || profile.heightCm <= 0) return null
-        val age = profile.birthDate.yearsUntil(session.startedAt.toLocalDateTime(TimeZone.UTC).date)
+        val age = profile.birthDate.yearsUntil(day)
         val restingPerDay = 10 * profile.bodyWeightKg + 6.25 * profile.heightCm - 5 * age +
             if (profile.sex == Sex.MALE) 5 else -161
         val minutes = trained.inWholeSeconds / 60.0

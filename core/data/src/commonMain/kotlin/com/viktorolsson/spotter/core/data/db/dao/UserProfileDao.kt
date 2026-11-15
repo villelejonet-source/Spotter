@@ -25,6 +25,9 @@ interface UserProfileDao {
     @Query("SELECT * FROM body_weight_entry WHERE date = :date")
     suspend fun getBodyWeight(date: LocalDate): BodyWeightEntryEntity?
 
+    @Query("SELECT * FROM body_weight_entry WHERE date <= :date ORDER BY date DESC LIMIT 1")
+    suspend fun getBodyWeightOnOrBefore(date: LocalDate): BodyWeightEntryEntity?
+
     @Query("SELECT * FROM body_weight_entry ORDER BY date DESC LIMIT 1")
     suspend fun getLatestBodyWeight(): BodyWeightEntryEntity?
 

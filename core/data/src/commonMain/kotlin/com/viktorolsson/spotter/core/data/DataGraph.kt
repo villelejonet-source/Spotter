@@ -87,8 +87,9 @@ class DataGraph(
     private val syncCursors by lazy { SyncCursorStore(dataStore) }
     val health by lazy {
         HealthRepository(
-            healthStore, database.healthExportDao(), database.workoutDao(), userProfiles, preferences, clock, errors,
+            healthStore, database, userProfiles, preferences, clock, errors,
             restoring = { syncCursors.get().restoring },
+            device = { deviceIdentity.id() },
         )
     }
     val seeder by lazy { ExerciseSeeder(catalog, database.exerciseDao(), dataStore) }

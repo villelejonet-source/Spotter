@@ -33,6 +33,7 @@
     <string name="health_section">Health Connect</string>
     <string name="health_save_workouts">Save workouts to Health Connect</string>
     <string name="health_save_workouts_summary">Each finished workout is added with its time and estimated calories, so Fitbit and other health apps count it</string>
+    <string name="health_needs_access">Spotter doesn't have access. Allow it in Health Connect, under App permissions.</string>
     <string name="health_manage">Open Health Connect</string>
     <string name="health_install_summary">Health Connect lets Spotter share finished workouts with Fitbit and other health apps. It needs to be installed or updated first.</string>
     <string name="health_install">Get Health Connect</string>

@@ -95,6 +95,13 @@ class SettingsScreenshotTest {
 
     @Test
     @Config(qualifiers = "w411dp-h1400dp-xxhdpi")
+    fun settings_healthNeedsAccess() = capture(
+        "settings_health_needs_access_light", dark = false,
+        health = HealthState(HealthAvailability.AVAILABLE, needsAccess = true),
+    )
+
+    @Test
+    @Config(qualifiers = "w411dp-h1400dp-xxhdpi")
     fun settings_healthNeedsInstall_dark() = capture(
         "settings_health_install_dark", dark = true,
         health = HealthState(HealthAvailability.NEEDS_INSTALL),

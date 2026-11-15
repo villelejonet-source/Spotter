@@ -16,7 +16,7 @@ enum class HealthAvailability {
 data class HealthWorkout(
     /** The session's sync id: the same workout always replaces its own record. */
     val id: String,
-    /** Goes up when the workout changes, so a newer write replaces an older one. */
+    /** Higher than the last one written for this workout: the store ignores a write that isn't. */
     val version: Long,
     val title: String?,
     val start: Instant,

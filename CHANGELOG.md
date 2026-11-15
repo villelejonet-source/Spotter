@@ -11,8 +11,8 @@ into the new version's entry and writes the store notes from it. Versions are th
 ### Added
 - Save workouts to Health Connect (Android): turn it on in Profile and each workout you finish
   is added to Health Connect with its time and estimated calories, so Fitbit and other health
-  apps count it. Deleting a workout removes it there too. Spotter reads nothing from Health
-  Connect.
+  apps count it. Deleting a workout removes it there too. If Spotter hasn't been allowed, Profile says
+  where to allow it. Spotter reads nothing from Health Connect.
 
 ### Website
 - Levels: this week's quests on Today and on the Levels page, lift mastery on the Levels page,

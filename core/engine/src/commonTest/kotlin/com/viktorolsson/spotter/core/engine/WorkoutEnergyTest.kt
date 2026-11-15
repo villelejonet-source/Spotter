@@ -5,8 +5,11 @@ import com.viktorolsson.spotter.core.engine.WorkoutEnergy.Intensity
 import com.viktorolsson.spotter.core.model.SessionExercise
 import com.viktorolsson.spotter.core.model.SetType
 import com.viktorolsson.spotter.core.model.Sex
+import com.viktorolsson.spotter.core.model.UserProfile
 import com.viktorolsson.spotter.core.model.WorkoutSession
 import com.viktorolsson.spotter.core.model.WorkoutSet
+import kotlinx.datetime.TimeZone
+import kotlinx.datetime.toLocalDateTime
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNull
@@ -46,28 +49,31 @@ class WorkoutEnergyTest {
         ),
     )
 
+    private fun kcal(session: WorkoutSession, profile: UserProfile) =
+        WorkoutEnergy.activeKcal(session, profile, start.toLocalDateTime(TimeZone.UTC).date)
+
     private val man = Fixtures.profile(sex = Sex.MALE, heightCm = 180.0, weightKg = 80.0) // rests at 1790 kcal a day
     private val woman = Fixtures.profile() // 1369 kcal a day
 
     @Test
     fun `an hour of steady compound lifting is moderate`() {
         assertEquals(Intensity.MODERATE, WorkoutEnergy.intensity(session(), 60.minutes))
-        assertEquals(298, WorkoutEnergy.activeKcal(session(), man))
-        assertEquals(228, WorkoutEnergy.activeKcal(session(), woman))
+        assertEquals(298, kcal(session(), man))
+        assertEquals(228, kcal(session(), woman))
     }
 
     @Test
     fun `dense sets near failure make it vigorous`() {
         val hard = session(sets = 20, rir = 1)
         assertEquals(Intensity.VIGOROUS, WorkoutEnergy.intensity(hard, 60.minutes))
-        assertEquals(373, WorkoutEnergy.activeKcal(hard, man))
+        assertEquals(373, kcal(hard, man))
     }
 
     @Test
     fun `few easy isolation sets are light`() {
         val easy = session(sets = 6, exerciseId = "dumbbell-lateral-raise", rir = 4)
         assertEquals(Intensity.LIGHT, WorkoutEnergy.intensity(easy, 60.minutes))
-        assertEquals(186, WorkoutEnergy.activeKcal(easy, man))
+        assertEquals(186, kcal(easy, man))
     }
 
     @Test
@@ -84,8 +90,8 @@ class WorkoutEnergyTest {
 
     @Test
     fun `a longer workout burns more`() {
-        val short = WorkoutEnergy.activeKcal(session(length = 30.minutes, lastSetAfter = 28.minutes, sets = 8), man)!!
-        val long = WorkoutEnergy.activeKcal(session(length = 90.minutes, lastSetAfter = 88.minutes, sets = 23), man)!!
+        val short = kcal(session(length = 30.minutes, lastSetAfter = 28.minutes, sets = 8), man)!!
+        val long = kcal(session(length = 90.minutes, lastSetAfter = 88.minutes, sets = 23), man)!!
         assertEquals(149, short)
         assertEquals(448, long)
     }
@@ -94,7 +100,7 @@ class WorkoutEnergyTest {
     fun `a workout left open ends five minutes after its last set`() {
         val forgotten = session(length = 9.hours, lastSetAfter = 50.minutes)
         assertEquals(start + 55.minutes, WorkoutEnergy.trainedUntil(forgotten))
-        assertEquals(WorkoutEnergy.activeKcal(session(length = 55.minutes, lastSetAfter = 50.minutes), man), WorkoutEnergy.activeKcal(forgotten, man))
+        assertEquals(kcal(session(length = 55.minutes, lastSetAfter = 50.minutes), man), kcal(forgotten, man))
     }
 
     @Test
@@ -110,12 +116,12 @@ class WorkoutEnergyTest {
     @Test
     fun `a workout in progress has no end and no calories`() {
         assertNull(WorkoutEnergy.trainedUntil(session(length = null)))
-        assertNull(WorkoutEnergy.activeKcal(session(length = null), man))
+        assertNull(kcal(session(length = null), man))
     }
 
     @Test
     fun `a profile without weight or height gives no calories`() {
-        assertNull(WorkoutEnergy.activeKcal(session(), man.copy(bodyWeightKg = 0.0)))
-        assertNull(WorkoutEnergy.activeKcal(session(), man.copy(heightCm = 0.0)))
+        assertNull(kcal(session(), man.copy(bodyWeightKg = 0.0)))
+        assertNull(kcal(session(), man.copy(heightCm = 0.0)))
     }
 }

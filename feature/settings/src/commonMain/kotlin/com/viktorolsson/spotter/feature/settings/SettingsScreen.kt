@@ -81,6 +81,7 @@ import com.viktorolsson.spotter.feature.settings.resources.backup_syncing
 import com.viktorolsson.spotter.feature.settings.resources.health_install
 import com.viktorolsson.spotter.feature.settings.resources.health_install_summary
 import com.viktorolsson.spotter.feature.settings.resources.health_manage
+import com.viktorolsson.spotter.feature.settings.resources.health_needs_access
 import com.viktorolsson.spotter.feature.settings.resources.health_save_workouts
 import com.viktorolsson.spotter.feature.settings.resources.health_save_workouts_summary
 import com.viktorolsson.spotter.feature.settings.resources.health_section
@@ -127,7 +128,7 @@ internal fun SettingsRoute(
     val syncStatus by viewModel.syncStatus.collectAsStateWithLifecycle()
     val message by viewModel.message.collectAsStateWithLifecycle()
     val health by viewModel.health.collectAsStateWithLifecycle()
-    val healthStore = rememberHealthStoreActions { allowed -> if (allowed) viewModel.setSavingWorkouts(true) else viewModel.refreshHealth() }
+    val healthStore = rememberHealthStoreActions { allowed -> if (allowed) viewModel.setSavingWorkouts(true) else viewModel.healthAccessRefused() }
     LifecycleResumeEffect(viewModel) {
         viewModel.refreshHealth()
         onPauseOrDispose {}
@@ -339,6 +340,13 @@ private fun HealthSection(health: HealthState, onSavingWorkoutsChange: (Boolean)
                 summary = stringResource(Res.string.health_save_workouts_summary),
             ) {
                 Switch(checked = health.savingWorkouts, onCheckedChange = onSavingWorkoutsChange)
+            }
+            if (health.needsAccess) {
+                Text(
+                    stringResource(Res.string.health_needs_access),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.error,
+                )
             }
             TextButton(onClick = onOpen) { Text(stringResource(Res.string.health_manage)) }
         }

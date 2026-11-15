@@ -13,6 +13,8 @@ data class HealthExportEntity(
     @PrimaryKey val sessionSyncId: String,
     /** The workout's [FinishedSessionRow.state] when it was saved; a different one now means save it again. */
     val state: Long,
+    /** The version it was written with. The health store ignores a write that isn't higher, so the next one goes above it. */
+    val version: Long,
 )
 
 /** A finished session as the export sees it: enough to tell that what's saved from it changed. */

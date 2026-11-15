@@ -3,6 +3,7 @@ package com.viktorolsson.spotter.core.data.health
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.viktorolsson.spotter.core.data.AppErrors
 import com.viktorolsson.spotter.core.data.db.SpotterDatabase
+import com.viktorolsson.spotter.core.data.repository.BodyWeightRepository
 import com.viktorolsson.spotter.core.data.repository.MutableClock
 import com.viktorolsson.spotter.core.data.repository.UserPreferencesRepository
 import com.viktorolsson.spotter.core.data.repository.UserProfileRepository
@@ -22,8 +23,7 @@ import com.viktorolsson.spotter.core.model.WeightUnit
 import kotlinx.coroutines.CoroutineExceptionHandler
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.SupervisorJob
-import kotlinx.coroutines.cancel
+import kotlinx.coroutines.cancelAndJoin
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.update
@@ -41,6 +41,7 @@ import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
 import java.io.File
+import kotlin.time.Duration.Companion.milliseconds
 import kotlin.time.Duration.Companion.minutes
 import kotlin.time.Duration.Companion.seconds
 import kotlin.time.Instant
@@ -54,11 +55,15 @@ class FakeHealthStore : HealthStore {
     var refused = emptySet<String>()
     val saved = MutableStateFlow<Map<String, HealthWorkout>>(emptyMap())
     var writes = 0
+    val attempts = MutableStateFlow(0)
 
     override suspend fun availability() = availability
     override suspend fun canWriteWorkouts() = canWrite
     override suspend fun writeWorkout(workout: HealthWorkout) {
+        attempts.update { it + 1 }
         if (failing || workout.id in refused) error("Health store unavailable")
+        // As Health Connect does: a write that isn't newer than what's there is ignored.
+        if (saved.value[workout.id]?.let { it.version >= workout.version } == true) return
         writes++
         saved.update { it + (workout.id to workout) }
     }
@@ -79,6 +84,9 @@ class HealthRepositoryTest {
     private val start = Instant.parse("2026-11-13T17:00:00Z")
     private val clock = MutableClock(start)
     private var restoring = false
+    /** Answers to "is a backup being restored?" that come before [restoring], for a restore that starts mid-pass. */
+    private val restoringFirst = ArrayDeque<Boolean>()
+    private var device = "this-phone"
 
     @Before
     fun setUp() = runTest {
@@ -95,7 +103,10 @@ class HealthRepositoryTest {
                 equipment = emptySet(), focusAreas = emptySet(), limitations = emptySet(),
             ),
         )
-        health = HealthRepository(store, db.healthExportDao(), db.workoutDao(), profiles, preferences, clock, AppErrors(), restoring = { restoring })
+        health = HealthRepository(
+            store, db, profiles, preferences, clock, AppErrors(),
+            restoring = { restoringFirst.removeFirstOrNull() ?: restoring }, device = { device }, retryAfter = 100.milliseconds,
+        )
     }
 
     @After
@@ -120,8 +131,7 @@ class HealthRepositoryTest {
     private fun syncId(sessionId: Long): String =
         db.sql.query("SELECT syncId FROM workout_session WHERE id = $sessionId").use { it.moveToFirst(); it.getString(0)!! }
 
-    private suspend fun reconcile() =
-        health.reconcile(db.healthExportDao().observeFinishedSessions(preferences.preferences.first().healthExportSince!!).first())
+    private suspend fun reconcile() = health.reconcile()
 
     @Test
     fun aFinishedWorkoutIsSavedOnceWithItsTimeAndCalories() = runTest {
@@ -264,11 +274,11 @@ class HealthRepositoryTest {
         health.setSavingWorkouts(true)
         val id = benchWorkout()
         store.failing = true
-        reconcile()
+        assertFalse(reconcile())
         assertTrue(store.saved.value.isEmpty())
 
         store.failing = false
-        reconcile()
+        assertTrue(reconcile())
 
         assertEquals(setOf(syncId(id)), store.saved.value.keys)
     }
@@ -390,22 +400,142 @@ class HealthRepositoryTest {
         assertFalse(health.state.first().savingWorkouts)
     }
 
+    /** Health Connect ignores a write whose version isn't higher, so a clock set back must not produce one. */
+    @Test
+    fun anEditAfterTheClockWentBackStillReplacesTheWorkout() = runTest {
+        health.setSavingWorkouts(true)
+        val id = benchWorkout()
+        reconcile()
+
+        clock.set(start + 30.minutes)
+        db.sql.execSQL("DELETE FROM set_entry WHERE id = (SELECT MAX(id) FROM set_entry)")
+        reconcile()
+
+        assertEquals(2, store.writes)
+        assertTrue(store.saved.value.getValue(syncId(id)).end < start + 60.minutes)
+    }
+
+    /** Editing an old workout prices it with the body weight of its day, not today's. */
+    @Test
+    fun aRewrittenWorkoutKeepsTheBodyWeightOfItsDay() = runTest {
+        val bodyWeight = BodyWeightRepository(db, db.userProfileDao())
+        bodyWeight.log(LocalDate(2026, 11, 13), 80.0)
+        health.setSavingWorkouts(true)
+        val id = benchWorkout()
+        reconcile()
+        assertEquals(298, store.saved.value.getValue(syncId(id)).activeKcal)
+
+        bodyWeight.log(LocalDate(2026, 12, 20), 100.0)
+        clock.advanceSeconds(60)
+        db.sql.execSQL("UPDATE set_entry SET reps = 10 WHERE id = (SELECT MIN(id) FROM set_entry)")
+        reconcile()
+
+        assertEquals(2, store.writes)
+        assertEquals(298, store.saved.value.getValue(syncId(id)).activeKcal)
+    }
+
+    /**
+     * A restore that begins while a pass is reading: the workouts it read as gone are only
+     * gone for the moment, so the pass removes nothing and says it isn't done.
+     */
+    @Test
+    fun aRestoreThatStartsDuringAPassRemovesNothing() = runTest {
+        health.setSavingWorkouts(true)
+        val id = benchWorkout()
+        reconcile()
+        val saved = syncId(id)
+
+        db.sql.execSQL("DELETE FROM workout_session")
+        restoringFirst += listOf(false, true)
+        assertFalse(reconcile())
+
+        assertEquals(setOf(saved), store.saved.value.keys)
+    }
+
+    /**
+     * Moving to a new phone copies the database and the preferences, and with them the switch
+     * and the list of what the old phone saved. The new phone's health store has none of it,
+     * so it starts with saving off and nothing recorded: giving access there doesn't export the
+     * old phone's workouts, and neither does editing one later.
+     */
+    @Test
+    fun aNewPhoneStartsWithSavingOff() = runTest {
+        health.setSavingWorkouts(true)
+        benchWorkout()
+        reconcile()
+
+        device = "new-phone"
+        store.saved.value = emptyMap()
+        reconcile()
+        assertTrue(store.saved.value.isEmpty())
+        assertTrue(db.healthExportDao().getAll().isEmpty())
+        assertEquals(HealthState(HealthAvailability.AVAILABLE, savingWorkouts = false), health.state.first())
+
+        clock.advanceSeconds(3600)
+        health.setSavingWorkouts(true)
+        db.sql.execSQL("UPDATE set_entry SET reps = 10 WHERE id = (SELECT MIN(id) FROM set_entry)")
+        reconcile()
+        assertTrue(store.saved.value.isEmpty())
+
+        val here = benchWorkout()
+        reconcile()
+        assertEquals(setOf(syncId(here)), store.saved.value.keys)
+    }
+
+    /** Android stops showing its permission screen after two refusals, so the screen has to say where access is given. */
+    @Test
+    fun aRefusalIsShownUntilAccessIsGiven() = runTest {
+        store.canWrite = false
+        health.refresh()
+        assertFalse(health.state.first().needsAccess)
+
+        health.accessRefused()
+        assertEquals(HealthState(HealthAvailability.AVAILABLE, savingWorkouts = false, needsAccess = true), health.state.first())
+
+        store.canWrite = true
+        health.setSavingWorkouts(true)
+        assertEquals(HealthState(HealthAvailability.AVAILABLE, savingWorkouts = true), health.state.first())
+
+        // Taken back in the health store while the switch is on.
+        store.canWrite = false
+        health.refresh()
+        assertTrue(health.state.first().needsAccess)
+    }
+
+    /** Access taken back and given again in the health store: what was finished meanwhile is saved, with no other change. */
+    @Test
+    fun workoutsFinishedWithoutAccessAreSavedWhenItReturns() = runTest {
+        health.setSavingWorkouts(true)
+        store.canWrite = false
+        health.refresh()
+        whileRunning {
+            val id = benchWorkout()
+
+            store.canWrite = true
+            health.refresh()
+            awaitSaved(setOf(syncId(id)))
+        }
+    }
+
+    /** Nothing else changes after the failure: the save must come back by itself. */
+    @Test
+    fun aFailedSaveIsRetriedWithoutAnotherChange() = runTest {
+        health.setSavingWorkouts(true)
+        whileRunning {
+            store.failing = true
+            val id = benchWorkout()
+            withContext(Dispatchers.Default) { withTimeoutOrNull(30.seconds) { store.attempts.first { it > 0 } } } ?: error("Never tried")
+            store.failing = false
+            awaitSaved(setOf(syncId(id)))
+        }
+    }
+
     /** The whole loop as the app runs it: finish a workout and it turns up, delete it and it goes, a failure in between is survived. */
     @Test
     fun runningKeepsTheHealthStoreInStepByItself() = runTest {
-        var stopped: Throwable? = null
-        val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default + CoroutineExceptionHandler { _, e -> stopped = e })
-        try {
-            val running = scope.launch { health.run() }
-            // Says what it saw when the store never gets there, since this only fails on slower machines.
-            suspend fun awaitSaved(ids: Set<String>) {
-                withContext(Dispatchers.Default) { withTimeoutOrNull(30.seconds) { store.saved.first { it.keys == ids } } }
-                    ?: error(
-                        "Health store has ${store.saved.value.keys}, expected $ids. Recorded: ${db.healthExportDao().getAll()}. " +
-                            "Watching: ${running.isActive}, stopped by: $stopped",
-                    )
-            }
-            health.setSavingWorkouts(true)
+        // On before the watcher starts, as in the app: DataStore can miss an update made while a new collector is starting.
+        health.setSavingWorkouts(true)
+        whileRunning {
 
             store.failing = true
             val first = benchWorkout()
@@ -415,8 +545,24 @@ class HealthRepositoryTest {
 
             workouts.deleteFinishedWorkout(first)
             awaitSaved(setOf(syncId(second)))
-        } finally {
-            scope.cancel()
         }
+    }
+
+    /** [block] with the watcher running as it does in the app; it has stopped, and failed the test if it broke, before this returns. */
+    private suspend fun whileRunning(block: suspend () -> Unit) {
+        var broke: Throwable? = null
+        val watcher = CoroutineScope(Dispatchers.Default + CoroutineExceptionHandler { _, e -> broke = e }).launch { health.run() }
+        try {
+            block()
+        } finally {
+            withContext(Dispatchers.Default) { watcher.cancelAndJoin() }
+        }
+        broke?.let { throw it }
+    }
+
+    /** Waits on real time: the watcher runs on its own threads. */
+    private suspend fun awaitSaved(ids: Set<String>) {
+        withContext(Dispatchers.Default) { withTimeoutOrNull(30.seconds) { store.saved.first { it.keys == ids } } }
+            ?: error("Health store has ${store.saved.value.keys}, expected $ids. Recorded: ${db.healthExportDao().getAll()}")
     }
 }

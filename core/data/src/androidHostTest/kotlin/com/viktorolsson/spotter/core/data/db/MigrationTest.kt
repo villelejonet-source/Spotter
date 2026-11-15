@@ -269,7 +269,7 @@ class MigrationTest {
             // Nothing has been saved to the health store yet, and the table stays on this phone:
             // no sync columns, so writing to it leaves no trace for sync.
             db.query("SELECT COUNT(*) FROM health_export").use { it.moveToFirst(); assertEquals(0, it.getInt(0)) }
-            db.execSQL("INSERT INTO health_export (sessionSyncId, state) VALUES ('$syncId', 1)")
+            db.execSQL("INSERT INTO health_export (sessionSyncId, state, version) VALUES ('$syncId', 1, 1)")
             db.execSQL("DELETE FROM health_export")
             db.query("SELECT COUNT(*) FROM sync_tombstone").use { it.moveToFirst(); assertEquals(0, it.getInt(0)) }
         }

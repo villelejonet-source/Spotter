@@ -90,6 +90,9 @@ class SettingsViewModel(
     /** Access to the health store changes outside the app, so the screen asks each time it's shown. */
     fun refreshHealth() = viewModelScope.launchReporting(errors, Failure.ACTION) { healthRepository.refresh() }
 
+    /** The person was asked for access and it wasn't given; the screen then says where to give it. */
+    fun healthAccessRefused() = viewModelScope.launchReporting(errors, Failure.ACTION) { healthRepository.accessRefused() }
+
     /** On only once the person has given access (the screen asks first); off needs nothing. */
     fun setSavingWorkouts(on: Boolean) = viewModelScope.launchReporting(errors) { healthRepository.setSavingWorkouts(on) }
 }

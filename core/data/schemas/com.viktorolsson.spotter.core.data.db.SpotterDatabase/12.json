@@ -2,7 +2,7 @@
   "formatVersion": 1,
   "database": {
     "version": 12,
-    "identityHash": "fd1c567dfb80076c38665de8401a96a8",
+    "identityHash": "885cefd053f90fe90c8ce68a8c202410",
     "entities": [
       {
         "tableName": "user_profile",
@@ -1651,7 +1651,7 @@
       },
       {
         "tableName": "health_export",
-        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`sessionSyncId` TEXT NOT NULL, `state` INTEGER NOT NULL, PRIMARY KEY(`sessionSyncId`))",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`sessionSyncId` TEXT NOT NULL, `state` INTEGER NOT NULL, `version` INTEGER NOT NULL, PRIMARY KEY(`sessionSyncId`))",
         "fields": [
           {
             "fieldPath": "sessionSyncId",
@@ -1662,6 +1662,12 @@
           {
             "fieldPath": "state",
             "columnName": "state",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "version",
+            "columnName": "version",
             "affinity": "INTEGER",
             "notNull": true
           }
@@ -1676,7 +1682,7 @@
     ],
     "setupQueries": [
       "CREATE TABLE IF NOT EXISTS room_master_table (id INTEGER PRIMARY KEY,identity_hash TEXT)",
-      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, 'fd1c567dfb80076c38665de8401a96a8')"
+      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, '885cefd053f90fe90c8ce68a8c202410')"
     ]
   }
 }

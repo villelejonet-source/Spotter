@@ -1,6 +1,6 @@
 # Spotter privacy policy
 
-_Last updated: 13 November 2026_
+_Last updated: 15 November 2026_
 
 Spotter is a workout logging app. This policy explains what happens to your data.
 
@@ -39,10 +39,20 @@ Profile and allow it, Spotter writes each workout you finish to Health Connect o
 that it was strength training, when it started and ended, its name, and an estimate of the
 active calories, worked out on your phone from the sets you logged and your sex, age, height
 and body weight. Other apps you've allowed in Health Connect, such as Fitbit, can then read
-it. Spotter reads nothing from Health Connect. Deleting a workout in Spotter removes it from
-Health Connect too. You can turn it off in Profile, or take the permission back in Health
-Connect, at any time; workouts already written stay there until you delete them. Nothing
-about this is sent to Spotter's servers.
+it. Deleting a workout in Spotter removes it from Health Connect too. Workouts already
+written stay there until you delete them.
+
+If you turn on "Use sleep and recovery" in Profile and allow it, Spotter reads from Health
+Connect what your watch or other apps recorded for the last four weeks: sleep, heart rate
+variability and resting heart rate. It uses them on your phone, when you open the app, to
+tell you how recovered you look and to suggest a lighter session or rest before a workout.
+What it reads is not stored by Spotter, not included in the cloud backup and never sent to
+Spotter's servers or anyone else. If you start a workout from that suggestion, only your
+check-in (a score from 1 to 5) and whether the session was lighter are saved with the
+workout, as they are when you answer "How do you feel today?" yourself.
+
+You can turn either off in Profile, or take the permissions back in Health Connect, at any
+time.
 
 **Spotter on the web.** With the same account you can sign in on the Spotter website
 (spotter.northstarsolutions.se) to see
@@ -52,12 +62,14 @@ but doesn't store it. The website sets only the cookie that keeps you signed in.
 
 **What Spotter doesn't do.** No analytics or tracking services, no advertising, no tracking
 across apps or websites, no selling or sharing of data with anyone. Spotter doesn't access
-your location, contacts, photos or sensors, and reads no health data from other apps.
+your location, contacts, photos or sensors, and reads health data from other apps only as
+described under Health Connect above, if you turn that on.
 
 **Permissions.** Notifications (to show the rest timer and tell you when rest is over),
 a foreground service (to keep the timer running with the screen off), vibration and a
 wake lock (for the rest alert), internet access (only used for the optional cloud backup), and, only if you turn it on,
-writing exercise and active calories to Health Connect.
+writing exercise and active calories to Health Connect, and reading sleep, heart rate
+variability and resting heart rate from it.
 
 **Deleting your data.** To delete your Spotter account and cloud backup, do either of these:
 

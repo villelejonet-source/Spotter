@@ -20,8 +20,12 @@ data class UserPreferences(
     val levelsIntroSeen: Boolean = false,
     /** Finished workouts are saved to the phone's health store, those ended from this moment on. */
     val healthExportSince: kotlin.time.Instant? = null,
-    /** The phone it was turned on for: these preferences can arrive on a new phone, whose health store is another one. */
-    val healthExportDevice: String? = null,
+    /** Sleep and recovery are read from the phone's health store for the suggestion before a workout. */
+    val healthReadiness: Boolean = false,
+    /** The phone the two health switches were turned on for: these preferences can arrive on a new phone, whose health store is another one. */
+    val healthDevice: String? = null,
+    /** The "use your sleep and recovery" card on Today was dismissed. */
+    val healthIntroDismissed: Boolean = false,
 ) {
     fun isDeload(today: kotlinx.datetime.LocalDate): Boolean = deloadUntil != null && today <= deloadUntil
 }

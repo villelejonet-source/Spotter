@@ -82,6 +82,8 @@ import com.viktorolsson.spotter.feature.settings.resources.health_install
 import com.viktorolsson.spotter.feature.settings.resources.health_install_summary
 import com.viktorolsson.spotter.feature.settings.resources.health_manage
 import com.viktorolsson.spotter.feature.settings.resources.health_needs_access
+import com.viktorolsson.spotter.feature.settings.resources.health_read_recovery
+import com.viktorolsson.spotter.feature.settings.resources.health_read_recovery_summary
 import com.viktorolsson.spotter.feature.settings.resources.health_save_workouts
 import com.viktorolsson.spotter.feature.settings.resources.health_save_workouts_summary
 import com.viktorolsson.spotter.feature.settings.resources.health_section
@@ -128,7 +130,13 @@ internal fun SettingsRoute(
     val syncStatus by viewModel.syncStatus.collectAsStateWithLifecycle()
     val message by viewModel.message.collectAsStateWithLifecycle()
     val health by viewModel.health.collectAsStateWithLifecycle()
-    val healthStore = rememberHealthStoreActions { allowed -> if (allowed) viewModel.setSavingWorkouts(true) else viewModel.healthAccessRefused() }
+    val healthStore = rememberHealthStoreActions { access, allowed ->
+        when {
+            !allowed -> viewModel.healthAccessRefused()
+            access == HealthAccess.SAVE_WORKOUTS -> viewModel.setSavingWorkouts(true)
+            else -> viewModel.setReadingRecovery(true)
+        }
+    }
     LifecycleResumeEffect(viewModel) {
         viewModel.refreshHealth()
         onPauseOrDispose {}
@@ -159,8 +167,9 @@ internal fun SettingsRoute(
         onDefaultRestChange = { viewModel.setDefaultRest(it) },
         onEffortScaleChange = { viewModel.setEffortScale(it) },
         health = health,
-        // Turning it on goes through the health store's permission screen first.
-        onSavingWorkoutsChange = { on -> if (on) healthStore.requestAccess() else viewModel.setSavingWorkouts(false) },
+        // Turning one on goes through the health store's permission screen first.
+        onSavingWorkoutsChange = { on -> if (on) healthStore.requestAccess(HealthAccess.SAVE_WORKOUTS) else viewModel.setSavingWorkouts(false) },
+        onReadingRecoveryChange = { on -> if (on) healthStore.requestAccess(HealthAccess.READ_RECOVERY) else viewModel.setReadingRecovery(false) },
         onOpenHealthStore = healthStore.open,
         snackbarHostState = snackbar,
     )
@@ -182,6 +191,7 @@ internal fun SettingsScreen(
     onShowLevelsChange: (Boolean) -> Unit = {},
     health: HealthState = HealthState(),
     onSavingWorkoutsChange: (Boolean) -> Unit = {},
+    onReadingRecoveryChange: (Boolean) -> Unit = {},
     onOpenHealthStore: () -> Unit = {},
     snackbarHostState: SnackbarHostState = remember { SnackbarHostState() },
 ) {
@@ -303,7 +313,7 @@ internal fun SettingsScreen(
                 )
             }
 
-            if (health.availability != HealthAvailability.UNSUPPORTED) HealthSection(health, onSavingWorkoutsChange, onOpenHealthStore)
+            if (health.availability != HealthAvailability.UNSUPPORTED) HealthSection(health, onSavingWorkoutsChange, onReadingRecoveryChange, onOpenHealthStore)
 
             Text(
                 stringResource(Res.string.settings_privacy_note),
@@ -324,7 +334,12 @@ internal fun SettingsScreen(
 }
 
 @Composable
-private fun HealthSection(health: HealthState, onSavingWorkoutsChange: (Boolean) -> Unit, onOpen: () -> Unit) {
+private fun HealthSection(
+    health: HealthState,
+    onSavingWorkoutsChange: (Boolean) -> Unit,
+    onReadingRecoveryChange: (Boolean) -> Unit,
+    onOpen: () -> Unit,
+) {
     SectionHeader(stringResource(Res.string.health_section), Modifier.padding(top = Spacing.sm))
     ContentCard(Modifier.fillMaxWidth()) {
         if (health.availability == HealthAvailability.NEEDS_INSTALL) {
@@ -340,6 +355,12 @@ private fun HealthSection(health: HealthState, onSavingWorkoutsChange: (Boolean)
                 summary = stringResource(Res.string.health_save_workouts_summary),
             ) {
                 Switch(checked = health.savingWorkouts, onCheckedChange = onSavingWorkoutsChange)
+            }
+            SettingRow(
+                title = stringResource(Res.string.health_read_recovery),
+                summary = stringResource(Res.string.health_read_recovery_summary),
+            ) {
+                Switch(checked = health.readingRecovery, onCheckedChange = onReadingRecoveryChange)
             }
             if (health.needsAccess) {
                 Text(

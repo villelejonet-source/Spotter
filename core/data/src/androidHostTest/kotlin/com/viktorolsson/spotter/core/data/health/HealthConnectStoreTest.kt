@@ -2,6 +2,8 @@ package com.viktorolsson.spotter.core.data.health
 
 import androidx.health.connect.client.records.ActiveCaloriesBurnedRecord
 import androidx.health.connect.client.records.ExerciseSessionRecord
+import androidx.health.connect.client.records.SleepSessionRecord
+import androidx.health.connect.client.records.metadata.Device
 import androidx.health.connect.client.records.metadata.Metadata
 import com.viktorolsson.spotter.core.model.HealthWorkout
 import org.junit.Assert.assertEquals
@@ -46,5 +48,30 @@ class HealthConnectStoreTest {
     @Test
     fun withoutCaloriesOnlyTheSessionIsWritten() {
         assertTrue(workout.copy(activeKcal = null).toRecords(ZoneOffset.UTC).single() is ExerciseSessionRecord)
+    }
+
+    /** Time asleep leaves out the awake stretches when the watch gives stages, and is the whole session when it doesn't. */
+    @Test
+    fun aSleepSessionCountsItsSleepStages() {
+        val bed = start.toJavaInstant()
+        fun stage(fromMinute: Long, toMinute: Long, type: Int) =
+            SleepSessionRecord.Stage(bed.plusSeconds(fromMinute * 60), bed.plusSeconds(toMinute * 60), type)
+        val staged = SleepSessionRecord(
+            startTime = bed, startZoneOffset = ZoneOffset.UTC, endTime = bed.plusSeconds(480 * 60), endZoneOffset = ZoneOffset.UTC,
+            metadata = Metadata.autoRecorded(Device(type = Device.TYPE_WATCH)),
+            stages = listOf(
+                stage(0, 200, SleepSessionRecord.STAGE_TYPE_LIGHT),
+                stage(200, 230, SleepSessionRecord.STAGE_TYPE_AWAKE),
+                stage(230, 400, SleepSessionRecord.STAGE_TYPE_DEEP),
+                stage(400, 480, SleepSessionRecord.STAGE_TYPE_REM),
+            ),
+        )
+        assertEquals(SleepSample(start + 480.minutes, 450.minutes), staged.toSample())
+
+        val plain = SleepSessionRecord(
+            startTime = bed, startZoneOffset = ZoneOffset.UTC, endTime = bed.plusSeconds(480 * 60), endZoneOffset = ZoneOffset.UTC,
+            metadata = Metadata.manualEntry(),
+        )
+        assertEquals(SleepSample(start + 480.minutes, 480.minutes), plain.toSample())
     }
 }

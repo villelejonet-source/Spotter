@@ -12,7 +12,12 @@ into the new version's entry and writes the store notes from it. Versions are th
 - Save workouts to Health Connect (Android): turn it on in Profile and each workout you finish
   is added to Health Connect with its time and estimated calories, so Fitbit and other health
   apps count it. Deleting a workout removes it there too. If Spotter hasn't been allowed, Profile says
-  where to allow it. Spotter reads nothing from Health Connect.
+  where to allow it.
+- Recovery on Today (Android): turn on "Use sleep and recovery" in Profile and Spotter reads
+  last night's sleep, heart rate variability and resting heart rate from Health Connect. Today
+  shows how recovered you look and why, and the check-in before a workout suggests keeping
+  it as planned, going lighter or resting. You can always answer for yourself instead. What
+  it reads is never stored or sent anywhere.
 
 ### Website
 - Levels: this week's quests on Today and on the Levels page, lift mastery on the Levels page,

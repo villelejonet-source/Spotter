@@ -192,6 +192,7 @@ fun SpotterApp(
                 onBuildPlan = { navController.navigate(OnboardingRoute()) },
                 onOpenLevels = { navController.navigate(AchievementsRoute) },
                 onOpenYearInReview = { navController.navigate(YearInReviewRoute(it)) },
+                onOpenProfile = { navController.navigateToTab(TopLevelDestination.PROFILE) },
             )
             historyScreen(onOpenWorkout = { navController.navigate(WorkoutDetailRoute(it)) })
             progressScreen(

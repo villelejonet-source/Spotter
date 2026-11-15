@@ -45,10 +45,12 @@ import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.LifecycleResumeEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.viktorolsson.spotter.core.engine.GamificationRules
 import com.viktorolsson.spotter.core.engine.PlanGenerator
 import com.viktorolsson.spotter.core.engine.PlanReview
+import com.viktorolsson.spotter.core.model.Readiness
 import com.viktorolsson.spotter.core.model.PlanDay
 import com.viktorolsson.spotter.core.model.ScheduledWorkout
 import com.viktorolsson.spotter.core.model.WeightUnit
@@ -130,9 +132,16 @@ internal fun TodayRoute(
     onBuildPlan: () -> Unit,
     onOpenLevels: () -> Unit,
     onOpenYearInReview: (Int) -> Unit,
+    onOpenProfile: () -> Unit,
     viewModel: TodayViewModel = koinViewModel(),
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val readiness by viewModel.readiness.collectAsStateWithLifecycle()
+    val healthIntro by viewModel.healthIntro.collectAsStateWithLifecycle()
+    LifecycleResumeEffect(viewModel) {
+        viewModel.refreshHealth()
+        onPauseOrDispose {}
+    }
     val level by viewModel.level.collectAsStateWithLifecycle()
     val review by viewModel.review.collectAsStateWithLifecycle()
     var reviewing by rememberSaveable { mutableStateOf(false) }
@@ -154,10 +163,15 @@ internal fun TodayRoute(
         },
         onLevelsIntroSeen = viewModel::levelsIntroSeen,
         onOpenYearInReview = onOpenYearInReview,
+        readiness = readiness,
+        healthIntro = healthIntro,
+        onHealthSetUp = onOpenProfile,
+        onHealthIntroDismiss = viewModel::dismissHealthIntro,
     )
     if (checkingIn) {
         CheckInSheet(
             inDeloadWeek = uiState.deloadUntil != null,
+            measured = readiness,
             onStart = { readiness, lighter ->
                 checkingIn = false
                 viewModel.startNext(readiness, lighter, onOpenSession)
@@ -192,6 +206,10 @@ internal fun TodayScreen(
     onOpenLevels: () -> Unit = {},
     onLevelsIntroSeen: () -> Unit = {},
     onOpenYearInReview: (Int) -> Unit = {},
+    readiness: Readiness? = null,
+    healthIntro: Boolean = false,
+    onHealthSetUp: () -> Unit = {},
+    onHealthIntroDismiss: () -> Unit = {},
 ) {
     val next = uiState.nextDay
     val scheduled = uiState.scheduledToday
@@ -228,6 +246,10 @@ internal fun TodayScreen(
             uiState.deloadUntil?.let { until -> DeloadCard(until) }
             if (review != null && uiState.today != null) PlanReviewCard(review, uiState.today, onReviewLater, onReviewOpen)
             if (uiState.scheduledTodayDone) DoneCard()
+            // Readiness is about the workout still to come: not shown once one is running or today's is done.
+            val toStart = uiState.activeSessionId == null && (scheduled != null || next != null)
+            if (readiness != null && toStart) ReadinessCard(readiness)
+            if (healthIntro && uiState.hasPlan) HealthIntroCard(onHealthSetUp, onHealthIntroDismiss)
             when {
                 scheduled != null && uiState.scheduledDay != null ->
                     WorkoutCard(uiState.scheduledDay, Res.string.today_scheduled_label, scheduled.notes, dashboard, onOpenPlan)

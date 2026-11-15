@@ -5,6 +5,7 @@ import androidx.lifecycle.viewModelScope
 import com.viktorolsson.spotter.core.data.AppErrors
 import com.viktorolsson.spotter.core.data.Failure
 import com.viktorolsson.spotter.core.data.launchReporting
+import com.viktorolsson.spotter.core.data.health.HealthRepository
 import com.viktorolsson.spotter.core.data.repository.GamificationRepository
 import com.viktorolsson.spotter.core.data.repository.HistoryRepository
 import com.viktorolsson.spotter.core.data.repository.PlanRepository
@@ -16,7 +17,9 @@ import com.viktorolsson.spotter.core.data.repository.WorkoutRepository
 import com.viktorolsson.spotter.core.engine.LiftOption
 import com.viktorolsson.spotter.core.engine.PlanReview
 import com.viktorolsson.spotter.core.engine.StalledLift
+import com.viktorolsson.spotter.core.model.HealthAvailability
 import com.viktorolsson.spotter.core.model.Level
+import com.viktorolsson.spotter.core.model.Readiness
 import com.viktorolsson.spotter.core.model.WeekQuests
 import com.viktorolsson.spotter.core.model.YearInReview
 import com.viktorolsson.spotter.core.model.PlanDay
@@ -32,8 +35,10 @@ import com.viktorolsson.spotter.core.model.windowStart
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.flatMapLatest
@@ -130,6 +135,7 @@ class TodayViewModel(
     private val preferencesRepository: UserPreferencesRepository,
     private val recommendationRepository: RecommendationRepository,
     gamificationRepository: GamificationRepository,
+    private val healthRepository: HealthRepository,
     private val errors: AppErrors,
     private val clock: Clock,
 ) : ViewModel() {
@@ -144,6 +150,26 @@ class TodayViewModel(
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
 
     fun levelsIntroSeen() = viewModelScope.launchReporting(errors) { preferencesRepository.setLevelsIntroSeen() }
+
+    private val _readiness = MutableStateFlow<Readiness?>(null)
+
+    /** This morning's readiness from the phone's health store; null when there's nothing to go on. */
+    val readiness: StateFlow<Readiness?> = _readiness.asStateFlow()
+
+    /** The health store is there and unused: offer it once, until it's set up or dismissed. */
+    val healthIntro: StateFlow<Boolean> = combine(healthRepository.state, preferencesRepository.preferences) { health, prefs ->
+        health.availability == HealthAvailability.AVAILABLE && !prefs.healthReadiness && !prefs.healthIntroDismissed
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), false)
+
+    /**
+     * Asks the health store again, each time Today is shown: last night's data arrives when the
+     * watch syncs, and access changes outside the app. Nothing read is kept beyond this screen.
+     */
+    fun refreshHealth() = viewModelScope.launchReporting(errors, Failure.ACTION) {
+        _readiness.value = healthRepository.readiness(clock.todayIn(TimeZone.currentSystemDefault()))
+    }
+
+    fun dismissHealthIntro() = viewModelScope.launchReporting(errors) { preferencesRepository.setHealthIntroDismissed() }
 
     /** The plan review, when one is due. */
     val review: StateFlow<PlanReview?> = recommendationRepository.observePlanReview()

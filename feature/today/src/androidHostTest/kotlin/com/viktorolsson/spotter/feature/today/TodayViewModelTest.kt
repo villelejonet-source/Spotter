@@ -8,7 +8,14 @@ import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.viktorolsson.spotter.core.data.DataGraph
 import com.viktorolsson.spotter.core.data.db.SpotterDatabase
+import com.russhwolf.settings.SharedPreferencesSettings
+import com.viktorolsson.spotter.core.data.health.HealthStore
 import com.viktorolsson.spotter.core.data.sync.AppBuild
+import com.viktorolsson.spotter.core.model.HealthAvailability
+import com.viktorolsson.spotter.core.model.HealthWorkout
+import com.viktorolsson.spotter.core.model.ReadinessLevel
+import com.viktorolsson.spotter.core.model.RecoveryNight
+import com.viktorolsson.spotter.core.model.SessionAdvice
 import com.viktorolsson.spotter.core.data.sync.SupabaseConfig
 import com.viktorolsson.spotter.core.data.sync.SyncScheduler
 import kotlinx.coroutines.CoroutineScope
@@ -27,11 +34,14 @@ import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
 import com.viktorolsson.spotter.core.model.weekStart
 import kotlinx.coroutines.withContext
+import kotlinx.datetime.DatePeriod
 import kotlinx.datetime.LocalDate
+import kotlinx.datetime.minus
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.todayIn
 import org.junit.After
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNull
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -52,6 +62,18 @@ class TodayViewModelTest {
         override fun now() = now
     }
     private lateinit var graph: DataGraph
+    private val context: Context = ApplicationProvider.getApplicationContext()
+
+    /** A health store that lets Spotter read [nights]. */
+    private val health = object : HealthStore {
+        var nights = emptyList<RecoveryNight>()
+        override suspend fun availability() = HealthAvailability.AVAILABLE
+        override suspend fun canWriteWorkouts() = false
+        override suspend fun writeWorkout(workout: HealthWorkout) = Unit
+        override suspend fun deleteWorkout(id: String) = Unit
+        override suspend fun canReadRecovery() = true
+        override suspend fun readRecovery(from: LocalDate, to: LocalDate) = nights
+    }
 
     @Before
     fun setUp() {
@@ -67,7 +89,8 @@ class TodayViewModelTest {
             applicationScope = scope,
             supabaseConfig = SupabaseConfig("", ""),
             sessionStore = { null },
-            deviceStore = { error("No device store in tests") },
+            deviceStore = { SharedPreferencesSettings(context.getSharedPreferences("device", Context.MODE_PRIVATE)) },
+            healthStore = health,
             appBuild = AppBuild(versionCode = 1),
             catalog = { File("../../core/data/catalog/exercises.json").readText() },
             syncScheduler = object : SyncScheduler {
@@ -86,7 +109,7 @@ class TodayViewModelTest {
 
     private fun viewModel() = TodayViewModel(
         graph.plans, graph.workouts, graph.schedule, graph.history, graph.userProfiles, graph.preferences,
-        graph.recommendations, graph.gamification, graph.errors, clock,
+        graph.recommendations, graph.gamification, graph.health, graph.errors, clock,
     )
 
     /** The database answers on its own thread: pump this test's main dispatcher in real time until [done]. */
@@ -97,6 +120,52 @@ class TodayViewModelTest {
             withContext(Dispatchers.Default) { delay(10) }
         }
         error("State never arrived: ${vm.uiState.value}")
+    }
+
+    private suspend fun TestScope.await(what: String, done: () -> Boolean) {
+        repeat(500) {
+            runCurrent()
+            if (done()) return
+            withContext(Dispatchers.Default) { delay(10) }
+        }
+        error("Never happened: $what")
+    }
+
+    /**
+     * Reading sleep and recovery is offered until it's turned on; from then on Today shows
+     * what last night looked like, asked again each time the screen is shown.
+     */
+    @Test
+    fun lastNightsRecoveryIsShownOnceReadingIsOn() = runTest(main) {
+        health.nights = (0..10).map { RecoveryNight(today.minus(DatePeriod(days = it)), sleep = if (it == 0) 5.hours else 8.hours) }
+        val vm = viewModel()
+        backgroundScope.launch { vm.healthIntro.collect {} }
+        vm.refreshHealth()
+        await("the offer") { vm.healthIntro.value }
+        assertNull(vm.readiness.value)
+
+        graph.health.setReadingRecovery(true)
+        vm.refreshHealth()
+        await("readiness") { vm.readiness.value != null }
+        assertEquals(ReadinessLevel.LOW, vm.readiness.value!!.level)
+        assertEquals(SessionAdvice.LIGHTER, vm.readiness.value!!.advice)
+        await("the offer going away") { !vm.healthIntro.value }
+
+        // The watch hasn't synced last night yet: nothing to show, not yesterday's picture.
+        health.nights = health.nights.drop(1)
+        vm.refreshHealth()
+        await("readiness going away") { vm.readiness.value == null }
+    }
+
+    @Test
+    fun theOfferStaysAwayOnceDismissed() = runTest(main) {
+        val vm = viewModel()
+        backgroundScope.launch { vm.healthIntro.collect {} }
+        vm.refreshHealth()
+        await("the offer") { vm.healthIntro.value }
+
+        vm.dismissHealthIntro()
+        await("the offer going away") { !vm.healthIntro.value }
     }
 
     private val today: LocalDate get() = clock.todayIn(TimeZone.currentSystemDefault())

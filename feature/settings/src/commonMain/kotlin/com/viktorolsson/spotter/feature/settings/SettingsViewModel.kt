@@ -95,4 +95,7 @@ class SettingsViewModel(
 
     /** On only once the person has given access (the screen asks first); off needs nothing. */
     fun setSavingWorkouts(on: Boolean) = viewModelScope.launchReporting(errors) { healthRepository.setSavingWorkouts(on) }
+
+    /** As [setSavingWorkouts], for reading sleep and recovery. */
+    fun setReadingRecovery(on: Boolean) = viewModelScope.launchReporting(errors) { healthRepository.setReadingRecovery(on) }
 }

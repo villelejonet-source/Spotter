@@ -93,7 +93,8 @@ seen before, on any track. Then add the build to the table above.
    - **Data deletion**: the same URL (section "Deleting your data" describes in-app and email deletion).
    - **Foreground service permissions**: declare `FOREGROUND_SERVICE_SPECIAL_USE` with the text below.
    - **Health apps declaration**: Spotter is a fitness app. From the first release with "Save
-     workouts to Health Connect" it writes to Health Connect and reads nothing; see below. It
+     workouts to Health Connect" it writes to Health Connect, and from the one with "Use sleep
+     and recovery" it reads three data types; see below. It
      doesn't use sensors.
    - **Content rating**: questionnaire, category "Health & fitness"; no user-generated content.
    - **Target audience**: 18+ (strength training guidance).
@@ -128,7 +129,11 @@ of that form). Declare exactly the permissions in `core/data/src/androidMain/And
 | `WRITE_EXERCISE` | Fitness tracking. When the user turns on "Save workouts to Health Connect", each strength workout they finish in Spotter is written as an exercise session (type, start, end, title), so their other health apps count it. |
 | `WRITE_ACTIVE_CALORIES_BURNED` | Fitness tracking. The same workout's estimated active calories, calculated on the device from the logged sets and the user's profile. |
 
-Nothing is read. The privacy policy linked in Play must be the one the app opens from Health
+| `READ_SLEEP` | Fitness tracking. When the user turns on "Use sleep and recovery", last night's sleep and the previous four weeks' are read to tell the user how recovered they are and to suggest a lighter strength session or a rest day before they start a workout. Processed on the device only; not stored, not transmitted. |
+| `READ_HEART_RATE_VARIABILITY` | Fitness tracking. The same suggestion: last night's heart rate variability against the user's own four-week normal. Processed on the device only; not stored, not transmitted. |
+| `READ_RESTING_HEART_RATE` | Fitness tracking. The same suggestion: resting heart rate against the user's own four-week normal. Processed on the device only; not stored, not transmitted. |
+
+The privacy policy linked in Play must be the one the app opens from Health
 Connect's permission screen (`HealthPrivacyActivity`): both are
 https://spotter.northstarsolutions.se/privacy. Add a read permission here, in the manifest and
 in the policy together.
@@ -155,6 +160,9 @@ in the policy together.
   (`data_extraction_rules.xml`).
 - Writing workouts to Health Connect is on the device, at the user's request, and isn't
   collection or sharing in the Data safety sense: nothing is transmitted off the device.
+- Sleep, heart rate variability and resting heart rate read from Health Connect are processed
+  on the device and never transmitted or stored, so they aren't "collected" either. The
+  check-in score saved with a workout is already covered by *Health info*.
 
 ### Account deletion (required because the app has accounts)
 

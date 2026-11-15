@@ -13,11 +13,12 @@ fun NavGraphBuilder.todayScreen(
     onBuildPlan: () -> Unit,
     onOpenLevels: () -> Unit,
     onOpenYearInReview: (year: Int) -> Unit,
+    onOpenProfile: () -> Unit,
 ) {
     composable<TodayRoute> {
         TodayRoute(
             onOpenSession = onOpenSession, onOpenPlan = onOpenPlan, onBuildPlan = onBuildPlan,
-            onOpenLevels = onOpenLevels, onOpenYearInReview = onOpenYearInReview,
+            onOpenLevels = onOpenLevels, onOpenYearInReview = onOpenYearInReview, onOpenProfile = onOpenProfile,
         )
     }
 }

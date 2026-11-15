@@ -17,6 +17,8 @@ import com.viktorolsson.spotter.core.model.ExperienceLevel
 import com.viktorolsson.spotter.core.model.Goal
 import com.viktorolsson.spotter.core.model.HealthAvailability
 import com.viktorolsson.spotter.core.model.HealthWorkout
+import com.viktorolsson.spotter.core.model.ReadinessLevel
+import com.viktorolsson.spotter.core.model.RecoveryNight
 import com.viktorolsson.spotter.core.model.Sex
 import com.viktorolsson.spotter.core.model.UserProfile
 import com.viktorolsson.spotter.core.model.WeightUnit
@@ -31,7 +33,10 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeoutOrNull
+import kotlinx.datetime.DatePeriod
 import kotlinx.datetime.LocalDate
+import kotlinx.datetime.minus
+import kotlinx.datetime.plus
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -41,6 +46,7 @@ import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
 import java.io.File
+import kotlin.time.Duration.Companion.hours
 import kotlin.time.Duration.Companion.milliseconds
 import kotlin.time.Duration.Companion.minutes
 import kotlin.time.Duration.Companion.seconds
@@ -71,6 +77,14 @@ class FakeHealthStore : HealthStore {
     override suspend fun deleteWorkout(id: String) {
         if (failing) error("Health store unavailable")
         saved.update { it - id }
+    }
+
+    var canRead = true
+    var nights = emptyList<RecoveryNight>()
+    override suspend fun canReadRecovery() = canRead
+    override suspend fun readRecovery(from: LocalDate, to: LocalDate): List<RecoveryNight> {
+        if (failing) error("Health store unavailable")
+        return nights.filter { it.date in from..to }
     }
 }
 
@@ -480,6 +494,40 @@ class HealthRepositoryTest {
         val here = benchWorkout()
         reconcile()
         assertEquals(setOf(syncId(here)), store.saved.value.keys)
+    }
+
+    @Test
+    fun readinessComesFromLastNightOnceReadingIsOn() = runTest {
+        val today = LocalDate(2026, 11, 13)
+        store.nights = (0..10).map { RecoveryNight(today.minus(DatePeriod(days = it)), sleep = if (it == 0) 5.hours else 8.hours) }
+        assertNull(health.readiness(today))
+
+        health.setReadingRecovery(true)
+        assertTrue(health.state.first().readingRecovery)
+        assertEquals(ReadinessLevel.LOW, health.readiness(today)!!.level)
+
+        // Nothing recorded for the night, a store that fails, or access taken back: no readiness, no error.
+        assertNull(health.readiness(today.plus(DatePeriod(days = 1))))
+        store.failing = true
+        assertNull(health.readiness(today))
+        store.failing = false
+        store.canRead = false
+        assertNull(health.readiness(today))
+        health.refresh()
+        assertEquals(HealthState(HealthAvailability.AVAILABLE, needsAccess = true), health.state.first())
+    }
+
+    /** The reading switch travels to a new phone like the saving one, and goes off there too. */
+    @Test
+    fun aNewPhoneStartsWithReadingOff() = runTest {
+        val today = LocalDate(2026, 11, 13)
+        store.nights = listOf(RecoveryNight(today, sleep = 8.hours))
+        health.setReadingRecovery(true)
+
+        device = "new-phone"
+        assertNull(health.readiness(today))
+        assertFalse(preferences.preferences.first().healthReadiness)
+        assertFalse(health.state.first().needsAccess)
     }
 
     /** Android stops showing its permission screen after two refusals, so the screen has to say where access is given. */

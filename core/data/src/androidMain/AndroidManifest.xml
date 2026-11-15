@@ -5,7 +5,11 @@
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
 
     <!-- Health Connect (HealthConnectStore): saving finished workouts and their estimated
-         calories, once the person turns that on in Profile. Nothing is read. -->
+         calories, and reading sleep, heart rate variability and resting heart rate for the
+         suggestion before a workout. Each only once the person turns it on in Profile. -->
+    <uses-permission android:name="android.permission.health.READ_SLEEP" />
+    <uses-permission android:name="android.permission.health.READ_HEART_RATE_VARIABILITY" />
+    <uses-permission android:name="android.permission.health.READ_RESTING_HEART_RATE" />
     <uses-permission android:name="android.permission.health.WRITE_EXERCISE" />
     <uses-permission android:name="android.permission.health.WRITE_ACTIVE_CALORIES_BURNED" />
 

@@ -90,7 +90,7 @@ class SettingsScreenshotTest {
     @Config(qualifiers = "w411dp-h1400dp-xxhdpi")
     fun settings_healthOn() = capture(
         "settings_health_on_light", dark = false,
-        health = HealthState(HealthAvailability.AVAILABLE, savingWorkouts = true),
+        health = HealthState(HealthAvailability.AVAILABLE, savingWorkouts = true, readingRecovery = true),
     )
 
     @Test

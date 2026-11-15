@@ -9,14 +9,23 @@ import com.viktorolsson.spotter.core.data.health.HealthConnectStore
 
 // Health Connect's permission screen and settings are Android activities.
 @Composable
-internal actual fun rememberHealthStoreActions(onAccess: (Boolean) -> Unit): HealthStoreActions {
+internal actual fun rememberHealthStoreActions(onAccess: (HealthAccess, Boolean) -> Unit): HealthStoreActions {
     val context = LocalContext.current
-    val launcher = rememberLauncherForActivityResult(HealthConnectStore.permissionRequest()) { granted ->
-        onAccess(granted.containsAll(HealthConnectStore.WRITE_PERMISSIONS))
+    val saving = rememberLauncherForActivityResult(HealthConnectStore.permissionRequest()) { granted ->
+        onAccess(HealthAccess.SAVE_WORKOUTS, granted.containsAll(HealthConnectStore.WRITE_PERMISSIONS))
     }
-    return remember(launcher, context) {
+    // Reading works with whichever of the three the person allows.
+    val reading = rememberLauncherForActivityResult(HealthConnectStore.permissionRequest()) { granted ->
+        onAccess(HealthAccess.READ_RECOVERY, granted.any { it in HealthConnectStore.READ_PERMISSIONS })
+    }
+    return remember(saving, reading, context) {
         HealthStoreActions(
-            requestAccess = { launcher.launch(HealthConnectStore.WRITE_PERMISSIONS) },
+            requestAccess = { access ->
+                when (access) {
+                    HealthAccess.SAVE_WORKOUTS -> saving.launch(HealthConnectStore.WRITE_PERMISSIONS)
+                    HealthAccess.READ_RECOVERY -> reading.launch(HealthConnectStore.READ_PERMISSIONS)
+                }
+            },
             open = {
                 try {
                     context.startActivity(HealthConnectStore.openIntent(context))

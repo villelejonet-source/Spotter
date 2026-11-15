@@ -151,17 +151,21 @@ These rules live in `core/engine` and run as workouts finish:
 - **Recovery** stays early, as stored cards: a lighter week when performance falls with sets near failure, after 3 low check-ins in 10 days, or after 6 weeks of steady training (several stalled lifts at once too, once the plan is old enough).
 
 ## Health Connect (Android)
+- **In:** with "Use sleep and recovery" on in Profile, Today reads the last four weeks of sleep, heart rate variability (RMSSD) and resting heart rate, from whatever wrote them (Fitbit for a Pixel Watch), each time it's shown. Nothing read is stored or synced.
+  - **Readiness** (`ReadinessRules` in `core/engine`) compares last night with the person's own usual: the median of the nights before, once there are 7. Points: sleep under 6 h or an hour under usual 1, under 5 h or two hours under 2; three nights averaging an hour under 1; HRV 10% under usual 1, 20% under 2; resting heart rate 4 bpm over 1, 7 over 2. 0 points is good, 1 reduced, 2–3 low, 4 or more very low. Without a usual, only the length of the night counts. No data for last night means no readiness.
+  - **Suggestion:** good and reduced keep the workout as planned, low suggests a lighter session, very low suggests rest or a lighter session. Today shows a Recovery card with the reasons in plain words, and the check-in sheet opens on it: the matching face is picked and the suggestion is one tap (Lighter, Keep as planned, Rest today). The faces still work, so the person can answer for themselves. What's stored is the same as before: the 1–5 check-in and whether the session was lighter, which the lighter-week and progression rules already use.
+  - A night is the day its sleep ended; the longest session of the day counts (a nap or a second app's copy doesn't add); HRV readings from 18:00 on belong to the next morning (`recoveryNights`, shared).
+  - A card on Today offers it once, linking to Profile, until it's turned on or dismissed.
 - **Out:** with "Save workouts to Health Connect" on in Profile, each finished workout is written as a strength-training session with its start, end and name, plus estimated active calories. Workouts ended from the moment it's turned on, not older ones.
 - **Calories** (`WorkoutEnergy` in `core/engine`) are an estimate, not a measurement: (MET − 1) × resting energy × time. Resting energy is Mifflin-St Jeor from sex, weight, height and age, with the body weight logged on the workout's day or last before it, so an old workout that is saved again keeps its figure. MET is 3.5, 5 or 6 by how heavy the session was: working sets per ten minutes, how close to failure, and the share of compound lifts; a lighter session is always 3.5. A workout left open counts until five minutes after its last ticked set, four hours at most.
 - **Kept in step by itself** (`HealthRepository`): a change after finishing rewrites the record, and deleting the workout (in the app, on the website or on another phone) removes it. A change only wakes it: each pass reads the workouts itself. A save that failed is tried again by itself, after 30 seconds and then at doubling intervals up to 15 minutes, and when access comes back. Turning the switch off leaves what's already there.
-- Nothing is read yet, and nothing about it leaves the phone. iOS has no health store yet (HealthKit later).
+- Nothing about either direction leaves the phone. iOS has no health store yet (HealthKit later).
 - **Restoring a backup** empties the workouts and pulls the same ones back; nothing is removed from Health Connect while that runs.
-- **A new phone** gets the database in a device-to-device transfer, and with it the switch and `health_export`. The switch remembers which phone it was turned on for (`DeviceIdentity`, which isn't transferred); on another phone it goes off and `health_export` is emptied, since that phone's Health Connect has none of those workouts.
+- **A new phone** gets the database in a device-to-device transfer, and with it the two switches and `health_export`. The switches remember which phone they were turned on for (`DeviceIdentity`, which isn't transferred); on another phone they go off and `health_export` is emptied, since that phone's Health Connect has none of those workouts.
 - **No access:** Android stops showing its permission screen after two refusals. Profile then says to allow Spotter in Health Connect, as it does when access is taken back while the switch is on.
 - **What's fixed for good** once released: a workout's record id in Health Connect is its sync id, and its version is the time it was written, or one above the last version when the phone's clock went back (so later versions must keep using time). Everything else can change: `health_export` is rebuilt from the workouts, and raising `EXPORT_FORMAT` in `HealthRepository` rewrites every saved workout.
 - **For the next steps** (from the review of the first one):
-  - Reading: return what was read or nothing; HealthKit never says whether reading is allowed. Today must call `HealthRepository.refresh()` before it shows the state. Each read permission needs a manifest line, a Play declaration and a line in the privacy policy.
-  - A "connect" card on Today needs the permission request that now lives in `feature/settings` (`rememberHealthStoreActions`); move it to `core/ui` then, taking the kinds of access to ask for.
+  - Each further read permission needs a manifest line, a Play declaration and a line in the privacy policy. HealthKit never says whether reading is allowed, so `canReadRecovery` there can only say "asked".
   - Heart rate that arrives after a workout doesn't change what the export compares, so that feature needs its own reason to save again.
   - Showing calories in the app or on the website: store the figure with the workout then, so it matches what Health Connect got.
   - Backfill or HealthKit: `HealthStore.writeWorkout` takes one workout per call. Hundreds at once want a `writeWorkouts(list)`; settle that before HealthKit implements the interface.
@@ -191,7 +195,6 @@ Material 3 theme with light, dark and "follow system" settings, plus dynamic col
 **Later ideas:**
 - Exercise images or GIFs (text cues ship in 0.10.0)
 - Body measurements and progress photos
-- Health Connect: read sleep, HRV and resting heart rate for a readiness suggestion before a workout (saving workouts to it is built, see "Health Connect")
 - Home-screen widget
 - Training-day reminders
 - Wear OS rest timer

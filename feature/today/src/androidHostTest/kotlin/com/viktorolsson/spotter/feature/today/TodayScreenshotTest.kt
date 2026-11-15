@@ -29,7 +29,11 @@ import com.viktorolsson.spotter.core.model.ProgressionRule
 import com.viktorolsson.spotter.core.model.Quest
 import com.viktorolsson.spotter.core.model.QuestKind
 import com.viktorolsson.spotter.core.model.QuestProgress
+import com.viktorolsson.spotter.core.model.Readiness
+import com.viktorolsson.spotter.core.model.ReadinessLevel
+import com.viktorolsson.spotter.core.model.ReadinessReason
 import com.viktorolsson.spotter.core.model.RecommendationAction
+import com.viktorolsson.spotter.core.model.RecoverySignal
 import com.viktorolsson.spotter.core.model.ScheduledWorkout
 import com.viktorolsson.spotter.core.model.TrainedDay
 import com.viktorolsson.spotter.core.model.WeekQuests
@@ -44,6 +48,8 @@ import kotlinx.datetime.LocalDate
 import kotlinx.datetime.isoDayNumber
 import kotlinx.datetime.minus
 import org.junit.Rule
+import kotlin.time.Duration.Companion.hours
+import kotlin.time.Duration.Companion.minutes
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.annotation.Config
@@ -92,13 +98,15 @@ class TodayScreenshotTest {
         fontScale: Float = 1f,
         review: PlanReview? = null,
         level: TodayLevel? = null,
+        readiness: Readiness? = null,
+        healthIntro: Boolean = false,
     ) =
         captureRoboImage(
             "src/test/screenshots/$name.png",
             roborazziComposeOptions = RoborazziComposeOptions { fontScale(fontScale) },
         ) {
             SpotterTheme(darkTheme = dark, dynamicColor = dynamic) {
-                TodayScreen(state, review = review, onResume = {}, onStartNext = {}, onEmptyWorkout = {}, onOpenPlan = {}, onBuildPlan = {}, level = level)
+                TodayScreen(state, review = review, onResume = {}, onStartNext = {}, onEmptyWorkout = {}, onOpenPlan = {}, onBuildPlan = {}, level = level, readiness = readiness, healthIntro = healthIntro)
             }
         }
 
@@ -183,12 +191,44 @@ class TodayScreenshotTest {
     @Test
     fun planReviewSheet_largeFont() = captureSheet("today_review_sheet_font_1_6", false, fontScale = 1.6f)
 
-    private fun captureCheckIn(name: String, dark: Boolean, readiness: Int?, fontScale: Float = 1f) = captureRoboImage(
+    private val lowReadiness = Readiness(
+        ReadinessLevel.VERY_LOW,
+        listOf(ReadinessReason.ShortSleep(5.hours + 10.minutes, 2.hours + 5.minutes), ReadinessReason.LowHrv(18), ReadinessReason.HighRestingHeartRate(6)),
+        missing = emptySet(), slept = 5.hours + 10.minutes,
+    )
+    /** Sleep only: the watch gave no heart rate variability or resting heart rate. */
+    private val goodReadiness = Readiness(
+        ReadinessLevel.GOOD, emptyList(), missing = setOf(RecoverySignal.HRV, RecoverySignal.RESTING_HEART_RATE), slept = 7.hours + 40.minutes,
+    )
+
+    @Test
+    fun readinessLow_light() = capture("today_readiness_low_light", false, next(), readiness = lowReadiness)
+
+    @Test
+    fun readinessGood_dark() = capture("today_readiness_good_dark", true, next(), readiness = goodReadiness)
+
+    @Test
+    fun readinessLow_largeFont() = capture("today_readiness_low_font_1_6", false, next(), fontScale = 1.6f, readiness = lowReadiness)
+
+    @Test
+    fun healthIntro_light() = capture("today_health_intro_light", false, next(), healthIntro = true)
+
+    @Test
+    fun checkInMeasuredLow_light() = captureCheckIn("today_checkin_measured_low_light", false, readiness = null, measured = lowReadiness)
+
+    @Test
+    fun checkInMeasuredGood_dark() = captureCheckIn("today_checkin_measured_good_dark", true, readiness = null, measured = goodReadiness)
+
+    @Test
+    fun checkInMeasuredLow_largeFont() =
+        captureCheckIn("today_checkin_measured_low_font_1_6", false, readiness = null, fontScale = 1.6f, measured = lowReadiness)
+
+    private fun captureCheckIn(name: String, dark: Boolean, readiness: Int?, fontScale: Float = 1f, measured: Readiness? = null) = captureRoboImage(
         "src/test/screenshots/$name.png",
         roborazziComposeOptions = RoborazziComposeOptions { fontScale(fontScale) },
     ) {
         SpotterTheme(darkTheme = dark) {
-            Surface { CheckInContent(readiness, inDeloadWeek = false, onPick = {}, onStart = { _, _ -> }) }
+            Surface { CheckInContent(readiness, inDeloadWeek = false, measured = measured, onPick = {}, onStart = { _, _ -> }) }
         }
     }
 

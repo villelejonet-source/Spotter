@@ -8,9 +8,12 @@ import com.viktorolsson.spotter.core.data.db.toModel
 import com.viktorolsson.spotter.core.data.db.withTransaction
 import com.viktorolsson.spotter.core.data.repository.UserPreferencesRepository
 import com.viktorolsson.spotter.core.data.repository.UserProfileRepository
+import com.viktorolsson.spotter.core.engine.ReadinessRules
 import com.viktorolsson.spotter.core.engine.WorkoutEnergy
 import com.viktorolsson.spotter.core.model.HealthAvailability
 import com.viktorolsson.spotter.core.model.HealthWorkout
+import com.viktorolsson.spotter.core.model.Readiness
+import com.viktorolsson.spotter.core.model.UserPreferences
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.channels.Channel
@@ -27,7 +30,10 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.merge
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withTimeoutOrNull
+import kotlinx.datetime.DatePeriod
+import kotlinx.datetime.LocalDate
 import kotlinx.datetime.TimeZone
+import kotlinx.datetime.minus
 import kotlinx.datetime.toLocalDateTime
 import kotlin.time.Clock
 import kotlin.time.Duration
@@ -39,8 +45,10 @@ data class HealthState(
     val availability: HealthAvailability = HealthAvailability.UNSUPPORTED,
     /** The switch is on and Spotter still has access, so finished workouts are being saved. */
     val savingWorkouts: Boolean = false,
+    /** The switch is on and Spotter may read: sleep and recovery go into the suggestion before a workout. */
+    val readingRecovery: Boolean = false,
     /**
-     * Access was asked for and not given, or was taken back while the switch was on. The
+     * Access was asked for and not given, or was taken back while a switch was on. The
      * person has to give it in the health store itself: Android stops showing its permission
      * screen after two refusals, and then the switch alone does nothing.
      */
@@ -75,19 +83,22 @@ class HealthRepository(
     private val dao = db.healthExportDao()
     private val workoutDao = db.workoutDao()
 
-    private data class Access(val availability: HealthAvailability, val canWrite: Boolean)
+    private data class Access(val availability: HealthAvailability, val canWrite: Boolean, val canRead: Boolean)
 
-    private val access = MutableStateFlow(Access(HealthAvailability.UNSUPPORTED, canWrite = false))
+    private val access = MutableStateFlow(Access(HealthAvailability.UNSUPPORTED, canWrite = false, canRead = false))
 
     /** The person was asked for access and didn't give it; forgotten when they turn saving on or off. */
     private val refused = MutableStateFlow(false)
 
     val state: Flow<HealthState> = combine(access, preferences.preferences, refused) { access, prefs, refused ->
-        val on = prefs.healthExportSince != null
+        val saving = prefs.healthExportSince != null
+        val reading = prefs.healthReadiness
         HealthState(
             access.availability,
-            savingWorkouts = on && access.canWrite,
-            needsAccess = access.availability == HealthAvailability.AVAILABLE && !access.canWrite && (on || refused),
+            savingWorkouts = saving && access.canWrite,
+            readingRecovery = reading && access.canRead,
+            needsAccess = access.availability == HealthAvailability.AVAILABLE &&
+                (refused || (saving && !access.canWrite) || (reading && !access.canRead)),
         )
     }.distinctUntilChanged()
 
@@ -101,7 +112,8 @@ class HealthRepository(
 
     private suspend fun currentAccess(): Access {
         val availability = store.availability()
-        return Access(availability, canWrite = availability == HealthAvailability.AVAILABLE && store.canWriteWorkouts())
+        val available = availability == HealthAvailability.AVAILABLE
+        return Access(availability, canWrite = available && store.canWriteWorkouts(), canRead = available && store.canReadRecovery())
     }
 
     /**
@@ -110,8 +122,50 @@ class HealthRepository(
      */
     suspend fun setSavingWorkouts(on: Boolean) {
         refused.value = false
+        onThisPhone(preferences.preferences.first())
         preferences.setHealthExportSince(if (on) clock.now() else null, device())
         refresh()
+    }
+
+    /** Turns reading sleep and recovery on (the person has just given access) or off. Nothing read is kept. */
+    suspend fun setReadingRecovery(on: Boolean) {
+        refused.value = false
+        onThisPhone(preferences.preferences.first())
+        preferences.setHealthReadiness(on, device())
+        refresh()
+    }
+
+    /**
+     * This morning's readiness from the last four weeks in the health store, read now, after
+     * asking the store about access again ([refresh]): null
+     * when reading is off, nothing was recorded for last night, or the store can't be read.
+     */
+    suspend fun readiness(today: LocalDate): Readiness? {
+        var readiness: Readiness? = null
+        // Asked each time a screen is shown, unprompted: a store that fails is noted, not put in front of the person.
+        attempt {
+            refresh()
+            val prefs = preferences.preferences.first()
+            if (!prefs.healthReadiness || !onThisPhone(prefs) || !access.value.canRead) return@attempt
+            val nights = store.readRecovery(today.minus(DatePeriod(days = ReadinessRules.BASELINE_DAYS)), today)
+            readiness = ReadinessRules.assess(nights, today)
+        }
+        return readiness
+    }
+
+    /**
+     * False when the switches came with a move to a new phone, whose health store has none of
+     * what this one recorded: that phone starts with both off and nothing saved, like any new one.
+     */
+    private suspend fun onThisPhone(prefs: UserPreferences): Boolean {
+        if (prefs.healthExportSince == null && !prefs.healthReadiness) return true
+        val device = device()
+        if (prefs.healthDevice == device) return true
+        dao.clear()
+        preferences.setHealthExportSince(null, device)
+        preferences.setHealthReadiness(false, device)
+        refresh()
+        return false
     }
 
     /** The person was shown the permission screen (or Android wouldn't show it again) and access wasn't given. */
@@ -156,14 +210,7 @@ class HealthRepository(
     internal suspend fun reconcile(): Boolean {
         val prefs = preferences.preferences.first()
         val since = prefs.healthExportSince ?: return true
-        if (prefs.healthExportDevice != device()) {
-            // The switch and the record of what's saved came with a move to a new phone, whose
-            // health store has none of it: this phone starts with saving off, like any new one.
-            dao.clear()
-            setSavingWorkouts(false)
-            return true
-        }
-        if (!currentAccess().canWrite) return true
+        if (!onThisPhone(prefs) || !currentAccess().canWrite) return true
         // During a restore a workout can be missing, or back without its sets yet: neither means
         // it's gone. Asked before and after reading, so the read can't have been of a half-restored phone.
         val restoringBefore = restoring()
